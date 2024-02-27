@@ -1,28 +1,33 @@
 ﻿#include <Framework/Application.h>
 
+#include "Framework/Core/ErrorCodes.h"
 #include "Framework/Core/Logging.h"
+
+PApplication* PApplication::Instance = GetInstance();
 
 PApplication* PApplication::GetInstance()
 {
-    static auto Instance = new PApplication();
+    if (Instance == nullptr)
+    {
+        Instance = new PApplication();
+    }
     return Instance;
 }
 
 int PApplication::Run() const
 {
     // Initialize the platform
-    Platform->Create();
-    if (!Platform->IsInitialized())
+    if (Platform->Create() != Success)
     {
-        return 1; // App run failure
+        return PlatformInitError; // App run failure
     }
 
     // Attempt to display the window
-    if (Platform->Show() != 0)
+    if (Platform->Show() != Success)
     {
-        return 2; // Show failure
+        return PlatformShowError; // Show failure
     }
 
     // Run the main loop
-    return Platform->Loop();
+    return Platform->Start();
 }

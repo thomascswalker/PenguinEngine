@@ -37,7 +37,6 @@ namespace Logging
         static int Line;
         static int Column;
         static std::string Source;
-        // static ELogLevel Level;
 
         Logger(Logger& Other) = delete;
         ~Logger() = default;

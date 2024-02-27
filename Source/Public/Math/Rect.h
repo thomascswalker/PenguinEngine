@@ -1,16 +1,16 @@
 ﻿#pragma once
 
-#include "Vector.h"
-
 template <typename T> struct TRect;
-typedef TRect<float> Rect;
+typedef TRect<int> RectI;
+typedef TRect<float> RectF;
+typedef TRect<double> RectD;
 
 template <typename T>
 struct TRect
 {
-    TVector2<T> Min;
-    TVector2<T> Max;
+    T Min[2];
+    T Max[2];
 
     TRect(){}
-    TRect(TVector2<T> InMin, TVector2<T> InMax) : Min(InMin), Max(InMax){}
+    TRect(T InMin[2], T InMax[2]) : Min(InMin), Max(InMax){}
 };

@@ -2,19 +2,25 @@
 
 #include <Framework/Application.h>
 
+#include "Framework/Core/ErrorCodes.h"
+
 #if defined(_WIN32) || defined(_WIN64)
 
 // Windows entry point
 #include "Framework/Platforms/WindowsPlatform.h"
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-    LOG_INFO("Starting engine.")
     PApplication* App = PApplication::GetInstance();
     App->Init<PWindowsPlatform>(hInstance);
-    const int Result = App->Run();
-    LOG_INFO("Shutting down engine.")
+    const int ExitCode = App->Run();
     delete App;
-    return Result;
+
+    if (ExitCode != Success)
+    {
+        LOG_ERROR("Application failed with error {}", ExitCode)
+    }
+    
+    return ExitCode;
 }
 
 #elif __APPLE__

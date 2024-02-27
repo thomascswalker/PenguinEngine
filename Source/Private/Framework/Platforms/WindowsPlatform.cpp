@@ -1,6 +1,7 @@
 ﻿#include <Framework/Platforms/WindowsPlatform.h>
 
-#include "Framework/Core/Core.h"
+#include "Framework/Core/ErrorCodes.h"
+#include "Framework/Engine/Engine.h"
 
 // ReSharper disable CppParameterMayBeConst
 LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
@@ -18,12 +19,12 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
             const HDC HDC = BeginPaint(Hwnd, &PS);
 
             // All painting occurs here, between BeginPaint and EndPaint.
-            constexpr COLORREF Color = COLOR_DESKTOP;
+            constexpr COLORREF Color = COLOR_3DLIGHT;
             const HBRUSH Brush = CreateSolidBrush(Color);
             FillRect(HDC, &PS.rcPaint, Brush);
-            
+
             EndPaint(Hwnd, &PS);
-            
+
             return 0;
         }
     case WM_SIZE :
@@ -31,7 +32,7 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
             // LOG_DEBUG("Resizing: {}, {}", LOWORD(LParam), HIWORD(LParam))
             return 0;
         }
-    default:
+    default :
         break;
     }
     return DefWindowProc(Hwnd, Msg, WParam, LParam);
@@ -64,14 +65,16 @@ void PWindowsPlatform::Register()
     LOG_INFO("Registered class.")
 }
 
-void PWindowsPlatform::Create()
+int PWindowsPlatform::Create()
 {
     Register();
     bInitialized = HWnd != nullptr;
     if (!bInitialized)
     {
         LOG_ERROR("Window failed to initialize (PWindowsPlatform::Create).")
+        return PlatformInitError;
     }
+    return Success;
 }
 
 int PWindowsPlatform::Show()
@@ -79,32 +82,61 @@ int PWindowsPlatform::Show()
     if (!bInitialized)
     {
         LOG_ERROR("Window failed to initialize (PWindowsPlatform::Show).")
-        return 3; // Show window failure
+        return PlatformShowError; // Show window failure
     }
 
-    int Result = ShowWindow(HWnd, 1);
     LOG_INFO("Showing window.")
-    return Result;
+    ShowWindow(HWnd, 1);
+    return Success;
 }
 
-int PWindowsPlatform::Loop()
+int PWindowsPlatform::Start()
 {
     if (!bInitialized)
     {
-        LOG_ERROR("Window failed to initialize (PWindowsPlatform::Loop).")
-        return 4; // Loop failure
+        LOG_ERROR("Window failed to initialize (PWindowsPlatform::Start).")
+        return PlatformStartError; // Start failure
     }
 
-    LOG_INFO("Beginning window loop.")
-    
     MSG Msg = {};
+    clock_t Time = clock();
+
+    // Start the actual engine
+    PEngine::GetInstance()->Startup();
+
+    // Windows loop
+    LOG_INFO("Beginning window loop.")
     while (GetMessage(&Msg, nullptr, 0, 0) > 0)
     {
+        // Get delta time in milliseconds
+        const float DeltaTime = static_cast<float>(clock() - Time);
+
+        // Loop, converting DeltaTime from milliseconds to seconds
+        if (const int LoopResult = Loop(1.0f / DeltaTime))
+        {
+            LOG_ERROR("Loop failed (PWindowsPlatform::Start).")
+            return LoopResult; // Start failure
+        }
         TranslateMessage(&Msg);
         DispatchMessage(&Msg);
+        Time = clock();
     }
-
     LOG_INFO("Ending window loop.")
 
-    return 0;
+    return End();
+}
+
+int PWindowsPlatform::Loop(float DeltaTime)
+{
+    PEngine::GetInstance()->Tick(DeltaTime);
+    return Success;
+}
+
+int PWindowsPlatform::End()
+{
+    if (!PEngine::GetInstance()->Shutdown())
+    {
+        return PlatformEndError;
+    }
+    return Success;
 }

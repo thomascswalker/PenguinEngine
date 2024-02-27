@@ -4,8 +4,10 @@ class IPlatform
 {
 public:
     virtual ~IPlatform() = default;
-    virtual void Create() = 0;
+    virtual int Create() = 0;
     virtual int Show() = 0;
-    virtual int Loop() = 0;
+    virtual int Start() = 0;
+    virtual int Loop(float DeltaTime) = 0;
+    virtual int End() = 0;
     virtual bool IsInitialized() const = 0;
 };

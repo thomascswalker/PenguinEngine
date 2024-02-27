@@ -5,8 +5,6 @@
 #include "Framework/Core/Core.h"
 #include "Framework/Platform.h"
 
-#define PENGUIN_API DECLSPEC_IMPORT
-
 class PWindowsPlatform : public IPlatform
 {
     LPCWSTR ClassName = L"PenguinWindow";
@@ -24,16 +22,16 @@ class PWindowsPlatform : public IPlatform
     void Register();
 
 public:
-    // PWindowsPlatform();
-    PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance)
-    {
-        
-    }
-    void Create() override;
+    // Platform interface
+    int Create() override;
     int Show() override;
-    int Loop() override;
+    int Start() override;
+    int Loop(float DeltaTime) override;
+    int End() override;
     bool IsInitialized() const override { return bInitialized; }
+
+    // Windows
+    explicit PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance) {}
     HWND GetHWnd() const { return HWnd; }
     void SetHInstance(HINSTANCE NewInstance) { HInstance = NewInstance; }
-
 };
