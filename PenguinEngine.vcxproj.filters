@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Penguin.cpp">
+    <ClCompile Include="PenguinEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
