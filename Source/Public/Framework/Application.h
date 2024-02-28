@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <memory>
 
-#include "Platform.h"
+#include "Platforms\PlatformInterface.h"
 #include "Engine/Engine.h"
 
 class PEngine;

@@ -100,6 +100,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -117,6 +118,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -136,6 +138,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,6 +160,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -171,10 +175,12 @@
     <ClCompile Include="Source\Private\Framework\Core\Core.cpp" />
     <ClCompile Include="Source\Private\Framework\Core\Logging.cpp" />
     <ClCompile Include="Source\Private\Framework\Engine\Engine.cpp" />
-    <ClCompile Include="Source\Private\Framework\Platform.cpp" />
+    <ClCompile Include="Source\Private\Framework\Engine\Mesh.cpp" />
+    <ClCompile Include="Source\Private\Framework\Platforms\PlatformInterface.cpp" />
     <ClCompile Include="Source\Private\Framework\Platforms\WindowsPlatform.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Private\Math\Matrix.cpp" />
+    <ClCompile Include="Source\Private\Math\Color.cpp" />
     <ClCompile Include="Source\Private\Math\Rect.cpp" />
     <ClCompile Include="Source\Private\Math\Vector.cpp" />
   </ItemGroup>
@@ -184,10 +190,12 @@
     <ClInclude Include="Source\Public\Framework\Core\ErrorCodes.h" />
     <ClInclude Include="Source\Public\Framework\Core\Logging.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Engine.h" />
-    <ClInclude Include="Source\Public\Framework\Platform.h" />
+    <ClInclude Include="Source\Public\Framework\Engine\Mesh.h" />
+    <ClInclude Include="Source\Public\Framework\Platforms\PlatformInterface.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\WindowsPlatform.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Renderer.h" />
     <ClInclude Include="Source\Public\Math\Matrix.h" />
+    <ClInclude Include="Source\Public\Math\Color.h" />
     <ClInclude Include="Source\Public\Math\Rect.h" />
     <ClInclude Include="Source\Public\Math\Types.h" />
     <ClInclude Include="Source\Public\Math\Vector.h" />

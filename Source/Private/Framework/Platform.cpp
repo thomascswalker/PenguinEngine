@@ -1,1 +1,0 @@
-﻿#include <Framework/Platform.h>

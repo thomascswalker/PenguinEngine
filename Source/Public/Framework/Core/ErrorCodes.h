@@ -11,4 +11,5 @@ enum EErrorCodes
     PlatformShowError,
     PlatformStartError,
     PlatformEndError,
+    PlatformLoopError,
 };

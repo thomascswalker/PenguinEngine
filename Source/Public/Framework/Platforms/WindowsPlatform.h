@@ -3,7 +3,7 @@
 #include <windows.h>
 
 #include "Framework/Core/Core.h"
-#include "Framework/Platform.h"
+#include "PlatformInterface.h"
 
 class PWindowsPlatform : public IPlatform
 {

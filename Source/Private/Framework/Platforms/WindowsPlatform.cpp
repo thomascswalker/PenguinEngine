@@ -16,7 +16,7 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
     LRESULT Result = 0;
     PWindowsPlatform* Platform = Cast<PWindowsPlatform>(PApplication::GetInstance()->GetPlatform());
     PEngine* Engine = PEngine::GetInstance();
-    std::shared_ptr<PRenderer> Renderer = Engine->GetRenderer();
+    PRenderer* Renderer = Engine->GetRenderer();
 
     switch (Msg)
     {
@@ -219,13 +219,18 @@ int PWindowsPlatform::Start()
 int PWindowsPlatform::Loop(float DeltaTime)
 {
     // Tick the engine forward
-    PEngine* Engine = PEngine::GetInstance();
-    Engine->Tick(DeltaTime);
+    if (PEngine* Engine = PEngine::GetInstance())
+    {
+        Engine->Tick(DeltaTime);
 
-    // Render the frame
-    Engine->GetRenderer()->Render();
-
-    return Success;
+        // Render the frame
+        if (PRenderer* Renderer = Engine->GetRenderer())
+        {
+            Renderer->Render();
+            return Success;
+        }
+    }
+    return PlatformLoopError;
 }
 
 int PWindowsPlatform::End()
