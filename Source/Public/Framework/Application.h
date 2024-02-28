@@ -21,6 +21,7 @@ public:
     {
         Platform = std::make_shared<PlatformType>(std::forward<Types>(Args)...);
         Engine = std::make_shared<PEngine>();
+        LOG_INFO("Initialized application.")
     }
 
     int Run() const;

@@ -7,19 +7,21 @@
 
 class PWindowsPlatform : public IPlatform
 {
+    // Windows specific variables
     LPCWSTR ClassName = L"PenguinWindow";
     LPCWSTR WindowName = L"Penguin Renderer";
-    HWND HWnd = nullptr;
-    DWORD Style = WS_OVERLAPPEDWINDOW;
-    int X = CW_USEDEFAULT;
-    int Y = CW_USEDEFAULT;
-    int Width = CW_USEDEFAULT;
-    int Height = CW_USEDEFAULT;
-    
+    HWND Hwnd = nullptr;
+    DWORD DefaultStyle = WS_OVERLAPPEDWINDOW;
+    int DefaultX = CW_USEDEFAULT;
+    int DefaultY = CW_USEDEFAULT;
+    int DefaultWidth = CW_USEDEFAULT;
+    int DefaultHeight = CW_USEDEFAULT;
+    BITMAPINFO BitmapInfo;
+
     bool bInitialized = false;
 
     HINSTANCE HInstance;
-    void Register();
+    bool Register();
 
 public:
     // Platform interface
@@ -31,7 +33,32 @@ public:
     bool IsInitialized() const override { return bInitialized; }
 
     // Windows
-    explicit PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance) {}
-    HWND GetHWnd() const { return HWnd; }
+    PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance)
+    {
+        InitBitmapInfo();
+    }
+    HWND GetHWnd() const { return Hwnd; }
     void SetHInstance(HINSTANCE NewInstance) { HInstance = NewInstance; }
+    RectI GetSize() override;
+
+    void InitBitmapInfo()
+    {
+        BitmapInfo.bmiHeader.biSize = sizeof(GetBitmapInfo()->bmiHeader);
+        BitmapInfo.bmiHeader.biWidth = DefaultWidth;
+        BitmapInfo.bmiHeader.biHeight = -DefaultHeight; // Otherwise Y is inverted
+        BitmapInfo.bmiHeader.biPlanes = 1;
+        BitmapInfo.bmiHeader.biBitCount = 32;
+        BitmapInfo.bmiHeader.biCompression = BI_RGB;
+    }
+    BITMAPINFO* GetBitmapInfo()
+    {
+        UpdateBitmapInfo();
+        return &BitmapInfo;
+    }
+    void UpdateBitmapInfo()
+    {
+        const RectI Size = GetSize();
+        BitmapInfo.bmiHeader.biWidth = Size.Width;
+        BitmapInfo.bmiHeader.biHeight = Size.Height;
+    }
 };

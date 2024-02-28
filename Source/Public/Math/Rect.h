@@ -8,9 +8,20 @@ typedef TRect<double> RectD;
 template <typename T>
 struct TRect
 {
-    T Min[2];
-    T Max[2];
+    struct
+    {
+        T X;
+        T Y;
+        T Width;
+        T Height;
+    };
 
     TRect(){}
-    TRect(T InMin[2], T InMax[2]) : Min(InMin), Max(InMax){}
+    TRect(T InX, T InY, T InWidth, T InHeight)
+    {
+        X = InX;
+        Y = InY;
+        Width = InX + InWidth;
+        Height = InY + InHeight;
+    }
 };

@@ -13,5 +13,5 @@ PEngine* PEngine::GetInstance()
 
 void PEngine::Tick(float DeltaTime)
 {
-    LOG_INFO("EngineTick: {}", DeltaTime)
+    // LOG_INFO("EngineTick: {}", DeltaTime)
 }

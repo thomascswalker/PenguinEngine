@@ -1,44 +1,103 @@
-﻿#include <Framework/Platforms/WindowsPlatform.h>
+﻿#include <assert.h>
+#include <Framework/Platforms/WindowsPlatform.h>
 
+#include "Framework/Application.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
+
+#ifndef WINDOWS_TIMER_ID
+    #define WINDOWS_TIMER_ID 1001
+#endif
+
 
 // ReSharper disable CppParameterMayBeConst
 LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
+    LRESULT Result = 0;
+    PWindowsPlatform* Platform = Cast<PWindowsPlatform>(PApplication::GetInstance()->GetPlatform());
+    PEngine* Engine = PEngine::GetInstance();
+    std::shared_ptr<PRenderer> Renderer = Engine->GetRenderer();
+
     switch (Msg)
     {
+    case WM_CREATE :
+        {
+            SetTimer(Hwnd, WINDOWS_TIMER_ID, 1, nullptr);
+            ShowCursor(TRUE);
+            return 0;
+        }
     case WM_DESTROY :
         {
+            PEngine* Engine = PEngine::GetInstance();
+            Engine->Shutdown();
             PostQuitMessage(0);
             return 0;
         }
     case WM_PAINT :
         {
-            PAINTSTRUCT PS;
-            const HDC HDC = BeginPaint(Hwnd, &PS);
+            if (!Renderer)
+            {
+                LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
+                break;
+            }
+            InvalidateRect(Hwnd, nullptr, TRUE);
+            PAINTSTRUCT Paint;
+            const HDC DeviceContext = BeginPaint(Hwnd, &Paint);
 
-            // All painting occurs here, between BeginPaint and EndPaint.
-            constexpr COLORREF Color = COLOR_3DLIGHT;
-            const HBRUSH Brush = CreateSolidBrush(Color);
-            FillRect(HDC, &PS.rcPaint, Brush);
+            HDC RenderContext = CreateCompatibleDC(DeviceContext);
+            PBuffer* Buffer = Renderer->GetBuffer();
+            int Width = Buffer->Width;
+            int Height = Buffer->Height;
 
-            EndPaint(Hwnd, &PS);
-
-            return 0;
+            HBITMAP Bitmap = CreateBitmap(Width, Height, 1, 32, Buffer->Memory);
+            SelectObject(RenderContext, Bitmap);
+            if (!BitBlt(DeviceContext, 0, 0, Width, Height, RenderContext, 0, 0, SRCCOPY))
+            {
+                LOG_ERROR("Failed during BitBlt")
+                Result = 1;
+            }
+            ReleaseDC(Hwnd, DeviceContext);
+            EndPaint(Hwnd, &Paint);
+            break;
         }
     case WM_SIZE :
         {
-            // LOG_DEBUG("Resizing: {}, {}", LOWORD(LParam), HIWORD(LParam))
-            return 0;
+            if (!Renderer)
+            {
+                LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_SIZE")
+                break;
+            }
+            const int Width = LOWORD(LParam);
+            const int Height = HIWORD(LParam);
+
+            // Update the renderer size
+            Renderer->SetSize(Width, Height);
+
+            // Re-allocate the buffer memory
+            Renderer->Realloc();
+
+            // Update the bitmap info
+            Platform->UpdateBitmapInfo();
+            break;
+        }
+    // Timer called every ms to update
+    case WM_TIMER :
+        {
+            InvalidateRect(Hwnd, nullptr, FALSE);
+            UpdateWindow(Hwnd);
+            break;
         }
     default :
-        break;
+        {
+            Result = DefWindowProcW(Hwnd, Msg, WParam, LParam);
+            break;
+        }
     }
-    return DefWindowProc(Hwnd, Msg, WParam, LParam);
+
+    return Result;
 }
 
-void PWindowsPlatform::Register()
+bool PWindowsPlatform::Register()
 {
     // Register the window class.
     WNDCLASS WindowClass = {};
@@ -47,28 +106,42 @@ void PWindowsPlatform::Register()
     WindowClass.hInstance = HInstance;
     WindowClass.lpszClassName = ClassName;
 
-    RegisterClassW(&WindowClass);
+    //Registering the window class
+    if (!RegisterClass(&WindowClass))
+    {
+        LOG_ERROR("Failed to register class (PWindowsPlatform::Register).")
+        return false;
+    }
 
     // Create the window.
-    HWnd = CreateWindowExW(
+    Hwnd = CreateWindowExW(
         0,
         ClassName,
         WindowName,
-        Style,
-        X, Y, Width, Height,
+        DefaultStyle,
+        DefaultX, DefaultY,
+        DefaultWidth, DefaultHeight,
         nullptr,
         nullptr,
         HInstance,
         nullptr
     );
 
+    bInitialized = Hwnd != nullptr;
+
+    if (!bInitialized)
+    {
+        LOG_ERROR("Failed to create window (PWindowsPlatform::Register).")
+        return false;
+    }
+
     LOG_INFO("Registered class.")
+    return true;
 }
 
 int PWindowsPlatform::Create()
 {
-    Register();
-    bInitialized = HWnd != nullptr;
+    bInitialized = Register();
     if (!bInitialized)
     {
         LOG_ERROR("Window failed to initialize (PWindowsPlatform::Create).")
@@ -86,7 +159,7 @@ int PWindowsPlatform::Show()
     }
 
     LOG_INFO("Showing window.")
-    ShowWindow(HWnd, 1);
+    ShowWindow(Hwnd, 1);
     return Success;
 }
 
@@ -98,45 +171,79 @@ int PWindowsPlatform::Start()
         return PlatformStartError; // Start failure
     }
 
-    MSG Msg = {};
+    // Start a clock to track DeltaTime
     clock_t Time = clock();
 
     // Start the actual engine
-    PEngine::GetInstance()->Startup();
+    PEngine* Engine = PEngine::GetInstance();
+    
+    // Initialize the engine
+    RECT ClientRect;
+    GetWindowRect(Hwnd, &ClientRect);
+    Engine->Startup(ClientRect.right, ClientRect.bottom);
 
     // Windows loop
-    LOG_INFO("Beginning window loop.")
-    while (GetMessage(&Msg, nullptr, 0, 0) > 0)
+    LOG_INFO("Beginning engine loop.")
+    while (Engine->IsRunning())
     {
-        // Get delta time in milliseconds
-        const float DeltaTime = static_cast<float>(clock() - Time);
+        LOG_DEBUG("Engine loop start")
 
-        // Loop, converting DeltaTime from milliseconds to seconds
-        if (const int LoopResult = Loop(1.0f / DeltaTime))
+        InvalidateRect(Hwnd, nullptr, FALSE);
+
+        // Process all messages and update the window
+        MSG Msg = {};
+        while (GetMessage(&Msg, nullptr, 0, 0) > 0)
         {
-            LOG_ERROR("Loop failed (PWindowsPlatform::Start).")
-            return LoopResult; // Start failure
+            TranslateMessage(&Msg);
+            DispatchMessage(&Msg);
+
+            // Get delta time in milliseconds
+            const float DeltaTime = static_cast<float>(clock() - Time);
+
+            // Loop, converting DeltaTime from milliseconds to seconds
+            if (const int LoopResult = Loop(1.0f / DeltaTime))
+            {
+                LOG_ERROR("Loop failed (PWindowsPlatform::Start).")
+                return LoopResult; // Start failure
+            }
+            Time = clock();
         }
-        TranslateMessage(&Msg);
-        DispatchMessage(&Msg);
-        Time = clock();
+
+        UpdateWindow(Hwnd);
     }
-    LOG_INFO("Ending window loop.")
+    LOG_INFO("Ending engine loop.")
 
     return End();
 }
 
 int PWindowsPlatform::Loop(float DeltaTime)
 {
-    PEngine::GetInstance()->Tick(DeltaTime);
+    // Tick the engine forward
+    PEngine* Engine = PEngine::GetInstance();
+    Engine->Tick(DeltaTime);
+
+    // Render the frame
+    Engine->GetRenderer()->Render();
+
     return Success;
 }
 
 int PWindowsPlatform::End()
 {
-    if (!PEngine::GetInstance()->Shutdown())
-    {
-        return PlatformEndError;
-    }
     return Success;
+}
+
+RectI PWindowsPlatform::GetSize()
+{
+    RECT OutRect;
+
+    if (GetWindowRect(GetHWnd(), &OutRect))
+    {
+        int Width = OutRect.right - OutRect.left;
+        int Height = OutRect.bottom - OutRect.top;
+        return {0, 0, Width, Height};
+    }
+
+    LOG_ERROR("Unable to get window size (PWindowsPlatform::GetSize).")
+    return {};
 }

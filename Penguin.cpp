@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include <Framework/Application.h>
-
 #include "Framework/Core/ErrorCodes.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -17,9 +16,16 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     if (ExitCode != Success)
     {
-        LOG_ERROR("Application failed with error {}", ExitCode)
+        const auto ErrorMsgs = Logging::Logger::GetInstance()->GetMessages(Logging::ELogLevel::Error);
+        std::string Msg = "Application failed with error(s):\n\n";
+        for (const auto& EMsg : ErrorMsgs)
+        {
+            Msg += EMsg + '\n';
+        }
+        std::wstring WMsg(Msg.begin(), Msg.end());
+        MessageBox(nullptr, WMsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
     }
-    
+
     return ExitCode;
 }
 
