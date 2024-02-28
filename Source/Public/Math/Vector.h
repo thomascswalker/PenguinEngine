@@ -6,9 +6,12 @@
 
 #include "Types.h"
 
-template <typename T> struct TVector2;
-template <typename T> struct TVector3;
-template <typename T> struct TVector4;
+template <typename T>
+struct TVector2;
+template <typename T>
+struct TVector3;
+template <typename T>
+struct TVector4;
 
 typedef TVector2<float> Vector2;
 typedef TVector2<double> Vector2d;
@@ -21,11 +24,11 @@ template <typename T>
 struct TVector2
 {
     static_assert(std::is_floating_point_v<T>, "Type is not floating point.");
-    
+
     // Memory aligned coordinate values
     union
     {
-        struct
+        struct  // NOLINT(clang-diagnostic-nested-anon-types)
         {
             T X;
             T Y;
@@ -97,10 +100,12 @@ struct TVector2
 template <typename T>
 struct TVector3
 {
+    static_assert(std::is_floating_point_v<T>, "Type is not floating point.");
+
     // Memory aligned coordinate values
     union
     {
-        struct
+        struct  // NOLINT(clang-diagnostic-nested-anon-types)
         {
             T X;
             T Y;
@@ -112,21 +117,18 @@ struct TVector3
     // Constructors
     TVector3() : X(0), Y(0), Z(0)
     {
-        CHECK_FP_TYPE(T)
     }
     TVector3(T InX) : X(InX), Y(InX), Z(InX)
     {
-        CHECK_FP_TYPE(T)
     }
     TVector3(T InX, T InY, T InZ) : X(InX), Y(InY), Z(InZ)
     {
-        CHECK_FP_TYPE(T)
     }
-    
+
     // Functions
     static TVector3 ZeroVector() { return TVector3(); }
     static TVector3 IdentityVector() { return TVector3(1); }
-    
+
     void Normalize()
     {
         X = T(1.0) / X;
@@ -197,10 +199,12 @@ struct TVector3
 template <typename T>
 struct TVector4
 {
+    static_assert(std::is_floating_point_v<T>, "Type is not floating point.");
+
     // Memory aligned coordinate values
     union
     {
-        struct
+        struct  // NOLINT(clang-diagnostic-nested-anon-types)
         {
             T X;
             T Y;
@@ -213,15 +217,12 @@ struct TVector4
     // Constructors
     TVector4() : X(0), Y(0), Z(0), W(0)
     {
-        CHECK_FP_TYPE(T)
     }
     TVector4(T InX) : X(InX), Y(InX), Z(InX), W(InX)
     {
-        CHECK_FP_TYPE(T)
     }
     TVector4(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
     {
-        CHECK_FP_TYPE(T)
     }
 
     // Functions
@@ -238,7 +239,7 @@ struct TVector4
     TVector4 Normalized() const { return {T(1.0) / X, T(1.0) / Y, T(1.0) / Z, T(1.0) / W}; }
 
     constexpr std::string ToString() const { return std::format("[{}, {}, {}, {}]", X, Y, Z, W); }
-    
+
     // Operators
     TVector4 operator+(const TVector4& V) const { return {X + V.X, Y + V.Y, Z + V.Z, W + V.W}; }
     TVector4& operator +=(const TVector4& V)
