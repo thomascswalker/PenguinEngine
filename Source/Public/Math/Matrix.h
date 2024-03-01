@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Math.h"
-#include "Types.h"
+#include "MathFwd.h"
 #include "Vector.h"
 #include "Plane.h"
 
@@ -43,6 +43,22 @@ struct TMatrix
         M[3][2] = InW.Z;
         M[3][3] = InW.W;
     }
+    TMatrix(const TMatrix& Other)
+    {
+        std::memcpy(M, &Other.M, 16 * sizeof(T));
+    }
+    TMatrix(TMatrix&& Other) noexcept
+    {
+        std::memcpy(M, &Other.M, 16 * sizeof(T));
+    }
+
+    TMatrix& operator=(const TMatrix& Other)
+    {
+        std::memcpy(M, &Other.M, 16 * sizeof(T));
+        return *this;
+    }
+
+    // Functions
 
     bool Equals(const TMatrix& Other, float Threshold = 0.00001f) const
     {
@@ -161,7 +177,7 @@ struct TMatrix
             return GetIdentity();
         }
         Determinant = 1.0f / Determinant;
-        
+
         T A2323 = M[2][2] * M[3][3] - M[2][3] * M[3][2];
         T A1323 = M[2][1] * M[3][3] - M[2][3] * M[3][1];
         T A1223 = M[2][1] * M[3][2] - M[2][2] * M[3][1];
@@ -242,7 +258,6 @@ struct TMatrix
         return Out;
     }
 
-    // Operators
     TMatrix operator+(const TMatrix& Other)
     {
         TMatrix Result;

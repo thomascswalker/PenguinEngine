@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Math/Rect.h"
-#include "Math/Types.h"
+#include "..\..\Math\MathFwd.h"
 
 class IPlatform
 {

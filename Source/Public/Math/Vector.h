@@ -3,21 +3,13 @@
 #include <format>
 
 #include "Math.h"
-#include "Types.h"
+#include "MathFwd.h"
 
-template <typename T>
-struct TVector2;
-template <typename T>
-struct TVector3;
-template <typename T>
-struct TVector4;
-
-typedef TVector2<float> PVector2;
-typedef TVector2<double> PVector2d;
-typedef TVector3<float> PVector3;
-typedef TVector3<double> PVector3d;
-typedef TVector4<float> PVector4;
-typedef TVector4<double> PVector4d;
+// Alias for 'float[4]'
+struct alignas(4) TVectorRegister
+{
+    float V[4];
+};
 
 template <typename T>
 struct TVector2
@@ -61,6 +53,11 @@ struct TVector2
         Y = T(1.0) / Y;
     }
     TVector2 Normalized() const { return {T(1.0) / X, T(1.0) / Y}; }
+
+    static float VectorSign(const TVector2<T>& Vec, const TVector2<T>& A, const TVector2<T>& B)
+    {
+        return Math::Sign((B.X - A.X) * (Vec.Y - A.Y) - (B.Y - A.Y) * (Vec.X - A.X));
+    }
 
     constexpr std::string ToString() const { return std::format("[{}, {}]", X, Y); }
 
@@ -257,6 +254,16 @@ struct TVector4
     }
     TVector4 Normalized() const { return {T(1.0) / X, T(1.0) / Y, T(1.0) / Z, T(1.0) / W}; }
 
+    TVectorRegister Register() const
+    {
+        TVectorRegister Reg;
+        Reg.V[0] = X;
+        Reg.V[1] = Y;
+        Reg.V[2] = Z;
+        Reg.V[3] = W;
+        return Reg;
+    }
+
     constexpr std::string ToString() const { return std::format("[{}, {}, {}, {}]", X, Y, Z, W); }
 
     // Operators
@@ -303,18 +310,38 @@ struct TVector4
 
 namespace Math
 {
-    static float VectorSign(const PVector2& Vec, const PVector2& A, const PVector2& B)
+    template <typename T>
+    static TVector3<T> Cross(const TVector3<T>& A, const TVector3<T>& B)
     {
-        return Sign((B.X - A.X) * (Vec.Y - A.Y) - (B.Y - A.Y) * (Vec.X - A.X));
+        return TVector3<T>{
+            A.Y * B.Z - A.Z * B.Y,
+            A.X * B.Z - A.Z * B.X,
+            A.X * B.Y - A.Y * B.X
+        };
     }
 
+    template <typename T>
+    static T Dot(const TVector3<T>& A, const TVector3<T>& B)
+    {
+        T Result = 0;
+        for (int32 Index = 0; Index < 3; Index++)
+        {
+            Result += A.XYZ[Index] * B[Index];
+        }
+        return Result;
+    }
+}
+
+template <typename T>
+struct TBarycentric
+{
     // Returns true when the point is inside the triangle
     // Should not return true when the point is on one of the edges
-    static bool IsPointInTriangle(const PVector2& TestPoint, const PVector2& A, const PVector2& B, const PVector2& C)
+    static bool IsPointInTriangle(const TVector2<T>& Point, const TVector2<T>& A, const TVector2<T>& B, const TVector2<T>& C)
     {
-        const float BA = VectorSign(B, A, TestPoint);
-        const float CB = VectorSign(C, B, TestPoint);
-        const float AC = VectorSign(A, C, TestPoint);
+        const float BA = TVector2<T>::VectorSign(B, A, Point);
+        const float CB = TVector2<T>::VectorSign(C, B, Point);
+        const float AC = TVector2<T>::VectorSign(A, C, Point);
 
         // point is in the same direction of all 3 tri edge lines
         // must be inside, regardless of tri winding
@@ -322,20 +349,25 @@ namespace Math
     }
 
     // Muller-Trumbore ray triangle intersect
-    static bool ClosestPointBarycentrics(const PVector3& P, const PVector3& V0, const PVector3& V1, const PVector3& V2, PVector3& UVW)
+    static bool GetBarycentric(const TVector3<T>& Point, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2, TVector3<T>& UVW)
     {
+        if (!IsPointInTriangle({Point.X, Point.Y}, {V0.X, V0.Y}, {V1.X, V1.Y}, {V2.X, V2.Y}))
+        {
+            return false;
+        }
+
         const PVector3 Edge01 = V1 - V0;
         const PVector3 Edge02 = V2 - V0;
-        const PVector3 Origin = P - V0;
-        
-        const PVector3 Normal = Edge02.Cross(Edge01);
-        const PVector3 Dir = Normal.Cross(Edge02);
-        const float InvDet = 1.0f / Edge01.Dot(Dir);
-        
-        UVW.Y = InvDet * Origin.Dot(Dir);
-        UVW.Z = InvDet * Normal.Dot(Origin.Cross(Edge01));
+        const PVector3 Origin = Point - V0;
+
+        const PVector3 Normal = Math::Cross(Edge02, Edge01);
+        const PVector3 Dir = Math::Cross(Normal, Edge02);
+        const float InvDet = 1.0f / Math::Dot(Edge01, Dir);
+
+        UVW.Y = InvDet * Math::Dot(Origin, Dir);
+        UVW.Z = InvDet * Math::Dot(Normal, Math::Cross(Origin, Edge01));
         UVW.X = 1.0f - UVW.Y - UVW.Z;
 
         return true;
     }
-}
+};

@@ -2,7 +2,6 @@
 
 #include "Framework/Core/Logging.h"
 #include "Framework/Engine/Engine.h"
-#include "Math/Types.h"
 
 #if _WIN32
     #include <windows.h>
@@ -68,29 +67,26 @@ void PRenderer::DrawTriangle(const PVector3& V0, const PVector3& V1, const PVect
     PVector3 V1ScreenPosition;
     PVector3 V2ScreenPosition;
 
-    Viewport->ProjectWorldToScreen(V0, Viewport->MVP, V0ScreenPosition);
-    Viewport->ProjectWorldToScreen(V1, Viewport->MVP, V1ScreenPosition);
-    Viewport->ProjectWorldToScreen(V2, Viewport->MVP, V2ScreenPosition);
+    const PMatrix4* MVP = Viewport->GetViewProjectionMatrix();
+    Viewport->ProjectWorldToScreen(V0, *MVP, V0ScreenPosition);
+    Viewport->ProjectWorldToScreen(V1, *MVP, V1ScreenPosition);
+    Viewport->ProjectWorldToScreen(V2, *MVP, V2ScreenPosition);
 
     for (uint32 Y = 0; Y < Buffer->Height; Y++)
     {
         for (uint32 X = 0; X < Buffer->Width; X++)
         {
             PVector3 Point(X, Y, 0.0f); // NOLINT
-            if (!Math::IsPointInTriangle({Point.X, Point.Y},
-                                   {V0ScreenPosition.X, V0ScreenPosition.Y},
-                                   {V1ScreenPosition.X, V1ScreenPosition.Y},
-                                   {V2ScreenPosition.X, V2ScreenPosition.Y}))
+            PVector3 UVW;
+            if (!PBarycentric::GetBarycentric(Point, V0ScreenPosition, V1ScreenPosition, V2ScreenPosition, UVW))
             {
                 continue;
             }
 
-            PVector3 UVW;
-            Math::ClosestPointBarycentrics(Point, V0ScreenPosition, V1ScreenPosition, V2ScreenPosition, UVW);
-
             const uint8 R = UVW.X * 255; // NOLINT
             const uint8 G = UVW.Y * 255; // NOLINT
-            Buffer->SetPixel(X, Y, PColor::FromRgba(R, G, 150));
+            const uint8 B = 255;
+            Buffer->SetPixel(X, Y, PColor::FromRgba(R, G, B));
         }
     }
 }
@@ -104,22 +100,21 @@ void PRenderer::DrawMesh(const PMesh* Mesh) const
         const uint32 V1Idx = Mesh->Indices[StartIndex + 1];
         const uint32 V2Idx = Mesh->Indices[StartIndex + 2];
 
-        auto V0 = Mesh->Vertices[V0Idx];
-        auto V1 = Mesh->Vertices[V1Idx];
-        auto V2 = Mesh->Vertices[V2Idx];
+        const PVector3* V0 = &Mesh->Vertices[V0Idx];
+        const PVector3* V1 = &Mesh->Vertices[V1Idx];
+        const PVector3* V2 = &Mesh->Vertices[V2Idx];
 
-        DrawTriangle(V0, V1, V2);
+        DrawTriangle(*V0, *V1, *V2);
     }
 }
 void PRenderer::Render() const
 {
-    Viewport->GetInfo()->ViewOrigin = {CAMERA_X, CAMERA_Y, CAMERA_Z};
-    Viewport->MVP = Viewport->GetInfo()->ComputeViewProjectionMatrix();
+    Viewport->UpdateViewProjectionMatrix({CAMERA_X, CAMERA_Y, CAMERA_Z});
 
     Buffer->Fill(PColor::Black());
 
     const PEngine* Engine = PEngine::GetInstance();
-    for (auto Mesh : Engine->GetMeshes())
+    for (const auto& Mesh : Engine->GetMeshes())
     {
         DrawMesh(Mesh.get());
     }

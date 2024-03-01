@@ -5,7 +5,7 @@
 #include "Viewport.h"
 #include "Framework/Engine/Mesh.h"
 #include "Math/Color.h"
-#include "Math/Types.h"
+#include "..\..\Math\MathFwd.h"
 
 #define BYTES_PER_CHANNEL 8
 #define BYTES_PER_PIXEL 32

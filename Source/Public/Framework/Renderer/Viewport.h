@@ -1,6 +1,7 @@
 ﻿#pragma once
+
 #include "Math/Matrix.h"
-#include "Math/Types.h"
+#include "..\..\Math\MathFwd.h"
 #include "Math/Vector.h"
 
 #define DEFAULT_VIEWPORT_WIDTH 640
@@ -40,17 +41,19 @@ struct PViewInfo
 class PViewport
 {
     std::shared_ptr<PViewInfo> Info;
+    PMatrix4 MVP;
 
 public:
-    PMatrix4 MVP;
-    
     PViewport(uint32 InWidth, uint32 InHeight);
     void Resize(uint32 InWidth, uint32 InHeight) const;
 
     uint32 GetWidth() const { return Info->Width; }
     uint32 GetHeight() const { return Info->Height; }
-    PVector2 GetSize() const { return PVector2(Info->Width, Info->Height); }  // NOLINT
+    PVector2 GetSize() const { return PVector2(Info->Width, Info->Height); } // NOLINT
 
     PViewInfo* GetInfo() const { return Info.get(); }
+
+    void UpdateViewProjectionMatrix(const PVector3& Location);
+    PMatrix4* GetViewProjectionMatrix() { return &MVP; }
     bool ProjectWorldToScreen(const PVector3& WorldPosition, const PMatrix4& ViewProjectionMatrix, PVector3& ScreenPosition) const;
 };

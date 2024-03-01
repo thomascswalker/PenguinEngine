@@ -1,9 +1,6 @@
 ﻿#pragma once
 
-template <typename T> struct TRect;
-typedef TRect<int> PRectI;
-typedef TRect<float> PRectF;
-typedef TRect<double> PRectD;
+#include "MathFwd.h"
 
 template <typename T>
 struct TRect
