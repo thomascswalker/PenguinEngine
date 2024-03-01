@@ -179,6 +179,7 @@
     <ClCompile Include="Source\Private\Framework\Platforms\PlatformInterface.cpp" />
     <ClCompile Include="Source\Private\Framework\Platforms\WindowsPlatform.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Renderer.cpp" />
+    <ClCompile Include="Source\Private\Framework\Renderer\Viewport.cpp" />
     <ClCompile Include="Source\Private\Math\Matrix.cpp" />
     <ClCompile Include="Source\Private\Math\Color.cpp" />
     <ClCompile Include="Source\Private\Math\Rect.cpp" />
@@ -191,11 +192,15 @@
     <ClInclude Include="Source\Public\Framework\Core\Logging.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Engine.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Mesh.h" />
+    <ClInclude Include="Source\Public\Framework\Engine\Timer.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformInterface.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\WindowsPlatform.h" />
+    <ClInclude Include="Source\Public\Framework\Renderer\Viewport.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Renderer.h" />
+    <ClInclude Include="Source\Public\Math\Math.h" />
     <ClInclude Include="Source\Public\Math\Matrix.h" />
     <ClInclude Include="Source\Public\Math\Color.h" />
+    <ClInclude Include="Source\Public\Math\Plane.h" />
     <ClInclude Include="Source\Public\Math\Rect.h" />
     <ClInclude Include="Source\Public\Math\Types.h" />
     <ClInclude Include="Source\Public\Math\Vector.h" />

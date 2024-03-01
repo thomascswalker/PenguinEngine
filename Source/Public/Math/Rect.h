@@ -1,9 +1,9 @@
 ﻿#pragma once
 
 template <typename T> struct TRect;
-typedef TRect<int> RectI;
-typedef TRect<float> RectF;
-typedef TRect<double> RectD;
+typedef TRect<int> PRectI;
+typedef TRect<float> PRectF;
+typedef TRect<double> PRectD;
 
 template <typename T>
 struct TRect

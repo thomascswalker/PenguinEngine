@@ -1,9 +1,8 @@
 ﻿#pragma once
 
-#include <stdexcept>
-#include <type_traits>
 #include <format>
 
+#include "Math.h"
 #include "Types.h"
 
 template <typename T>
@@ -13,12 +12,12 @@ struct TVector3;
 template <typename T>
 struct TVector4;
 
-typedef TVector2<float> Vector2;
-typedef TVector2<double> Vector2d;
-typedef TVector3<float> Vector3;
-typedef TVector3<double> Vector3d;
-typedef TVector4<float> Vector4;
-typedef TVector4<double> Vector4d;
+typedef TVector2<float> PVector2;
+typedef TVector2<double> PVector2d;
+typedef TVector3<float> PVector3;
+typedef TVector3<double> PVector3d;
+typedef TVector4<float> PVector4;
+typedef TVector4<double> PVector4d;
 
 template <typename T>
 struct TVector2
@@ -28,7 +27,7 @@ struct TVector2
     // Memory aligned coordinate values
     union
     {
-        struct  // NOLINT(clang-diagnostic-nested-anon-types)
+        struct // NOLINT(clang-diagnostic-nested-anon-types)
         {
             T X;
             T Y;
@@ -39,15 +38,17 @@ struct TVector2
     // Constructors
     TVector2() : X(0), Y(0)
     {
-        CHECK_FP_TYPE(T)
     }
     TVector2(T InX) : X(InX), Y(InX)
     {
-        CHECK_FP_TYPE(T)
     }
-    TVector2(T InX, T InY, T InZ) : X(InX), Y(InY)
+    TVector2(T InX, T InY) : X(InX), Y(InY)
     {
-        CHECK_FP_TYPE(T)
+    }
+    TVector2(const std::initializer_list<T>& Values)
+    {
+        X = *(Values.begin());
+        Y = *(Values.begin() + 1);
     }
 
     // Functions
@@ -105,7 +106,7 @@ struct TVector3
     // Memory aligned coordinate values
     union
     {
-        struct  // NOLINT(clang-diagnostic-nested-anon-types)
+        struct // NOLINT(clang-diagnostic-nested-anon-types)
         {
             T X;
             T Y;
@@ -123,6 +124,12 @@ struct TVector3
     }
     TVector3(T InX, T InY, T InZ) : X(InX), Y(InY), Z(InZ)
     {
+    }
+    TVector3(const std::initializer_list<T>& Values)
+    {
+        X = *(Values.begin());
+        Y = *(Values.begin() + 1);
+        Z = *(Values.begin() + 2);
     }
 
     // Functions
@@ -148,7 +155,7 @@ struct TVector3
 
     T Dot(const TVector3& V) const
     {
-        T Result;
+        T Result = 0;
         for (int32 Index = 0; Index < 3; Index++)
         {
             Result += XYZ[Index] * V[Index];
@@ -191,6 +198,8 @@ struct TVector3
         Z /= V.Z;
         return *this;
     }
+    bool operator==(const TVector3& V) const { return X == V.X && Y == V.Y && Z == V.Z; }
+    bool operator!=(const TVector3& V) const { return X != V.X || Y != V.Y || Z != V.Z; }
 
     T operator[](int32 Index) const { return XYZ[Index]; }
     T& operator[](int32 Index) { return XYZ[Index]; }
@@ -204,7 +213,7 @@ struct TVector4
     // Memory aligned coordinate values
     union
     {
-        struct  // NOLINT(clang-diagnostic-nested-anon-types)
+        struct // NOLINT(clang-diagnostic-nested-anon-types)
         {
             T X;
             T Y;
@@ -222,6 +231,16 @@ struct TVector4
     {
     }
     TVector4(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
+    {
+    }
+    TVector4(const std::initializer_list<T>& Values)
+    {
+        X = *(Values.begin());
+        Y = *(Values.begin() + 1);
+        Z = *(Values.begin() + 2);
+        W = *(Values.begin() + 3);
+    }
+    TVector4(const PVector3& V, float InW) : X(V.X), Y(V.Y), Z(V.Z), W(InW)
     {
     }
 
@@ -281,3 +300,42 @@ struct TVector4
     T operator[](int32 Index) const { return XYZW[Index]; }
     T& operator[](int32 Index) { return XYZW[Index]; }
 };
+
+namespace Math
+{
+    static float VectorSign(const PVector2& Vec, const PVector2& A, const PVector2& B)
+    {
+        return Sign((B.X - A.X) * (Vec.Y - A.Y) - (B.Y - A.Y) * (Vec.X - A.X));
+    }
+
+    // Returns true when the point is inside the triangle
+    // Should not return true when the point is on one of the edges
+    static bool IsPointInTriangle(const PVector2& TestPoint, const PVector2& A, const PVector2& B, const PVector2& C)
+    {
+        const float BA = VectorSign(B, A, TestPoint);
+        const float CB = VectorSign(C, B, TestPoint);
+        const float AC = VectorSign(A, C, TestPoint);
+
+        // point is in the same direction of all 3 tri edge lines
+        // must be inside, regardless of tri winding
+        return BA == CB && CB == AC; // NOLINT
+    }
+
+    // Muller-Trumbore ray triangle intersect
+    static bool ClosestPointBarycentrics(const PVector3& P, const PVector3& V0, const PVector3& V1, const PVector3& V2, PVector3& UVW)
+    {
+        const PVector3 Edge01 = V1 - V0;
+        const PVector3 Edge02 = V2 - V0;
+        const PVector3 Origin = P - V0;
+        
+        const PVector3 Normal = Edge02.Cross(Edge01);
+        const PVector3 Dir = Normal.Cross(Edge02);
+        const float InvDet = 1.0f / Edge01.Dot(Dir);
+        
+        UVW.Y = InvDet * Origin.Dot(Dir);
+        UVW.Z = InvDet * Normal.Dot(Origin.Cross(Edge01));
+        UVW.X = 1.0f - UVW.Y - UVW.Z;
+
+        return true;
+    }
+}

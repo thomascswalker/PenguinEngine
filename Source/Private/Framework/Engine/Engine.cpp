@@ -1,6 +1,8 @@
 ﻿#include <Framework/Engine/Engine.h>
 #include <Framework/Engine/Mesh.h>
 
+#include "Framework/Engine/Timer.h"
+
 PEngine* PEngine::Instance = GetInstance();
 
 PEngine* PEngine::GetInstance()
@@ -19,10 +21,17 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     Renderer = std::make_shared<PRenderer>(InWidth, InHeight);
     bRunning = true;
 
+    // Track starting time
+    StartTime = PTimer::Now();
+
     // Construct a simple triangle mesh
-    if (std::shared_ptr<PMesh> TriangleMesh = PMesh::Triangle())
+    if (auto Plane = PMesh::CreatePlane(0.5f))
     {
-        Meshes.emplace_back(TriangleMesh);
+        Meshes.emplace_back(Plane);
+    }
+    if (auto Tri = PMesh::CreateTriangle(0.25f))
+    {
+        Meshes.emplace_back(Tri);
     }
 
     LOG_INFO("Renderer constructed.")
@@ -36,7 +45,9 @@ bool PEngine::Shutdown()
     return true;
 }
 
-void PEngine::Tick(float DeltaTime)
+void PEngine::Tick()
 {
-    // LOG_INFO("EngineTick: {}", DeltaTime)
+    TimePoint EndTime = PTimer::Now();
+    DeltaTime = std::chrono::duration_cast<DurationMs>(EndTime - StartTime).count();
+    StartTime = PTimer::Now();
 }
