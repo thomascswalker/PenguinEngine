@@ -1,22 +1,21 @@
-﻿#include <assert.h>
+﻿#include <cassert>
 #include <Framework/Platforms/WindowsPlatform.h>
 
 #include "Framework/Application.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
+#include "Framework/Engine/Timer.h"
 
 #ifndef WINDOWS_TIMER_ID
     #define WINDOWS_TIMER_ID 1001
 #endif
 
-
 // ReSharper disable CppParameterMayBeConst
 LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
-    PWindowsPlatform* Platform = Cast<PWindowsPlatform>(PApplication::GetInstance()->GetPlatform());
     PEngine* Engine = PEngine::GetInstance();
-    PRenderer* Renderer = Engine->GetRenderer();
+    const PRenderer* Renderer = Engine->GetRenderer();
 
     switch (Msg)
     {
@@ -28,7 +27,6 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
         }
     case WM_DESTROY :
         {
-            PEngine* Engine = PEngine::GetInstance();
             Engine->Shutdown();
             PostQuitMessage(0);
             return 0;
@@ -40,24 +38,49 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
                 break;
             }
+
+            // Get the current window size from the buffer
+            const PBuffer* Buffer = Renderer->GetBuffer();
+            const uint32 Width = Buffer->Width;
+            const uint32 Height = Buffer->Height;
+
+            // Create a bitmap with the current renderer buffer memory the size of the window
             InvalidateRect(Hwnd, nullptr, TRUE);
             PAINTSTRUCT Paint;
             const HDC DeviceContext = BeginPaint(Hwnd, &Paint);
-
-            HDC RenderContext = CreateCompatibleDC(DeviceContext);
-            PBuffer* Buffer = Renderer->GetBuffer();
-            int Width = Buffer->Width;
-            int Height = Buffer->Height;
-
-            HBITMAP Bitmap = CreateBitmap(Width, Height, 1, 32, Buffer->Memory);
+            const HDC RenderContext = CreateCompatibleDC(DeviceContext);
+            const HBITMAP Bitmap = CreateBitmap(Width, Height, 1, 32, Buffer->Memory); // NOLINT
             SelectObject(RenderContext, Bitmap);
-            if (!BitBlt(DeviceContext, 0, 0, Width, Height, RenderContext, 0, 0, SRCCOPY))
+            if (!BitBlt(DeviceContext, 0, 0, Width, Height, RenderContext, 0, 0, SRCCOPY)) // NOLINT
             {
                 LOG_ERROR("Failed during BitBlt")
                 Result = 1;
             }
+
+            // Draw text indicating the current FPS
+            RECT ClientRect;
+            GetClientRect(Hwnd, &ClientRect);
+            ClientRect.top += 10;
+            ClientRect.right -= 10;
+
+            std::string FpsMessage = std::to_string(static_cast<uint32>(Engine->GetFps()));
+            SetTextColor(DeviceContext, RGB(0, 255, 0));
+            SetBkColor(DeviceContext, TRANSPARENT);
+            DrawText(
+                DeviceContext, // DC
+                std::wstring(FpsMessage.begin(), FpsMessage.end()).c_str(), // Message
+                -1,
+                &ClientRect, // Client rectangle (the window)
+                DT_TOP | DT_RIGHT // Drawing options
+            );
+
+            // Cleanup and end painting
             ReleaseDC(Hwnd, DeviceContext);
+            DeleteDC(DeviceContext);
+            DeleteDC(RenderContext);
+            DeleteObject(Bitmap);
             EndPaint(Hwnd, &Paint);
+
             break;
         }
     case WM_SIZE :
@@ -71,13 +94,13 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
             const int Height = HIWORD(LParam);
 
             // Update the renderer size
-            Renderer->SetSize(Width, Height);
-
-            // Re-allocate the buffer memory
-            Renderer->Realloc();
-
-            // Update the bitmap info
-            Platform->UpdateBitmapInfo();
+            Renderer->Resize(Width, Height);
+            break;
+        }
+    case WM_EXITSIZEMOVE :
+    case WM_ERASEBKGND :
+        {
+            InvalidateRect(Hwnd, nullptr, TRUE);
             break;
         }
     // Timer called every ms to update
@@ -139,7 +162,7 @@ bool PWindowsPlatform::Register()
     return true;
 }
 
-int PWindowsPlatform::Create()
+uint32 PWindowsPlatform::Create()
 {
     bInitialized = Register();
     if (!bInitialized)
@@ -150,7 +173,7 @@ int PWindowsPlatform::Create()
     return Success;
 }
 
-int PWindowsPlatform::Show()
+uint32 PWindowsPlatform::Show()
 {
     if (!bInitialized)
     {
@@ -163,7 +186,7 @@ int PWindowsPlatform::Show()
     return Success;
 }
 
-int PWindowsPlatform::Start()
+uint32 PWindowsPlatform::Start()
 {
     if (!bInitialized)
     {
@@ -171,60 +194,44 @@ int PWindowsPlatform::Start()
         return PlatformStartError; // Start failure
     }
 
-    // Start a clock to track DeltaTime
-    clock_t Time = clock();
-
     // Start the actual engine
     PEngine* Engine = PEngine::GetInstance();
-    
+
     // Initialize the engine
     RECT ClientRect;
-    GetWindowRect(Hwnd, &ClientRect);
+    GetClientRect(Hwnd, &ClientRect);
     Engine->Startup(ClientRect.right, ClientRect.bottom);
+    // InvalidateRect(Hwnd, nullptr, FALSE);
 
-    // Windows loop
-    LOG_INFO("Beginning engine loop.")
-    while (Engine->IsRunning())
+    // Process all messages and update the window
+    LOG_DEBUG("Engine loop start")
+    MSG Msg = {};
+    while (Engine->IsRunning() && GetMessage(&Msg, nullptr, 0, 0) > 0)
     {
-        LOG_DEBUG("Engine loop start")
+        TranslateMessage(&Msg);
+        DispatchMessage(&Msg);
 
-        InvalidateRect(Hwnd, nullptr, FALSE);
-
-        // Process all messages and update the window
-        MSG Msg = {};
-        while (GetMessage(&Msg, nullptr, 0, 0) > 0)
+        // Loop, converting DeltaTime from milliseconds to seconds
+        if (const uint32 LoopResult = Loop())
         {
-            TranslateMessage(&Msg);
-            DispatchMessage(&Msg);
-
-            // Get delta time in milliseconds
-            const float DeltaTime = static_cast<float>(clock() - Time);
-
-            // Loop, converting DeltaTime from milliseconds to seconds
-            if (const int LoopResult = Loop(1.0f / DeltaTime))
-            {
-                LOG_ERROR("Loop failed (PWindowsPlatform::Start).")
-                return LoopResult; // Start failure
-            }
-            Time = clock();
+            LOG_ERROR("Loop failed (PWindowsPlatform::Start).")
+            return LoopResult; // Start failure
         }
-
-        UpdateWindow(Hwnd);
     }
     LOG_INFO("Ending engine loop.")
 
     return End();
 }
 
-int PWindowsPlatform::Loop(float DeltaTime)
+uint32 PWindowsPlatform::Loop()
 {
     // Tick the engine forward
     if (PEngine* Engine = PEngine::GetInstance())
     {
-        Engine->Tick(DeltaTime);
+        Engine->Tick();
 
         // Render the frame
-        if (PRenderer* Renderer = Engine->GetRenderer())
+        if (const PRenderer* Renderer = Engine->GetRenderer())
         {
             Renderer->Render();
             return Success;
@@ -233,12 +240,17 @@ int PWindowsPlatform::Loop(float DeltaTime)
     return PlatformLoopError;
 }
 
-int PWindowsPlatform::End()
+uint32 PWindowsPlatform::Paint()
+{
+    return 0;
+}
+
+uint32 PWindowsPlatform::End()
 {
     return Success;
 }
 
-RectI PWindowsPlatform::GetSize()
+PRectI PWindowsPlatform::GetSize()
 {
     RECT OutRect;
 

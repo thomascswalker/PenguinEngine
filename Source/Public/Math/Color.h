@@ -19,8 +19,28 @@ struct PColor
         uint8 RGBA[4];
     };
 
-    static PColor FromRgba(const uint8 R, const uint8 G, const uint8 B, const uint8 A = 255);
-    void Clamp();
+protected:
+    PColor(uint8 InR, uint8 InG, uint8 InB, uint8 InA = 255)
+    {
+        R = InR;
+        G = InG;
+        B = InB;
+        A = InA;
+    }
+
+public:
+    static PColor Red() { return FromRgba(255, 0, 0); }
+    static PColor Blue() { return FromRgba(0, 255, 0); }
+    static PColor Green() { return FromRgba(0, 0, 255); }
+
+    static PColor Yellow() { return FromRgba(255, 255, 0); }
+    static PColor Cyan() { return FromRgba(0, 255, 255); }
+    static PColor Magenta() { return FromRgba(255, 0, 255); }
+
+    static PColor White() { return FromRgba(255, 255, 255); }
+    static PColor Black() { return FromRgba(0, 0, 0); }
+
+    static PColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
 };
 
 struct PLinearColor

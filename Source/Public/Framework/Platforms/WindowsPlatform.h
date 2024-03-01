@@ -4,6 +4,7 @@
 
 #include "Framework/Core/Core.h"
 #include "PlatformInterface.h"
+#include "Framework/Renderer/Viewport.h"
 
 class PWindowsPlatform : public IPlatform
 {
@@ -12,11 +13,10 @@ class PWindowsPlatform : public IPlatform
     LPCWSTR WindowName = L"Penguin Renderer";
     HWND Hwnd = nullptr;
     DWORD DefaultStyle = WS_OVERLAPPEDWINDOW;
-    int DefaultX = CW_USEDEFAULT;
-    int DefaultY = CW_USEDEFAULT;
-    int DefaultWidth = CW_USEDEFAULT;
-    int DefaultHeight = CW_USEDEFAULT;
-    BITMAPINFO BitmapInfo;
+    int32 DefaultX = CW_USEDEFAULT;
+    int32 DefaultY = CW_USEDEFAULT;
+    int32 DefaultWidth = DEFAULT_VIEWPORT_WIDTH;
+    int32 DefaultHeight = DEFAULT_VIEWPORT_HEIGHT;
 
     bool bInitialized = false;
 
@@ -25,40 +25,19 @@ class PWindowsPlatform : public IPlatform
 
 public:
     // Platform interface
-    int Create() override;
-    int Show() override;
-    int Start() override;
-    int Loop(float DeltaTime) override;
-    int End() override;
+    uint32 Create() override;
+    uint32 Show() override;
+    uint32 Start() override;
+    uint32 Loop() override;
+    uint32 Paint() override;
+    uint32 End() override;
     bool IsInitialized() const override { return bInitialized; }
 
     // Windows
     PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance)
     {
-        InitBitmapInfo();
     }
     HWND GetHWnd() const { return Hwnd; }
     void SetHInstance(HINSTANCE NewInstance) { HInstance = NewInstance; }
-    RectI GetSize() override;
-
-    void InitBitmapInfo()
-    {
-        BitmapInfo.bmiHeader.biSize = sizeof(GetBitmapInfo()->bmiHeader);
-        BitmapInfo.bmiHeader.biWidth = DefaultWidth;
-        BitmapInfo.bmiHeader.biHeight = -DefaultHeight; // Otherwise Y is inverted
-        BitmapInfo.bmiHeader.biPlanes = 1;
-        BitmapInfo.bmiHeader.biBitCount = 32;
-        BitmapInfo.bmiHeader.biCompression = BI_RGB;
-    }
-    BITMAPINFO* GetBitmapInfo()
-    {
-        UpdateBitmapInfo();
-        return &BitmapInfo;
-    }
-    void UpdateBitmapInfo()
-    {
-        const RectI Size = GetSize();
-        BitmapInfo.bmiHeader.biWidth = Size.Width;
-        BitmapInfo.bmiHeader.biHeight = Size.Height;
-    }
+    PRectI GetSize() override;
 };

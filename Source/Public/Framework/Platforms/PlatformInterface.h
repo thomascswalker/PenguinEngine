@@ -1,5 +1,7 @@
 ﻿#pragma once
+
 #include "Math/Rect.h"
+#include "Math/Types.h"
 
 class IPlatform
 {
@@ -7,13 +9,14 @@ public:
     virtual ~IPlatform() = default;
 
     // Core
-    virtual int Create() = 0;
-    virtual int Show() = 0;
-    virtual int Start() = 0;
-    virtual int Loop(float DeltaTime) = 0;
-    virtual int End() = 0;
+    virtual uint32 Create() = 0;
+    virtual uint32 Show() = 0;
+    virtual uint32 Start() = 0;
+    virtual uint32 Loop() = 0;
+    virtual uint32 Paint() = 0;
+    virtual uint32 End() = 0;
     virtual bool IsInitialized() const = 0;
 
     // Properties
-    virtual RectI GetSize() = 0;
+    virtual PRectI GetSize() = 0;
 };

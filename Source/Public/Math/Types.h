@@ -9,5 +9,3 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned int uint32;
 typedef unsigned long long uint64;
-
-#define CHECK_FP_TYPE(T) if (!std::is_floating_point<T>()) { throw std::runtime_error("Type is not floating point."); }
