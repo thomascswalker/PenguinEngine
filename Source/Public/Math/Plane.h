@@ -1,8 +1,5 @@
 ﻿#pragma once
 
-template <typename T> struct TPlane;
-typedef TPlane<float> PPlane;
-
 template <typename T>
 struct TPlane
 {

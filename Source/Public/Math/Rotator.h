@@ -1,44 +1,50 @@
 ﻿#pragma once
 
-#include "MathImpl.h"
+#include <format>
+#include "MathFwd.h"
 
 template <typename T>
 struct TRotator
 {
     // Rotation around Right axis (Y)
-    T Pitch;
+    T Pitch = 0;
     // Rotation around Up axis (Z)
-    T Yaw;
+    T Yaw = 0;
     // Rotation around Forward axis (X)
-    T Roll;
+    T Roll = 0;
 
     TRotator() = default;
-    explicit TRotator(const TQuat<T>& Q)
+    TRotator(TQuat<T>& Q);
+    TRotator(T InPitch, T InYaw, T InRoll) : Pitch(InPitch), Yaw(InYaw), Roll(InRoll)
     {
-        *this = Q.Rotator();
     }
+    TRotator(const TVector3<T>& Euler);
 
-    explicit TRotator(const TVector3<T>& Euler)
-    {
-        Pitch = Euler.Y;
-        Yaw = Euler.Z;
-        Roll = Euler.X;
-    }
+    static TRotator Identity() { return TRotator(); }
+    TQuat<T> Quaternion() const;
 
-    T NormalizeAxis(T Angle) const
+    T NormalizeAxis(T Angle) const;
+    void Normalize();
+    std::string ToString() const { return std::format("[Pitch={}, Yaw={}, Roll={}]", Pitch, Yaw, Roll); }
+
+    TRotator operator+(const TRotator& Other)
     {
-        Angle = Math::Clamp(Angle, 0, 360);
-        if (Angle > static_cast<T>(180.0))
-        {
-            Angle -= static_cast<T>(360.0);
-        }
-        return Angle;
+        TRotator Out;
+        Out.Pitch = Pitch + Other.Pitch;
+        Out.Yaw = Yaw + Other.Yaw;
+        Out.Roll = Roll + Other.Roll;
+        return Out;
     }
-    
-    void Normalize()
+    TRotator& operator+=(const TRotator& Other)
     {
-        Pitch = NormalizeAxis(Pitch);
-        Yaw = NormalizeAxis(Yaw);
-        Roll = NormalizeAxis(Roll);
+        *this = *this + Other;
+        return *this;
+    }
+    TRotator operator*(T Scale) const
+    {
+        return {Pitch * Scale, Yaw * Scale, Roll * Scale};
     }
 };
+
+template <>
+FQuat FRotator::Quaternion() const;

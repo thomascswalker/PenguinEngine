@@ -1,7 +1,6 @@
 ﻿#include <cassert>
 #include <Framework/Platforms/WindowsPlatform.h>
 
-#include "Framework/Application.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
 #include "Framework/Engine/Timer.h"
@@ -10,12 +9,17 @@
     #define WINDOWS_TIMER_ID 1001
 #endif
 
-// ReSharper disable CppParameterMayBeConst
-LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+const float MovementSpeed = 0.01f;
+bool bShowText = true;
+
+LRESULT PWindowsPlatform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
     PEngine* Engine = PEngine::GetInstance();
     const PRenderer* Renderer = Engine->GetRenderer();
+
+    WORD KeyCode;
+    WORD KeyFlags;
 
     switch (Msg)
     {
@@ -30,6 +34,49 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
             Engine->Shutdown();
             PostQuitMessage(0);
             return 0;
+        }
+    case WM_KEYDOWN :
+    case WM_SYSKEYDOWN :
+        {
+            KeyCode = LOWORD(WParam);
+            KeyFlags = HIWORD(LParam);
+
+            switch (KeyCode)
+            {
+            // Forward
+            case 'W' :
+                Renderer->GetViewport()->AddViewTranslation(FVector3::ForwardVector() * MovementSpeed);
+                break;
+            // Backward
+            case 'S' :
+                Renderer->GetViewport()->AddViewTranslation(FVector3::ForwardVector() * -MovementSpeed);
+                break;
+            // Right
+            case 'D' :
+                Renderer->GetViewport()->AddViewTranslation(FVector3::RightVector() * MovementSpeed);
+                break;
+            // Left
+            case 'A' :
+                Renderer->GetViewport()->AddViewTranslation(FVector3::RightVector() * -MovementSpeed);
+                break;
+            // Up
+            case 'Q' :
+                Renderer->GetViewport()->AddViewTranslation(FVector3::UpVector() * MovementSpeed);
+                break;
+            // Down
+            case 'E' :
+                Renderer->GetViewport()->AddViewTranslation(FVector3::UpVector() * -MovementSpeed);
+                break;
+            case 'T':
+                bShowText = !bShowText;
+                break;
+            case VK_ESCAPE :
+                Engine->SetRunning(false);
+                break;
+            default :
+                break;
+            }
+            break;
         }
     case WM_PAINT :
         {
@@ -57,22 +104,30 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
                 Result = 1;
             }
 
-            // Draw text indicating the current FPS
-            RECT ClientRect;
-            GetClientRect(Hwnd, &ClientRect);
-            ClientRect.top += 10;
-            ClientRect.right -= 10;
+            auto ViewString = Renderer->GetViewport()->GetInfo()->ViewRotationMatrix.ToString();
+            auto ProjString = Renderer->GetViewport()->GetInfo()->ProjectionMatrix.ToString();
+            auto MvpString = Renderer->GetViewport()->GetViewProjectionMatrix()->ToString();
 
-            std::string FpsMessage = std::to_string(static_cast<uint32>(Engine->GetFps()));
-            SetTextColor(DeviceContext, RGB(0, 255, 0));
-            SetBkColor(DeviceContext, TRANSPARENT);
-            DrawText(
-                DeviceContext, // DC
-                std::wstring(FpsMessage.begin(), FpsMessage.end()).c_str(), // Message
-                -1,
-                &ClientRect, // Client rectangle (the window)
-                DT_TOP | DT_RIGHT // Drawing options
-            );
+            if (bShowText)
+            {
+                // Draw text indicating the current FPS
+                RECT ClientRect;
+                GetClientRect(Hwnd, &ClientRect);
+                ClientRect.top += 10;
+                ClientRect.left += 10;
+
+                std::string FpsMessage = std::to_string(static_cast<uint32>(Engine->GetFps()));
+                std::string OutputMessage = std::format("FPS: {}\nResolution: [{}, {}]\nView: {}\nProjection: {}\nMVP: {}", FpsMessage, Width, Height, ViewString, ProjString, MvpString);
+                SetTextColor(DeviceContext, RGB(0, 255, 0));
+                SetBkColor(DeviceContext, TRANSPARENT);
+                DrawText(
+                    DeviceContext, // DC
+                    std::wstring(OutputMessage.begin(), OutputMessage.end()).c_str(), // Message
+                    -1,
+                    &ClientRect, // Client rectangle (the window)
+                    DT_TOP | DT_LEFT // Drawing options
+                );
+            }
 
             // Cleanup and end painting
             ReleaseDC(Hwnd, DeviceContext);
@@ -120,12 +175,14 @@ LRESULT CALLBACK AppWindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam
     return Result;
 }
 
+
+// ReSharper disable CppParameterMayBeConst
 bool PWindowsPlatform::Register()
 {
     // Register the window class.
     WNDCLASS WindowClass = {};
 
-    WindowClass.lpfnWndProc = AppWindowProc;
+    WindowClass.lpfnWndProc = WindowProc;
     WindowClass.hInstance = HInstance;
     WindowClass.lpszClassName = ClassName;
 
@@ -201,7 +258,6 @@ uint32 PWindowsPlatform::Start()
     RECT ClientRect;
     GetClientRect(Hwnd, &ClientRect);
     Engine->Startup(ClientRect.right, ClientRect.bottom);
-    // InvalidateRect(Hwnd, nullptr, FALSE);
 
     // Process all messages and update the window
     LOG_DEBUG("Engine loop start")
@@ -250,14 +306,14 @@ uint32 PWindowsPlatform::End()
     return Success;
 }
 
-PRectI PWindowsPlatform::GetSize()
+FRect PWindowsPlatform::GetSize()
 {
     RECT OutRect;
 
     if (GetWindowRect(GetHWnd(), &OutRect))
     {
-        int Width = OutRect.right - OutRect.left;
-        int Height = OutRect.bottom - OutRect.top;
+        float Width = static_cast<float>(OutRect.right - OutRect.left);
+        float Height = static_cast<float>(OutRect.bottom - OutRect.top);
         return {0, 0, Width, Height};
     }
 

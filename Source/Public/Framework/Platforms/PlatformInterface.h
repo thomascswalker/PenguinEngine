@@ -1,7 +1,6 @@
 ﻿#pragma once
 
-#include "Math/Rect.h"
-#include "..\..\Math\MathFwd.h"
+#include <Math/MathFwd.h>
 
 class IPlatform
 {
@@ -18,5 +17,5 @@ public:
     virtual bool IsInitialized() const = 0;
 
     // Properties
-    virtual PRectI GetSize() = 0;
+    virtual FRect GetSize() = 0;
 };

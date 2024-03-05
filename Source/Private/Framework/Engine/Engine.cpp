@@ -25,13 +25,9 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     StartTime = PTimer::Now();
 
     // Construct a simple triangle mesh
-    if (auto Plane = PMesh::CreatePlane(0.5f))
+    if (auto Mesh = PMesh::CreateSphere(0.5f, 6))
     {
-        Meshes.emplace_back(Plane);
-    }
-    if (auto Tri = PMesh::CreateTriangle(0.25f))
-    {
-        Meshes.emplace_back(Tri);
+        Meshes.emplace_back(Mesh);
     }
 
     LOG_INFO("Renderer constructed.")

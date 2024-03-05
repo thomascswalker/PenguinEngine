@@ -1,9 +1,7 @@
 ﻿#pragma once
 
-#include "Rotator.h"
-
 template <typename T>
-struct alignas(16) TQuat
+struct TQuat
 {
     union
     {
@@ -17,13 +15,17 @@ struct alignas(16) TQuat
         T XYZW[4];
     };
 
-    TQuat(){}
-    TQuat(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW){}
+    TQuat() : X(0), Y(0), Z(0), W(0)
+    {
+    }
+    TQuat(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
+    {
+    }
     TQuat(TVector3<T> Axis, T Angle)
     {
         const T HalfAngle = 0.5f * Angle;
         T S, C;
-        Math::SinCos(S, C, HalfAngle);
+        Math::SinCos(&S, &C, HalfAngle);
 
         X = S * Axis.X;
         Y = S * Axis.Y;
@@ -31,39 +33,61 @@ struct alignas(16) TQuat
         W = C;
     }
 
-    TRotator<T> Rotator()
+    TQuat(const TMatrix<T>& M)
     {
-        // Test for singularities, accounts for gimbal lock
-        // https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
-        const T SingularityTest = X * Y + Z * W;
-        const T YawX = 1.0f - 2.0f * (Math::Square(Y) + Math::Square(Z));
-        const T YawY = 2.0f * (W * Z + X * Y);
-        const T RollX = -2.0f * (X * Y * Z * W);
-        const T RollY = 1.0f - (2.0f * (X * Y * Z * W));
-        const T PitchX = Math::Sqrt(1.0f + 2.0f * (W * Y - X * Z));
-        const T PitchY = Math::Sqrt(1.0f - 2.0f * (W * Y - X * Z));
-        T Pitch, Yaw, Roll;
-    
-        if (SingularityTest > P_SINGULARITY_THRESHOLD)
+        //const MeReal *const t = (MeReal *) tm;
+        T s;
+
+        // Check diagonal (trace)
+        const T tr = M.M[0][0] + M.M[1][1] + M.M[2][2];
+
+        if (tr > 0.0f)
         {
-            // North pole
-            Pitch = -90.0f;
-            Yaw = Math::ATan2(YawX, YawY) * P_RAD_TO_DEG;
-        
-        }
-        if (SingularityTest < -P_SINGULARITY_THRESHOLD)
-        {
-            // South pole
+            T InvS = Math::InvSqrt(tr + 1.f);
+            this->W = 0.5f * (1.f / InvS);
+            s = 0.5f * InvS;
+
+            this->X = ((M.M[1][2] - M.M[2][1]) * s);
+            this->Y = ((M.M[2][0] - M.M[0][2]) * s);
+            this->Z = ((M.M[0][1] - M.M[1][0]) * s);
         }
         else
         {
-            // Normal
-            Pitch = Math::ASin(2.0f * SingularityTest) * P_RAD_TO_DEG;
-            Yaw = Math::ATan2(YawX, YawY) * P_RAD_TO_DEG;
-            Roll = Math::ATan2(-YawY, YawX) * P_RAD_TO_DEG;
+            // diagonal is negative
+            int32 i = 0;
+
+            if (M.M[1][1] > M.M[0][0])
+                i = 1;
+
+            if (M.M[2][2] > M.M[i][i])
+                i = 2;
+
+            static constexpr int32 nxt[3] = {1, 2, 0};
+            const int32 j = nxt[i];
+            const int32 k = nxt[j];
+
+            s = M.M[i][i] - M.M[j][j] - M.M[k][k] + 1.0f;
+
+            T InvS = Math::InvSqrt(s);
+
+            T qt[4];
+            qt[i] = 0.5f * (1.f / InvS);
+
+            s = 0.5f * InvS;
+
+            qt[3] = (M.M[j][k] - M.M[k][j]) * s;
+            qt[j] = (M.M[i][j] + M.M[j][i]) * s;
+            qt[k] = (M.M[i][k] + M.M[k][i]) * s;
+
+            this->X = qt[0];
+            this->Y = qt[1];
+            this->Z = qt[2];
+            this->W = qt[3];
         }
-    
-        TRotator<T> Result(Pitch, Yaw, Roll);
-        return Result;
     }
+    
+    TRotator<T> Rotator();
 };
+
+template <>
+FRotator FQuat::Rotator();
