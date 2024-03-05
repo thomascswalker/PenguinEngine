@@ -1,5 +1,17 @@
 ﻿#pragma once
 
+#define P_PI 3.14159265358979323846f
+#define P_EPSILON FLT_EPSILON
+#define P_SINGULARITY_THRESHOLD 0.4999995f
+#define P_RAD_TO_DEG (180.0f / P_PI)
+#define P_MIN_Z = 0.001f
+#define P_MAX_Z 10000.0f
+#define P_ZERO_PRECISION = 0.0f
+#define P_VERY_SMALL_NUMBER FLT_EPSILON
+#define P_SMALL_NUMBER 0.0001f
+#define P_LARGE_NUMBER 10000.0f
+#define P_VERY_LARGE_NUMBER 10000000.0f
+
 // Basic types
 typedef char int8;
 typedef short int16;
@@ -87,3 +99,20 @@ typedef TTransform<double> DTransform;
 template <typename T>
 struct TPlane;
 typedef TPlane<float> FPlane;
+
+// Enums
+enum EWindingOrder
+{
+    CW,
+    // Clockwise
+    CCW,
+    // Counter-clockwise
+    CL // Co-linear, in a line
+};
+
+enum EAxis
+{
+    X,
+    Y,
+    Z
+};

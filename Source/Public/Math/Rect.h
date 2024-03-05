@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "MathFwd.h"
 #include "Vector.h"
 
 template <typename T>

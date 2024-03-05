@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "Viewport.h"
-#include "Framework/Core/Core.h"
 #include "Framework/Engine/Mesh.h"
 #include "Math/MathCommon.h"
 

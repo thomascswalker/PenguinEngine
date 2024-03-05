@@ -7,22 +7,7 @@
 
 #include "MathFwd.h"
 
-#define P_PI 3.14159265358979323846f
-#define P_EPSILON FLT_EPSILON
-#define P_SINGULARITY_THRESHOLD 0.4999995f
-#define P_RAD_TO_DEG (180.0f / P_PI)
-#define P_MAX_Z 10000.0f
-#define VERY_SMALL_NUMBER FLT_EPSILON
-#define SMALL_NUMBER 0.0001f
-#define LARGE_NUMBER 10000.0f
-#define VERY_LARGE_NUMBER 10000000.0f
 
-enum EAxis
-{
-    X,
-    Y,
-    Z
-};
 
 namespace Math
 {

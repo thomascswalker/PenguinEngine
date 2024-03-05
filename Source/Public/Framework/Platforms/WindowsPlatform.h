@@ -2,7 +2,6 @@
 
 #include <windows.h>
 
-#include "Framework/Core/Core.h"
 #include "PlatformInterface.h"
 #include "Framework/Renderer/Viewport.h"
 

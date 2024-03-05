@@ -1,5 +1,4 @@
 ﻿#include "Math/MathCommon.h"
-#include "Framework/Core/Logging.h"
 
 // Matrices
 

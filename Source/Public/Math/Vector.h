@@ -5,16 +5,7 @@
 
 #include "Framework/Core/Logging.h"
 #include "Math.h"
-#include "Framework/Core/Core.h"
 
-enum EWindingOrder
-{
-    CW,
-    // Clockwise
-    CCW,
-    // Counter-clockwise
-    CL // Co-linear, in a line
-};
 
 // Alias for 'float[4]'
 struct alignas(4) FVectorRegister
@@ -488,7 +479,7 @@ struct TBarycentric
     static bool GetBarycentric(const TVector3<T>& P,
                                TVector3<T>* Points,
                                TVector3<T>& UVW,
-                               T Tolerance = VERY_SMALL_NUMBER)
+                               T Tolerance = P_VERY_SMALL_NUMBER)
     {
         const TVector3<T> A = Points[0];
         const TVector3<T> B = Points[1];
