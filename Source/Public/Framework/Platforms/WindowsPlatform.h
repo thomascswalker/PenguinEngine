@@ -37,7 +37,9 @@ public:
     PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance)
     {
     }
+    static LRESULT CALLBACK WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);
     HWND GetHWnd() const { return Hwnd; }
     void SetHInstance(HINSTANCE NewInstance) { HInstance = NewInstance; }
-    PRectI GetSize() override;
+    FRect GetSize() override;
+    // FRect GetSize() override;
 };

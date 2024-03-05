@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Types.h"
+#include "MathFwd.h"
 
 struct PColor;
 struct PLinearColor;
@@ -38,6 +38,7 @@ public:
     static PColor Magenta() { return FromRgba(255, 0, 255); }
 
     static PColor White() { return FromRgba(255, 255, 255); }
+    static PColor Gray() { return FromRgba(128,128,128); }
     static PColor Black() { return FromRgba(0, 0, 0); }
 
     static PColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
@@ -57,6 +58,22 @@ struct PLinearColor
         float RGBA[4];
     };
 
-    static PLinearColor FromRgba(float R, float G, float B, float A = 1.0f);
-    void Clamp();
+    static PLinearColor FromRgba(float R, float G, float B, float A = 1.0f)
+    {
+        PLinearColor Color;
+        Color.R = R;
+        Color.G = G;
+        Color.B = B;
+        Color.A = A;
+        return Color;
+    }
+    
+    void Clamp()
+    {
+        for (float& V : RGBA)
+        {
+            V = V > 1.0f ? 1.0f : V;
+        }
+    }
+
 };

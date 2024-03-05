@@ -180,12 +180,9 @@
     <ClCompile Include="Source\Private\Framework\Platforms\WindowsPlatform.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Viewport.cpp" />
-    <ClCompile Include="Source\Private\Math\Matrix.cpp" />
-    <ClCompile Include="Source\Private\Math\Color.cpp" />
-    <ClCompile Include="Source\Private\Math\Rect.cpp" />
-    <ClCompile Include="Source\Private\Math\Vector.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Private\Math\MathCommon.cpp" />
     <ClInclude Include="Source\Public\Framework\Application.h" />
     <ClInclude Include="Source\Public\Framework\Core\Core.h" />
     <ClInclude Include="Source\Public\Framework\Core\ErrorCodes.h" />
@@ -198,11 +195,15 @@
     <ClInclude Include="Source\Public\Framework\Renderer\Viewport.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Renderer.h" />
     <ClInclude Include="Source\Public\Math\Math.h" />
+    <ClInclude Include="Source\Public\Math\MathCommon.h" />
     <ClInclude Include="Source\Public\Math\Matrix.h" />
     <ClInclude Include="Source\Public\Math\Color.h" />
     <ClInclude Include="Source\Public\Math\Plane.h" />
+    <ClInclude Include="Source\Public\Math\Quat.h" />
     <ClInclude Include="Source\Public\Math\Rect.h" />
-    <ClInclude Include="Source\Public\Math\Types.h" />
+    <ClInclude Include="Source\Public\Math\Rotator.h" />
+    <ClInclude Include="Source\Public\Math\MathFwd.h" />
+    <ClInclude Include="Source\Public\Math\Transform.h" />
     <ClInclude Include="Source\Public\Math\Vector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

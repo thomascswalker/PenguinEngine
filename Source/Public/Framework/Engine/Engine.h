@@ -23,6 +23,7 @@ public:
 
     PRenderer* GetRenderer() const { return Renderer.get(); }
     bool IsRunning() const { return bRunning; }
+    void SetRunning(bool bNewRunning) { bRunning = bNewRunning; }
 
     std::vector<std::shared_ptr<PMesh>> Meshes;
     std::vector<std::shared_ptr<PMesh>> GetMeshes() const { return Meshes; }

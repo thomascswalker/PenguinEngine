@@ -1,7 +1,8 @@
 ﻿#pragma once
+
 #include <memory>
 
-#include "Platforms\PlatformInterface.h"
+#include "Platforms/PlatformInterface.h"
 #include "Engine/Engine.h"
 
 class PEngine;
@@ -24,7 +25,7 @@ public:
         LOG_INFO("Initialized application.")
     }
 
-    int Run() const;
+    uint32 Run() const;
     IPlatform* GetPlatform() const { return Platform.get(); }
     PEngine* GetEngine() const { return Engine.get(); }
 

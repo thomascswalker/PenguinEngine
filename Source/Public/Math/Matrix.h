@@ -3,13 +3,10 @@
 #include <string>
 
 #include "Math.h"
-#include "Types.h"
-#include "Vector.h"
 #include "Plane.h"
-
-template <typename T>
-struct TMatrix;
-typedef TMatrix<float> PMatrix4;
+#include "Rotator.h"
+#include "Vector.h"
+#include "Framework/Core/Logging.h"
 
 // M[RowIndex][ColumnIndex]
 template <typename T>
@@ -22,9 +19,10 @@ struct TMatrix
     TMatrix()
     {
         SetIdentity();
+        CheckNaN();
     }
 
-    TMatrix(const PPlane& InX, const PPlane& InY, const PPlane& InZ, const PPlane& InW)
+    TMatrix(const TPlane<T>& InX, const TPlane<T>& InY, const TPlane<T>& InZ, const TPlane<T>& InW)
     {
         M[0][0] = InX.X;
         M[0][1] = InX.Y;
@@ -42,9 +40,70 @@ struct TMatrix
         M[3][1] = InW.Y;
         M[3][2] = InW.Z;
         M[3][3] = InW.W;
+        CheckNaN();
+    }
+    TMatrix(const TMatrix& Other)
+    {
+        std::memcpy(M, &Other.M, 16 * sizeof(T));
+        CheckNaN();
+    }
+    TMatrix(TMatrix&& Other) noexcept
+    {
+        std::memcpy(M, &Other.M, 16 * sizeof(T));
+        CheckNaN();
     }
 
-    bool Equals(const TMatrix& Other, float Threshold = 0.00001f) const
+    void CheckNaN() const
+    {
+        for (int32 X = 0; X < 4; X++)
+        {
+            for (int32 Y = 0; Y < 4; Y++)
+            {
+                if (!Math::IsFinite(M[X][Y]))
+                {
+                    LOG_ERROR("Matrix cell [{},{}] contains NaN", X, Y)
+                }
+            }
+        }
+    }
+
+    static TMatrix MakeRotationMatrix(const TRotator<T>& Rotation)
+    {
+        T SP, SY, SR;
+        T CP, CY, CR;
+
+        Math::SinCos(&SP, &CP, Math::DegreesToRadians(Rotation.Pitch));
+        Math::SinCos(&SY, &CY, Math::DegreesToRadians(Rotation.Yaw));
+        Math::SinCos(&SR, &CR, Math::DegreesToRadians(Rotation.Roll));
+
+        TMatrix Out;
+
+        Out.M[0][0] = CP * CY;
+        Out.M[0][1] = CP * SY;
+        Out.M[0][2] = SP;
+        Out.M[0][3] = 0.0f;
+
+        Out.M[1][0] = SR * SP * CY - CR * SY;
+        Out.M[1][1] = SR * SP * SY + CR * CY;
+        Out.M[1][2] = -SR * CP;
+        Out.M[1][3] = 0.0f;
+
+        Out.M[2][0] = -(CR * SP * CY + SR * SY);
+        Out.M[2][1] = CY * SR - CR * SP * SY;
+        Out.M[2][2] = CR * CP;
+        Out.M[2][3] = 0.f;
+
+        Out.M[3][0] = 0; // Translation X
+        Out.M[3][1] = 0; // Translation Y
+        Out.M[3][2] = 0; // Translation Z
+        Out.M[3][3] = 1.0f;
+
+        return Out;
+    }
+
+    // Functions
+
+    bool Equals(const TMatrix& Other, T Threshold = 0.00001f) const
     {
         for (int32 X = 0; X < 4; X++)
         {
@@ -61,11 +120,11 @@ struct TMatrix
 
     static TMatrix GetIdentity()
     {
-        return {
-            PPlane(1, 0, 0, 0),
-            PPlane(0, 1, 0, 0),
-            PPlane(0, 0, 1, 0),
-            PPlane(0, 0, 0, 1)
+        return TMatrix{
+            FPlane(1, 0, 0, 0),
+            FPlane(0, 1, 0, 0),
+            FPlane(0, 0, 1, 0),
+            FPlane(0, 0, 0, 1)
         };
     }
 
@@ -89,7 +148,7 @@ struct TMatrix
         M[3][3] = 1;
     }
 
-    constexpr T GetDeterminant()
+    constexpr T GetDeterminant() const
     {
         T A11 = M[0][0];
         T A12 = M[0][1];
@@ -161,7 +220,7 @@ struct TMatrix
             return GetIdentity();
         }
         Determinant = 1.0f / Determinant;
-        
+
         T A2323 = M[2][2] * M[3][3] - M[2][3] * M[3][2];
         T A1323 = M[2][1] * M[3][3] - M[2][3] * M[3][1];
         T A1223 = M[2][1] * M[3][2] - M[2][2] * M[3][1];
@@ -202,16 +261,59 @@ struct TMatrix
 
         TMatrix Out;
         std::memcpy(Out.M, &Result, 16 * sizeof(T));
+        Out.CheckNaN();
         return Out;
     }
 
-    static PMatrix4 ProjectionMatrix(float HalfFov, float Width, float Height, float MinZ)
+    TVector3<T> GetScaledAxis(const EAxis InAxis) const
     {
-        return {
-            PPlane(1.0f / Math::Tan(HalfFov), 0.0f, 0.0f, 0.0f),
-            PPlane(0.0f, Width / Math::Tan(HalfFov) / Height, 0.0f, 0.0f),
-            PPlane(0.0f, 0.0f, 0.0f, 1.0f),
-            PPlane(0.0f, 0.0f, MinZ, 0.0f)
+        switch (InAxis)
+        {
+        case X :
+            {
+                return TVector3(M[0][0], M[0][1], M[0][2]);
+            }
+        case Y :
+            {
+                return TVector3(M[1][0], M[1][1], M[1][2]);
+            }
+        case Z :
+            {
+                return TVector3(M[2][0], M[2][1], M[2][2]);
+            }
+        }
+        return TVector3<T>::ZeroVector();
+    }
+
+    TRotator<T> GetRotator() const
+    {
+        const TVector3 XAxis = GetScaledAxis(X);
+        const TVector3 YAxis = GetScaledAxis(Y);
+        const TVector3 ZAxis = GetScaledAxis(Z);
+        const T RadToDeg = 180.0f / (P_PI * 2.0f);
+
+        T Pitch = Math::ATan2(XAxis.Z, Math::Sqrt(Math::Square(XAxis.X) + Math::Square(XAxis.Y))) * RadToDeg;
+        T Yaw = Math::ATan2(XAxis.Y, XAxis.X) * RadToDeg;
+        TRotator Rotator = TRotator(Pitch, Yaw, T(0));
+
+        const TVector3 SYAxis = MakeRotationMatrix(Rotator).GetScaledAxis(Y);
+        Rotator.Roll = Math::ATan2(Math::Dot(ZAxis, SYAxis), Math::Dot(YAxis, SYAxis)) * RadToDeg;
+
+        return Rotator;
+    }
+    TVector3<T> GetScale(T Tolerance = 0.00000001f);
+    TVector3<T> GetTranslation()
+    {
+        return TVector3(M[3][0], M[3][1], M[3][2]);
+    }
+
+    static TMatrix PerspectiveMatrix(T HalfFov, T Width, T Height, T MinZ)
+    {
+        return TMatrix{
+            TPlane<T>(1.0f / Math::Tan(HalfFov), 0.0f, 0.0f, 0.0f),
+            TPlane<T>(0.0f, Width / Math::Tan(HalfFov) / Height, 0.0f, 0.0f),
+            TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f),
+            TPlane<T>(0.0f, 0.0f, MinZ, 0.0f)
         };
     }
 
@@ -227,23 +329,17 @@ struct TMatrix
 
     std::string ToString() const
     {
-        std::string Out;
+        std::string Output;
 
-        for (int32 X = 0; X < 4; X++)
-        {
-            Out += "[";
-            for (int32 Y = 0; Y < 4; Y++)
-            {
-                Out += std::to_string(M[X][Y]) + ", ";
-            }
-            Out += "]\n";
-        }
+        Output += std::format("[{} {} {} {}] ", M[0][0], M[0][1], M[0][2], M[0][3]);
+        Output += std::format("[{} {} {} {}] ", M[1][0], M[1][1], M[1][2], M[1][3]);
+        Output += std::format("[{} {} {} {}] ", M[2][0], M[2][1], M[2][2], M[2][3]);
+        Output += std::format("[{} {} {} {}] ", M[3][0], M[3][1], M[3][2], M[3][3]);
 
-        return Out;
+        return Output;
     }
 
-    // Operators
-    TMatrix operator+(const TMatrix& Other)
+    TMatrix operator+(const TMatrix& Other) const
     {
         TMatrix Result;
         for (int32 X = 0; X < 4; X++)
@@ -258,9 +354,10 @@ struct TMatrix
     TMatrix& operator+=(const TMatrix& Other)
     {
         *this = *this + Other;
+        CheckNaN();
         return *this;
     }
-    TMatrix operator-(const TMatrix& Other)
+    TMatrix operator-(const TMatrix& Other) const
     {
         TMatrix Result;
         for (int32 X = 0; X < 4; X++)
@@ -275,9 +372,10 @@ struct TMatrix
     TMatrix& operator-=(const TMatrix& Other)
     {
         *this = *this - Other;
+        CheckNaN();
         return *this;
     }
-    TMatrix operator*(const TMatrix& Other)
+    TMatrix operator*(const TMatrix& Other) const
     {
         TMatrix Result;
         for (uint32 X = 0; X < 4; X++)
@@ -297,9 +395,10 @@ struct TMatrix
     TMatrix& operator*=(const TMatrix& Other)
     {
         *this = *this * Other;
+        CheckNaN();
         return *this;
     }
-    TMatrix operator/(const TMatrix& Other)
+    TMatrix operator/(const TMatrix& Other) const
     {
         TMatrix Result;
         for (int32 X = 0; X < 4; X++)
@@ -314,18 +413,115 @@ struct TMatrix
     TMatrix& operator/=(const TMatrix& Other)
     {
         *this = *this / Other;
+        CheckNaN();
         return *this;
     }
 
-    PVector4 operator*(const PVector4& V4) const
+    TVector4<T> operator*(const TVector4<T>& V4) const
     {
-        T TempX, TempY, TempZ, TempW;
-
-        TempX = V4.X * M[0][0] + V4.Y * M[1][0] + V4.Z * M[2][0] + V4.W * M[3][0];
-        TempY = V4.X * M[0][1] + V4.Y * M[1][1] + V4.Z * M[2][1] + V4.W * M[3][1];
-        TempZ = V4.X * M[0][2] + V4.Y * M[1][2] + V4.Z * M[2][2] + V4.W * M[3][2];
-        TempW = V4.X * M[0][3] + V4.Y * M[1][3] + V4.Z * M[2][3] + V4.W * M[3][3];
+        T TempX = V4.X * M[0][0] + V4.Y * M[1][0] + V4.Z * M[2][0] + V4.W * M[3][0];
+        T TempY = V4.X * M[0][1] + V4.Y * M[1][1] + V4.Z * M[2][1] + V4.W * M[3][1];
+        T TempZ = V4.X * M[0][2] + V4.Y * M[1][2] + V4.Z * M[2][2] + V4.W * M[3][2];
+        T TempW = V4.X * M[0][3] + V4.Y * M[1][3] + V4.Z * M[2][3] + V4.W * M[3][3];
 
         return {TempX, TempY, TempZ, TempW};
+    }
+
+    TMatrix& operator=(const TMatrix& Other) // NOLINT
+    {
+        std::memcpy(M, &Other.M, 16 * sizeof(T));
+        CheckNaN();
+        return *this;
+    }
+};
+
+template <typename T>
+struct TPerspectiveMatrix : TMatrix<T>
+{
+    TPerspectiveMatrix(T HalfFOV, T MinZ, T MaxZ = P_MAX_Z)
+        : TMatrix<T>(
+            TPlane<T>(Math::Tan(HalfFOV), 0.0f, 0.0f, 0.0f),
+            TPlane<T>(0.0f, Math::Tan(HalfFOV), 0.0f, 0.0f),
+            TPlane<T>(0.0f, 0.0f, -(MaxZ / (MaxZ - MinZ)), -1.0f),
+            TPlane<T>(0.0f, 0.0f, -((MaxZ * MinZ) / (MaxZ - MinZ)), 0.0f))
+    {
+    }
+};
+
+template <typename T>
+struct TReversedZPerspectiveMatrix : TMatrix<T>
+{
+    TReversedZPerspectiveMatrix(T HalfFOV, T Width, T Height, T MinZ)
+        : TMatrix<T>(
+            TPlane<T>(1.0f / Math::Tan(HalfFOV), 0.0f, 0.0f, 0.0f),
+            TPlane<T>(0.0f, Width / Math::Tan(HalfFOV) / Height, 0.0f, 0.0f),
+            TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f),
+            TPlane<T>(0.0f, 0.0f, MinZ, 0.0f))
+    {
+    }
+};
+
+template <typename T>
+struct TLookAtMatrix : TMatrix<T>
+{
+    TLookAtMatrix(const TVector3<T>& EyePosition, const TVector3<T>& LookAtPosition, const TVector3<T>& UpVector)
+    {
+        const TVector3<T> ZAxis = (LookAtPosition - EyePosition).GetSafeNormal();
+        const TVector3<T> XAxis = (Math::Cross(UpVector, ZAxis)).GetSafeNormal();
+        const TVector3<T> YAxis = Math::Cross(ZAxis, XAxis).GetSafeNormal();
+
+        this->SetIdentity();
+        for (uint32 RowIndex = 0; RowIndex < 3; RowIndex++)
+        {
+            this->M[RowIndex][0] = (&XAxis.X)[RowIndex];
+            this->M[RowIndex][1] = (&YAxis.X)[RowIndex];
+            this->M[RowIndex][2] = (&ZAxis.X)[RowIndex];
+            this->M[RowIndex][3] = 0.0f;
+        }
+
+        FVector3 InvEyePosition = EyePosition * -1.0f;
+        this->M[3][0] = Math::Dot(InvEyePosition, XAxis);
+        this->M[3][1] = Math::Dot(InvEyePosition, YAxis);
+        this->M[3][2] = Math::Dot(InvEyePosition, ZAxis);
+        this->M[3][3] = 1.0f;
+    }
+};
+
+template <typename T>
+struct TTranslationMatrix : TMatrix<T>
+{
+    TTranslationMatrix(const TVector3<T>& Delta)
+        : TMatrix<T>(
+            TPlane<T>(1., 0, 0, 0),
+            TPlane<T>(0., 1, 0, 0),
+            TPlane<T>(0., 0, 1, 0),
+            TPlane<T>(Delta.X, Delta.Y, Delta.Z, 1)
+        )
+    {
+    }
+};
+
+template <typename T>
+struct TInverseRotationMatrix : TMatrix<T>
+{
+    TInverseRotationMatrix(const TRotator<T>& Rot)
+        : TMatrix<T>(
+            TMatrix<T>( // Yaw
+                TPlane<T>(+Math::Cos(Rot.Yaw * P_PI / 180.f), -Math::Sin(Rot.Yaw * P_PI / 180.f), 0.0f, 0.0f),
+                TPlane<T>(+Math::Sin(Rot.Yaw * P_PI / 180.f), +Math::Cos(Rot.Yaw * P_PI / 180.f), 0.0f, 0.0f),
+                TPlane<T>(0.0f, 0.0f, 1.0f, 0.0f),
+                TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f)) *
+            TMatrix<T>( // Pitch
+                TPlane<T>(+Math::Cos(Rot.Pitch * P_PI / 180.f), 0.0f, -Math::Sin(Rot.Pitch * P_PI / 180.f), 0.0f),
+                TPlane<T>(0.0f, 1.0f, 0.0f, 0.0f),
+                TPlane<T>(+Math::Sin(Rot.Pitch * P_PI / 180.f), 0.0f, +Math::Cos(Rot.Pitch * P_PI / 180.f), 0.0f),
+                TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f)) *
+            TMatrix<T>( // Roll
+                TPlane<T>(1.0f, 0.0f, 0.0f, 0.0f),
+                TPlane<T>(0.0f, +Math::Cos(Rot.Roll * P_PI / 180.f), +Math::Sin(Rot.Roll * P_PI / 180.f), 0.0f),
+                TPlane<T>(0.0f, -Math::Sin(Rot.Roll * P_PI / 180.f), +Math::Cos(Rot.Roll * P_PI / 180.f), 0.0f),
+                TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f))
+        )
+    {
     }
 };
