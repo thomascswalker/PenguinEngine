@@ -1,6 +1,6 @@
 ﻿#include <cassert>
-#include <Framework/Platforms/WindowsPlatform.h>
 
+#include "Framework/Platforms/Win32Platform.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
 #include "Framework/Engine/Timer.h"
@@ -9,10 +9,10 @@
     #define WINDOWS_TIMER_ID 1001
 #endif
 
-const float MovementSpeed = 0.01f;
+const float MovementSpeed = 0.05f;
 bool bShowText = true;
 
-LRESULT PWindowsPlatform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
 {
     LRESULT Result = 0;
     PEngine* Engine = PEngine::GetInstance();
@@ -87,7 +87,7 @@ LRESULT PWindowsPlatform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM 
             }
 
             // Get the current window size from the buffer
-            const PBuffer* Buffer = Renderer->GetBuffer();
+            const std::shared_ptr<PBuffer> Buffer = Renderer->GetColorBuffer();
             const uint32 Width = Buffer->Width;
             const uint32 Height = Buffer->Height;
 
@@ -177,7 +177,7 @@ LRESULT PWindowsPlatform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM 
 
 
 // ReSharper disable CppParameterMayBeConst
-bool PWindowsPlatform::Register()
+bool PWin32Platform::Register()
 {
     // Register the window class.
     WNDCLASS WindowClass = {};
@@ -189,7 +189,7 @@ bool PWindowsPlatform::Register()
     //Registering the window class
     if (!RegisterClass(&WindowClass))
     {
-        LOG_ERROR("Failed to register class (PWindowsPlatform::Register).")
+        LOG_ERROR("Failed to register class (PWin32Platform::Register).")
         return false;
     }
 
@@ -211,7 +211,7 @@ bool PWindowsPlatform::Register()
 
     if (!bInitialized)
     {
-        LOG_ERROR("Failed to create window (PWindowsPlatform::Register).")
+        LOG_ERROR("Failed to create window (PWin32Platform::Register).")
         return false;
     }
 
@@ -219,22 +219,22 @@ bool PWindowsPlatform::Register()
     return true;
 }
 
-uint32 PWindowsPlatform::Create()
+uint32 PWin32Platform::Create()
 {
     bInitialized = Register();
     if (!bInitialized)
     {
-        LOG_ERROR("Window failed to initialize (PWindowsPlatform::Create).")
+        LOG_ERROR("Window failed to initialize (PWin32Platform::Create).")
         return PlatformInitError;
     }
     return Success;
 }
 
-uint32 PWindowsPlatform::Show()
+uint32 PWin32Platform::Show()
 {
     if (!bInitialized)
     {
-        LOG_ERROR("Window failed to initialize (PWindowsPlatform::Show).")
+        LOG_ERROR("Window failed to initialize (PWin32Platform::Show).")
         return PlatformShowError; // Show window failure
     }
 
@@ -243,11 +243,11 @@ uint32 PWindowsPlatform::Show()
     return Success;
 }
 
-uint32 PWindowsPlatform::Start()
+uint32 PWin32Platform::Start()
 {
     if (!bInitialized)
     {
-        LOG_ERROR("Window failed to initialize (PWindowsPlatform::Start).")
+        LOG_ERROR("Window failed to initialize (PWin32Platform::Start).")
         return PlatformStartError; // Start failure
     }
 
@@ -270,7 +270,7 @@ uint32 PWindowsPlatform::Start()
         // Loop, converting DeltaTime from milliseconds to seconds
         if (const uint32 LoopResult = Loop())
         {
-            LOG_ERROR("Loop failed (PWindowsPlatform::Start).")
+            LOG_ERROR("Loop failed (PWin32Platform::Start).")
             return LoopResult; // Start failure
         }
     }
@@ -279,7 +279,7 @@ uint32 PWindowsPlatform::Start()
     return End();
 }
 
-uint32 PWindowsPlatform::Loop()
+uint32 PWin32Platform::Loop()
 {
     // Tick the engine forward
     if (PEngine* Engine = PEngine::GetInstance())
@@ -296,17 +296,17 @@ uint32 PWindowsPlatform::Loop()
     return PlatformLoopError;
 }
 
-uint32 PWindowsPlatform::Paint()
+uint32 PWin32Platform::Paint()
 {
     return 0;
 }
 
-uint32 PWindowsPlatform::End()
+uint32 PWin32Platform::End()
 {
     return Success;
 }
 
-FRect PWindowsPlatform::GetSize()
+FRect PWin32Platform::GetSize()
 {
     RECT OutRect;
 
@@ -317,6 +317,6 @@ FRect PWindowsPlatform::GetSize()
         return {0, 0, Width, Height};
     }
 
-    LOG_ERROR("Unable to get window size (PWindowsPlatform::GetSize).")
+    LOG_ERROR("Unable to get window size (PWin32Platform::GetSize).")
     return {};
 }

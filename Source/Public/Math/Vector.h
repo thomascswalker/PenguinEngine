@@ -208,7 +208,7 @@ struct TVector3
     }
     constexpr T Length() const
     {
-        return Math::Sqrt(X * X + Y * Y + Z * Z);;
+        return Math::Sqrt(X * X + Y * Y + Z * Z);
     }
     TVector3 Cross(const TVector3& V) const
     {
@@ -273,6 +273,7 @@ struct TVector3
     }
     bool operator==(const TVector3& V) const { return X == V.X && Y == V.Y && Z == V.Z; }
     bool operator!=(const TVector3& V) const { return X != V.X || Y != V.Y || Z != V.Z; }
+
     TVector3 operator-()
     {
         return TVector3(-X, -Y, -Z);
@@ -288,6 +289,11 @@ struct TVector3
 
     T operator[](int32 Index) const { return XYZ[Index]; }
     T& operator[](int32 Index) { return XYZ[Index]; }
+
+    operator TVector2<T>() const
+    {
+        return {X, Y};
+    }
 };
 
 template <typename T>
@@ -421,6 +427,16 @@ struct TVector4
 
     T operator[](int32 Index) const { return XYZW[Index]; }
     T& operator[](int32 Index) { return XYZW[Index]; }
+
+    operator TVector2<T>() const
+    {
+        return {X, Y};
+    }
+
+    operator TVector3<T>() const
+    {
+        return {X, Y, Z};
+    }
 };
 
 namespace Math
@@ -461,8 +477,15 @@ namespace Math
 
 
 template <typename T>
-struct TBarycentric
+struct TTriangle
 {
+    static T Area(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+    {
+        return (V0.X * (V1.Y - V2.Y) +
+            V1.X * (V2.Y - V0.Y) +
+            V2.X * (V0.Y - V1.Y)) / 2.0f;
+    }
+
     // Vector Sign
     static bool EdgeSign(const TVector2<T>& A, const TVector2<T>& B, const TVector2<T>& C)
     {
@@ -477,23 +500,19 @@ struct TBarycentric
 
     // Muller-Trumbore ray triangle intersect
     static bool GetBarycentric(const TVector3<T>& P,
-                               TVector3<T>* Points,
+                               const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2,
                                TVector3<T>& UVW,
                                T Tolerance = P_VERY_SMALL_NUMBER)
     {
-        const TVector3<T> A = Points[0];
-        const TVector3<T> B = Points[1];
-        const TVector3<T> C = Points[2];
+        const TVector3<T> BA = V1 - V0;
+        const TVector3<T> CA = V2 - V0;
+        const TVector3<T> PA = P - V0;
 
-        const TVector3<T> V0 = B - A;
-        const TVector3<T> V1 = C - A;
-        const TVector3<T> V2 = P - A;
-
-        const T D00 = Math::Dot(V0, V0);
-        const T D01 = Math::Dot(V0, V1);
-        const T D11 = Math::Dot(V1, V1);
-        const T D20 = Math::Dot(V2, V0);
-        const T D21 = Math::Dot(V2, V1);
+        const T D00 = Math::Dot(BA, BA);
+        const T D01 = Math::Dot(BA, CA);
+        const T D11 = Math::Dot(CA, CA);
+        const T D20 = Math::Dot(PA, BA);
+        const T D21 = Math::Dot(PA, CA);
         const T Denom = 1.0f / (D00 * D11 - D01 * D01);
 
         const T V = (D11 * D20 - D01 * D21) * Denom;
@@ -513,13 +532,47 @@ struct TBarycentric
             (1.0f - Sum) < Tolerance);
     }
 
-    static EWindingOrder GetVertexOrder(const TVector3<T>& P, const TVector3<T>& Q, const TVector3<T>& R)
+    static EWindingOrder GetVertexOrder(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
-        const float Result = (Q.Y - P.Y) * (R.X - Q.X) - (Q.X - P.X) * (R.Y - Q.Y);
+        const float Result = (V1.Y - V0.Y) * (V2.X - V1.X) - (V1.X - V0.X) * (V2.Y - V1.Y);
         if (Result == 0.0f)
         {
             return CL;
         }
         return Result > 0.0f ? CW : CCW;
+    }
+
+    static T GetDepth(const TVector3<T>& P, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+    {
+        // Calculate area of this triangle
+        T A = FTriangle::Area(V0, V1, V2);
+
+        // Calculate depth
+        T W0 = FTriangle::Area(V1, V2, P);
+        T W1 = FTriangle::Area(V2, V0, P);
+        T W2 = FTriangle::Area(V0, V1, P);
+
+        if (W0 < 0.0f && W1 < 0.0f && W2 < 0.0f)
+        {
+            return FLT_MAX;
+        }
+
+        W0 /= A;
+        W0 /= A;
+        W1 /= A;
+
+        return W0 * V0.Z + W1 * V1.Z + W2 * V2.Z;
+    }
+
+    static FVector3 GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+    {
+        FVector3 Normal;
+        const FVector3 U = V1 - V0;
+        const FVector3 V = V2 - V0;
+        Normal.X = (U.Y * V.Z) - (U.Z * V.Y);
+        Normal.Y = (U.Z * V.X) - (U.X * V.Z);
+        Normal.Z = (U.X * V.Y) - (U.Y * V.X);
+        Normal.Normalize();
+        return Normal;
     }
 };

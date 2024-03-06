@@ -116,42 +116,40 @@ std::shared_ptr<PMesh> PMesh::CreatePlane(float Width, float Height)
     return std::make_shared<PMesh>(Mesh);
 }
 
-std::shared_ptr<PMesh> PMesh::CreateSphere(float Radius, float Segments)
+std::shared_ptr<PMesh> PMesh::CreateSphere(const float Radius, const int32 Segments)
 {
     std::vector<FVector3> Vertices;
     std::vector<uint32> Indices;
 
-    float SectorCount = Segments;
-    float StackCount = Segments;
-    float X, Y, Z, XY; // vertex position
+    const int32 SectorCount = Segments;
+    const int32 StackCount = Segments;
 
-    float SectorStep = 2 * P_PI / SectorCount;
-    float StackStep = P_PI / StackCount;
+    const float SectorStep = 2.0f * P_PI / static_cast<float>(SectorCount);
+    const float StackStep = P_PI / static_cast<float>(SectorCount);
 
     for (int32 Stack = 0; Stack <= StackCount; ++Stack)
     {
-        float StackAngle = P_PI / 2 - Stack * StackStep; // starting from pi/2 to -pi/2
-        XY = Radius * cosf(StackAngle); // r * cos(u)
-        Z = Radius * sinf(StackAngle); // r * sin(u)
+        const float StackAngle = P_PI / 2.0f - static_cast<float>(Stack) * StackStep; // starting from pi/2 to -pi/2
+        const float XY = Radius * cosf(StackAngle); // r * cos(u)
+        float Z = Radius * sinf(StackAngle); // r * sin(u)
 
         // add (sectorCount+1) vertices per stack
         // first and last vertices have same position and normal, but different tex coords
         for (int32 Sector = 0; Sector <= SectorCount; ++Sector)
         {
-            float SectorAngle = Sector * SectorStep; // starting from 0 to 2pi
+            const float SectorAngle = static_cast<float>(Sector) * SectorStep; // starting from 0 to 2pi
 
             // vertex position (x, y, z)
-            X = XY * cosf(SectorAngle); // r * cos(u) * cos(v)
-            Y = XY * sinf(SectorAngle); // r * cos(u) * sin(v)
-            Vertices.emplace_back(FVector3{X, Y, Z});
+            float X = XY * Math::Cos(SectorAngle); // r * cos(u) * cos(v)
+            float Y = XY * Math::Sin(SectorAngle); // r * cos(u) * sin(v)
+            Vertices.emplace_back(X, Y, Z);
         }
     }
 
-    int K1, K2;
     for (int32 Stack = 0; Stack < StackCount; ++Stack)
     {
-        K1 = Stack * (SectorCount + 1); // beginning of current stack
-        K2 = K1 + SectorCount + 1; // beginning of next stack
+        int32 K1 = Stack * (SectorCount + 1); // beginning of current stack
+        int32 K2 = K1 + SectorCount + 1; // beginning of next stack
 
         for (int32 Sector = 0; Sector < SectorCount; ++Sector, ++K1, ++K2)
         {
@@ -159,20 +157,62 @@ std::shared_ptr<PMesh> PMesh::CreateSphere(float Radius, float Segments)
             // k1 => k2 => k1+1
             if (Stack != 0)
             {
-                Indices.push_back(K1);
-                Indices.push_back(K2);
-                Indices.push_back(K1 + 1);
+                Indices.emplace_back(K1);
+                Indices.emplace_back(K2);
+                Indices.emplace_back(K1 + 1);
             }
 
             // k1+1 => k2 => k2+1
             if (Stack != (StackCount - 1))
             {
-                Indices.push_back(K1 + 1);
-                Indices.push_back(K2);
-                Indices.push_back(K2 + 1);
+                Indices.emplace_back(K1 + 1);
+                Indices.emplace_back(K2);
+                Indices.emplace_back(K2 + 1);
             }
         }
     }
+
+    return std::make_shared<PMesh>(Vertices, Indices);
+}
+
+std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
+{
+    std::vector<uint32> Indices {
+        //Top
+        2, 6, 7,
+        2, 3, 7,
+
+        //Bottom
+        0, 4, 5,
+        0, 1, 5,
+
+        //Left
+        0, 2, 6,
+        0, 4, 6,
+
+        //Right
+        1, 3, 7,
+        1, 5, 7,
+
+        //Front
+        0, 2, 3,
+        0, 1, 3,
+
+        //Back
+        4, 6, 7,
+        4, 5, 7
+    };
+        
+    std::vector Vertices {
+        FVector3(-Scale, -Scale,  Scale), //0
+        FVector3(Scale, -Scale,  Scale), //1
+        FVector3(-Scale,  Scale,  Scale), //2
+        FVector3(Scale,  Scale,  Scale), //3
+        FVector3(-Scale, -Scale, -Scale), //4
+        FVector3(Scale, -Scale, -Scale), //5
+        FVector3(-Scale,  Scale, -Scale), //6
+        FVector3(Scale,  Scale, -Scale) //7
+    };
 
     return std::make_shared<PMesh>(Vertices, Indices);
 }

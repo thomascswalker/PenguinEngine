@@ -5,7 +5,7 @@
 #include "PlatformInterface.h"
 #include "Framework/Renderer/Viewport.h"
 
-class PWindowsPlatform : public IPlatform
+class PWin32Platform : public IPlatform
 {
     // Windows specific variables
     LPCWSTR ClassName = L"PenguinWindow";
@@ -33,7 +33,7 @@ public:
     bool IsInitialized() const override { return bInitialized; }
 
     // Windows
-    PWindowsPlatform(HINSTANCE NewInstance) : HInstance(NewInstance)
+    PWin32Platform(HINSTANCE NewInstance) : HInstance(NewInstance)
     {
     }
     static LRESULT CALLBACK WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam);

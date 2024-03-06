@@ -6,11 +6,11 @@
 #if defined(_WIN32) || defined(_WIN64)
 
 // Windows entry point
-#include "Framework/Platforms/WindowsPlatform.h"
+#include "Source\Public\Framework\Platforms\Win32Platform.h"
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
     PApplication* App = PApplication::GetInstance();
-    App->Init<PWindowsPlatform>(hInstance);
+    App->Init<PWin32Platform>(hInstance);
     const int ExitCode = App->Run();
     delete App;
 

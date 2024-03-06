@@ -36,28 +36,17 @@ struct TRect
 
     static TRect MakeBoundingBox(const TVector2<T>& V0, const TVector2<T>& V1, const TVector2<T>& V2)
     {
-        TVector2<T> BBMin;
-        TVector2<T> BBMax;
+        T XValues[3] = {V0.X, V1.X, V2.X};
+        T YValues[3] = {V0.Y, V1.Y, V2.Y};
+        
+        const T MinX = *std::ranges::min_element(XValues);
+        const T MinY = *std::ranges::min_element(YValues);
+        const T MaxX = *std::ranges::max_element(XValues);
+        const T MaxY = *std::ranges::max_element(YValues);
 
-        // Min
-        BBMin.X = V0.X;
-        BBMin.Y = V0.Y;
-        BBMax.X = V0.X;
-        BBMax.Y = V0.Y;
-
-        // Max (Width)
-        if (V1.X < BBMin.X) { BBMin.X = V1.X; }
-        if (V2.X < BBMin.X) { BBMin.X = V2.X; }
-        if (V1.X > BBMax.X) { BBMax.X = V1.X; }
-        if (V2.X > BBMax.X) { BBMax.X = V2.X; }
-
-        // Max (Height)
-        if (V1.Y < BBMin.Y) { BBMin.Y = V1.Y; }
-        if (V2.Y < BBMin.Y) { BBMin.Y = V2.Y; }
-        if (V1.Y > BBMax.Y) { BBMax.Y = V1.Y; }
-        if (V2.Y > BBMax.Y) { BBMax.Y = V2.Y; }
+        TVector2<T> BBMin(MinX, MinY);
+        TVector2<T> BBMax(MaxX, MaxY);
 
         return TRect(BBMin, BBMax);
     }
-
 };

@@ -192,4 +192,12 @@ namespace Math
     {
         return std::modf(A, B);
     }
+
+    template <typename T>
+    constexpr static T Rerange(T Value, T OldMin, T OldMax, T NewMin, T NewMax)
+    {
+        T OldRange = (OldMax - OldMin);  
+        T NewRange = (NewMax - NewMin);  
+        return (((Value - OldMin) * NewRange) / OldRange) + NewMin;
+    }
 };

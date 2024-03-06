@@ -25,7 +25,7 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     StartTime = PTimer::Now();
 
     // Construct a simple triangle mesh
-    if (auto Mesh = PMesh::CreateSphere(0.5f, 6))
+    if (auto Mesh = PMesh::CreateCube(0.5f))
     {
         Meshes.emplace_back(Mesh);
     }

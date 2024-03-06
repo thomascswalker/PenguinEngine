@@ -451,12 +451,12 @@ struct TPerspectiveMatrix : TMatrix<T>
 template <typename T>
 struct TReversedZPerspectiveMatrix : TMatrix<T>
 {
-    TReversedZPerspectiveMatrix(T HalfFOV, T Width, T Height, T MinZ)
+    TReversedZPerspectiveMatrix(T Scale, T Aspect, T MinZ, T MaxZ = P_MAX_Z)
         : TMatrix<T>(
-            TPlane<T>(1.0f / Math::Tan(HalfFOV), 0.0f, 0.0f, 0.0f),
-            TPlane<T>(0.0f, Width / Math::Tan(HalfFOV) / Height, 0.0f, 0.0f),
-            TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f),
-            TPlane<T>(0.0f, 0.0f, MinZ, 0.0f))
+            TPlane<T>(Scale / Aspect, 0.0f, 0.0f, 0.0f),
+            TPlane<T>(0.0f, Scale, 0.0f, 0.0f),
+            TPlane<T>(0.0f, 0.0f, MaxZ / (MaxZ - MinZ), 1.0f),
+            TPlane<T>(0.0f, 0.0f, -(MaxZ * MinZ) / (MaxZ - MinZ), 0.0f))
     {
     }
 };
@@ -466,9 +466,9 @@ struct TLookAtMatrix : TMatrix<T>
 {
     TLookAtMatrix(const TVector3<T>& EyePosition, const TVector3<T>& LookAtPosition, const TVector3<T>& UpVector)
     {
-        const TVector3<T> ZAxis = (LookAtPosition - EyePosition).GetSafeNormal();
-        const TVector3<T> XAxis = (Math::Cross(UpVector, ZAxis)).GetSafeNormal();
-        const TVector3<T> YAxis = Math::Cross(ZAxis, XAxis).GetSafeNormal();
+        const TVector3<T> ZAxis = (LookAtPosition - EyePosition).Normalized();
+        const TVector3<T> XAxis = (Math::Cross(UpVector, ZAxis)).Normalized();
+        const TVector3<T> YAxis = Math::Cross(ZAxis, XAxis).Normalized();
 
         this->SetIdentity();
         for (uint32 RowIndex = 0; RowIndex < 3; RowIndex++)

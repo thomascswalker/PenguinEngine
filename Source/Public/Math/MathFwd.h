@@ -4,8 +4,8 @@
 #define P_EPSILON FLT_EPSILON
 #define P_SINGULARITY_THRESHOLD 0.4999995f
 #define P_RAD_TO_DEG (180.0f / P_PI)
-#define P_MIN_Z = 0.001f
-#define P_MAX_Z 10000.0f
+#define P_MIN_Z 0.001f
+#define P_MAX_Z 100000.0f
 #define P_ZERO_PRECISION = 0.0f
 #define P_VERY_SMALL_NUMBER FLT_EPSILON
 #define P_SMALL_NUMBER 0.0001f
@@ -22,6 +22,12 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned int uint32;
 typedef unsigned long long uint64;
+
+// Buffer
+template <int32 N>
+struct TBuffer;
+typedef TBuffer<4> PColorBuffer;
+typedef TBuffer<1> PDataBuffer;
 
 // Rect
 template <typename T>
@@ -48,9 +54,9 @@ typedef TVector4<float> FVector4;
 typedef TVector4<double> DVector4;
 
 template <typename T>
-struct TBarycentric;
-typedef TBarycentric<float> FBarycentric;
-typedef TBarycentric<double> DBarycentric;
+struct TTriangle;
+typedef TTriangle<float> FTriangle;
+typedef TTriangle<double> DTriangle;
 
 // Matrix
 template <typename T>
@@ -115,4 +121,10 @@ enum EAxis
     X,
     Y,
     Z
+};
+
+enum EBufferType
+{
+    Data,
+    Color
 };

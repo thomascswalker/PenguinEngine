@@ -55,22 +55,6 @@ public:
     static std::shared_ptr<PMesh> CreateTriangle(float Scale);
     static std::shared_ptr<PMesh> CreatePlane(float Size);
     static std::shared_ptr<PMesh> CreatePlane(float Width, float Height);
-    static std::shared_ptr<PMesh> CreateSphere(float Radius, float Segments = 8);
+    static std::shared_ptr<PMesh> CreateSphere(float Radius, int32 Segments = 8);
+    static std::shared_ptr<PMesh> CreateCube(float Scale);
 };
-
-namespace Math
-{
-    static FVector3 GetNormal(const FVector3& V0, const FVector3& V1, const FVector3& V2)
-    {
-        const FVector3 U = V1 - V0;
-        const FVector3 V = V2 - V1;
-        
-        FVector3 N;
-        N.X = (U.Y * V.Z) - (U.Z * V.Y);
-        N.Y = (U.Z * V.X) - (U.X * V.Z);
-        N.Z = (U.X * V.Y) - (U.Y * V.X);
-        
-        return N;
-    }
-
-}

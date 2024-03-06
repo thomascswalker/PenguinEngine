@@ -1,21 +1,31 @@
 ﻿#include "Framework/Renderer/Viewport.h"
 #include "Framework/Core/Logging.h"
 
+// View Info
+FTransform PViewInfo::GetViewTransform()
+{
+    return {Rotation, Translation};
+}
+
 FMatrix PViewInfo::ComputeViewProjectionMatrix(bool bLookAt)
 {
     if (bLookAt)
     {
-        return FLookAtMatrix(Translation, FVector3(0,0,0), FVector3::UpVector());
+        ViewRotationMatrix = FLookAtMatrix(Translation, FVector3::ZeroVector(), FVector3::UpVector());
+    }
+    else
+    {
+        ViewRotationMatrix = FInverseRotationMatrix(Rotation);
+        ViewRotationMatrix = FTranslationMatrix(Translation) * ViewRotationMatrix;
     }
 
-    ViewRotationMatrix = FInverseRotationMatrix(Rotation);
-    ViewRotationMatrix = FTranslationMatrix(-Translation);// * ViewRotationMatrix;
+    const float Scale = 1.0f / Math::Tan(Math::DegreesToRadians(Fov / 2.0f));
+    ProjectionMatrix = FReversedZPerspectiveMatrix(Scale, GetAspect(), MinZ, MaxZ); // NOLINT
 
-    const float HalfFovRad = Math::DegreesToRadians(Fov / 2.0f);
-    ProjectionMatrix = FReversedZPerspectiveMatrix(HalfFovRad, Width, Height, MaxZ); // NOLINT
-    
     return ViewRotationMatrix * ProjectionMatrix;
 }
+
+// Viewport
 
 PViewport::PViewport(const uint32 InWidth, const uint32 InHeight, const FVector3& StartTranslation, const FRotator& StartRotation)
 {
