@@ -12,6 +12,9 @@ class PEngine
     TimePoint StartTime;
     float DeltaTime = 0.0f;
 
+    float CameraSpeed = 0.005f;
+    float CameraSpeedMultiplier = 1.0f;
+
 public:
     static PEngine* Instance;
     static PEngine* GetInstance();

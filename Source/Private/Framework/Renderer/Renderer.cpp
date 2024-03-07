@@ -176,7 +176,7 @@ void PRenderer::DrawMesh(const PMesh* Mesh) const
 }
 void PRenderer::Render() const
 {
-    Viewport->UpdateViewProjectionMatrix(LOOK_AT);
+    Viewport->UpdateViewProjectionMatrix();
     ClearBuffers();
 
     const PEngine* Engine = PEngine::GetInstance();

@@ -1,5 +1,6 @@
 ﻿#include "Framework/Renderer/Viewport.h"
 #include "Framework/Core/Logging.h"
+#include "Framework/Engine/Engine.h"
 
 // View Info
 FTransform PViewInfo::GetViewTransform()
@@ -105,4 +106,36 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatri
     }
 
     return false;
+}
+
+void PViewport::FormatDebugText()
+{
+    PEngine* Engine = PEngine::GetInstance();
+    const IInputHandler* InputHandler = IInputHandler::GetInstance();
+    std::string MousePosition = InputHandler->GetCurrentCursorPosition().ToString();
+    std::string MouseDelta = InputHandler->GetDeltaCursorPosition().ToString();
+    auto KeysDown = InputHandler->GetKeysDown();
+    std::string FmtKeysDown;
+
+    for (size_t Index = 0; Index < KeysDown.size(); ++Index)
+    {
+        FmtKeysDown += KeysDown[Index];
+        if (Index != KeysDown.size() - 1)
+        {
+            FmtKeysDown += ", ";
+        }
+    }
+
+    DebugText = std::format(
+        "FPS: {}\n"
+        "Size: {}\n"
+        "Mouse Position: {}\n"
+        "Mouse Delta: {}\n"
+        "Keys pressed: {}",
+        Engine->GetFps(),
+        GetSize().ToString(),
+        MousePosition,
+        MouseDelta,
+        FmtKeysDown
+    );
 }

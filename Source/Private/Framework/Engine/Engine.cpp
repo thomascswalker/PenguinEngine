@@ -1,7 +1,8 @@
 ﻿#include <Framework/Engine/Engine.h>
 #include <Framework/Engine/Mesh.h>
-
 #include "Framework/Engine/Timer.h"
+#include "Framework/Input/InputHandler.h"
+#include "Framework/Application.h"
 
 PEngine* PEngine::Instance = GetInstance();
 
@@ -46,4 +47,29 @@ void PEngine::Tick()
     TimePoint EndTime = PTimer::Now();
     DeltaTime = std::chrono::duration_cast<DurationMs>(EndTime - StartTime).count();
     StartTime = PTimer::Now();
+
+
+    // Update camera movement
+    IInputHandler* Input = PWin32InputHandler::GetInstance();
+    if (Input)
+    {
+        FVector3 DeltaTranslation;
+
+        // Update camera position
+        const float ScaledCameraSpeed = CameraSpeed * CameraSpeedMultiplier * DeltaTime;
+        if (Input->IsKeyDown('W')) { DeltaTranslation.Y = ScaledCameraSpeed; } // Forward
+        if (Input->IsKeyDown('S')) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Backward
+        if (Input->IsKeyDown('D')) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
+        if (Input->IsKeyDown('A')) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
+        if (Input->IsKeyDown('E')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Up
+        if (Input->IsKeyDown('Q')) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Down
+
+        // Arcball rotation
+        Renderer->GetViewport()->GetInfo()->Translation += DeltaTranslation;
+
+        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition();
+    }
+
+    // Format debug text
+    Renderer->GetViewport()->FormatDebugText();
 }

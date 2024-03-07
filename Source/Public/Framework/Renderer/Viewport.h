@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Math/MathCommon.h"
+#include "Framework/Input/InputHandler.h"
 
 #define DEFAULT_VIEWPORT_WIDTH 320
 #define DEFAULT_VIEWPORT_HEIGHT 240
@@ -49,6 +50,8 @@ class PViewport
 {
     std::shared_ptr<PViewInfo> Info;
     FMatrix MVP;
+    bool bShowDebugText = true;
+    std::string DebugText = "Debug!";
 
 public:
     FTransform Transform;
@@ -64,7 +67,12 @@ public:
     }
 
     PViewInfo* GetInfo() const { return Info.get(); }
-    
+
+    void ResetView() const
+    {
+        Info->Translation = DEFAULT_CAMERA_TRANSLATION;
+    }
+
     void SetViewTranslation(const FVector3& NewTranslation) const;
     void AddViewTranslation(const FVector3& Delta) const;
     void SetViewRotation(const FRotator& NewRotation) const;
@@ -74,4 +82,10 @@ public:
     FMatrix* GetViewProjectionMatrix() { return &MVP; }
     bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const;
     bool ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const;
+
+    void FormatDebugText();
+
+    std::string GetDebugText() const { return DebugText; }
+    bool GetShowDebugText() const { return bShowDebugText; }
+    void ToggleShowDebugText() { bShowDebugText = !bShowDebugText; }
 };

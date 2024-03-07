@@ -4,6 +4,7 @@
 
 #include "Platforms/PlatformInterface.h"
 #include "Engine/Engine.h"
+#include "Input/InputHandler.h"
 
 class PEngine;
 class PApplication
@@ -22,6 +23,8 @@ public:
     {
         Platform = std::make_shared<PlatformType>(std::forward<Types>(Args)...);
         Engine = std::make_shared<PEngine>();
+
+        InputHandler = PWin32InputHandler::GetInstance();
         LOG_INFO("Initialized application.")
     }
 
@@ -31,6 +34,7 @@ public:
 
 protected:
     PApplication() = default;
+    IInputHandler* InputHandler;
 
 private:
     std::shared_ptr<IPlatform> Platform;
