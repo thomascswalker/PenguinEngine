@@ -68,13 +68,13 @@ EWindingOrder PMesh::GetWindingOrder(const FVector3& V0, const FVector3& V1, con
     const float Result = (V1.X - V0.X) * (V2.Y - V0.Y) - (V2.X - V0.X) * (V1.Y - V0.Y);
     if (Result > 0)
     {
-        return CCW;
+        return EWindingOrder::CCW;
     }
     if (Result < 0)
     {
-        return CW;
+        return EWindingOrder::CW;
     }
-    return CL;
+    return EWindingOrder::CL;
 }
 
 /*
@@ -108,10 +108,10 @@ std::shared_ptr<PMesh> PMesh::CreatePlane(float Width, float Height)
 {
     PMesh Mesh;
     Mesh.AddQuad(
-        {-Width, -Height, 0.0f},
-        {Width, -Height, 0.0f},
-        {Width, Height, 0.0f},
-        {-Width, Height, 0.0f}
+        {-Width, 0.0f, -Height},
+        {Width, 0.0f, -Height},
+        {Width, 0.0f, Height},
+        {-Width, 0.0f, Height}
     );
     return std::make_shared<PMesh>(Mesh);
 }
@@ -177,7 +177,7 @@ std::shared_ptr<PMesh> PMesh::CreateSphere(const float Radius, const int32 Segme
 
 std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
 {
-    std::vector<uint32> Indices {
+    std::vector<uint32> Indices{
         //Top
         2, 6, 7,
         2, 3, 7,
@@ -202,16 +202,16 @@ std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
         4, 6, 7,
         4, 5, 7
     };
-        
-    std::vector Vertices {
-        FVector3(-Scale, -Scale,  Scale), //0
-        FVector3(Scale, -Scale,  Scale), //1
-        FVector3(-Scale,  Scale,  Scale), //2
-        FVector3(Scale,  Scale,  Scale), //3
+
+    std::vector Vertices{
+        FVector3(-Scale, -Scale, Scale), //0
+        FVector3(Scale, -Scale, Scale), //1
+        FVector3(-Scale, Scale, Scale), //2
+        FVector3(Scale, Scale, Scale), //3
         FVector3(-Scale, -Scale, -Scale), //4
         FVector3(Scale, -Scale, -Scale), //5
-        FVector3(-Scale,  Scale, -Scale), //6
-        FVector3(Scale,  Scale, -Scale) //7
+        FVector3(-Scale, Scale, -Scale), //6
+        FVector3(Scale, Scale, -Scale) //7
     };
 
     return std::make_shared<PMesh>(Vertices, Indices);

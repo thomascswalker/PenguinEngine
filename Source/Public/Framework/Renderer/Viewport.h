@@ -1,20 +1,19 @@
 ﻿#pragma once
 
 #include "Math/MathCommon.h"
-#include "Framework/Input/InputHandler.h"
 
 #define DEFAULT_VIEWPORT_WIDTH 320
 #define DEFAULT_VIEWPORT_HEIGHT 240
 
-#define DEFAULT_FOV 90.0f
+#define DEFAULT_FOV 120.0f
 #define DEFAULT_MINZ 1.0f
 #define DEFAULT_MAXZ 1000.0f
 
-#define DEFAULT_ZOOM 5.0f
+#define DEFAULT_ZOOM 2.0f
 #define MIN_ZOOM 1.0f
 #define MAX_ZOOM 10.0f
 
-#define DEFAULT_CAMERA_TRANSLATION FVector3(0, 0, -1)
+#define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,-(X))
 
 enum EViewportType
 {
@@ -23,7 +22,7 @@ enum EViewportType
 };
 
 // Synonymous with a camera view
-struct PViewInfo
+struct PCamera
 {
     uint32 Width = DEFAULT_VIEWPORT_WIDTH;
     uint32 Height = DEFAULT_VIEWPORT_HEIGHT;
@@ -34,57 +33,62 @@ struct PViewInfo
     float MinZoom = MIN_ZOOM;
     float MaxZoom = MAX_ZOOM;
 
-    FVector3 Translation;
-    FRotator Rotation;
-    FVector3 LookAt;
+    FVector3 Translation = DEFAULT_CAMERA_TRANSLATION(Zoom); // Current translation
+    FRotator Rotation; // Current rotation
+
+    FVector3 TargetTranslation = FVector3::ZeroVector(); // Origin
+    FVector3 UpVector = FVector3::UpVector();
 
     FMatrix ProjectionMatrix;
-    FMatrix ViewRotationMatrix;
+    FMatrix ViewMatrix;
 
     constexpr float GetAspect() const { return static_cast<float>(Width) / static_cast<float>(Height); }
     FTransform GetViewTransform();
     FMatrix ComputeViewProjectionMatrix(bool bLookAt = false);
+    void Orbit(float DX, float DY);
 };
 
 class PViewport
 {
-    std::shared_ptr<PViewInfo> Info;
+    std::shared_ptr<PCamera> Camera;
     FMatrix MVP;
     bool bShowDebugText = true;
-    std::string DebugText = "Debug!";
+    std::string DebugText;
 
 public:
     FTransform Transform;
 
-    PViewport(uint32 InWidth, uint32 InHeight, const FVector3& StartTranslation = DEFAULT_CAMERA_TRANSLATION, const FRotator& StartRotation = FRotator::Identity());
+    PViewport(uint32 InWidth, uint32 InHeight);
     void Resize(uint32 InWidth, uint32 InHeight) const;
 
-    uint32 GetWidth() const { return Info->Width; }
-    uint32 GetHeight() const { return Info->Height; }
+    uint32 GetWidth() const { return Camera->Width; }
+    uint32 GetHeight() const { return Camera->Height; }
     FVector2 GetSize() const
     {
-        return {static_cast<float>(Info->Width), static_cast<float>(Info->Height)};
+        return {static_cast<float>(Camera->Width), static_cast<float>(Camera->Height)};
     }
+    float GetAspect() const { return static_cast<float>(Camera->Width) / static_cast<float>(Camera->Height); }
 
-    PViewInfo* GetInfo() const { return Info.get(); }
+    PCamera* GetCamera() const { return Camera.get(); }
 
-    void ResetView() const
+    void ResetView()
     {
-        Info->Translation = DEFAULT_CAMERA_TRANSLATION;
+        Camera->Translation = DEFAULT_CAMERA_TRANSLATION(Camera->Zoom);
+        UpdateViewProjectionMatrix(true);
     }
 
     void SetViewTranslation(const FVector3& NewTranslation) const;
     void AddViewTranslation(const FVector3& Delta) const;
+
     void SetViewRotation(const FRotator& NewRotation) const;
     void AddViewRotation(const FRotator& Rotation) const;
 
-    void UpdateViewProjectionMatrix(bool bLookAt = false);
+    void UpdateViewProjectionMatrix(bool bLookAt = true);
     FMatrix* GetViewProjectionMatrix() { return &MVP; }
-    bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const;
-    bool ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const;
+    bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition);
+    bool ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition);
 
     void FormatDebugText();
-
     std::string GetDebugText() const { return DebugText; }
     bool GetShowDebugText() const { return bShowDebugText; }
     void ToggleShowDebugText() { bShowDebugText = !bShowDebugText; }

@@ -2,19 +2,18 @@
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 
-#define DRAW_WIREFRAME 1
+#define DRAW_WIREFRAME 0
 #define DRAW_SHADED 1
-#define DEPTH_TEST 0
+#define DEPTH_TEST 1
 #define LOOK_AT 1
 
 /* Renderer */
-
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 {
     Viewport = std::make_shared<PViewport>(InWidth, InHeight);
 
-    AddBuffer(Data, "Depth");
-    AddBuffer(Color, "Color");
+    AddBuffer(EBufferType::Data, "Depth");
+    AddBuffer(EBufferType::Color, "Color");
 }
 
 void PRenderer::Resize(uint32 InWidth, uint32 InHeight) const
@@ -82,41 +81,45 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
     // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
-    const FVector3 Normal = FTriangle::GetSurfaceNormal(V0, V1, V2);
-    const float FacingRatio = Math::Dot(Viewport->GetInfo()->Translation, Normal);
-    // if (FacingRatio < 0.0f)
-    // {
-    //     return; // The entire triangle is behind the camera
-    // }
-    // FacingRatio = Math::Clamp(Math::Abs(FacingRatio), 0.0f, 1.0f);
+    const FVector3 LookAtTranslation = Viewport->GetCamera()->TargetTranslation;
+    const FVector3 CameraTranslation = Viewport->GetCamera()->Translation;
+
+    const FVector3 CameraNormal = (CameraTranslation - LookAtTranslation).Normalized();
+    const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2).Normalized();
+
+    const float FacingRatio = Math::Abs(Math::Dot(WorldNormal, CameraNormal));
 
     // Project the world-space points to screen-space
     FVector3 ScreenPoints[3];
-    Viewport->ProjectWorldToScreen(V0, ScreenPoints[0]);
-    Viewport->ProjectWorldToScreen(V1, ScreenPoints[1]);
-    Viewport->ProjectWorldToScreen(V2, ScreenPoints[2]);
+    bool bTriangleOnScreen = false;
+    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V0, ScreenPoints[0]);
+    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V1, ScreenPoints[1]);
+    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V2, ScreenPoints[2]);
+
+    // If none of the points are on the screen, the triangle is not in the frame, so exit
+    // drawing this triangle
+    if (!bTriangleOnScreen)
+    {
+        return;
+    }
 
 #if DRAW_SHADED
     // Reverse the order to CCW if the order is CW
     const EWindingOrder WindingOrder = FTriangle::GetVertexOrder(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
     switch (WindingOrder)
     {
-    case CW :
+    case EWindingOrder::CW :
         std::swap(ScreenPoints[0], ScreenPoints[1]);
         break;
-    case CCW :
+    case EWindingOrder::CCW :
         break;
-    case CL :
+    case EWindingOrder::CL :
         return;
     }
 
     // Get the bounding box of the 2d triangle
-    const FRect BB = FRect::MakeBoundingBox(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
-
-#if DEPTH_TEST
-    // Only calculate the area of the triangle if we're doing the depth test
-    float Area = FTriangle::Area(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
-#endif
+    FRect BB = FRect::MakeBoundingBox(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
+    BB.Clamp({0, 0, static_cast<float>(GetWidth()), static_cast<float>(GetHeight())});
 
     for (int32 Y = BB.Min().Y; Y < BB.Max().Y; Y++)
     {
@@ -129,27 +132,22 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
                 continue;
             }
 
-            // UVW /= Area;
 #if DEPTH_TEST
-            float NewDepth = 1.0f / (ScreenPoints[0].Z * UVW.X + ScreenPoints[1].Z * UVW.Y + ScreenPoints[2].Z * UVW.Z);
-            const float CurrentDepth = GetDepthBuffer()->GetPixel<float>(X, Y);
+            const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
+            float NewDepth = FTriangle::GetDepth(P, V0, V1, V2);
             if (NewDepth > CurrentDepth)
             {
-                continue;
+                // continue;
             }
-            // Set the depth buffer to the current pixel depth
             GetDepthBuffer()->SetPixel(X, Y, NewDepth);
-            const uint8 R = static_cast<uint8>(NewDepth / GetViewport()->GetInfo()->MaxZ * 255.0f); // Linear to SRGB
-#else
-            const uint8 R = 128; //Math::Rerange(NewDepth, 0.0f, 100.0f, 0.0f, 1.0f) * 255;
+            uint8 R = (Math::Remap(NewDepth, DEFAULT_MINZ, DEFAULT_MAXZ, 0.0f, 1.0f)) * 255;
 #endif
-
             // Set the color buffer to this new color
-            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(UVW.X * 255, UVW.Y * 255, UVW.Z  * 255));
+            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
         }
     }
 #endif
-
+    
 #if DRAW_WIREFRAME
     DrawLine({ScreenPoints[0].X, ScreenPoints[0].Y}, {ScreenPoints[1].X, ScreenPoints[1].Y}, WireColor);
     DrawLine({ScreenPoints[1].X, ScreenPoints[1].Y}, {ScreenPoints[2].X, ScreenPoints[2].Y}, WireColor);
@@ -157,6 +155,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 #endif
 }
 
+// TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
 void PRenderer::DrawMesh(const PMesh* Mesh) const
 {
     for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
@@ -194,5 +193,5 @@ void PRenderer::ClearBuffers() const
     }
 
     // Fill the depth buffer with the Max Z-depth
-    GetDepthBuffer()->Fill(Viewport->GetInfo()->MaxZ);
+    GetDepthBuffer()->Fill(Viewport->GetCamera()->MaxZ);
 }

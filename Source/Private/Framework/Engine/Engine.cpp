@@ -26,7 +26,11 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     StartTime = PTimer::Now();
 
     // Construct a simple triangle mesh
-    if (auto Mesh = PMesh::CreateCube(0.5f))
+    if (auto Mesh = PMesh::CreatePlane(2.0f))
+    {
+        Meshes.emplace_back(Mesh);
+    }
+    if (auto Mesh = PMesh::CreateSphere(1.0f, 16))
     {
         Meshes.emplace_back(Mesh);
     }
@@ -44,31 +48,35 @@ bool PEngine::Shutdown()
 
 void PEngine::Tick()
 {
-    TimePoint EndTime = PTimer::Now();
+    const TimePoint EndTime = PTimer::Now();
     DeltaTime = std::chrono::duration_cast<DurationMs>(EndTime - StartTime).count();
     StartTime = PTimer::Now();
 
-
     // Update camera movement
-    IInputHandler* Input = PWin32InputHandler::GetInstance();
-    if (Input)
+    if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
-        FVector3 DeltaTranslation;
-
         // Update camera position
+        PCamera* Camera = Renderer->GetViewport()->GetCamera();
         const float ScaledCameraSpeed = CameraSpeed * CameraSpeedMultiplier * DeltaTime;
-        if (Input->IsKeyDown('W')) { DeltaTranslation.Y = ScaledCameraSpeed; } // Forward
-        if (Input->IsKeyDown('S')) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Backward
-        if (Input->IsKeyDown('D')) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
-        if (Input->IsKeyDown('A')) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
-        if (Input->IsKeyDown('E')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Up
-        if (Input->IsKeyDown('Q')) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Down
 
-        // Arcball rotation
-        Renderer->GetViewport()->GetInfo()->Translation += DeltaTranslation;
+        // if (Input->IsKeyDown('W')) { /* Input->ConsumeKey('W'); */ DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
+        // if (Input->IsKeyDown('S')) { /* Input->ConsumeKey('S'); */ DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
+        // if (Input->IsKeyDown('D')) { /* Input->ConsumeKey('D'); */ DeltaTranslation.X = ScaledCameraSpeed; } // Right
+        // if (Input->IsKeyDown('A')) { /* Input->ConsumeKey('A'); */ DeltaTranslation.X = -ScaledCameraSpeed; } // Left
+        // if (Input->IsKeyDown('E')) { /* Input->ConsumeKey('E'); */ DeltaTranslation.Y = ScaledCameraSpeed; } // Up
+        // if (Input->IsKeyDown('Q')) { /* Input->ConsumeKey('Q'); */ DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
 
-        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition();
+        // Calculate rotation amount given the mouse delta
+        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition() * ScaledCameraSpeed;
+
+        // If there's actual movement on either the X or Y axis, move the camera
+        if (DeltaMouseCursor != 0)
+        {
+            Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y);
+        }
+        Input->ResetDeltaCursorPosition();
     }
+
 
     // Format debug text
     Renderer->GetViewport()->FormatDebugText();

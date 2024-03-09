@@ -111,7 +111,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                     Renderer->GetViewport()->ToggleShowDebugText();
                     break;
                 }
-            case 'O' :
+            case 'F' :
                 {
                     Renderer->GetViewport()->ResetView();
                     break;
@@ -127,6 +127,14 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             {
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
                 break;
+            }
+
+            // Draw mouse cursor line from click origin
+            FVector2 A = InputHandler->GetClickPosition();
+            if (A != 0)
+            {
+                FVector2 B = InputHandler->GetCurrentCursorPosition();
+                Renderer->DrawLine(A, B, PColor::Red());
             }
 
             // Get the current window size from the buffer
@@ -157,7 +165,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 ClientRect.left += 10;
 
                 std::string OutputString = Renderer->GetViewport()->GetDebugText();
-                SetTextColor(DeviceContext, RGB(0, 255, 0));
+                SetTextColor(DeviceContext, RGB(255, 255, 0));
                 SetBkColor(DeviceContext, TRANSPARENT);
                 DrawText(
                     DeviceContext, // DC
@@ -328,7 +336,10 @@ uint32 PWin32Platform::Loop()
         // Render the frame
         if (const PRenderer* Renderer = Engine->GetRenderer())
         {
+            // Render the actual frame
             Renderer->Render();
+
+            // Return
             return Success;
         }
     }

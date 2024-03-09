@@ -38,7 +38,7 @@ struct TRect
     {
         T XValues[3] = {V0.X, V1.X, V2.X};
         T YValues[3] = {V0.Y, V1.Y, V2.Y};
-        
+
         const T MinX = *std::ranges::min_element(XValues);
         const T MinY = *std::ranges::min_element(YValues);
         const T MaxX = *std::ranges::max_element(XValues);
@@ -48,5 +48,13 @@ struct TRect
         TVector2<T> BBMax(MaxX, MaxY);
 
         return TRect(BBMin, BBMax);
+    }
+
+    void Clamp(const TRect& Other)
+    {
+        X = Math::Max(X, Other.X);
+        Y = Math::Max(Y, Other.Y);
+        Width = Math::Min(Width, Other.Width);
+        Height = Math::Min(Height, Other.Height);
     }
 };

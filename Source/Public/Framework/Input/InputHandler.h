@@ -34,7 +34,7 @@ protected:
     FVector2 CurrentCursorPosition;
     FVector2 DeltaCursorPosition;
 
-    std::map<const char, bool> KeyStateMap;
+    std::map<int32, bool> KeyStateMap;
 
     IInputHandler()
     {
@@ -54,13 +54,19 @@ public:
     virtual bool IsMouseDown(EMouseButtonType ButtonType) const { return false; }
     virtual bool IsAnyMouseDown() const { return false; }
 
+    virtual FVector2 GetClickPosition() const { return ClickPosition; }
     virtual FVector2 GetCurrentCursorPosition() const { return CurrentCursorPosition; }
     virtual FVector2 GetDeltaCursorPosition() const { return DeltaCursorPosition; }
+    virtual void ResetDeltaCursorPosition()
+    {
+        DeltaCursorPosition.X = 0.0f;
+        DeltaCursorPosition.Y = 0.0f;
+    }
 
     // Keys
-    virtual std::vector<char> GetKeysDown() const
+    virtual std::vector<int32> GetKeysDown() const
     {
-        std::vector<char> Keys;
+        std::vector<int32> Keys;
         for (const auto& [K, V] : KeyStateMap)
         {
             if (V)
@@ -73,6 +79,10 @@ public:
     virtual bool OnKeyDown(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
     virtual bool OnKeyUp(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
     virtual bool IsKeyDown(int32 KeyCode) const { return false; }
+    virtual void ConsumeKey(int32 KeyCode)
+    {
+        KeyStateMap.at(KeyCode) = false;
+    }
 };
 
 class PWin32InputHandler : public IInputHandler
@@ -123,6 +133,7 @@ public:
         default :
             return false;
         }
+        ClickPosition = 0;
 
         return true;
     }

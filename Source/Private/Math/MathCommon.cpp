@@ -5,7 +5,7 @@
 template <typename T>
 TVector3<T> TMatrix<T>::GetScale(T Tolerance)
 {
-    TVector3 Scale(0, 0, 0);
+    TVector3<T> Scale(0, 0, 0);
 
     // For each row, find magnitude, and if its non-zero re-scale so its unit length.
     const T SquareSum0 = (M[0][0] * M[0][0]) + (M[0][1] * M[0][1]) + (M[0][2] * M[0][2]);
@@ -73,35 +73,17 @@ TRotator<T>::TRotator(const TVector3<T>& Euler)
     Roll = Euler.X;
 }
 
+// Rotator to Quaternion
 template <typename T>
 TQuat<T> TRotator<T>::Quaternion() const
 {
-    const T DEG_TO_RAD = P_PI / (180.f);
-    const T RADS_DIVIDED_BY_2 = DEG_TO_RAD / 2.f;
-    T SP, SY, SR;
-    T CP, CY, CR;
-
-    const T PitchNoWinding = Math::Mod(Pitch, 360.0f);
-    const T YawNoWinding = Math::Mod(Yaw, 360.0f);
-    const T RollNoWinding = Math::Mod(Roll, 360.0f);
-
-    Math::SinCos(&SP, &CP, PitchNoWinding * RADS_DIVIDED_BY_2);
-    Math::SinCos(&SY, &CY, YawNoWinding * RADS_DIVIDED_BY_2);
-    Math::SinCos(&SR, &CR, RollNoWinding * RADS_DIVIDED_BY_2);
-
-    TQuat<T> RotationQuat;
-    RotationQuat.X = CR * SP * SY - SR * CP * CY;
-    RotationQuat.Y = -CR * SP * CY - SR * CP * SY;
-    RotationQuat.Z = CR * CP * SY - SR * SP * CY;
-    RotationQuat.W = CR * CP * CY + SR * SP * SY;
-
-    return RotationQuat;
+    return TQuat<T>(Pitch, Yaw, Roll);
 }
 
 template <typename T>
 T TRotator<T>::NormalizeAxis(T Angle) const
 {
-    Angle = Math::Clamp(Angle, 0.0f, 360.0f);
+    Angle = Math::Clamp<T>(Angle, 0.0f, 360.0f);
     if (Angle > 180.0f)
     {
         Angle -= 360.0f;
@@ -118,42 +100,13 @@ void TRotator<T>::Normalize()
 }
 
 // Quat
-
+// Quaternion to Rotator
 template <typename T>
 TRotator<T> TQuat<T>::Rotator()
 {
-    // Test for singularities, accounts for gimbal lock
-    // https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
-    const T SingularityTest = X * Y + Z * W;
-    const T YawX = 1.0f - 2.0f * (Math::Square(Y) + Math::Square(Z));
-    const T YawY = 2.0f * (W * Z + X * Y);
-    const T RollX = -2.0f * (X * Y * Z * W);
-    const T RollY = 1.0f - (2.0f * (X * Y * Z * W));
-    const T PitchX = Math::Sqrt(1.0f + 2.0f * (W * Y - X * Z));
-    const T PitchY = Math::Sqrt(1.0f - 2.0f * (W * Y - X * Z));
-    T Pitch, Yaw, Roll;
-
-    if (SingularityTest > P_SINGULARITY_THRESHOLD)
-    {
-        // North pole
-        Pitch = -90.0f;
-        Yaw = 0;
-        Roll = 0;
-    }
-    else if (SingularityTest < -P_SINGULARITY_THRESHOLD)
-    {
-        // South pole
-        Pitch = 90.0f;
-        Yaw = 0;
-        Roll = 0;
-    }
-    else
-    {
-        // Normal
-        Pitch = Math::ASin(2.0f * SingularityTest) * P_RAD_TO_DEG;
-        Yaw = Math::ATan2(YawX, YawY) * P_RAD_TO_DEG;
-        Roll = Math::ATan2(-YawY, YawX) * P_RAD_TO_DEG;
-    }
+    T Roll = Math::ATan2(2.0f * Y * W - 2.0f * X * Z, 1.0f - 2.0f * Y * Y - 2.0f * Z * Z);
+    T Pitch = Math::ATan2(2.0f * X * W - 2.0f * Y * Z, 1.0f - 2.0f * X * X - 2.0f * Z * Z);
+    T Yaw = Math::ASin(2.0f * X * Y + 2.0f * Z * W);
 
     TRotator Result(Pitch, Yaw, Roll);
     return Result;

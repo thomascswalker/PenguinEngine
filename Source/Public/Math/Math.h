@@ -4,13 +4,19 @@
 #include <bit>
 #include <cmath>
 #include <float.h>
+#include <intrin.h>
 
 #include "MathFwd.h"
 
 
-
 namespace Math
 {
+    template <typename T>
+    constexpr static T Pow(T Value, T Power)
+    {
+        return std::pow(Value, Power);
+    }
+
     template <typename T>
     constexpr static T Sin(T Value)
     {
@@ -164,9 +170,18 @@ namespace Math
     constexpr static T InvSqrt(T Value)
     {
         // https://en.wikipedia.org/wiki/Fast_inverse_square_root
-        int32 Magic = 0x5f3759df;
-        float const Y = std::bit_cast<float>(Magic - (std::bit_cast<uint32>(Value) >> 1));
-        return Y * (1.5f - (Value * 0.5f * Y * Y));
+        const float Magic = 0x5f3759df;
+        const float ThreeHalves = 1.5F;
+        float Y = Value;
+
+        long I = *reinterpret_cast<long*>(&Y);
+
+        I = Magic - (I >> 1);
+        Y = *reinterpret_cast<float*>(&I);
+
+        Y = Y * (ThreeHalves - ((Value * 0.5f) * Y * Y));
+
+        return Y;
     }
 
     template <typename T>
@@ -190,14 +205,12 @@ namespace Math
     template <typename T>
     constexpr static T Mod(T A, T B)
     {
-        return std::modf(A, B);
+        return fmodf(static_cast<float>(A), static_cast<float>(B));
     }
 
     template <typename T>
-    constexpr static T Rerange(T Value, T OldMin, T OldMax, T NewMin, T NewMax)
+    constexpr static T Remap(T Value, T OldMin, T OldMax, T NewMin, T NewMax)
     {
-        T OldRange = (OldMax - OldMin);  
-        T NewRange = (NewMax - NewMin);  
-        return (((Value - OldMin) * NewRange) / OldRange) + NewMin;
+        return (((Value - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin;
     }
 };

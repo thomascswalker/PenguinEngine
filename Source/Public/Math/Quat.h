@@ -85,9 +85,56 @@ struct TQuat
             this->W = qt[3];
         }
     }
-    
-    TRotator<T> Rotator();
-};
 
-template <>
-FRotator FQuat::Rotator();
+    // From Euler angles
+    TQuat(const float Pitch, const float Yaw, const float Roll)
+    {
+        T CY = cosf(Yaw * 0.5f);
+        T SY = sinf(Yaw * 0.5f);
+        T CP = cosf(Pitch * 0.5f);
+        T SP = sinf(Pitch * 0.5f);
+        T CR = cosf(Roll * 0.5f);
+        T SR = sinf(Roll * 0.5f);
+
+        W = CR * CP * CY + SR * SP * SY;
+        X = SR * CP * CY - CR * SP * SY;
+        Y = CR * SP * CY + SR * CP * SY;
+        Z = CR * CP * SY - SR * SP * CY;
+    }
+
+    TQuat operator*(const TQuat& Other) const
+    {
+        T TempW = W * Other.W - X * Other.X - Y * Other.Y - Z * Other.Z;
+        T TempX = W * Other.X + X * Other.W + Y * Other.Z - Z * Other.Y;
+        T TempY = W * Other.Y - X * Other.Y + Y * Other.W + Z * Other.X;
+        T TempZ = W * Other.Z + X * Other.Z - Y * Other.X + Z * Other.W;
+
+        return {TempX, TempY, TempZ, TempW};
+    }
+
+    TVector4<T> operator*(const TVector4<T>& Other)
+    {
+        TQuat QuatVector{Other.X, Other.Y, Other.Z, Other.W};
+        TQuat Inverse = GetConjugate();
+        TQuat Temp = *this;
+        TQuat Out = Temp * QuatVector * Inverse;
+        return {Out.X, Out.Y, Out.Z, Out.W};
+    }
+
+    TRotator<T> Rotator();
+
+    TQuat GetConjugate()
+    {
+        return {-X, -Y, -Z, W};
+    }
+
+    TQuat GetInverse()
+    {
+        return GetConjugate();
+    }
+};
+//
+// template <>
+// FRotator FQuat::Rotator();
+// template <>
+// DRotator DQuat::Rotator();

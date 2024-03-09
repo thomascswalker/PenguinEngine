@@ -42,6 +42,28 @@ struct TMatrix
         M[3][3] = InW.W;
         CheckNaN();
     }
+
+    template <typename T>
+    TMatrix(const TVector3<T>& InX, const TVector3<T>& InY, const TVector3<T>& InZ, const TVector3<T>& InW)
+    {
+        M[0][0] = InX.X;
+        M[0][1] = InX.Y;
+        M[0][2] = InX.Z;
+        M[0][3] = 0.0f;
+        M[1][0] = InY.X;
+        M[1][1] = InY.Y;
+        M[1][2] = InY.Z;
+        M[1][3] = 0.0f;
+        M[2][0] = InZ.X;
+        M[2][1] = InZ.Y;
+        M[2][2] = InZ.Z;
+        M[2][3] = 0.0f;
+        M[3][0] = InW.X;
+        M[3][1] = InW.Y;
+        M[3][2] = InW.Z;
+        M[3][3] = 1.0f;
+        CheckNaN();
+    }
     TMatrix(const TMatrix& Other)
     {
         std::memcpy(M, &Other.M, 16 * sizeof(T));
@@ -67,36 +89,71 @@ struct TMatrix
         }
     }
 
+    // https://www.opengl-tutorial.org/assets/faq_quaternions/index.html#Q28
     static TMatrix MakeRotationMatrix(const TRotator<T>& Rotation)
+    {
+        T A = Math::Cos(Rotation.Pitch);
+        T B = Math::Sin(Rotation.Pitch);
+        T C = Math::Cos(Rotation.Yaw);
+        T D = Math::Sin(Rotation.Yaw);
+        T E = Math::Cos(Rotation.Roll);
+        T F = Math::Sin(Rotation.Roll);
+
+        T AD = A * D;
+        T BD = B * D;
+
+        TMatrix Out;
+        Out.SetIdentity();
+
+        //      |  CE      -CF       D   0 |
+        // M  = |  BDE+AF  -BDF+AE  -BC  0 |
+        //      | -ADE+BF   ADF+BE   AC  0 |
+        //      |  0        0        0   1 |
+
+        Out.M[0][0] = C * E;
+        Out.M[0][1] = -C * F;
+        Out.M[0][2] = D;
+
+        Out.M[1][0] = BD * E + A * F;
+        Out.M[1][1] = -BD * F + A * E;
+        Out.M[1][2] = -B * C;
+
+        Out.M[2][0] = -AD * E + B * F;
+        Out.M[2][1] = AD * F + B * E;
+        Out.M[2][2] = A * C;
+
+        return Out;
+    }
+
+    static TMatrix MakeRotationTranslationMatrix(const FRotator& Rot, const FVector3& Translation)
     {
         T SP, SY, SR;
         T CP, CY, CR;
-
-        Math::SinCos(&SP, &CP, Math::DegreesToRadians(Rotation.Pitch));
-        Math::SinCos(&SY, &CY, Math::DegreesToRadians(Rotation.Yaw));
-        Math::SinCos(&SR, &CR, Math::DegreesToRadians(Rotation.Roll));
+        Math::SinCos(&SP, &CP, (T)Math::DegreesToRadians(Rot.Pitch));
+        Math::SinCos(&SY, &CY, (T)Math::DegreesToRadians(Rot.Yaw));
+        Math::SinCos(&SR, &CR, (T)Math::DegreesToRadians(Rot.Roll));
 
         TMatrix Out;
-
+        
         Out.M[0][0] = CP * CY;
         Out.M[0][1] = CP * SY;
         Out.M[0][2] = SP;
-        Out.M[0][3] = 0.0f;
+        Out.M[0][3] = 0.f;
 
         Out.M[1][0] = SR * SP * CY - CR * SY;
         Out.M[1][1] = SR * SP * SY + CR * CY;
         Out.M[1][2] = -SR * CP;
-        Out.M[1][3] = 0.0f;
+        Out.M[1][3] = 0.f;
 
         Out.M[2][0] = -(CR * SP * CY + SR * SY);
         Out.M[2][1] = CY * SR - CR * SP * SY;
         Out.M[2][2] = CR * CP;
         Out.M[2][3] = 0.f;
 
-        Out.M[3][0] = 0; // Translation X
-        Out.M[3][1] = 0; // Translation Y
-        Out.M[3][2] = 0; // Translation Z
-        Out.M[3][3] = 1.0f;
+        Out.M[3][0] = Translation.X;
+        Out.M[3][1] = Translation.Y;
+        Out.M[3][2] = Translation.Z;
+        Out.M[3][3] = 1.f;
 
         return Out;
     }
@@ -121,10 +178,10 @@ struct TMatrix
     static TMatrix GetIdentity()
     {
         return TMatrix{
-            FPlane(1, 0, 0, 0),
-            FPlane(0, 1, 0, 0),
-            FPlane(0, 0, 1, 0),
-            FPlane(0, 0, 0, 1)
+            TPlane<T>(1, 0, 0, 0),
+            TPlane<T>(0, 1, 0, 0),
+            TPlane<T>(0, 0, 1, 0),
+            TPlane<T>(0, 0, 0, 1)
         };
     }
 
@@ -269,17 +326,17 @@ struct TMatrix
     {
         switch (InAxis)
         {
-        case X :
+        case EAxis::X :
             {
-                return TVector3(M[0][0], M[0][1], M[0][2]);
+                return TVector3(M[0][0], M[1][0], M[2][0]);
             }
-        case Y :
+        case EAxis::Y :
             {
-                return TVector3(M[1][0], M[1][1], M[1][2]);
+                return TVector3(M[0][1], M[1][1], M[2][1]);
             }
-        case Z :
+        case EAxis::Z :
             {
-                return TVector3(M[2][0], M[2][1], M[2][2]);
+                return TVector3(M[0][2], M[1][2], M[2][2]);
             }
         }
         return TVector3<T>::ZeroVector();
@@ -287,16 +344,16 @@ struct TMatrix
 
     TRotator<T> GetRotator() const
     {
-        const TVector3 XAxis = GetScaledAxis(X);
-        const TVector3 YAxis = GetScaledAxis(Y);
-        const TVector3 ZAxis = GetScaledAxis(Z);
+        const TVector3 XAxis = GetScaledAxis(EAxis::X);
+        const TVector3 YAxis = GetScaledAxis(EAxis::Y);
+        const TVector3 ZAxis = GetScaledAxis(EAxis::Z);
         const T RadToDeg = 180.0f / (P_PI * 2.0f);
 
         T Pitch = Math::ATan2(XAxis.Z, Math::Sqrt(Math::Square(XAxis.X) + Math::Square(XAxis.Y))) * RadToDeg;
         T Yaw = Math::ATan2(XAxis.Y, XAxis.X) * RadToDeg;
         TRotator Rotator = TRotator(Pitch, Yaw, T(0));
 
-        const TVector3 SYAxis = MakeRotationMatrix(Rotator).GetScaledAxis(Y);
+        const TVector3 SYAxis = MakeRotationMatrix(Rotator).GetScaledAxis(EAxis::Y);
         Rotator.Roll = Math::ATan2(Math::Dot(ZAxis, SYAxis), Math::Dot(YAxis, SYAxis)) * RadToDeg;
 
         return Rotator;
@@ -315,6 +372,81 @@ struct TMatrix
             TPlane<T>(0.0f, 0.0f, 0.0f, 1.0f),
             TPlane<T>(0.0f, 0.0f, MinZ, 0.0f)
         };
+    }
+
+    static TMatrix MakeFromX(TVector3<T> const& XAxis)
+    {
+        TVector3<T> const NewX = XAxis.GetSafeNormal();
+
+        // try to use up if possible
+        TVector3<T> const UpVector = (Math::Abs(NewX.Z) < (1.0f - P_SMALL_NUMBER)) ? TVector3<T>(0, 0, 1.0f) : TVector3<T>(1.0f, 0, 0);
+
+        const TVector3<T> NewY = Math::Cross(UpVector, NewX).GetSafeNormal();
+        const TVector3<T> NewZ = Math::Cross(NewX, NewY);
+
+        return TMatrix<T>(NewX, NewY, NewZ, TVector3<T>::ZeroVector());
+    }
+
+    static TMatrix MakeFromX(T Angle)
+    {
+        T C = Math::Cos(Angle);
+        T S = Math::Sin(Angle);
+        return TMatrix(
+            TPlane<T>(1, 0, 0, 0),
+            TPlane<T>(0, C, -S, 0),
+            TPlane<T>(0, S, C, 0),
+            TPlane<T>(0, 0, 0, 1)
+        );
+    }
+
+    static TMatrix MakeFromY(TVector3<T> const& YAxis)
+    {
+        TVector3<T> const NewY = YAxis.GetSafeNormal();
+
+        // try to use up if possible
+        TVector3<T> const UpVector = (Math::Abs(NewY.Z) < (1.0f - P_SMALL_NUMBER)) ? TVector3<T>(0, 0, 1.0f) : TVector3<T>(1.0f, 0, 0);
+
+        const TVector3<T> NewZ = Math::Cross(UpVector, NewY).GetSafeNormal();
+        const TVector3<T> NewX = Math::Cross(NewY, NewZ);
+
+        return TMatrix<T>(NewX, NewY, NewZ, TVector3<T>::ZeroVector());
+    }
+
+    static TMatrix MakeFromY(T Angle)
+    {
+        T C = Math::Cos(Angle);
+        T S = Math::Sin(Angle);
+        return TMatrix(
+            TPlane<T>(C, 0, S, 0),
+            TPlane<T>(0, 1, 0, 0),
+            TPlane<T>(-S, 0, C, 0),
+            TPlane<T>(0, 0, 0, 1)
+        );
+    }
+
+    static TMatrix MakeFromZ(TVector3<T> const& ZAxis)
+    {
+        TVector3<T> const NewZ = ZAxis.GetSafeNormal();
+
+        // try to use up if possible
+        TVector3<T> const UpVector = (Math::Abs(NewZ.Z) < (1.0f - P_SMALL_NUMBER)) ? TVector3<T>(0, 0, 1.0f) : TVector3<T>(1.0f, 0, 0);
+
+        const TVector3<T> NewX = Math::Cross(UpVector, NewZ).GetSafeNormal();
+        const TVector3<T> NewY = Math::Cross(NewZ, NewX);
+
+        return TMatrix(NewX, NewY, NewZ, TVector3<T>::ZeroVector());
+    }
+
+    static TMatrix MakeFromZ(T Angle)
+    {
+        T C = Math::Cos(Angle);
+        T S = Math::Sin(Angle);
+        return TMatrix(
+            TPlane<T>(C, -S, 0, 0),
+            TPlane<T>(S, C, 0, 0),
+            TPlane<T>(0, 0, 1, 0),
+            TPlane<T>(0, 0, 0, 1)
+        );
     }
 
     T Get(int32 X, int32 Y) const
@@ -417,6 +549,15 @@ struct TMatrix
         return *this;
     }
 
+    TVector3<T> operator*(const TVector3<T>& V3) const
+    {
+        T TempX = V3.X * M[0][0] + V3.Y * M[1][0] + V3.Z * M[2][0];
+        T TempY = V3.X * M[0][1] + V3.Y * M[1][1] + V3.Z * M[2][1];
+        T TempZ = V3.X * M[0][2] + V3.Y * M[1][2] + V3.Z * M[2][2];
+
+        return {TempX, TempY, TempZ};
+    }
+
     TVector4<T> operator*(const TVector4<T>& V4) const
     {
         T TempX = V4.X * M[0][0] + V4.Y * M[1][0] + V4.Z * M[2][0] + V4.W * M[3][0];
@@ -433,31 +574,52 @@ struct TMatrix
         CheckNaN();
         return *this;
     }
+
+    bool Equals(const TMatrix& Other)
+    {
+        for (int32 X = 0; X < 4; X++)
+        {
+            for (int32 Y = 0; Y < 4; Y++)
+            {
+                if (M[X][Y] != Other.M[X][Y])
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 };
+
 
 template <typename T>
 struct TPerspectiveMatrix : TMatrix<T>
 {
-    TPerspectiveMatrix(T HalfFOV, T MinZ, T MaxZ = P_MAX_Z)
-        : TMatrix<T>(
-            TPlane<T>(Math::Tan(HalfFOV), 0.0f, 0.0f, 0.0f),
-            TPlane<T>(0.0f, Math::Tan(HalfFOV), 0.0f, 0.0f),
-            TPlane<T>(0.0f, 0.0f, -(MaxZ / (MaxZ - MinZ)), -1.0f),
-            TPlane<T>(0.0f, 0.0f, -((MaxZ * MinZ) / (MaxZ - MinZ)), 0.0f))
-    {
-    }
-};
-
-template <typename T>
-struct TReversedZPerspectiveMatrix : TMatrix<T>
-{
-    TReversedZPerspectiveMatrix(T Scale, T Aspect, T MinZ, T MaxZ = P_MAX_Z)
+    TPerspectiveMatrix(T Scale, T Aspect, T MinZ, T MaxZ = P_MAX_Z)
         : TMatrix<T>(
             TPlane<T>(Scale / Aspect, 0.0f, 0.0f, 0.0f),
             TPlane<T>(0.0f, Scale, 0.0f, 0.0f),
             TPlane<T>(0.0f, 0.0f, MaxZ / (MaxZ - MinZ), 1.0f),
             TPlane<T>(0.0f, 0.0f, -(MaxZ * MinZ) / (MaxZ - MinZ), 0.0f))
+
     {
+        //     TPerspectiveMatrix(T Scale, T Aspect, T MinZ, T MaxZ = P_MAX_Z)
+        //     {
+        //         T Right = Aspect * Scale;
+        //         T Left = -Right;
+        //         T Top = Scale;
+        //         T Bottom = -Top;
+        //
+        //         this->M[0][0] = 2.0f * MinZ / (Right - Left);
+        //         this->M[1][1] = 2.0f * MinZ / (Top - Bottom);
+        //
+        //         this->M[2][0] = (Right + Left) / (Right - Left);
+        //         this->M[2][1] = (Top + Bottom) / (Top - Bottom);
+        //         this->M[2][2] = -(MaxZ + MinZ) / (MinZ - MaxZ);
+        //         this->M[2][3] = -1.0f; // Left or right handed
+        //
+        //         this->M[3][2] = -2.0f * MinZ * MaxZ / (MinZ - MaxZ);
+        //         this->M[3][3] = 0.0f;
     }
 };
 
@@ -480,9 +642,9 @@ struct TLookAtMatrix : TMatrix<T>
         }
 
         FVector3 InvEyePosition = EyePosition * -1.0f;
-        this->M[3][0] = Math::Dot(InvEyePosition, XAxis);
-        this->M[3][1] = Math::Dot(InvEyePosition, YAxis);
-        this->M[3][2] = Math::Dot(InvEyePosition, ZAxis);
+        this->M[3][0] = InvEyePosition.X;
+        this->M[3][1] = InvEyePosition.Y;
+        this->M[3][2] = InvEyePosition.Z;
         this->M[3][3] = 1.0f;
     }
 };
@@ -492,9 +654,9 @@ struct TTranslationMatrix : TMatrix<T>
 {
     TTranslationMatrix(const TVector3<T>& Delta)
         : TMatrix<T>(
-            TPlane<T>(1., 0, 0, 0),
-            TPlane<T>(0., 1, 0, 0),
-            TPlane<T>(0., 0, 1, 0),
+            TPlane<T>(1, 0, 0, 0),
+            TPlane<T>(0, 1, 0, 0),
+            TPlane<T>(0, 0, 1, 0),
             TPlane<T>(Delta.X, Delta.Y, Delta.Z, 1)
         )
     {

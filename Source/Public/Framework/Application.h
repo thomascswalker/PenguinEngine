@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "Core/Logging.h"
 #include "Platforms/PlatformInterface.h"
 #include "Engine/Engine.h"
 #include "Input/InputHandler.h"

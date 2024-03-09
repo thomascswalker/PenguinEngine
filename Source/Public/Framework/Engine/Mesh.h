@@ -33,6 +33,7 @@ public:
     // Properties
     std::vector<FVector3> Vertices;
     std::vector<uint32> Indices;
+    FTransform Transform;
 
     PMesh()
     {
@@ -41,7 +42,16 @@ public:
     {
     }
 
-    // Functions
+    // Object Functions
+    FVector3 GetTranslation() const { return Transform.Translation; }
+    FRotator GetRotation() const { return Transform.Rotation; }
+    FVector3 GetScale() const { return Transform.Scale; }
+
+    void SetTranslation(const FVector3& NewTranslation) { Transform.Translation = NewTranslation; }
+    void SetRotation(const FRotator& NewRotation) { Transform.Rotation = NewRotation; }
+    void SetScale(const FVector3& NewScale) { Transform.Scale = NewScale; }
+    
+    // Mesh Functions
     void AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& InV2);
     void AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, const FVector3& V3);
     void Empty();

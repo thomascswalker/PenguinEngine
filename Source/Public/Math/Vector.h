@@ -114,6 +114,22 @@ struct TVector2
     {
         return X > Other.X && Y > Other.Y;
     }
+    bool operator>(T Value)
+    {
+        return X > Value && Y > Value;
+    }
+    bool operator<(T Value)
+    {
+        return X < Value && Y < Value;
+    }
+    bool operator ==(const TVector2& Other)
+    {
+        return X == Other.X && Y == Other.Y;
+    }
+    bool operator !=(const TVector2& Other)
+    {
+        return X != Other.X || Y != Other.Y;
+    }
 
     T operator[](int32 Index) const { return XY[Index]; }
     T& operator[](int32 Index) { return XY[Index]; }
@@ -162,8 +178,8 @@ struct TVector3
     static TVector3 ZeroVector() { return TVector3(); }
     static TVector3 IdentityVector() { return TVector3(1); }
     static TVector3 ForwardVector() { return TVector3(1, 0, 0); }
-    static TVector3 RightVector() { return TVector3(0, 1, 0); }
-    static TVector3 UpVector() { return TVector3(0, 0, 1); }
+    static TVector3 UpVector() { return TVector3(0, 1, 0); }
+    static TVector3 RightVector() { return TVector3(0, 0, 1); }
     void CheckNaN() const
     {
         if (!(Math::IsFinite(X) && Math::IsFinite(Y) && Math::IsFinite(Z)))
@@ -174,8 +190,8 @@ struct TVector3
 
     void Normalize()
     {
-        const T SquareSum = X * X + Y * Y + Z * Z;
-        if (SquareSum > 0.00001f)
+        const T SquareSum = (X * X) + (Y * Y) + (Z * Z);
+        if (SquareSum > P_SMALL_NUMBER)
         {
             const T Scale = Math::InvSqrt(SquareSum);
             X *= Scale;
@@ -473,6 +489,15 @@ namespace Math
     {
         return Math::Dot(Math::Cross(A, B), P);
     }
+
+    /* Distance between two points in 3D space */
+    template <typename T>
+    static T Distance(const TVector3<T> V0, const TVector3<T>& V1)
+    {
+        T A = Math::Pow(V1.X - V0.X, 2.0f);
+        T B = Math::Pow(V1.Y - V0.Y, 2.0f);
+        return Math::Sqrt(A + B);
+    }
 }
 
 
@@ -481,9 +506,10 @@ struct TTriangle
 {
     static T Area(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
-        return (V0.X * (V1.Y - V2.Y) +
-            V1.X * (V2.Y - V0.Y) +
-            V2.X * (V0.Y - V1.Y)) / 2.0f;
+        T A = V0.X * (V1.Y - V2.Y);
+        T B = V1.X * (V2.Y - V0.Y);
+        T C = V2.X * (V0.Y - V1.Y);
+        return (A + B + C) / T(2);
     }
 
     // Vector Sign
@@ -513,66 +539,65 @@ struct TTriangle
         const T D11 = Math::Dot(CA, CA);
         const T D20 = Math::Dot(PA, BA);
         const T D21 = Math::Dot(PA, CA);
-        const T Denom = 1.0f / (D00 * D11 - D01 * D01);
+        const T Denom = T(1) / (D00 * D11 - D01 * D01);
 
         const T V = (D11 * D20 - D01 * D21) * Denom;
         const T W = (D00 * D21 - D01 * D20) * Denom;
-        const T U = 1.0f - V - W;
+        const T U = T(1) - V - W;
 
         UVW.X = U;
         UVW.Y = V;
         UVW.Z = W;
 
         T Sum = UVW.X + UVW.Y + UVW.Z;
-        T OneMinusSum = 1.0f - Sum;
+        T OneMinusSum = T(1) - Sum;
         return (
-            UVW.X > 0.0f &&
-            UVW.Y > 0.0f &&
-            UVW.Z > 0.0f &&
-            (1.0f - Sum) < Tolerance);
+            UVW.X > T(0) &&
+            UVW.Y > T(0) &&
+            UVW.Z > T(0) &&
+            (T(1) - Sum) < Tolerance);
     }
 
     static EWindingOrder GetVertexOrder(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         const float Result = (V1.Y - V0.Y) * (V2.X - V1.X) - (V1.X - V0.X) * (V2.Y - V1.Y);
-        if (Result == 0.0f)
+        if (Result == T(0))
         {
-            return CL;
+            return EWindingOrder::CL;
         }
-        return Result > 0.0f ? CW : CCW;
+        return Result > T(0) ? EWindingOrder::CW : EWindingOrder::CCW;
     }
 
     static T GetDepth(const TVector3<T>& P, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         // Calculate area of this triangle
-        T A = FTriangle::Area(V0, V1, V2);
+        T A = TTriangle::Area(V0, V1, V2);
 
         // Calculate depth
-        T W0 = FTriangle::Area(V1, V2, P);
-        T W1 = FTriangle::Area(V2, V0, P);
-        T W2 = FTriangle::Area(V0, V1, P);
+        T W0 = TTriangle::Area(V1, V2, P);
+        T W1 = TTriangle::Area(V2, V0, P);
+        T W2 = TTriangle::Area(V0, V1, P);
 
-        if (W0 < 0.0f && W1 < 0.0f && W2 < 0.0f)
+        if (W0 < T(0) && W1 < T(0) && W2 < T(0))
         {
             return FLT_MAX;
         }
 
         W0 /= A;
-        W0 /= A;
         W1 /= A;
+        W2 /= A;
 
         return W0 * V0.Z + W1 * V1.Z + W2 * V2.Z;
     }
 
-    static FVector3 GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+    static TVector3<T> GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
-        FVector3 Normal;
-        const FVector3 U = V1 - V0;
-        const FVector3 V = V2 - V0;
+        TVector3<T> Normal;
+        const TVector3<T> U = V1 - V0;
+        const TVector3<T> V = V2 - V0;
         Normal.X = (U.Y * V.Z) - (U.Z * V.Y);
         Normal.Y = (U.Z * V.X) - (U.X * V.Z);
         Normal.Z = (U.X * V.Y) - (U.Y * V.X);
-        Normal.Normalize();
         return Normal;
     }
 };

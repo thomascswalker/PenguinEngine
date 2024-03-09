@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include "Mesh.h"
 #include "Timer.h"
 #include "Framework/Core/Logging.h"
@@ -12,7 +13,7 @@ class PEngine
     TimePoint StartTime;
     float DeltaTime = 0.0f;
 
-    float CameraSpeed = 0.005f;
+    float CameraSpeed = .1f;
     float CameraSpeedMultiplier = 1.0f;
 
 public:

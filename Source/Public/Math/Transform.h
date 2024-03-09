@@ -23,12 +23,6 @@ struct TTransform
         Translation = InTranslation;
         Scale = TVector3<T>();
     }
-    explicit TTransform(TQuat<T>& InRotation)
-    {
-        Rotation = InRotation.Rotator();
-        Translation = TVector3<T>();
-        Scale = TVector3<T>();
-    }
     explicit TTransform(TRotator<T>& InRotation)
     {
         Rotation = InRotation;
@@ -66,7 +60,7 @@ struct TTransform
 
         Rotation.Normalize();
     }
-    
+
     TMatrix<T> ToMatrix() const
     {
         TMatrix<T> Out;
@@ -94,6 +88,13 @@ struct TTransform
         return Out;
     }
 
+    TVector3<T> GetUnitAxis(EAxis InAxis) const
+    {
+        TMatrix<T> M = ToMatrix().GetInverse();
+        TVector3<T> AxisVector = M.GetScaledAxis(InAxis);
+        AxisVector.Normalize();
+        return AxisVector;
+    }
 
     std::string ToString() const { return std::format("Translation={}, Rotation={}, Scale={}", Translation.ToString(), Rotation.ToString(), Scale.ToString()); }
 
