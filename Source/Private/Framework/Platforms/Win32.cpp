@@ -16,8 +16,6 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
     LRESULT Result = 0;
     PEngine* Engine = PEngine::GetInstance();
     PRenderer* Renderer = Engine->GetRenderer();
-
-    EPlatformType PlatformType = PApplication::GetInstance()->GetPlatform()->GetPlatformType();
     IInputHandler* InputHandler = IInputHandler::GetInstance();
 
     switch (Msg)
@@ -103,22 +101,6 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
         {
             const int32 Char = static_cast<int32>(wParam);
             InputHandler->OnKeyUp(Char, 0, false);
-
-            switch (Char)
-            {
-            case 'T' :
-                {
-                    Renderer->GetViewport()->ToggleShowDebugText();
-                    break;
-                }
-            case 'F' :
-                {
-                    Renderer->GetViewport()->ResetView();
-                    break;
-                }
-            default :
-                break;
-            }
             return 0;
         }
     case WM_PAINT :

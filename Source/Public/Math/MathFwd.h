@@ -72,6 +72,10 @@ struct TLookAtMatrix;
 typedef TLookAtMatrix<float> FLookAtMatrix;
 
 template <typename T>
+struct TRotationMatrix;
+typedef TRotationMatrix<float> FRotationMatrix;
+
+template <typename T>
 struct TInverseRotationMatrix;
 typedef TInverseRotationMatrix<float> FInverseRotationMatrix;
 

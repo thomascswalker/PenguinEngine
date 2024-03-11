@@ -25,16 +25,15 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     // Track starting time
     StartTime = PTimer::Now();
 
-    // Construct a simple triangle mesh
-    if (auto Mesh = PMesh::CreatePlane(2.0f))
+    // Bind input events
+    if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
-        Meshes.emplace_back(Mesh);
-    }
-    if (auto Mesh = PMesh::CreateSphere(1.0f, 16))
-    {
-        Meshes.emplace_back(Mesh);
+        Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
     }
 
+    // Load all geometry into the scene
+    LoadSceneGeometry();
+    
     LOG_INFO("Renderer constructed.")
     return true;
 }
@@ -59,13 +58,19 @@ void PEngine::Tick()
         PCamera* Camera = Renderer->GetViewport()->GetCamera();
         const float ScaledCameraSpeed = CameraSpeed * CameraSpeedMultiplier * DeltaTime;
 
-        // if (Input->IsKeyDown('W')) { /* Input->ConsumeKey('W'); */ DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
-        // if (Input->IsKeyDown('S')) { /* Input->ConsumeKey('S'); */ DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
-        // if (Input->IsKeyDown('D')) { /* Input->ConsumeKey('D'); */ DeltaTranslation.X = ScaledCameraSpeed; } // Right
-        // if (Input->IsKeyDown('A')) { /* Input->ConsumeKey('A'); */ DeltaTranslation.X = -ScaledCameraSpeed; } // Left
-        // if (Input->IsKeyDown('E')) { /* Input->ConsumeKey('E'); */ DeltaTranslation.Y = ScaledCameraSpeed; } // Up
-        // if (Input->IsKeyDown('Q')) { /* Input->ConsumeKey('Q'); */ DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
+        FVector3 DeltaTranslation;
+        if (Input->IsKeyDown('W')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
+        if (Input->IsKeyDown('S')) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
+        if (Input->IsKeyDown('D')) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
+        if (Input->IsKeyDown('A')) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
+        if (Input->IsKeyDown('E')) { DeltaTranslation.Y = ScaledCameraSpeed; } // Up
+        if (Input->IsKeyDown('Q')) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
 
+        if (DeltaTranslation != 0)
+        {
+            Camera->Translate(DeltaTranslation);
+        }
+        
         // Calculate rotation amount given the mouse delta
         FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition() * ScaledCameraSpeed;
 
@@ -76,8 +81,39 @@ void PEngine::Tick()
         }
         Input->ResetDeltaCursorPosition();
     }
-
-
+    
     // Format debug text
     Renderer->GetViewport()->FormatDebugText();
+}
+
+void PEngine::LoadSceneGeometry()
+{
+    // Construct a simple triangle mesh
+    if (auto Mesh = PMesh::CreatePlane(2.0f))
+    {
+        Meshes.emplace_back(Mesh);
+    }
+    if (auto Mesh = PMesh::CreateSphere(1.0f, 16))
+    {
+        Meshes.emplace_back(Mesh);
+    }
+}
+
+void PEngine::OnKeyPressed(int32 KeyCode) const
+{
+    switch (KeyCode)
+    {
+    case 'T' :
+        {
+            Renderer->GetViewport()->ToggleShowDebugText();
+            break;
+        }
+    case 'F' :
+        {
+            Renderer->GetViewport()->ResetView();
+            break;
+        }
+    default :
+        break;
+    }
 }

@@ -89,6 +89,16 @@ struct TMatrix
         }
     }
 
+    static TMatrix MakeTranslationMatrix(const TVector3<T>& V)
+    {
+        return TMatrix(
+            TPlane<T>(1, 0, 0, 0),
+            TPlane<T>(0, 1, 0, 0),
+            TPlane<T>(0, 0, 1, 0),
+            TPlane<T>(V.X, V.Y, V.Z, 1)
+        );
+    }
+    
     // https://www.opengl-tutorial.org/assets/faq_quaternions/index.html#Q28
     static TMatrix MakeRotationMatrix(const TRotator<T>& Rotation)
     {
@@ -134,7 +144,7 @@ struct TMatrix
         Math::SinCos(&SR, &CR, (T)Math::DegreesToRadians(Rot.Roll));
 
         TMatrix Out;
-        
+
         Out.M[0][0] = CP * CY;
         Out.M[0][1] = CP * SY;
         Out.M[0][2] = SP;
@@ -603,23 +613,6 @@ struct TPerspectiveMatrix : TMatrix<T>
             TPlane<T>(0.0f, 0.0f, -(MaxZ * MinZ) / (MaxZ - MinZ), 0.0f))
 
     {
-        //     TPerspectiveMatrix(T Scale, T Aspect, T MinZ, T MaxZ = P_MAX_Z)
-        //     {
-        //         T Right = Aspect * Scale;
-        //         T Left = -Right;
-        //         T Top = Scale;
-        //         T Bottom = -Top;
-        //
-        //         this->M[0][0] = 2.0f * MinZ / (Right - Left);
-        //         this->M[1][1] = 2.0f * MinZ / (Top - Bottom);
-        //
-        //         this->M[2][0] = (Right + Left) / (Right - Left);
-        //         this->M[2][1] = (Top + Bottom) / (Top - Bottom);
-        //         this->M[2][2] = -(MaxZ + MinZ) / (MinZ - MaxZ);
-        //         this->M[2][3] = -1.0f; // Left or right handed
-        //
-        //         this->M[3][2] = -2.0f * MinZ * MaxZ / (MinZ - MaxZ);
-        //         this->M[3][3] = 0.0f;
     }
 };
 
@@ -660,6 +653,18 @@ struct TTranslationMatrix : TMatrix<T>
             TPlane<T>(Delta.X, Delta.Y, Delta.Z, 1)
         )
     {
+    }
+};
+
+template <typename T>
+struct TRotationMatrix : TMatrix<T>
+{
+    TRotationMatrix(T Pitch, T Yaw, T Roll)
+    {
+        TMatrix RotX = TMatrix<T>::MakeFromX(Pitch);
+        TMatrix RotY = TMatrix<T>::MakeFromY(Yaw);
+        TMatrix RotZ = TMatrix<T>::MakeFromZ(Roll);
+        this->M = (RotY * RotX * RotZ).M;
     }
 };
 

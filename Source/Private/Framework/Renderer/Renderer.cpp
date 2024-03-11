@@ -82,7 +82,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 {
     // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
     const FVector3 LookAtTranslation = Viewport->GetCamera()->TargetTranslation;
-    const FVector3 CameraTranslation = Viewport->GetCamera()->Translation;
+    const FVector3 CameraTranslation = Viewport->GetCamera()->GetTranslation();
 
     const FVector3 CameraNormal = (CameraTranslation - LookAtTranslation).Normalized();
     const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2).Normalized();

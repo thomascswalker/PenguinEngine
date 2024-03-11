@@ -1,6 +1,14 @@
 ﻿#pragma once
+
 #include <map>
 #include "Math/Vector.h"
+#include "Framework/Engine/Delegate.h"
+
+DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, FVector2);
+DECLARE_MULTICAST_DELEGATE(FOnMouseLeftClicked, FVector2);
+DECLARE_MULTICAST_DELEGATE(FOnMouseRightClicked, FVector2);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleClicked, FVector2);
+DECLARE_MULTICAST_DELEGATE(FKeyPressed, int32);
 
 class IInputHandler;
 class PWin32InputHandler;
@@ -25,6 +33,8 @@ class IInputHandler
 public:
     static IInputHandler* GetInstance();
 
+    // Events
+    
 protected:
     bool bMouseLeftDown = false;
     bool bMouseRightDown = false;
@@ -46,6 +56,13 @@ protected:
     ~IInputHandler() = default;
 
 public:
+    // Events
+    FOnMouseMoved MouseMoved;
+    FOnMouseLeftClicked MouseLeftClicked;
+    FOnMouseRightClicked MouseRightClicked;
+    FOnMouseMiddleClicked MouseMiddleClicked;
+    FKeyPressed KeyPressed;
+    
     // Mouse
     virtual bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
     virtual bool OnMouseUp(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
@@ -94,6 +111,7 @@ protected:
 
 public:
     static PWin32InputHandler* GetInstance();
+
     bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) override
     {
         switch (ButtonType)
@@ -147,6 +165,7 @@ public:
     {
         // Update current cursor position
         CurrentCursorPosition = CursorPosition;
+        MouseMoved.Broadcast(CurrentCursorPosition);
 
         // Update delta cursor position if any of the mouse buttons are down
         if (IsAnyMouseDown())
@@ -187,21 +206,19 @@ public:
 
     bool OnKeyDown(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) override
     {
-        const char Char = static_cast<char>(KeyCode);
-        KeyStateMap[Char] = true;
+        KeyStateMap[KeyCode] = true;
         return true;
     }
 
     bool OnKeyUp(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) override
     {
-        const char Char = static_cast<char>(KeyCode);
-        KeyStateMap[Char] = false;
+        KeyStateMap[KeyCode] = false;
+        KeyPressed.Broadcast(KeyCode);
         return true;
     }
 
     bool IsKeyDown(int32 KeyCode) const override
     {
-        const char Char = static_cast<char>(KeyCode);
-        return KeyStateMap.at(Char);
+        return KeyStateMap.at(KeyCode);
     }
 };

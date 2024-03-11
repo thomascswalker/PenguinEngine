@@ -8,19 +8,19 @@
 // View Camera
 FTransform PCamera::GetViewTransform()
 {
-    return {Rotation, Translation};
+    return Transform;
 }
 
 FMatrix PCamera::ComputeViewProjectionMatrix(bool bLookAt)
 {
     if (bLookAt)
     {
-        ViewMatrix = FLookAtMatrix(Translation, TargetTranslation, UpVector);
+        ViewMatrix = FLookAtMatrix(GetTranslation(), TargetTranslation, GetUpVector());
     }
     else
     {
-        ViewMatrix = FMatrix::MakeRotationMatrix(Rotation);
-        ViewMatrix = FTranslationMatrix(Translation) * ViewMatrix;
+        ViewMatrix = FMatrix::MakeRotationMatrix(GetRotation());
+        ViewMatrix = FTranslationMatrix(GetTranslation()) * ViewMatrix;
     }
 
     const float Scale = 1.0f / Math::Tan(Math::DegreesToRadians(Fov / 2.0f));
@@ -32,12 +32,12 @@ FMatrix PCamera::ComputeViewProjectionMatrix(bool bLookAt)
 void PCamera::Orbit(float DX, float DY)
 {
     // Get the camera rotation as a vector
-    const FVector3 CameraOrientation = (Translation - TargetTranslation).GetSafeNormal(); // Target is always [0,0,0]
+    const FVector3 CameraOrientation = (GetTranslation() - TargetTranslation).GetSafeNormal(); // Target is always [0,0,0]
 
     // Convert delta X and Y to radians
     const float Pitch = Math::DegreesToRadians(DX); // DX * (P_PI / 180.f)
     const float Yaw = Math::DegreesToRadians(DY); // DY * (P_PI / 180.f)
-
+    
     // Construct a quaternion with the derived Pitch and Yaw
     FQuat QuatRotation{Pitch, Yaw, 0};
             
@@ -50,12 +50,12 @@ void PCamera::Orbit(float DX, float DY)
     // Take X/Y/Z components of the result and apply them as the X/Y/Z components of
     // the new rotated orientation
     const FVector3 RotatedOrientation{QuatResult.X, QuatResult.Y, QuatResult.Z};
-
+    
     // Multiply by zoom distance to get the final location
     const FVector3 NewTranslation = RotatedOrientation * Zoom;
 
     // Set new location as the current location
-    Translation = NewTranslation;
+    SetTranslation(NewTranslation);
 }
 
 // Viewport
@@ -72,23 +72,15 @@ void PViewport::Resize(uint32 InWidth, uint32 InHeight) const
     Camera->Height = InHeight;
 }
 
-void PViewport::SetViewTranslation(const FVector3& NewTranslation) const
+FVector2 PViewport::GetSize() const
 {
-    Camera->Translation = NewTranslation;
+    return {static_cast<float>(Camera->Width), static_cast<float>(Camera->Height)};
 }
 
-void PViewport::AddViewTranslation(const FVector3& Delta) const
+void PViewport::ResetView()
 {
-    Camera->Translation += Delta;
-}
-
-void PViewport::SetViewRotation(const FRotator& NewRotation) const
-{
-    Camera->Rotation = NewRotation;
-}
-void PViewport::AddViewRotation(const FRotator& Rotation) const
-{
-    Camera->Rotation += Rotation;
+    Camera->SetTranslation(DEFAULT_CAMERA_TRANSLATION(Camera->Zoom));
+    UpdateViewProjectionMatrix(true);
 }
 
 void PViewport::UpdateViewProjectionMatrix(bool bLookAt)
@@ -104,7 +96,7 @@ void PViewport::UpdateViewProjectionMatrix(bool bLookAt)
  * \param ScreenPosition The out screen position.
  * \return True if the position could be projected, false otherwise.
  */
-bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition)
+bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const
 {
     return ProjectWorldToScreen(WorldPosition, MVP, ScreenPosition);
 }
@@ -117,11 +109,11 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& Sc
  * \param ScreenPosition The out screen position.
  * \return True if the position could be projected, false otherwise.
  */
-bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition)
+bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const
 {
     FMatrix Model; // Default model matrix
     Model.SetIdentity();
-    
+
     const FVector4 Result = Camera->ViewMatrix * Camera->ProjectionMatrix * FVector4(WorldPosition, 1.0f);
     if (Result.W > 0.0f)
     {
@@ -171,7 +163,8 @@ void PViewport::FormatDebugText()
         "Mouse Delta: {}\n"
         "Keys pressed: {}\n\n"
         "Camera Position: {}\n"
-        "Camera Rotation: {}"
+        "Camera Rotation: {}\n"
+        "Camera Up: {}"
         ,
         Engine->GetFps(),
         GetSize().ToString(),
@@ -180,6 +173,6 @@ void PViewport::FormatDebugText()
         FmtKeysDown,
         Translation.ToString(),
         Rotation.ToString(),
-        MVP.ToString()
+        Camera->GetUpVector().ToString()
     );
 }
