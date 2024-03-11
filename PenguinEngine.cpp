@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <GLFW/glfw3.h>
+
 #include <Framework/Application.h>
 #include "Framework/Core/ErrorCodes.h"
 
@@ -9,6 +11,8 @@
 #include "Source\Public\Framework\Platforms\Win32Platform.h"
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+    
+    
     PApplication* App = PApplication::GetInstance();
     App->Init<PWin32Platform>(hInstance);
     const int ExitCode = App->Run();
