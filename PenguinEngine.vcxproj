@@ -176,6 +176,7 @@
     <ClCompile Include="Source\Private\Framework\Core\Logging.cpp" />
     <ClCompile Include="Source\Private\Framework\Engine\Engine.cpp" />
     <ClCompile Include="Source\Private\Framework\Engine\Mesh.cpp" />
+    <ClCompile Include="Source\Private\Framework\Input\InputHandler.cpp" />
     <ClCompile Include="Source\Private\Framework\Platforms\PlatformInterface.cpp" />
     <ClCompile Include="Source\Private\Framework\Platforms\Win32.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Renderer.cpp" />
@@ -187,9 +188,13 @@
     <ClInclude Include="Source\Public\Framework\Core\Core.h" />
     <ClInclude Include="Source\Public\Framework\Core\ErrorCodes.h" />
     <ClInclude Include="Source\Public\Framework\Core\Logging.h" />
+    <ClInclude Include="Source\Public\Framework\Engine\Delegate.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Engine.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Mesh.h" />
+    <ClInclude Include="Source\Public\Framework\Engine\Object.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Timer.h" />
+    <ClInclude Include="Source\Public\Framework\Input\InputHandler.h" />
+    <ClInclude Include="Source\Public\Framework\Input\MouseTracker.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformInterface.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformMemory.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\Win32Platform.h" />

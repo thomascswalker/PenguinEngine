@@ -71,10 +71,9 @@ struct PBuffer
         *Ptr = ((Color.R << 16) | Color.G << 8) | Color.B; // TODO: Disregard alpha channel for now
     }
     
-    template <typename T>
-    constexpr T GetPixel(uint32 X, uint32 Y)
+    uint32 GetPixel(uint32 X, uint32 Y) const
     {
-        return *(static_cast<T*>(Memory) + GetOffset(X, Y));
+        return *(static_cast<uint32*>(Memory) + GetOffset(X, Y));
     }
     
     void Clear() const
@@ -104,7 +103,7 @@ public:
 
     void AddBuffer(EBufferType Type, const char* Name)
     {
-        Buffers.emplace(Name, new PBuffer(Type, GetWidth(), GetHeight()));
+        Buffers.emplace(Name, std::make_shared<PBuffer>(Type, GetWidth(), GetHeight()));
     }
     std::shared_ptr<PBuffer> GetBuffer(const char* Name) const
     {
@@ -114,8 +113,8 @@ public:
     std::shared_ptr<PBuffer> GetColorBuffer() const { return Buffers.at("Color"); }
     std::shared_ptr<PBuffer> GetDepthBuffer() const { return Buffers.at("Depth"); }
     
-    uint32 GetWidth() const { return Viewport->GetInfo()->Width; }
-    uint32 GetHeight() const { return Viewport->GetInfo()->Height; }
+    uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
+    uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
 
     PViewport* GetViewport() const { return Viewport.get(); }
 

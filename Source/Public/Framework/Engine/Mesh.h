@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <vector>
-#include "Math/MathCommon.h"
+#include "Object.h"
 
 enum EPrimitiveType
 {
@@ -24,7 +24,7 @@ struct PTri
     }
 };
 
-struct PMesh
+struct PMesh : PObject
 {
 protected:
     uint32 AddVertex(const FVector3& V);
@@ -33,6 +33,7 @@ public:
     // Properties
     std::vector<FVector3> Vertices;
     std::vector<uint32> Indices;
+    FTransform Transform;
 
     PMesh()
     {
@@ -41,7 +42,7 @@ public:
     {
     }
 
-    // Functions
+    // Mesh Functions
     void AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& InV2);
     void AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, const FVector3& V3);
     void Empty();

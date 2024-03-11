@@ -68,12 +68,12 @@ struct TPerspectiveMatrix;
 typedef TPerspectiveMatrix<float> FPerspectiveMatrix;
 
 template <typename T>
-struct TReversedZPerspectiveMatrix;
-typedef TReversedZPerspectiveMatrix<float> FReversedZPerspectiveMatrix;
-
-template <typename T>
 struct TLookAtMatrix;
 typedef TLookAtMatrix<float> FLookAtMatrix;
+
+template <typename T>
+struct TRotationMatrix;
+typedef TRotationMatrix<float> FRotationMatrix;
 
 template <typename T>
 struct TInverseRotationMatrix;
@@ -107,7 +107,7 @@ struct TPlane;
 typedef TPlane<float> FPlane;
 
 // Enums
-enum EWindingOrder
+enum class EWindingOrder : uint8
 {
     CW,
     // Clockwise
@@ -116,14 +116,15 @@ enum EWindingOrder
     CL // Co-linear, in a line
 };
 
-enum EAxis
+// TODO: Swap Up and forward directions
+enum class EAxis : uint8
 {
-    X,
-    Y,
-    Z
+    X, // Right
+    Y, // Up
+    Z // Foward
 };
 
-enum EBufferType
+enum class EBufferType : uint8
 {
     Data,
     Color

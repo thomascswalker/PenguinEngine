@@ -1,25 +1,22 @@
 ﻿#include <cassert>
+#include <windowsx.h>
 
+#include "Framework/Application.h"
 #include "Framework/Platforms/Win32Platform.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
-#include "Framework/Engine/Timer.h"
+#include "Framework/Input/InputHandler.h"
 
 #ifndef WINDOWS_TIMER_ID
     #define WINDOWS_TIMER_ID 1001
 #endif
 
-const float MovementSpeed = 0.05f;
-bool bShowText = true;
-
-LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LParam)
+LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
     LRESULT Result = 0;
     PEngine* Engine = PEngine::GetInstance();
-    const PRenderer* Renderer = Engine->GetRenderer();
-
-    WORD KeyCode;
-    WORD KeyFlags;
+    PRenderer* Renderer = Engine->GetRenderer();
+    IInputHandler* InputHandler = IInputHandler::GetInstance();
 
     switch (Msg)
     {
@@ -35,48 +32,76 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
             PostQuitMessage(0);
             return 0;
         }
-    case WM_KEYDOWN :
-    case WM_SYSKEYDOWN :
+    case WM_LBUTTONDOWN :
+    case WM_LBUTTONUP :
+    case WM_RBUTTONDOWN :
+    case WM_RBUTTONUP :
+    case WM_MBUTTONUP :
+    case WM_MBUTTONDOWN :
         {
-            KeyCode = LOWORD(WParam);
-            KeyFlags = HIWORD(LParam);
+            bool bMouseUp = false;
+            auto ButtonType = EMouseButtonType::Invalid;
 
-            switch (KeyCode)
+            switch (Msg)
             {
-            // Forward
-            case 'W' :
-                Renderer->GetViewport()->AddViewTranslation(FVector3::ForwardVector() * MovementSpeed);
+            case WM_LBUTTONDOWN :
+                ButtonType = EMouseButtonType::Left;
                 break;
-            // Backward
-            case 'S' :
-                Renderer->GetViewport()->AddViewTranslation(FVector3::ForwardVector() * -MovementSpeed);
+            case WM_LBUTTONUP :
+                ButtonType = EMouseButtonType::Left;
+                bMouseUp = true;
                 break;
-            // Right
-            case 'D' :
-                Renderer->GetViewport()->AddViewTranslation(FVector3::RightVector() * MovementSpeed);
+            case WM_RBUTTONDOWN :
+                ButtonType = EMouseButtonType::Right;
                 break;
-            // Left
-            case 'A' :
-                Renderer->GetViewport()->AddViewTranslation(FVector3::RightVector() * -MovementSpeed);
+            case WM_RBUTTONUP :
+                ButtonType = EMouseButtonType::Right;
+                bMouseUp = true;
                 break;
-            // Up
-            case 'Q' :
-                Renderer->GetViewport()->AddViewTranslation(FVector3::UpVector() * MovementSpeed);
+            case WM_MBUTTONUP :
+                ButtonType = EMouseButtonType::Middle;
+                bMouseUp = true;
                 break;
-            // Down
-            case 'E' :
-                Renderer->GetViewport()->AddViewTranslation(FVector3::UpVector() * -MovementSpeed);
-                break;
-            case 'T':
-                bShowText = !bShowText;
-                break;
-            case VK_ESCAPE :
-                Engine->SetRunning(false);
+            case WM_MBUTTONDOWN :
+                ButtonType = EMouseButtonType::Middle;
                 break;
             default :
-                break;
+                return 1;
             }
-            break;
+
+            const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            if (bMouseUp)
+            {
+                InputHandler->OnMouseUp(ButtonType, CursorPosition);
+            }
+            else
+            {
+                InputHandler->OnMouseDown(ButtonType, CursorPosition);
+            }
+            return 0;
+        }
+
+    // Mouse movement
+    case WM_MOUSEMOVE :
+    case WM_INPUT :
+        {
+            const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            InputHandler->OnMouseMove(CursorPosition);
+
+            return 0;
+        }
+    // Keyboard input
+    case WM_KEYDOWN :
+        {
+            const int32 Char = static_cast<int32>(wParam);
+            InputHandler->OnKeyDown(Char, 0, false);
+            return 0;
+        }
+    case WM_KEYUP :
+        {
+            const int32 Char = static_cast<int32>(wParam);
+            InputHandler->OnKeyUp(Char, 0, false);
+            return 0;
         }
     case WM_PAINT :
         {
@@ -84,6 +109,14 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
             {
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
                 break;
+            }
+
+            // Draw mouse cursor line from click origin
+            FVector2 A = InputHandler->GetClickPosition();
+            if (A != 0)
+            {
+                FVector2 B = InputHandler->GetCurrentCursorPosition();
+                Renderer->DrawLine(A, B, PColor::Red());
             }
 
             // Get the current window size from the buffer
@@ -104,11 +137,8 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
                 Result = 1;
             }
 
-            auto ViewString = Renderer->GetViewport()->GetInfo()->ViewRotationMatrix.ToString();
-            auto ProjString = Renderer->GetViewport()->GetInfo()->ProjectionMatrix.ToString();
-            auto MvpString = Renderer->GetViewport()->GetViewProjectionMatrix()->ToString();
-
-            if (bShowText)
+            // Display debug text
+            if (Renderer->GetViewport()->GetShowDebugText())
             {
                 // Draw text indicating the current FPS
                 RECT ClientRect;
@@ -116,13 +146,12 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
                 ClientRect.top += 10;
                 ClientRect.left += 10;
 
-                std::string FpsMessage = std::to_string(static_cast<uint32>(Engine->GetFps()));
-                std::string OutputMessage = std::format("FPS: {}\nResolution: [{}, {}]\nView: {}\nProjection: {}\nMVP: {}", FpsMessage, Width, Height, ViewString, ProjString, MvpString);
-                SetTextColor(DeviceContext, RGB(0, 255, 0));
+                std::string OutputString = Renderer->GetViewport()->GetDebugText();
+                SetTextColor(DeviceContext, RGB(255, 255, 0));
                 SetBkColor(DeviceContext, TRANSPARENT);
                 DrawText(
                     DeviceContext, // DC
-                    std::wstring(OutputMessage.begin(), OutputMessage.end()).c_str(), // Message
+                    std::wstring(OutputString.begin(), OutputString.end()).c_str(), // Message
                     -1,
                     &ClientRect, // Client rectangle (the window)
                     DT_TOP | DT_LEFT // Drawing options
@@ -145,8 +174,8 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_SIZE")
                 break;
             }
-            const int Width = LOWORD(LParam);
-            const int Height = HIWORD(LParam);
+            const int Width = LOWORD(lParam);
+            const int Height = HIWORD(lParam);
 
             // Update the renderer size
             Renderer->Resize(Width, Height);
@@ -167,7 +196,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM WParam, LPARAM LP
         }
     default :
         {
-            Result = DefWindowProcW(Hwnd, Msg, WParam, LParam);
+            Result = DefWindowProcW(Hwnd, Msg, wParam, lParam);
             break;
         }
     }
@@ -289,7 +318,10 @@ uint32 PWin32Platform::Loop()
         // Render the frame
         if (const PRenderer* Renderer = Engine->GetRenderer())
         {
+            // Render the actual frame
             Renderer->Render();
+
+            // Return
             return Success;
         }
     }

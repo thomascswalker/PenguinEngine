@@ -1,4 +1,6 @@
 ﻿#pragma once
+
+#include "Delegate.h"
 #include "Mesh.h"
 #include "Timer.h"
 #include "Framework/Core/Logging.h"
@@ -11,6 +13,9 @@ class PEngine
 
     TimePoint StartTime;
     float DeltaTime = 0.0f;
+
+    float CameraSpeed = .01f;
+    float CameraSpeedMultiplier = 1.0f;
 
 public:
     static PEngine* Instance;
@@ -25,8 +30,11 @@ public:
     bool IsRunning() const { return bRunning; }
     void SetRunning(bool bNewRunning) { bRunning = bNewRunning; }
 
+    void LoadSceneGeometry();
+
     std::vector<std::shared_ptr<PMesh>> Meshes;
     std::vector<std::shared_ptr<PMesh>> GetMeshes() const { return Meshes; }
 
     constexpr float GetFps() const { return 1000.0f / DeltaTime; }
+    void OnKeyPressed(int32 KeyCode) const;
 };

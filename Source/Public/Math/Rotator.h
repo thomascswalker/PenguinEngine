@@ -6,9 +6,9 @@
 template <typename T>
 struct TRotator
 {
-    // Rotation around Right axis (Y)
+    // Rotation around Right axis (Z)
     T Pitch = 0;
-    // Rotation around Up axis (Z)
+    // Rotation around Up axis (Y)
     T Yaw = 0;
     // Rotation around Forward axis (X)
     T Roll = 0;

@@ -2,6 +2,14 @@
 
 #include <Math/MathFwd.h>
 
+enum class EPlatformType : uint8
+{
+    Windows,
+    MacOS,
+    Linux,
+    Unknown
+};
+
 class IPlatform
 {
 public:
@@ -18,4 +26,5 @@ public:
 
     // Properties
     virtual FRect GetSize() = 0;
+    virtual EPlatformType GetPlatformType() = 0;
 };
