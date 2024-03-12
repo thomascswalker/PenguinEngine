@@ -2,10 +2,10 @@
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 
-#define DRAW_WIREFRAME 0
+#define DRAW_WIREFRAME 1
 #define DRAW_SHADED 1
-#define DEPTH_TEST 1
-#define LOOK_AT 1
+#define DEPTH_TEST 0
+#define LOOK_AT 0
 
 /* Renderer */
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
@@ -80,14 +80,13 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
 
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
-    // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
     const FVector3 LookAtTranslation = Viewport->GetCamera()->TargetTranslation;
     const FVector3 CameraTranslation = Viewport->GetCamera()->GetTranslation();
 
     const FVector3 CameraNormal = (CameraTranslation - LookAtTranslation).Normalized();
     const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2).Normalized();
 
-    const float FacingRatio = Math::Abs(Math::Dot(WorldNormal, CameraNormal));
+    const float FacingRatio = Math::Max(0.0f, Math::Dot(WorldNormal, CameraNormal));
 
     // Project the world-space points to screen-space
     FVector3 ScreenPoints[3];
@@ -140,8 +139,8 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
                 // continue;
             }
             GetDepthBuffer()->SetPixel(X, Y, NewDepth);
-            uint8 R = (Math::Remap(NewDepth, DEFAULT_MINZ, DEFAULT_MAXZ, 0.0f, 1.0f)) * 255;
 #endif
+            uint8 R = Math::Pow(FacingRatio, 2.2f) * 255; // Convert to SRGB
             // Set the color buffer to this new color
             GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
         }

@@ -87,7 +87,12 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
         {
             const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             InputHandler->OnMouseMove(CursorPosition);
-
+            return 0;
+        }
+    case WM_MOUSEWHEEL:
+        {
+            const float DeltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
+            InputHandler->OnMouseWheel(DeltaScroll / 120.0f);
             return 0;
         }
     // Keyboard input

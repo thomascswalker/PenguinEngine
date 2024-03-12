@@ -76,12 +76,12 @@ struct TRotationMatrix;
 typedef TRotationMatrix<float> FRotationMatrix;
 
 template <typename T>
-struct TInverseRotationMatrix;
-typedef TInverseRotationMatrix<float> FInverseRotationMatrix;
-
-template <typename T>
 struct TTranslationMatrix;
 typedef TTranslationMatrix<float> FTranslationMatrix;
+
+template <typename T>
+struct TRotationTranslationMatrix;
+typedef TRotationTranslationMatrix<float> FRotationTranslationMatrix;
 
 // Rotator
 template <typename T>

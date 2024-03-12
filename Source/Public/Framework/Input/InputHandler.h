@@ -9,6 +9,7 @@ DECLARE_MULTICAST_DELEGATE(FOnMouseLeftClicked, FVector2);
 DECLARE_MULTICAST_DELEGATE(FOnMouseRightClicked, FVector2);
 DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleClicked, FVector2);
 DECLARE_MULTICAST_DELEGATE(FKeyPressed, int32);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleScrolled, float);
 
 class IInputHandler;
 class PWin32InputHandler;
@@ -61,6 +62,7 @@ public:
     FOnMouseLeftClicked MouseLeftClicked;
     FOnMouseRightClicked MouseRightClicked;
     FOnMouseMiddleClicked MouseMiddleClicked;
+    FOnMouseMiddleScrolled MouseMiddleScrolled;
     FKeyPressed KeyPressed;
     
     // Mouse
@@ -158,6 +160,7 @@ public:
 
     bool OnMouseWheel(float Delta) override
     {
+        MouseMiddleScrolled.Broadcast(Delta);
         return true;
     }
 

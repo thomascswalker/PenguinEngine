@@ -15,6 +15,7 @@ PEngine* PEngine::GetInstance()
     return Instance;
 }
 
+
 bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
 {
     LOG_INFO("Starting up engine.")
@@ -29,11 +30,12 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
         Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
+        Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
     }
 
     // Load all geometry into the scene
     LoadSceneGeometry();
-    
+
     LOG_INFO("Renderer constructed.")
     return true;
 }
@@ -55,35 +57,36 @@ void PEngine::Tick()
     if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
         // Update camera position
-        PCamera* Camera = Renderer->GetViewport()->GetCamera();
+        PCamera* Camera = GetViewportCamera();
         const float ScaledCameraSpeed = CameraSpeed * CameraSpeedMultiplier * DeltaTime;
 
         FVector3 DeltaTranslation;
         if (Input->IsKeyDown('W')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
-        if (Input->IsKeyDown('S')) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
+        if (Input->IsKeyDown('S')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Backward
         if (Input->IsKeyDown('D')) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
         if (Input->IsKeyDown('A')) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
         if (Input->IsKeyDown('E')) { DeltaTranslation.Y = ScaledCameraSpeed; } // Up
         if (Input->IsKeyDown('Q')) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
 
+        // Move in world space
         if (DeltaTranslation != 0)
         {
             Camera->Translate(DeltaTranslation);
         }
-        
+
         // Calculate rotation amount given the mouse delta
-        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition() * ScaledCameraSpeed;
+        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition() * DeltaTime * 0.00001f;
 
         // If there's actual movement on either the X or Y axis, move the camera
         if (DeltaMouseCursor != 0)
         {
-            Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y);
+            Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y, FVector3::ZeroVector());
         }
         Input->ResetDeltaCursorPosition();
     }
-    
+
     // Format debug text
-    Renderer->GetViewport()->FormatDebugText();
+    GetViewport()->FormatDebugText();
 }
 
 void PEngine::LoadSceneGeometry()
@@ -105,15 +108,21 @@ void PEngine::OnKeyPressed(int32 KeyCode) const
     {
     case 'T' :
         {
-            Renderer->GetViewport()->ToggleShowDebugText();
+            GetViewport()->ToggleShowDebugText();
             break;
         }
     case 'F' :
         {
-            Renderer->GetViewport()->ResetView();
+            GetViewport()->ResetView();
             break;
         }
     default :
         break;
     }
+}
+
+void PEngine::OnMouseMiddleScrolled(float Delta) const
+{
+    PCamera* Camera = GetViewportCamera();
+    Camera->SetFov(Camera->Fov + Delta);
 }

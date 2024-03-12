@@ -6,53 +6,29 @@
 #include "../Private/Math/MathCommon.cpp" // NOLINT
 
 // View Camera
-FTransform PCamera::GetViewTransform()
+FTransform PCamera::GetViewTransform() const
 {
     return Transform;
 }
 
-FMatrix PCamera::ComputeViewProjectionMatrix(bool bLookAt)
+FMatrix PCamera::ComputeViewProjectionMatrix()
 {
-    if (bLookAt)
-    {
-        ViewMatrix = FLookAtMatrix(GetTranslation(), TargetTranslation, GetUpVector());
-    }
-    else
-    {
-        ViewMatrix = FMatrix::MakeRotationMatrix(GetRotation());
-        ViewMatrix = FTranslationMatrix(GetTranslation()) * ViewMatrix;
-    }
-
     const float Scale = 1.0f / Math::Tan(Math::DegreesToRadians(Fov / 2.0f));
-    ProjectionMatrix = FPerspectiveMatrix(Scale, GetAspect(), MinZ, MaxZ); // NOLINT
-
+    ViewMatrix = FLookAtMatrix(GetTranslation(), TargetTranslation, FVector3::UpVector());
+    ProjectionMatrix = FPerspectiveMatrix(Scale, GetAspect(), MinZ, MaxZ);
     return ViewMatrix * ProjectionMatrix;
 }
 
-void PCamera::Orbit(float DX, float DY)
+void PCamera::Orbit(float DX, float DY, const FVector3& Target)
 {
     // Get the camera rotation as a vector
-    const FVector3 CameraOrientation = (GetTranslation() - TargetTranslation).GetSafeNormal(); // Target is always [0,0,0]
+    const FVector3 Direction = (Target - GetTranslation()).Normalized(); // Target is always [0,0,0]
 
-    // Convert delta X and Y to radians
-    const float Pitch = Math::DegreesToRadians(DX); // DX * (P_PI / 180.f)
-    const float Yaw = Math::DegreesToRadians(DY); // DY * (P_PI / 180.f)
-    
-    // Construct a quaternion with the derived Pitch and Yaw
-    FQuat QuatRotation{Pitch, Yaw, 0};
-            
-    // Construct a quaternion with the derived camera orientation
-    const FQuat QuatTranslation(CameraOrientation.X, CameraOrientation.Y, CameraOrientation.Z, 0);
-            
-    // Multiply Qr * Qt * Qr⁻¹
-    const FQuat QuatResult = QuatRotation * QuatTranslation * QuatRotation.GetConjugate();
-            
-    // Take X/Y/Z components of the result and apply them as the X/Y/Z components of
-    // the new rotated orientation
-    const FVector3 RotatedOrientation{QuatResult.X, QuatResult.Y, QuatResult.Z};
-    
+    // Rotate the orientation by the delta X and delta Y values (in degrees)
+    const FVector3 RotatedDirection = Math::Rotate(Direction, DX, DY, 0.0f);
+
     // Multiply by zoom distance to get the final location
-    const FVector3 NewTranslation = RotatedOrientation * Zoom;
+    const FVector3 NewTranslation = RotatedDirection * Zoom;
 
     // Set new location as the current location
     SetTranslation(NewTranslation);
@@ -80,12 +56,12 @@ FVector2 PViewport::GetSize() const
 void PViewport::ResetView()
 {
     Camera->SetTranslation(DEFAULT_CAMERA_TRANSLATION(Camera->Zoom));
-    UpdateViewProjectionMatrix(true);
+    UpdateViewProjectionMatrix();
 }
 
-void PViewport::UpdateViewProjectionMatrix(bool bLookAt)
+void PViewport::UpdateViewProjectionMatrix()
 {
-    MVP = Camera->ComputeViewProjectionMatrix(bLookAt);
+    MVP = Camera->ComputeViewProjectionMatrix();
 }
 
 
@@ -111,10 +87,7 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& Sc
  */
 bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const
 {
-    FMatrix Model; // Default model matrix
-    Model.SetIdentity();
-
-    const FVector4 Result = Camera->ViewMatrix * Camera->ProjectionMatrix * FVector4(WorldPosition, 1.0f);
+    const FVector4 Result = ViewProjectionMatrix * FVector4(WorldPosition, 1.0f);
     if (Result.W > 0.0f)
     {
         // Normalized device coordinates
@@ -163,8 +136,7 @@ void PViewport::FormatDebugText()
         "Mouse Delta: {}\n"
         "Keys pressed: {}\n\n"
         "Camera Position: {}\n"
-        "Camera Rotation: {}\n"
-        "Camera Up: {}"
+        "Camera zoom: {}"
         ,
         Engine->GetFps(),
         GetSize().ToString(),
@@ -172,7 +144,6 @@ void PViewport::FormatDebugText()
         MouseDelta,
         FmtKeysDown,
         Translation.ToString(),
-        Rotation.ToString(),
-        Camera->GetUpVector().ToString()
+        Camera->Zoom
     );
 }

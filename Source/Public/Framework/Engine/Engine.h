@@ -21,12 +21,15 @@ public:
     static PEngine* Instance;
     static PEngine* GetInstance();
 
+    void OnMouseMiddleScrolled(float Delta) const;
     bool Startup(uint32 InWidth, uint32 InHeight);
     bool Shutdown();
 
     void Tick();
 
     PRenderer* GetRenderer() const { return Renderer.get(); }
+    PViewport* GetViewport() const { return GetRenderer()->GetViewport(); }
+    PCamera* GetViewportCamera() const { return GetViewport()->GetCamera(); }
     bool IsRunning() const { return bRunning; }
     void SetRunning(bool bNewRunning) { bRunning = bNewRunning; }
 
