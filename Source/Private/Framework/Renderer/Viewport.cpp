@@ -2,36 +2,28 @@
 #include "Framework/Engine/Engine.h"
 #include "Framework/Input/InputHandler.h"
 
-// Needed for TQuat<float>::Rotator()
-#include "../Private/Math/MathCommon.cpp" // NOLINT
-
 // View Camera
-FTransform PCamera::GetViewTransform() const
-{
-    return Transform;
-}
-
 FMatrix PCamera::ComputeViewProjectionMatrix()
 {
     const float Scale = 1.0f / Math::Tan(Math::DegreesToRadians(Fov / 2.0f));
     ViewMatrix = FLookAtMatrix(GetTranslation(), TargetTranslation, FVector3::UpVector());
     ProjectionMatrix = FPerspectiveMatrix(Scale, GetAspect(), MinZ, MaxZ);
-    return ViewMatrix * ProjectionMatrix;
+    return ProjectionMatrix * ViewMatrix * FMatrix::GetIdentity();
 }
 
-void PCamera::Orbit(float DX, float DY, const FVector3& Target)
+void PCamera::Orbit(const float DX, const float DY)
 {
-    // Get the camera rotation as a vector
-    const FVector3 Direction = (Target - GetTranslation()).Normalized(); // Target is always [0,0,0]
+    // Rotate the camera by delta X/Y, converted from degrees to radians
+    FRotator NewRotator = OriginalTransform.Rotation + FRotator(DX, DY, 0.0f);
+    NewRotator.Normalize();
 
-    // Rotate the orientation by the delta X and delta Y values (in degrees)
-    const FVector3 RotatedDirection = Math::Rotate(Direction, DX, DY, 0.0f);
+    // Multiply the rotation by the Zoom amount
+    const FVector3 NewTranslation = FRotationMatrix(NewRotator) * FVector3(0, 0, Zoom);
 
-    // Multiply by zoom distance to get the final location
-    const FVector3 NewTranslation = RotatedDirection * Zoom;
-
-    // Set new location as the current location
+    // Set new location as the current location, offset by the target location
     SetTranslation(NewTranslation);
+    SetRotation(NewRotator);
+    SetScale(FVector3(1, 1, 1));
 }
 
 // Viewport
@@ -56,6 +48,7 @@ FVector2 PViewport::GetSize() const
 void PViewport::ResetView()
 {
     Camera->SetTranslation(DEFAULT_CAMERA_TRANSLATION(Camera->Zoom));
+    Camera->SetRotation(FRotator());
     UpdateViewProjectionMatrix();
 }
 
@@ -110,7 +103,7 @@ void PViewport::FormatDebugText()
     const PEngine* Engine = PEngine::GetInstance();
     const IInputHandler* InputHandler = IInputHandler::GetInstance();
     std::string MousePosition = InputHandler->GetCurrentCursorPosition().ToString();
-    std::string MouseDelta = InputHandler->GetDeltaCursorPosition().ToString();
+    std::string MouseDelta = (InputHandler->GetCurrentCursorPosition() - InputHandler->GetClickPosition()).ToString();
 
     auto KeysDown = InputHandler->GetKeysDown();
     std::string FmtKeysDown;
@@ -124,8 +117,8 @@ void PViewport::FormatDebugText()
         }
     }
 
-    FVector3 Translation = Camera->GetViewTransform().Translation;
-    FRotator Rotation = Camera->GetViewTransform().Rotation;
+    FVector3 Translation = Camera->GetTranslation();
+    FRotator Rotation = Camera->GetRotation();
 
     DebugText = std::format(
         "Click and drag to orbit\n"
@@ -136,6 +129,7 @@ void PViewport::FormatDebugText()
         "Mouse Delta: {}\n"
         "Keys pressed: {}\n\n"
         "Camera Position: {}\n"
+        "Camera Rotation: {}\n"
         "Camera zoom: {}"
         ,
         Engine->GetFps(),
@@ -144,6 +138,7 @@ void PViewport::FormatDebugText()
         MouseDelta,
         FmtKeysDown,
         Translation.ToString(),
+        Rotation.ToString(),
         Camera->Zoom
     );
 }

@@ -122,6 +122,10 @@ struct TVector2
     {
         return X < Value && Y < Value;
     }
+    bool operator ==(T Value)
+    {
+        return X == Value && Y == Value;
+    }
     bool operator ==(const TVector2& Other)
     {
         return X == Other.X && Y == Other.Y;

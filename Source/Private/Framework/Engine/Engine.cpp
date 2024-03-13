@@ -31,6 +31,8 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     {
         Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
         Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
+        Input->MouseLeftDown.AddRaw(this, &PEngine::OnLeftMouseDown);
+        Input->MouseLeftUp.AddRaw(this, &PEngine::OnLeftMouseUp);
     }
 
     // Load all geometry into the scene
@@ -62,7 +64,7 @@ void PEngine::Tick()
 
         FVector3 DeltaTranslation;
         if (Input->IsKeyDown('W')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
-        if (Input->IsKeyDown('S')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Backward
+        if (Input->IsKeyDown('S')) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
         if (Input->IsKeyDown('D')) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
         if (Input->IsKeyDown('A')) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
         if (Input->IsKeyDown('E')) { DeltaTranslation.Y = ScaledCameraSpeed; } // Up
@@ -75,14 +77,16 @@ void PEngine::Tick()
         }
 
         // Calculate rotation amount given the mouse delta
-        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition() * DeltaTime * 0.00001f;
-
-        // If there's actual movement on either the X or Y axis, move the camera
-        if (DeltaMouseCursor != 0)
+        if (Input->IsMouseDown(EMouseButtonType::Left))
         {
-            Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y, FVector3::ZeroVector());
+            FVector2 DeltaMouseCursor = Input->GetCurrentCursorPosition() - Input->GetClickPosition();
+
+            // If there's actual movement on either the X or Y axis, move the camera
+            if (DeltaMouseCursor != 0)
+            {
+                Camera->Orbit(DeltaMouseCursor.Y, DeltaMouseCursor.X); // Swap X and Y
+            }
         }
-        Input->ResetDeltaCursorPosition();
     }
 
     // Format debug text
@@ -96,6 +100,10 @@ void PEngine::LoadSceneGeometry()
     {
         Meshes.emplace_back(Mesh);
     }
+    // if (auto Mesh = PMesh::CreateCube(0.5f))
+    // {
+    //     Meshes.emplace_back(Mesh);
+    // }
     if (auto Mesh = PMesh::CreateSphere(1.0f, 16))
     {
         Meshes.emplace_back(Mesh);
@@ -119,6 +127,20 @@ void PEngine::OnKeyPressed(int32 KeyCode) const
     default :
         break;
     }
+}
+
+void PEngine::OnLeftMouseDown(const FVector2& CursorPosition) const
+{
+    // Store the original transform when a click begins
+    PCamera* Camera = GetViewportCamera();
+    Camera->OriginalTransform = Camera->GetTransform();
+}
+
+void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
+{
+    // Store the original transform when a click begins
+    PCamera* Camera = GetViewportCamera();
+    Camera->OriginalTransform = Camera->GetTransform();
 }
 
 void PEngine::OnMouseMiddleScrolled(float Delta) const

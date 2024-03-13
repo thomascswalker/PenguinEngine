@@ -25,23 +25,25 @@ namespace Math
         TVector3<T> Normal = {Q.X, Q.Y, Q.Z};
         TVector3<T> Axis = Normal.Normalized();
 
-        TMatrix<T> Result = TMatrix<T>::GetIdentity();
+        TMatrix<T> Rotation = TMatrix<T>::GetIdentity();
         T One = static_cast<T>(1);
         T Zero = static_cast<T>(0);
-        Result.Set(0,0, C + (One - C) * Axis.X * Axis.X);
-        Result.Set(0,1, (One - C) * Axis.X * Axis.Y + S * Axis.Z);
-        Result.Set(0,2, (One - C) * Axis.X * Axis.Z - S * Axis.Y);
-        Result.Set(0,3, Zero);
-        Result.Set(1,0, (One - C) * Axis.Y * Axis.X - S * Axis.Z);
-        Result.Set(1,1, C + (One - C) * Axis.Y * Axis.Y);
-        Result.Set(1,2, (One - C) * Axis.Y * Axis.Z + S * Axis.X);
-        Result.Set(1,3, Zero);
-        Result.Set(2,0, (One - C) * Axis.Z * Axis.X + S * Axis.Y);
-        Result.Set(2,1, (One - C) * Axis.Z * Axis.Y - S * Axis.X);
-        Result.Set(2,2, C + (One - C) * Axis.Z * Axis.Z);
-        Result.Set(2,3, Zero);
+        Rotation.Set(0, 0, C + (One - C) * Axis.X * Axis.X);
+        Rotation.Set(0, 1, (One - C) * Axis.X * Axis.Y + S * Axis.Z);
+        Rotation.Set(0, 2, (One - C) * Axis.X * Axis.Z - S * Axis.Y);
+        Rotation.Set(0, 3, Zero);
+        Rotation.Set(1, 0, (One - C) * Axis.Y * Axis.X - S * Axis.Z);
+        Rotation.Set(1, 1, C + (One - C) * Axis.Y * Axis.Y);
+        Rotation.Set(1, 2, (One - C) * Axis.Y * Axis.Z + S * Axis.X);
+        Rotation.Set(1, 3, Zero);
+        Rotation.Set(2, 0, (One - C) * Axis.Z * Axis.X + S * Axis.Y);
+        Rotation.Set(2, 1, (One - C) * Axis.Z * Axis.Y - S * Axis.X);
+        Rotation.Set(2, 2, C + (One - C) * Axis.Z * Axis.Z);
+        Rotation.Set(2, 3, Zero);
 
-        return Result * V;
+        TTranslationMatrix<T> Translation(V);
+        TMatrix<T> Out = Translation * Rotation;
+        return Out.GetTranslation();
     }
 
     // Rotate a vector with the specified Pitch, Yaw, and Roll (in degrees)

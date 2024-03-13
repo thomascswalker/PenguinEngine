@@ -560,19 +560,24 @@ struct TLookAtMatrix : TMatrix<T>
 
         // Up vector
         const TVector3<T> Up = Math::Cross(Right, Forward);
-        
+
+        //  Rx |  Ux | -Fx | 0
+        //  Ry |  Uy | -Fy | 0
+        //  Rz |  Uz | -Fz | 0
+        // -Tx | -Ty | -Tz | 1
         this->M[0][0] = Right[0];
-        this->M[0][1] = Right[1];
-        this->M[0][2] = Right[2];
-        this->M[0][3] = -Math::Dot(Right, EyePosition);
-        this->M[1][0] = Up[0];
+        this->M[1][0] = Right[1];
+        this->M[2][0] = Right[2];
+        this->M[3][0] = Math::Dot(Right, -EyePosition);
+        this->M[0][1] = Up[0];
         this->M[1][1] = Up[1];
-        this->M[1][2] = Up[2];
-        this->M[1][3] = -Math::Dot(Up, EyePosition);
-        this->M[2][0] = -Forward[0];
-        this->M[2][1] = -Forward[1];
+        this->M[2][1] = Up[2];
+        this->M[3][1] = Math::Dot(Up, -EyePosition);
+        this->M[0][2] = -Forward[0];
+        this->M[1][2] = -Forward[1];
         this->M[2][2] = -Forward[2];
-        this->M[2][3] = -Math::Dot(Forward, EyePosition);
+        this->M[3][2] = Math::Dot(Forward, -EyePosition);
+        
         this->M[3][3] = 1.0f;
     }
 };
@@ -593,6 +598,11 @@ struct TRotationMatrix : TMatrix<T>
 {
     TRotationMatrix(T Pitch, T Yaw, T Roll) : TMatrix<T>()
     {
+        // Convert from degrees to radians
+        Pitch = Math::DegreesToRadians(Pitch);
+        Yaw = Math::DegreesToRadians(Yaw);
+        Roll = Math::DegreesToRadians(Roll);
+        
         T A = Math::Cos(Pitch);
         T B = Math::Sin(Pitch);
         T C = Math::Cos(Yaw);

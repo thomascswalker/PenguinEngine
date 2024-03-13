@@ -2,10 +2,11 @@
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 
+
 #define DRAW_WIREFRAME 1
 #define DRAW_SHADED 1
-#define DEPTH_TEST 0
-#define LOOK_AT 0
+#define DEPTH_TEST 1
+#define TWO_SIDED 1
 
 /* Renderer */
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
@@ -80,14 +81,6 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
 
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
-    const FVector3 LookAtTranslation = Viewport->GetCamera()->TargetTranslation;
-    const FVector3 CameraTranslation = Viewport->GetCamera()->GetTranslation();
-
-    const FVector3 CameraNormal = (CameraTranslation - LookAtTranslation).Normalized();
-    const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2).Normalized();
-
-    const float FacingRatio = Math::Max(0.0f, Math::Dot(WorldNormal, CameraNormal));
-
     // Project the world-space points to screen-space
     FVector3 ScreenPoints[3];
     bool bTriangleOnScreen = false;
@@ -103,18 +96,36 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     }
 
 #if DRAW_SHADED
+    auto W0 = V0;
+    auto W1 = V1;
+    
     // Reverse the order to CCW if the order is CW
     const EWindingOrder WindingOrder = FTriangle::GetVertexOrder(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
     switch (WindingOrder)
     {
     case EWindingOrder::CW :
         std::swap(ScreenPoints[0], ScreenPoints[1]);
+        std::swap(W0, W1);
         break;
     case EWindingOrder::CCW :
         break;
     case EWindingOrder::CL :
         return;
     }
+
+    const FVector3 LookAtTranslation = Viewport->GetCamera()->TargetTranslation;
+    const FVector3 CameraTranslation = Viewport->GetCamera()->GetTranslation();
+
+    const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
+    const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(W0, W1, V2).Normalized();
+
+    float FacingRatio = Math::Dot(-CameraNormal, WorldNormal);
+
+#if TWO_SIDED
+    FacingRatio = Math::Abs(Math::Min(FacingRatio, 1.0f));
+#else
+    FacingRatio = Math::Max(0.0f, Math::Min(FacingRatio, 1.0f));
+#endif
 
     // Get the bounding box of the 2d triangle
     FRect BB = FRect::MakeBoundingBox(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
@@ -124,7 +135,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     {
         for (int32 X = BB.Min().X; X < BB.Max().X; X++)
         {
-            FVector3 P = FVector3(static_cast<float>(X) + 0.5f, static_cast<float>(Y) + 0.5f, 0.0f);
+            FVector3 P = FVector3(static_cast<float>(X), static_cast<float>(Y), 0.0f);
             FVector3 UVW;
             if (!FTriangle::GetBarycentric(P, ScreenPoints[0], ScreenPoints[1], ScreenPoints[2], UVW))
             {
@@ -133,16 +144,18 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
 #if DEPTH_TEST
             const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
-            float NewDepth = FTriangle::GetDepth(P, V0, V1, V2);
+            float NewDepth = FTriangle::GetDepth(P, W0, W1, V2);
             if (NewDepth > CurrentDepth)
             {
-                // continue;
+                continue;
             }
             GetDepthBuffer()->SetPixel(X, Y, NewDepth);
 #endif
-            uint8 R = Math::Pow(FacingRatio, 2.2f) * 255; // Convert to SRGB
+            uint8 R = Math::Max(Math::Pow(WorldNormal.X, 2.2f) * 255, 50.0f); // Convert to SRGB
+            uint8 G = Math::Max(Math::Pow(WorldNormal.Y, 2.2f) * 255, 50.0f); // Convert to SRGB
+            
             // Set the color buffer to this new color
-            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
+            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, G, FacingRatio * 255));
         }
     }
 #endif

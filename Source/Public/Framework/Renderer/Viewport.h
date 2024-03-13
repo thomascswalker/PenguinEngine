@@ -10,11 +10,11 @@
 #define DEFAULT_MINZ 1.0f
 #define DEFAULT_MAXZ 1000.0f
 
-#define DEFAULT_ZOOM 10.0f
+#define DEFAULT_ZOOM 2.0f
 #define MIN_ZOOM 1.0f
 #define MAX_ZOOM 25.0f
 
-#define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,-(X))
+#define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,(X))
 
 enum EViewportType
 {
@@ -39,6 +39,8 @@ public:
 
     FVector3 TargetTranslation = FVector3::ZeroVector(); // Origin
 
+    FTransform OriginalTransform;
+    
     FMatrix ProjectionMatrix;
     FMatrix ViewMatrix;
 
@@ -51,9 +53,8 @@ public:
         SetTranslation(DEFAULT_CAMERA_TRANSLATION(Zoom));
     }
     constexpr float GetAspect() const { return static_cast<float>(Width) / static_cast<float>(Height); }
-    FTransform GetViewTransform() const;
     FMatrix ComputeViewProjectionMatrix();
-    void Orbit(float DX, float DY, const FVector3& Target = FVector3(0));
+    void Orbit(float DX, float DY);
     void SetFov(float NewFov)
     {
         Fov = Math::Clamp(NewFov, MinFov, MaxFov);

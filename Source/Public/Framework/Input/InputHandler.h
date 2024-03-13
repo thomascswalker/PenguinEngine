@@ -4,10 +4,15 @@
 #include "Math/Vector.h"
 #include "Framework/Engine/Delegate.h"
 
-DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, FVector2);
-DECLARE_MULTICAST_DELEGATE(FOnMouseLeftClicked, FVector2);
-DECLARE_MULTICAST_DELEGATE(FOnMouseRightClicked, FVector2);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleClicked, FVector2);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseLeftDown, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseLeftUp, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseRightDown, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseRightUp, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleDown, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleUp, const FVector2&);
+
+
 DECLARE_MULTICAST_DELEGATE(FKeyPressed, int32);
 DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleScrolled, float);
 
@@ -35,7 +40,7 @@ public:
     static IInputHandler* GetInstance();
 
     // Events
-    
+
 protected:
     bool bMouseLeftDown = false;
     bool bMouseRightDown = false;
@@ -59,12 +64,15 @@ protected:
 public:
     // Events
     FOnMouseMoved MouseMoved;
-    FOnMouseLeftClicked MouseLeftClicked;
-    FOnMouseRightClicked MouseRightClicked;
-    FOnMouseMiddleClicked MouseMiddleClicked;
+    FOnMouseLeftDown MouseLeftDown;
+    FOnMouseRightDown MouseRightDown;
+    FOnMouseMiddleDown MouseMiddleDown;
+    FOnMouseLeftUp MouseLeftUp;
+    FOnMouseRightUp MouseRightUp;
+    FOnMouseMiddleUp MouseMiddleUp;
     FOnMouseMiddleScrolled MouseMiddleScrolled;
     FKeyPressed KeyPressed;
-    
+
     // Mouse
     virtual bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
     virtual bool OnMouseUp(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
@@ -120,12 +128,15 @@ public:
         {
         case EMouseButtonType::Left :
             bMouseLeftDown = true;
+            MouseLeftDown.Broadcast(CursorPosition);
             break;
         case EMouseButtonType::Right :
             bMouseRightDown = true;
+            MouseRightDown.Broadcast(CursorPosition);
             break;
         case EMouseButtonType::Middle :
             bMouseMiddleDown = true;
+            MouseMiddleDown.Broadcast(CursorPosition);
             break;
         case EMouseButtonType::Invalid :
         default :
@@ -142,12 +153,15 @@ public:
         {
         case EMouseButtonType::Left :
             bMouseLeftDown = false;
+            MouseLeftUp.Broadcast(CursorPosition);
             break;
         case EMouseButtonType::Right :
             bMouseRightDown = false;
+            MouseRightUp.Broadcast(CursorPosition);
             break;
         case EMouseButtonType::Middle :
             bMouseMiddleDown = false;
+            MouseMiddleUp.Broadcast(CursorPosition);
             break;
         case EMouseButtonType::Invalid :
         default :

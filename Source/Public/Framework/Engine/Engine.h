@@ -21,7 +21,6 @@ public:
     static PEngine* Instance;
     static PEngine* GetInstance();
 
-    void OnMouseMiddleScrolled(float Delta) const;
     bool Startup(uint32 InWidth, uint32 InHeight);
     bool Shutdown();
 
@@ -39,5 +38,9 @@ public:
     std::vector<std::shared_ptr<PMesh>> GetMeshes() const { return Meshes; }
 
     constexpr float GetFps() const { return 1000.0f / DeltaTime; }
+
+    void OnLeftMouseDown(const FVector2& CursorPosition) const;
+    void OnLeftMouseUp(const FVector2& CursorPosition) const;
+    void OnMouseMiddleScrolled(float Delta) const;
     void OnKeyPressed(int32 KeyCode) const;
 };
