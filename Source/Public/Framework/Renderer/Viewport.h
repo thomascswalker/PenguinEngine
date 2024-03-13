@@ -6,15 +6,15 @@
 #define DEFAULT_VIEWPORT_WIDTH 320
 #define DEFAULT_VIEWPORT_HEIGHT 240
 
-#define DEFAULT_FOV 120.0f
+#define DEFAULT_FOV 90.0f
 #define DEFAULT_MINZ 1.0f
 #define DEFAULT_MAXZ 1000.0f
 
 #define DEFAULT_ZOOM 2.0f
 #define MIN_ZOOM 1.0f
-#define MAX_ZOOM 10.0f
+#define MAX_ZOOM 25.0f
 
-#define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,-(X))
+#define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,(X))
 
 enum EViewportType
 {
@@ -26,31 +26,42 @@ enum EViewportType
 class PCamera : public PObject
 {
 public:
-    PCamera()
-    {
-        SetTranslation(FVector3(0, 0, -Zoom));
-    }
     uint32 Width = DEFAULT_VIEWPORT_WIDTH;
     uint32 Height = DEFAULT_VIEWPORT_HEIGHT;
     float Fov = DEFAULT_FOV;
-    float MinZ = DEFAULT_MINZ;
-    float MaxZ = DEFAULT_MAXZ;
+    float MinZ = 1.0f;
+    float MaxZ = 1000.0f;
     float Zoom = DEFAULT_ZOOM;
     float MinZoom = MIN_ZOOM;
     float MaxZoom = MAX_ZOOM;
+    float MinFov = 20.0f;
+    float MaxFov = 120.0f;
 
     FVector3 TargetTranslation = FVector3::ZeroVector(); // Origin
 
+    FTransform OriginalTransform;
+    
     FMatrix ProjectionMatrix;
     FMatrix ViewMatrix;
 
-    constexpr float GetAspect() const { return static_cast<float>(Width) / static_cast<float>(Height); }
-    FTransform GetViewTransform();
-    FMatrix ComputeViewProjectionMatrix(bool bLookAt = false);
-    void Orbit(float DX, float DY);
-    void Translate(const FVector3& Delta)
+    PCamera()
     {
-        Transform.Translation += Delta;
+        Init();
+    }
+    void Init()
+    {
+        SetTranslation(DEFAULT_CAMERA_TRANSLATION(Zoom));
+    }
+    constexpr float GetAspect() const { return static_cast<float>(Width) / static_cast<float>(Height); }
+    FMatrix ComputeViewProjectionMatrix();
+    void Orbit(float DX, float DY);
+    void SetFov(float NewFov)
+    {
+        Fov = Math::Clamp(NewFov, MinFov, MaxFov);
+    }
+    void SetZoom(float NewZoom)
+    {
+        Zoom = Math::Clamp(NewZoom, MinZoom, MaxZoom);
     }
 };
 
@@ -74,7 +85,7 @@ public:
     PCamera* GetCamera() const { return Camera.get(); }
 
     void ResetView();
-    void UpdateViewProjectionMatrix(bool bLookAt = true);
+    void UpdateViewProjectionMatrix();
     FMatrix* GetViewProjectionMatrix() { return &MVP; }
     bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const;
     bool ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const;

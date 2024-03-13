@@ -21,6 +21,18 @@ struct TQuat
     TQuat(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
     {
     }
+    
+    // Quaternion constructed from euler angles specified (in radians)
+    TQuat(const TVector3<T>& EulerAngles)
+    {
+        TVector3<T> C = Math::Cos(EulerAngles * T(0.5f));
+        TVector3<T> S = Math::Sin(EulerAngles * T(0.5f));
+
+        W = C.X * C.Y * C.Z + S.X * S.Y * S.Z;
+        X = S.X * C.Y * C.Z - C.X * S.Y * S.Z;
+        Y = C.X * S.Y * C.Z + S.X * C.Y * S.Z;
+        Z = C.X * C.Y * S.Z - S.X * S.Y * C.Z;
+    }
     TQuat(TVector3<T> Axis, T Angle)
     {
         const T HalfAngle = 0.5f * Angle;

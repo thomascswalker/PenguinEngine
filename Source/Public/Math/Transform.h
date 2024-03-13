@@ -60,7 +60,11 @@ struct TTransform
 
         Rotation.Normalize();
     }
-
+    
+    //  | rx0 | rx1 | rx2 | tx*sx |
+    //  | ry0 | ry1 | ry2 | ty*sy |
+    //  | rz0 | rz1 | rz2 | tz*sz |
+    //  |  0  |  0  |  0  |   1   | 
     TMatrix<T> ToMatrix() const
     {
         TMatrix<T> Out;
@@ -71,12 +75,12 @@ struct TTransform
         Out.M[2][3] = Translation.Z;
 
         // Apply rotation
-        TMatrix RotationMatrix = TMatrix<T>::MakeRotationMatrix(Rotation);
-        for (int Y = 0; Y < 3; ++Y)
+        TMatrix RotationMatrix = TRotationMatrix<T>(Rotation);
+        for (int32 X = 0; X < 3; ++X)
         {
-            for (int X = 0; X < 3; ++X)
+            for (int32 Y = 0; Y < 3; ++Y)
             {
-                Out.M[Y][X] = RotationMatrix.M[Y][X];
+                Out.M[X][Y] = RotationMatrix.M[X][Y];
             }
         }
 
@@ -88,10 +92,10 @@ struct TTransform
         return Out;
     }
 
-    TVector3<T> GetUnitAxis(EAxis InAxis) const
+    TVector3<T> GetAxisNormalized(EAxis InAxis) const
     {
         TMatrix<T> M = ToMatrix().GetInverse();
-        TVector3<T> AxisVector = M.GetScaledAxis(InAxis);
+        TVector3<T> AxisVector = M.GetAxis(InAxis);
         AxisVector.Normalize();
         return AxisVector;
     }

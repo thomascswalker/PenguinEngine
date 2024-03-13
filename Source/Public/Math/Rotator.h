@@ -3,6 +3,7 @@
 #include <format>
 #include "MathFwd.h"
 
+// Rotator composed of euler angles, in degrees
 template <typename T>
 struct TRotator
 {
@@ -23,8 +24,17 @@ struct TRotator
     static TRotator Identity() { return TRotator(); }
     TQuat<T> Quaternion() const;
 
-    T NormalizeAxis(T Angle) const;
-    void Normalize();
+    T NormalizeAxis(T Angle) const
+    {
+        T Remainder = Math::Mod(Angle, T(360));
+        return Math::Mod(Remainder + T(360), T(360));
+    }
+    void Normalize()
+    {
+        Pitch = NormalizeAxis(Pitch);
+        Yaw = NormalizeAxis(Yaw);
+        Roll = NormalizeAxis(Roll);
+    }
     std::string ToString() const { return std::format("[Pitch={}, Yaw={}, Roll={}]", Pitch, Yaw, Roll); }
 
     TRotator operator+(const TRotator& Other)

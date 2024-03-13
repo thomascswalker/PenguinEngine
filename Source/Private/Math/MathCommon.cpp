@@ -77,27 +77,9 @@ TRotator<T>::TRotator(const TVector3<T>& Euler)
 template <typename T>
 TQuat<T> TRotator<T>::Quaternion() const
 {
-    return TQuat<T>(Pitch, Yaw, Roll);
+    return TQuat<T>(T(Pitch), T(Yaw), T(Roll));
 }
 
-template <typename T>
-T TRotator<T>::NormalizeAxis(T Angle) const
-{
-    Angle = Math::Clamp<T>(Angle, 0.0f, 360.0f);
-    if (Angle > 180.0f)
-    {
-        Angle -= 360.0f;
-    }
-    return Angle;
-}
-
-template <typename T>
-void TRotator<T>::Normalize()
-{
-    Pitch = NormalizeAxis(Pitch);
-    Yaw = NormalizeAxis(Yaw);
-    Roll = NormalizeAxis(Roll);
-}
 
 // Quat
 // Quaternion to Rotator

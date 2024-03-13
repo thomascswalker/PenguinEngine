@@ -17,10 +17,20 @@ namespace Math
         return std::pow(Value, Power);
     }
 
+    static float Sin(float Value)
+    {
+        return std::sinf(Value);
+    }
+
+    static double Sin(double Value)
+    {
+        return std::sin(Value);
+    }
+
     template <typename T>
     constexpr static T Sin(T Value)
     {
-        return std::sinf(Value);
+        return Math::Sin(Value);
     }
 
     template <typename T>
@@ -28,11 +38,22 @@ namespace Math
     {
         return std::asinf(Value);
     }
+    
+    static float Cos(float Value)
+    {
+        return std::cosf(Value);
+    }
 
+    static double Cos(double Value)
+    {
+        return std::cos(Value);
+    }
+
+    
     template <typename T>
     constexpr static T Cos(T Value)
     {
-        return std::cosf(Value);
+        return Math::Cos(Value);
     }
 
     template <typename T>

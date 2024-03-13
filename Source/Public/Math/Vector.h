@@ -122,6 +122,10 @@ struct TVector2
     {
         return X < Value && Y < Value;
     }
+    bool operator ==(T Value)
+    {
+        return X == Value && Y == Value;
+    }
     bool operator ==(const TVector2& Other)
     {
         return X == Other.X && Y == Other.Y;
@@ -190,13 +194,16 @@ struct TVector3
 
     void Normalize()
     {
-        const T SquareSum = (X * X) + (Y * Y) + (Z * Z);
-        if (SquareSum > P_SMALL_NUMBER)
+        const T Magnitude = Length();
+        if (Magnitude < 0.000001f)
         {
-            const T Scale = Math::InvSqrt(SquareSum);
-            X *= Scale;
-            Y *= Scale;
-            Z *= Scale;
+            *this = ZeroVector();
+        }
+        else
+        {
+            X /= Magnitude;
+            Y /= Magnitude;
+            Z /= Magnitude;
         }
         CheckNaN();
     }
@@ -206,22 +213,7 @@ struct TVector3
         Out.Normalize();
         return Out;
     }
-    TVector3 GetSafeNormal() const
-    {
-        const T SquareSum = X * X + Y * Y + Z * Z;
 
-        if (SquareSum == 1.f)
-        {
-            return *this;
-        }
-
-        if (SquareSum < 0.000001f)
-        {
-            return ZeroVector();
-        }
-        const T Scale = static_cast<T>(Math::InvSqrt(SquareSum));
-        return TVector3(X * Scale, Y * Scale, Z * Scale);
-    }
     constexpr T Length() const
     {
         return Math::Sqrt(X * X + Y * Y + Z * Z);
@@ -290,7 +282,7 @@ struct TVector3
     bool operator==(const TVector3& V) const { return X == V.X && Y == V.Y && Z == V.Z; }
     bool operator!=(const TVector3& V) const { return X != V.X || Y != V.Y || Z != V.Z; }
 
-    TVector3 operator-()
+    TVector3 operator-() const
     {
         return TVector3(-X, -Y, -Z);
     }
@@ -476,12 +468,8 @@ namespace Math
     template <typename T>
     static T Dot(const TVector3<T>& A, const TVector3<T>& B)
     {
-        T Result = 0;
-        for (int32 Index = 0; Index < 3; Index++)
-        {
-            Result += A.XYZ[Index] * B[Index];
-        }
-        return Result;
+        TVector3<T> C = A * B;
+        return C.X + C.Y + C.Z;
     }
 
     template <typename T>
@@ -590,6 +578,7 @@ struct TTriangle
         return W0 * V0.Z + W1 * V1.Z + W2 * V2.Z;
     }
 
+    // // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
     static TVector3<T> GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         TVector3<T> Normal;
