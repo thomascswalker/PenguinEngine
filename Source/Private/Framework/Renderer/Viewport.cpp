@@ -14,7 +14,7 @@ FMatrix PCamera::ComputeViewProjectionMatrix()
 void PCamera::Orbit(const float DX, const float DY)
 {
     // Rotate the camera by delta X/Y, converted from degrees to radians
-    FRotator NewRotator = OriginalTransform.Rotation + FRotator(DX, DY, 0.0f);
+    FRotator NewRotator = OriginalTransform.Rotation + FRotator(0.0f, DY, DX);
     NewRotator.Normalize();
 
     // Multiply the rotation by the Zoom amount

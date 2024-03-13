@@ -587,6 +587,6 @@ struct TTriangle
         Normal.X = (U.Y * V.Z) - (U.Z * V.Y);
         Normal.Y = (U.Z * V.X) - (U.X * V.Z);
         Normal.Z = (U.X * V.Y) - (U.Y * V.X);
-        return Normal;
+        return Normal.Normalized();
     }
 };

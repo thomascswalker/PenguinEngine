@@ -174,7 +174,8 @@ public:
 
     bool OnMouseWheel(float Delta) override
     {
-        MouseMiddleScrolled.Broadcast(Delta);
+        // Invert delta
+        MouseMiddleScrolled.Broadcast(-Delta);
         return true;
     }
 

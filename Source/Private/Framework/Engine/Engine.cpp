@@ -96,15 +96,15 @@ void PEngine::Tick()
 void PEngine::LoadSceneGeometry()
 {
     // Construct a simple triangle mesh
-    if (auto Mesh = PMesh::CreatePlane(2.0f))
-    {
-        Meshes.emplace_back(Mesh);
-    }
+    // if (auto Mesh = PMesh::CreatePlane(2.0f))
+    // {
+    //     Meshes.emplace_back(Mesh);
+    // }
     // if (auto Mesh = PMesh::CreateCube(0.5f))
     // {
     //     Meshes.emplace_back(Mesh);
     // }
-    if (auto Mesh = PMesh::CreateSphere(1.0f, 16))
+    if (auto Mesh = PMesh::CreateSphere(5.0f, 16))
     {
         Meshes.emplace_back(Mesh);
     }
@@ -146,5 +146,5 @@ void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
 void PEngine::OnMouseMiddleScrolled(float Delta) const
 {
     PCamera* Camera = GetViewportCamera();
-    Camera->SetFov(Camera->Fov + Delta);
+    Camera->SetZoom(Camera->Zoom + Delta);
 }
