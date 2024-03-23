@@ -169,6 +169,7 @@ struct TVector3
     {
         CheckNaN();
     }
+    TVector3(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]){}
     TVector3(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
@@ -335,6 +336,7 @@ struct TVector4
     {
         CheckNaN();
     }
+    TVector4(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]), W(Values[3]){}
     TVector4(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
@@ -343,7 +345,7 @@ struct TVector4
         W = *(Values.begin() + 3);
         CheckNaN();
     }
-    TVector4(const TVector3<T>& V, T InW) : X(V.X), Y(V.Y), Z(V.Z), W(InW)
+    TVector4(const TVector3<T>& V, T InW = T(1)) : X(V.X), Y(V.Y), Z(V.Z), W(InW)
     {
         CheckNaN();
     }
@@ -468,8 +470,12 @@ namespace Math
     template <typename T>
     static T Dot(const TVector3<T>& A, const TVector3<T>& B)
     {
-        TVector3<T> C = A * B;
-        return C.X + C.Y + C.Z;
+        T Result = T(0);
+        for (int32 Index = 0; Index < 3; Index++)
+        {
+            Result += A[Index] * B[Index];
+        }
+        return Result;
     }
 
     template <typename T>
@@ -486,6 +492,17 @@ namespace Math
         T B = Math::Pow(V1.Y - V0.Y, 2.0f);
         return Math::Sqrt(A + B);
     }
+
+    template <typename T>
+    static T Dot(const TVector4<T>& A, const TVector4<T>& B)
+    {
+        T Result = T(0);
+        for (int32 Index = 0; Index < 4; Index++)
+        {
+            Result += A[Index] * B[Index];
+        }
+        return Result;
+    }
 }
 
 
@@ -497,7 +514,7 @@ struct TTriangle
         T A = V0.X * (V1.Y - V2.Y);
         T B = V1.X * (V2.Y - V0.Y);
         T C = V2.X * (V0.Y - V1.Y);
-        return (A + B + C) / T(2);
+        return Math::Abs((A + B + C) / T(2));
     }
 
     // Vector Sign
@@ -587,6 +604,6 @@ struct TTriangle
         Normal.X = (U.Y * V.Z) - (U.Z * V.Y);
         Normal.Y = (U.Z * V.X) - (U.X * V.Z);
         Normal.Z = (U.X * V.Y) - (U.Y * V.X);
-        return Normal;
+        return Normal.Normalized();
     }
 };

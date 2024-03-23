@@ -198,6 +198,7 @@
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformInterface.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformMemory.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\Win32Platform.h" />
+    <ClInclude Include="Source\Public\Framework\Renderer\Grid.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Viewport.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Renderer.h" />
     <ClInclude Include="Source\Public\Math\Math.h" />

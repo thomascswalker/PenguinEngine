@@ -3,6 +3,7 @@
 #include <memory>
 #include <map>
 
+#include "Grid.h"
 #include "Viewport.h"
 #include "Framework/Engine/Mesh.h"
 #include "Math/MathCommon.h"
@@ -94,8 +95,10 @@ class PRenderer
     std::shared_ptr<PColorBuffer> ColorBuffer;
     std::shared_ptr<PDataBuffer> DepthBuffer;
     std::shared_ptr<PViewport> Viewport;
+    std::unique_ptr<PGrid> Grid;
 
     const PColor WireColor = PColor::FromRgba(255, 175, 50);
+    const PColor GridColor = PColor::FromRgba(128, 128, 128);
 
 public:
     PRenderer(uint32 InWidth, uint32 InHeight);
@@ -119,9 +122,11 @@ public:
     PViewport* GetViewport() const { return Viewport.get(); }
 
     // Drawing
+    bool ClipLine(const FVector2& InA, const FVector2& InB, FVector2& OutA, FVector2& OutB) const;
     void DrawLine(const FVector2& InA, const FVector2& InB, const PColor& Color) const;
     void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
     void DrawMesh(const PMesh* Mesh) const;
+    void DrawGrid() const;
     void Render() const;
     void ClearBuffers() const;
 };

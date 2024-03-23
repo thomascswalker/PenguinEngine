@@ -470,21 +470,23 @@ struct TMatrix
         return *this;
     }
 
-    TVector3<T> operator*(const TVector3<T>& V3) const
+    TVector3<T> operator*(const TVector3<T>& V) const
     {
-        T TempX = V3.X * M[0][0] + V3.Y * M[1][0] + V3.Z * M[2][0];
-        T TempY = V3.X * M[0][1] + V3.Y * M[1][1] + V3.Z * M[2][1];
-        T TempZ = V3.X * M[0][2] + V3.Y * M[1][2] + V3.Z * M[2][2];
-
-        return {TempX, TempY, TempZ};
+        TVector3<T> Result;
+        for (int32 Index = 0; Index < 3; Index++)
+        {
+            TVector4<T> RowVector({M[Index][0], M[Index][1], M[Index][2], M[Index][3]});
+            Result[Index] = Math::Dot(RowVector, TVector4<T>(V));
+        }
+        return Result;
     }
 
-    TVector4<T> operator*(const TVector4<T>& V4) const
+    TVector4<T> operator*(const TVector4<T>& V) const
     {
-        T TempX = V4.X * M[0][0] + V4.Y * M[1][0] + V4.Z * M[2][0] + V4.W * M[3][0];
-        T TempY = V4.X * M[0][1] + V4.Y * M[1][1] + V4.Z * M[2][1] + V4.W * M[3][1];
-        T TempZ = V4.X * M[0][2] + V4.Y * M[1][2] + V4.Z * M[2][2] + V4.W * M[3][2];
-        T TempW = V4.X * M[0][3] + V4.Y * M[1][3] + V4.Z * M[2][3] + V4.W * M[3][3];
+        T TempX = V.X * M[0][0] + V.Y * M[1][0] + V.Z * M[2][0] + V.W * M[3][0];
+        T TempY = V.X * M[0][1] + V.Y * M[1][1] + V.Z * M[2][1] + V.W * M[3][1];
+        T TempZ = V.X * M[0][2] + V.Y * M[1][2] + V.Z * M[2][2] + V.W * M[3][2];
+        T TempW = V.X * M[0][3] + V.Y * M[1][3] + V.Z * M[2][3] + V.W * M[3][3];
 
         return {TempX, TempY, TempZ, TempW};
     }
@@ -603,25 +605,25 @@ struct TRotationMatrix : TMatrix<T>
         Yaw = Math::DegreesToRadians(Yaw);
         Roll = Math::DegreesToRadians(Roll);
         
-        T A = Math::Cos(Pitch);
-        T B = Math::Sin(Pitch);
-        T C = Math::Cos(Yaw);
-        T D = Math::Sin(Yaw);
-        T E = Math::Cos(Roll);
-        T F = Math::Sin(Roll);
+        T CP = Math::Cos(Pitch);
+        T SP = Math::Sin(Pitch);
+        T CY = Math::Cos(Yaw);
+        T SY = Math::Sin(Yaw);
+        T CR = Math::Cos(Roll);
+        T SR = Math::Sin(Roll);
 
-        T AD = A * D;
-        T BD = B * D;
+        T CPSY = CP * SY;
+        T SPSY = SP * SY;
         
-        this->M[0][0] = C * E;
-        this->M[0][1] = -C * F;
-        this->M[0][2] = D;
-        this->M[1][0] = BD * E + A * F;
-        this->M[1][1] = -BD * F + A * E;
-        this->M[1][2] = -B * C;
-        this->M[2][0] = -AD * E + B * F;
-        this->M[2][1] = AD * F + B * E;
-        this->M[2][2] = A * C;
+        this->M[0][0] = CY * CR;
+        this->M[0][1] = -CY * SR;
+        this->M[0][2] = SY;
+        this->M[1][0] = SPSY * CR + CP * SR;
+        this->M[1][1] = -SPSY * SR + CP * CR;
+        this->M[1][2] = -SP * CY;
+        this->M[2][0] = -CPSY * CR + SP * SR;
+        this->M[2][1] = CPSY * SR + SP * CR;
+        this->M[2][2] = CP * CY;
     }
 
     TRotationMatrix(const TRotator<T>& Rotation) : TMatrix<T>()

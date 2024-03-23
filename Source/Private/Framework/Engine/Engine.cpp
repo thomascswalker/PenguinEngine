@@ -71,7 +71,7 @@ void PEngine::Tick()
         if (Input->IsKeyDown('Q')) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
 
         // Move in world space
-        if (DeltaTranslation != 0)
+        if (DeltaTranslation != 0.0f)
         {
             Camera->Translate(DeltaTranslation);
         }
@@ -84,7 +84,7 @@ void PEngine::Tick()
             // If there's actual movement on either the X or Y axis, move the camera
             if (DeltaMouseCursor != 0)
             {
-                Camera->Orbit(DeltaMouseCursor.Y, DeltaMouseCursor.X); // Swap X and Y
+                Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y); // Swap X and Y
             }
         }
     }
@@ -96,15 +96,15 @@ void PEngine::Tick()
 void PEngine::LoadSceneGeometry()
 {
     // Construct a simple triangle mesh
-    if (auto Mesh = PMesh::CreatePlane(2.0f))
-    {
-        Meshes.emplace_back(Mesh);
-    }
-    // if (auto Mesh = PMesh::CreateCube(0.5f))
+    // if (auto Mesh = PMesh::CreatePlane(10.0f))
     // {
     //     Meshes.emplace_back(Mesh);
     // }
-    if (auto Mesh = PMesh::CreateSphere(1.0f, 16))
+    // if (auto Mesh = PMesh::CreateCube(5.0f))
+    // {
+    //     Meshes.emplace_back(Mesh);
+    // }
+    if (auto Mesh = PMesh::CreateSphere(5.0f, 16))
     {
         Meshes.emplace_back(Mesh);
     }
@@ -146,5 +146,5 @@ void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
 void PEngine::OnMouseMiddleScrolled(float Delta) const
 {
     PCamera* Camera = GetViewportCamera();
-    Camera->SetFov(Camera->Fov + Delta);
+    Camera->SetZoom(Camera->Zoom + Delta);
 }

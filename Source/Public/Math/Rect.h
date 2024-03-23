@@ -34,6 +34,22 @@ struct TRect
     TVector2<T> Min() const { return TVector2(X, Y); }
     TVector2<T> Max() const { return TVector2(X + Width, Y + Height); }
 
+    static TRect MakeBoundingBox(const TVector2<T>& V0, const TVector2<T>& V1)
+    {
+        T XValues[2] = {V0.X, V1.X};
+        T YValues[2] = {V0.Y, V1.Y};
+
+        const T MinX = *std::ranges::min_element(XValues);
+        const T MinY = *std::ranges::min_element(YValues);
+        const T MaxX = *std::ranges::max_element(XValues);
+        const T MaxY = *std::ranges::max_element(YValues);
+
+        TVector2<T> BBMin(MinX, MinY);
+        TVector2<T> BBMax(MaxX, MaxY);
+
+        return TRect(BBMin, BBMax);
+    }
+    
     static TRect MakeBoundingBox(const TVector2<T>& V0, const TVector2<T>& V1, const TVector2<T>& V2)
     {
         T XValues[3] = {V0.X, V1.X, V2.X};
