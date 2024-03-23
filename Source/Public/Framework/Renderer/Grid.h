@@ -15,14 +15,14 @@ struct PGrid
 {
     std::vector<PLine3> Lines;
 
-    PGrid(float Count, float Size)
+    PGrid(float Divisions, float CellSize)
     {
-        for (float Step = 0; Step <= Count; Step += Size)
+        for (float Step = 0; Step <= Divisions; Step += CellSize)
         {
-            Lines.emplace_back(FVector3(-Count, 0.0f, Step), FVector3(Count, 0.0f, Step));
-            Lines.emplace_back(FVector3(-Count, 0.0f, -Step), FVector3(Count, 0.0f, -Step));
-            Lines.emplace_back(FVector3(Step, 0.0f, -Count), FVector3(Step, 0.0f, Count));
-            Lines.emplace_back(FVector3(-Step, 0.0f, -Count), FVector3(-Step, 0.0f, Count));
+            Lines.emplace_back(FVector3(-Divisions, 0.0f, Step), FVector3(Divisions, 0.0f, Step));
+            Lines.emplace_back(FVector3(-Divisions, 0.0f, -Step), FVector3(Divisions, 0.0f, -Step));
+            Lines.emplace_back(FVector3(Step, 0.0f, -Divisions), FVector3(Step, 0.0f, Divisions));
+            Lines.emplace_back(FVector3(-Step, 0.0f, -Divisions), FVector3(-Step, 0.0f, Divisions));
         }
     }
 };

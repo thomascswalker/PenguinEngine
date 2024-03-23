@@ -61,18 +61,15 @@ struct TTransform
         Rotation.Normalize();
     }
     
-    //  | rx0 | rx1 | rx2 | tx*sx |
-    //  | ry0 | ry1 | ry2 | ty*sy |
-    //  | rz0 | rz1 | rz2 | tz*sz |
-    //  |  0  |  0  |  0  |   1   | 
+    //  | rx0   | rx1   | rx2   | 0 |
+    //  | ry0   | ry1   | ry2   | 0 |
+    //  | rz0   | rz1   | rz2   | 0 |
+    //  | tx*sx | ty*sy | tz*sz | 1 | 
     TMatrix<T> ToMatrix() const
     {
-        TMatrix<T> Out;
 
         // Apply translation
-        Out.M[0][3] = Translation.X;
-        Out.M[1][3] = Translation.Y;
-        Out.M[2][3] = Translation.Z;
+        TMatrix<T> Out = TTranslationMatrix<T>(Translation);
 
         // Apply rotation
         TMatrix RotationMatrix = TRotationMatrix<T>(Rotation);
@@ -80,14 +77,14 @@ struct TTransform
         {
             for (int32 Y = 0; Y < 3; ++Y)
             {
-                Out.M[X][Y] = RotationMatrix.M[X][Y];
+                Out.M[Y][X] = RotationMatrix.M[Y][X];
             }
         }
 
         // Apply scale
-        Out.M[0][3] *= Scale.X;
-        Out.M[1][3] *= Scale.Y;
-        Out.M[2][3] *= Scale.Z;
+        Out.M[3][0] *= Scale.X;
+        Out.M[3][1] *= Scale.Y;
+        Out.M[3][2] *= Scale.Z;
 
         return Out;
     }

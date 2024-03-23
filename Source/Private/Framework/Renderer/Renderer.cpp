@@ -4,15 +4,15 @@
 
 
 #define DRAW_WIREFRAME 1
-#define DRAW_SHADED 1
+#define DRAW_SHADED 0
 #define DEPTH_TEST 1
-#define TWO_SIDED 0
+#define TWO_SIDED 1
 
 /* Renderer */
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 {
     Viewport = std::make_shared<PViewport>(InWidth, InHeight);
-    Grid = std::make_unique<PGrid>(10, 1.0f);
+    Grid = std::make_unique<PGrid>(8, 4.0f);
 
     AddBuffer(EBufferType::Data, "Depth");
     AddBuffer(EBufferType::Color, "Color");
@@ -76,7 +76,7 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
     FVector2 OutA;
     FVector2 OutB;
     ClipLine(InA, InB, OutA, OutB);
-    
+
     IVector2 A(OutA.X, OutA.Y); // NOLINT
     IVector2 B(OutB.X, OutB.Y); // NOLINT
 
@@ -158,8 +158,9 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
         return;
     }
 
-    const FVector3 LookAtTranslation = Viewport->GetCamera()->TargetTranslation;
-    const FVector3 CameraTranslation = Viewport->GetCamera()->GetTranslation();
+    auto Camera = Viewport->GetCamera();
+    const FVector3 LookAtTranslation = Camera->TargetTranslation;
+    const FVector3 CameraTranslation = Camera->GetTranslation();
 
     const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
     const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2);
@@ -194,18 +195,24 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
                 continue;
             }
 
+            uint8 R = 128;
 #if DEPTH_TEST
+            // Calculate new depth
+            const float NewDepth = UVW.X * ScreenPoints[0].Z + UVW.Y * ScreenPoints[1].Z + UVW.Z * ScreenPoints[2].Z;
+
+            // Compare the new depth to the current depth at this pixel. If the new depth is further than
+            // the current depth, continue
             const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
-            float NewDepth = FTriangle::GetDepth(P, V0, V1, V2);
-            if (NewDepth > CurrentDepth)
+            if (NewDepth >= CurrentDepth)
             {
                 continue;
             }
             GetDepthBuffer()->SetPixel(X, Y, NewDepth);
-#endif
-            uint8 R = Math::Abs(FacingRatio) * 255; // Convert to SRGB
-            uint8 G = 128; // Convert to SRGB
+            
+            float RemappedDepth = Math::Remap(NewDepth, -1.0f, 1.0f, 0.0f, 1.0f);
+            R = RemappedDepth * 255;
 
+#endif
             // Set the color buffer to this new color
             GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
         }

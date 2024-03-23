@@ -13,16 +13,30 @@ FMatrix PCamera::ComputeViewProjectionMatrix()
 
 void PCamera::Orbit(const float DX, const float DY)
 {
-    // Rotate the camera by delta X/Y, converted from degrees to radians
-    FRotator NewRotator = OriginalTransform.Rotation + FRotator(0.0f, DY, DX);
-    NewRotator.Normalize();
+    // Convert degrees to radians
+    const float RX = Math::DegreesToRadians(DX);
+    const float RY = Math::DegreesToRadians(DY);
 
-    // Multiply the rotation by the Zoom amount
-    const FVector3 NewTranslation = FRotationMatrix(NewRotator) * FVector3(0, 0, Zoom);
+    // Get the camera's direction
+    FVector3 Direction = (OriginalTransform.Translation - TargetTranslation).Normalized();
 
-    // Set new location as the current location, offset by the target location
+    // Individually rotate the direction by X (Yaw), then Y (Pitch)
+    const FMatrix RotY = FMatrix::MakeFromY(RX);
+    Direction = RotY * Direction;
+    
+    const FMatrix RotZ = FMatrix::MakeFromZ(RY);
+    Direction = RotZ * Direction;
+
+    // Set the final translation to be the new rotated direction * the zoom distance
+    const FVector3 NewTranslation = Direction * Zoom;
     SetTranslation(NewTranslation);
+
+    // Construct a new rotator from the LookAt matrix
+    FRotator NewRotator = (RotY * RotZ).GetRotator();
+    NewRotator.Roll = 0.0f; // Force Roll to always be 0
     SetRotation(NewRotator);
+
+    // Force scale to always be [1,1,1]
     SetScale(FVector3(1, 1, 1));
 }
 
@@ -86,7 +100,7 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatri
         // Normalized device coordinates
         const float NormalizedX = (Result.X / (Result.W * 2.0f)) + 0.5f;
         const float NormalizedY = 1.0f - (Result.Y / (Result.W * 2.0f)) - 0.5f;
-        const float NormalizedZ = Result.Z != 0.0f ? 1.0f / Result.Z : 0.0f;
+        const float NormalizedZ = Result.Z != 0.0f ? 1.0f / (Result.Z / (Result.W * 2.0f)) : 0.0f;
 
         // Apply the current render width and height
         ScreenPosition = FVector3(NormalizedX * static_cast<float>(Camera->Width),
