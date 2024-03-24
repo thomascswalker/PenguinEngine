@@ -169,7 +169,10 @@ struct TVector3
     {
         CheckNaN();
     }
-    TVector3(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]){}
+    TVector3(const TVector2<T>& V, T InZ = T(1)) : X(V.X), Y(V.Y), Z(InZ)
+    {
+        CheckNaN();
+    }
     TVector3(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
@@ -598,12 +601,9 @@ struct TTriangle
     // // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
     static TVector3<T> GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
-        TVector3<T> Normal;
-        const TVector3<T> U = V1 - V0;
-        const TVector3<T> V = V2 - V0;
-        Normal.X = (U.Y * V.Z) - (U.Z * V.Y);
-        Normal.Y = (U.Z * V.X) - (U.X * V.Z);
-        Normal.Z = (U.X * V.Y) - (U.Y * V.X);
+        TVector3<T> Edge0 = V1 - V0;
+        TVector3<T> Edge1 = V2 - V0;
+        TVector3<T> Normal = Math::Cross(Edge0, Edge1);
         return Normal.Normalized();
     }
 };

@@ -102,6 +102,12 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatri
         const float NormalizedY = 1.0f - (Result.Y / (Result.W * 2.0f)) - 0.5f;
         const float NormalizedZ = Result.Z != 0.0f ? 1.0f / (Result.Z / (Result.W * 2.0f)) : 0.0f;
 
+        // If Z is less than zero, it's behind the camera
+        if (NormalizedZ < 0.0f)
+        {
+            return false;
+        }
+        
         // Apply the current render width and height
         ScreenPosition = FVector3(NormalizedX * static_cast<float>(Camera->Width),
                                   NormalizedY * static_cast<float>(Camera->Height),

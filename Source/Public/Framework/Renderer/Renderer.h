@@ -15,7 +15,7 @@ enum
     BYTES_PER_PIXEL = 32
 };
 
-struct PBuffer
+struct PChannel
 {
     void* Memory; // Memory Order BB GG RR XX
     uint32 ChannelCount = BYTES_PER_PIXEL / BYTES_PER_CHANNEL; // 4
@@ -24,7 +24,7 @@ struct PBuffer
     uint32 Pitch;
     EBufferType Type;
 
-    PBuffer(EBufferType InType, uint32 InWidth, uint32 InHeight) : Type(InType)
+    PChannel(EBufferType InType, uint32 InWidth, uint32 InHeight) : Type(InType)
     {
         Resize(InWidth, InHeight);
     }
@@ -89,14 +89,47 @@ struct PBuffer
     }
 };
 
+struct PBuffer
+{
+    int32* Memory;
+    PBuffer(int32* Ptr)
+    {
+        Memory = Ptr;
+    }
+    ~PBuffer()
+    {
+        delete[] Memory;
+    }
+};
+
 class PRenderer
 {
-    std::map<const char*, std::shared_ptr<PBuffer>> Buffers;
-    std::shared_ptr<PColorBuffer> ColorBuffer;
-    std::shared_ptr<PDataBuffer> DepthBuffer;
+    // Render channels
+    std::map<const char*, std::shared_ptr<PChannel>> Channels;
+    std::shared_ptr<PColorChannel> ColorChannel;
+    std::shared_ptr<PDataChannel> DepthChannel;
     std::shared_ptr<PViewport> Viewport;
     std::unique_ptr<PGrid> Grid;
 
+    // Buffers (vertex, index, etc.)
+    std::vector<PBuffer> Buffers;
+    
+    void GenBuffer(int32* Ptr)
+    {
+        Buffers.emplace_back(Ptr);
+    }
+    template <typename T>
+    void BindBuffer(T* Ptr)
+    {
+        
+    }
+    template <typename T>
+    void BufferData(size_t Size, T* Data)
+    {
+        
+    }
+
+    // Constants
     const PColor WireColor = PColor::FromRgba(255, 175, 50);
     const PColor GridColor = PColor::FromRgba(128, 128, 128);
 
@@ -106,15 +139,15 @@ public:
 
     void AddBuffer(EBufferType Type, const char* Name)
     {
-        Buffers.emplace(Name, std::make_shared<PBuffer>(Type, GetWidth(), GetHeight()));
+        Channels.emplace(Name, std::make_shared<PChannel>(Type, GetWidth(), GetHeight()));
     }
-    std::shared_ptr<PBuffer> GetBuffer(const char* Name) const
+    std::shared_ptr<PChannel> GetBuffer(const char* Name) const
     {
-        return Buffers.at(Name);
+        return Channels.at(Name);
     }
 
-    std::shared_ptr<PBuffer> GetColorBuffer() const { return Buffers.at("Color"); }
-    std::shared_ptr<PBuffer> GetDepthBuffer() const { return Buffers.at("Depth"); }
+    std::shared_ptr<PChannel> GetColorBuffer() const { return Channels.at("Color"); }
+    std::shared_ptr<PChannel> GetDepthBuffer() const { return Channels.at("Depth"); }
     
     uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
     uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
@@ -122,8 +155,8 @@ public:
     PViewport* GetViewport() const { return Viewport.get(); }
 
     // Drawing
-    bool ClipLine(const FVector2& InA, const FVector2& InB, FVector2& OutA, FVector2& OutB) const;
-    void DrawLine(const FVector2& InA, const FVector2& InB, const PColor& Color) const;
+    bool ClipLine(FVector2* A, FVector2* B) const;
+    void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
     void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
     void DrawMesh(const PMesh* Mesh) const;
     void DrawGrid() const;

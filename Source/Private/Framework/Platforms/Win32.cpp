@@ -92,7 +92,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
     case WM_MOUSEWHEEL:
         {
             const float DeltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
-            InputHandler->OnMouseWheel(DeltaScroll / 120.0f);
+            InputHandler->OnMouseWheel(-DeltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
             return 0;
         }
     // Keyboard input
@@ -117,15 +117,15 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             }
 
             // Draw mouse cursor line from click origin
-            FVector2 A = InputHandler->GetClickPosition();
-            if (A != 0)
+            FVector3 A = InputHandler->GetClickPosition();
+            if (A.X != 0.0f && A.Y != 0.0f)
             {
-                FVector2 B = InputHandler->GetCurrentCursorPosition();
+                FVector3 B = InputHandler->GetCurrentCursorPosition();
                 Renderer->DrawLine(A, B, PColor::Red());
             }
 
             // Get the current window size from the buffer
-            const std::shared_ptr<PBuffer> Buffer = Renderer->GetColorBuffer();
+            const std::shared_ptr<PChannel> Buffer = Renderer->GetColorBuffer();
             const uint32 Width = Buffer->Width;
             const uint32 Height = Buffer->Height;
 

@@ -25,9 +25,9 @@ typedef unsigned long long uint64;
 
 // Buffer
 template <int32 N>
-struct TBuffer;
-typedef TBuffer<4> PColorBuffer;
-typedef TBuffer<1> PDataBuffer;
+struct TChannel;
+typedef TChannel<4> PColorChannel;
+typedef TChannel<1> PDataChannel;
 
 // Rect
 template <typename T>

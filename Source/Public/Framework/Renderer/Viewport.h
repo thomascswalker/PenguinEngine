@@ -30,7 +30,7 @@ public:
     uint32 Height = DEFAULT_VIEWPORT_HEIGHT;
     float Fov = DEFAULT_FOV;
     float MinZ = 1.0f;
-    float MaxZ = 1000.0f;
+    float MaxZ = 10.0f;
     float Zoom = DEFAULT_ZOOM;
     float MinZoom = MIN_ZOOM;
     float MaxZoom = MAX_ZOOM;
