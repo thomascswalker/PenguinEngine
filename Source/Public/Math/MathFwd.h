@@ -36,6 +36,15 @@ typedef TRect<float> FRect;
 typedef TRect<double> DRect;
 typedef TRect<int32> IRect;
 
+// Lines
+template <typename T>
+struct TLine;
+typedef TLine<float> FLine;
+
+template <typename T>
+struct TLine3d;
+typedef TLine3d<float> FLine3d;
+
 // Vector
 template <typename T>
 struct TVector2;

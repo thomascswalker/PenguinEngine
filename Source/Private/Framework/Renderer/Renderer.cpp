@@ -11,7 +11,7 @@
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 {
     Viewport = std::make_shared<PViewport>(InWidth, InHeight);
-    Grid = std::make_unique<PGrid>(8, 4.0f);
+    Grid = std::make_unique<FGrid>(8, 4.0f);
 
     AddBuffer(EBufferType::Data, "Depth");
     AddBuffer(EBufferType::Color, "Color");
@@ -99,6 +99,12 @@ bool PRenderer::ClipLine(FVector2* A, FVector2* B) const
 
     return true;
 }
+
+bool PRenderer::ClipLine(FLine* Line) const
+{
+    return ClipLine(&Line->A, &Line->B);
+}
+
 void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const
 {
     FVector2 A(InA.X, InA.Y); // NOLINT
@@ -157,6 +163,11 @@ void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor&
             }
         }
     }
+}
+
+void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
+{
+    DrawLine(Line.A, Line.B, Color);
 }
 
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
@@ -220,9 +231,9 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     const int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
     const int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
     const int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
-    for (int32 Y = MinY; Y < MaxX; Y++)
+    for (int32 Y = MinY; Y < MaxY; Y++)
     {
-        for (int32 X = MinX; X < MaxY; X++)
+        for (int32 X = MinX; X < MaxX; X++)
         {
             FVector3 P(static_cast<float>(X), static_cast<float>(Y), 0.0f);
 
@@ -281,7 +292,7 @@ void PRenderer::DrawMesh(const PMesh* Mesh) const
 
 void PRenderer::DrawGrid() const
 {
-    for (const PLine3& Line : Grid->Lines)
+    for (const FLine3d& Line : Grid->Lines)
     {
         // Project the world-space points to screen-space
         FVector3 S0, S1;

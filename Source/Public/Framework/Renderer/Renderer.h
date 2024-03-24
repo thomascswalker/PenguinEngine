@@ -109,7 +109,7 @@ class PRenderer
     std::shared_ptr<PColorChannel> ColorChannel;
     std::shared_ptr<PDataChannel> DepthChannel;
     std::shared_ptr<PViewport> Viewport;
-    std::unique_ptr<PGrid> Grid;
+    std::unique_ptr<FGrid> Grid;
 
     // Buffers (vertex, index, etc.)
     std::vector<PBuffer> Buffers;
@@ -156,7 +156,9 @@ public:
 
     // Drawing
     bool ClipLine(FVector2* A, FVector2* B) const;
+    bool ClipLine(FLine* Line) const;
     void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
+    void DrawLine(const FLine3d& Line, const PColor& Color) const;
     void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
     void DrawMesh(const PMesh* Mesh) const;
     void DrawGrid() const;
