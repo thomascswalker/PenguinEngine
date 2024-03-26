@@ -54,11 +54,13 @@ typedef TVector2<double> DVector2;
 
 template <typename T>
 struct TVector3;
+typedef TVector3<int32> IVector3;
 typedef TVector3<float> FVector3;
 typedef TVector3<double> DVector3;
 
 template <typename T>
 struct TVector4;
+typedef TVector4<int32> IVector4;
 typedef TVector4<float> FVector4;
 typedef TVector4<double> DVector4;
 

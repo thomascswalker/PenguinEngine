@@ -125,18 +125,6 @@ void PViewport::FormatDebugText()
     std::string MousePosition = InputHandler->GetCurrentCursorPosition().ToString();
     std::string MouseDelta = (InputHandler->GetCurrentCursorPosition() - InputHandler->GetClickPosition()).ToString();
 
-    auto KeysDown = InputHandler->GetKeysDown();
-    std::string FmtKeysDown;
-
-    for (size_t Index = 0; Index < KeysDown.size(); ++Index)
-    {
-        FmtKeysDown += KeysDown[Index];
-        if (Index != KeysDown.size() - 1)
-        {
-            FmtKeysDown += ", ";
-        }
-    }
-
     FVector3 Translation = Camera->GetTranslation();
     FRotator Rotation = Camera->GetRotation();
 
@@ -147,7 +135,6 @@ void PViewport::FormatDebugText()
         "Size: {}\n"
         "Mouse Position: {}\n"
         "Mouse Delta: {}\n"
-        "Keys pressed: {}\n\n"
         "Camera Position: {}\n"
         "Camera Rotation: {}\n"
         "Camera zoom: {}"
@@ -156,7 +143,6 @@ void PViewport::FormatDebugText()
         GetSize().ToString(),
         MousePosition,
         MouseDelta,
-        FmtKeysDown,
         Translation.ToString(),
         Rotation.ToString(),
         Camera->Zoom

@@ -63,12 +63,12 @@ void PEngine::Tick()
         const float ScaledCameraSpeed = CameraSpeed * CameraSpeedMultiplier * DeltaTime;
 
         FVector3 DeltaTranslation;
-        if (Input->IsKeyDown('W')) { DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
-        if (Input->IsKeyDown('S')) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
-        if (Input->IsKeyDown('D')) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
-        if (Input->IsKeyDown('A')) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
-        if (Input->IsKeyDown('E')) { DeltaTranslation.Y = ScaledCameraSpeed; } // Up
-        if (Input->IsKeyDown('Q')) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
+        if (Input->IsKeyDown(EKey::W)) { DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
+        if (Input->IsKeyDown(EKey::S)) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
+        if (Input->IsKeyDown(EKey::D)) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
+        if (Input->IsKeyDown(EKey::A)) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
+        if (Input->IsKeyDown(EKey::E)) { DeltaTranslation.Y = ScaledCameraSpeed; } // Up
+        if (Input->IsKeyDown(EKey::Q)) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
 
         // Move in world space
         if (DeltaTranslation != 0.0f)
@@ -101,16 +101,21 @@ void PEngine::LoadSceneGeometry()
     }
 }
 
-void PEngine::OnKeyPressed(int32 KeyCode) const
+void PEngine::OnKeyPressed(EKey KeyCode)
 {
     switch (KeyCode)
     {
-    case 'T' :
+    case EKey::Escape:
+        {
+            bRunning = false;
+            break;
+        }
+    case EKey::T :
         {
             GetViewport()->ToggleShowDebugText();
             break;
         }
-    case 'F' :
+    case EKey::F :
         {
             GetViewport()->ResetView();
             break;

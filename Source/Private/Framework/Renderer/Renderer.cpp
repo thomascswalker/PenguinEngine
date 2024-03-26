@@ -6,6 +6,7 @@
 #define DRAW_WIREFRAME 0
 #define DRAW_SHADED 1
 #define DEPTH_TEST 1
+#define SCANLINE 0
 
 /* Renderer */
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
@@ -173,8 +174,10 @@ void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
     // Screen points
+    int32 Width = GetWidth();
+    int32 Height = GetHeight();
     FVector3 S0, S1, S2;
-    
+
     // Project the world-space points to screen-space
     bool bTriangleOnScreen = false;
     bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V0, S0);
@@ -190,8 +193,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
 #if DRAW_SHADED
     // Reverse the order to CCW if the order is CW
-    const EWindingOrder WindingOrder = FTriangle::GetVertexOrder(S0, S1, S2);
-    switch (WindingOrder)
+    switch (Math::GetVertexOrder(S0, S1, S2))
     {
     case EWindingOrder::CW :
         std::swap(S0, S1);
@@ -209,11 +211,11 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
     // Calculate the camera normal (direction) and the world normal of the triangle
     const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
-    const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2);
+    const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
 
     // Calculate the Camera to Triangle ratio
     const float FacingRatio = Math::Dot(CameraNormal, WorldNormal);
-    
+
     // If FacingRatio is above 0, the two normals are facing opposite directions, and the face
     // is facing away from the camera.
     if (FacingRatio > 0.0f)
@@ -227,10 +229,79 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     TriangleRect.Clamp(ViewportRect);
 
     // Loop through all pixels in the screen bounding box.
-    const int32 MinX = static_cast<int32>(TriangleRect.Min().X);
-    const int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
-    const int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
-    const int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
+    int32 MinX = static_cast<int32>(TriangleRect.Min().X);
+    int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
+    int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
+    int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
+
+#if SCANLINE
+    std::vector<IVector2> Points;
+    Math::GetLine(S0, S1, Points, Width, Height);
+    Math::GetLine(S1, S2, Points, Width, Height);
+    Math::GetLine(S2, S0, Points, Width, Height);
+
+    // Clip points to screen boundaries
+    for (auto& Point : Points)
+    {
+        Point.X = Math::Max(0, Math::Min(Point.X, Width - 1));
+        Point.Y = Math::Max(0, Math::Min(Point.Y, Height - 1));
+    }
+
+    // Filling the triangle
+    for (int Y = MinY; Y < MaxY; ++Y)
+    {
+        std::vector<int> Intersections;
+        for (size_t Index = 0; Index < Points.size(); ++Index)
+        {
+            int NextIndex = (Index + 1) % Points.size();
+            int X0 = Points[Index].X;
+            int Y0 = Points[Index].Y;
+            int X1 = Points[NextIndex].X;
+            int Y1 = Points[NextIndex].Y;
+
+            // Check if the scanline intersects with the edge
+            if ((Y0 <= Y && Y1 > Y) || (Y1 <= Y && Y0 > Y))
+            {
+                int XIntersection = (X0 + (static_cast<double>(Y - Y0) / static_cast<double>(Y1 - Y0)) * (X1 - X0));
+                Intersections.push_back(XIntersection);
+            }
+        }
+
+        // Sort intersections to get the pairs of x coordinates for the scanline
+        std::ranges::sort(Intersections);
+        for (size_t Index = 0; Index < Intersections.size(); Index += 2)
+        {
+            int32 X0 = Intersections[Index];
+            int32 X1 = Intersections[Index + 1];
+            for (int32 X = X0; X < X1; ++X)
+            {
+#if DEPTH_TEST
+                // Calculate new depth
+                FVector3 UVW = Math::GetBarycentric(FVector3{static_cast<float>(X), static_cast<float>(Y)}, S0, S1, S2, UVW);
+                const float NewDepth = 1.0f / (UVW.X * S0.Z + UVW.Y * S1.Z + UVW.Z * S2.Z);
+
+                // Compare the new depth to the current depth at this pixel. If the new depth is further than
+                // the current depth, continue.
+                const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
+                if (NewDepth > CurrentDepth)
+                {
+                    continue;
+                }
+
+                // If the new depth is closer than the current depth, set the current depth
+                // at this pixel to the new depth we just got.
+                GetDepthBuffer()->SetPixel(X, Y, NewDepth);
+                const float RemappedDepth = Math::Remap(NewDepth, 1.0f, 10.0f, 0.0f, 1.0f);
+                uint8 R = static_cast<uint8>(RemappedDepth * 255.0f);
+#else
+                uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
+#endif // Depth test
+                GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
+            }
+        }
+    }
+
+#else // Normal barycentric
     for (int32 Y = MinY; Y < MaxY; Y++)
     {
         for (int32 X = MinX; X < MaxX; X++)
@@ -240,7 +311,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
             // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
             // the pixel is not within the triangle.
             FVector3 UVW;
-            if (!FTriangle::GetBarycentric(P, S0, S1, S2, UVW))
+            if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
             {
                 continue;
             }
@@ -256,16 +327,20 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
             {
                 continue;
             }
-            
+
             // If the new depth is closer than the current depth, set the current depth
             // at this pixel to the new depth we just got.
             GetDepthBuffer()->SetPixel(X, Y, NewDepth);
-#endif
-            const uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
-            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
+            const float RemappedDepth = Math::Remap(NewDepth, 0.0f, 2.0f, 0.0f, 1.0f);
+            const uint8 R = static_cast<uint8>(RemappedDepth * 255.0f);
+#else
+                const uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
+#endif // Depth test
+            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
         }
     }
-#endif
+#endif // Scanline
+#endif // Draw shaded
 
 #if DRAW_WIREFRAME
     DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
@@ -332,7 +407,7 @@ void PRenderer::Render() const
 void PRenderer::ClearBuffers() const
 {
     // Set all channels to 0
-    for (const auto &[Key, Channel] : Channels)
+    for (const auto& [Key, Channel] : Channels)
     {
         // Ignore the depth channel, we'll handle that later
         if (Key == "Depth") // NOLINT
@@ -343,5 +418,5 @@ void PRenderer::ClearBuffers() const
     }
 
     // Fill the depth buffer with the Max Z-depth
-    GetDepthBuffer()->Fill(Viewport->GetCamera()->MaxZ);
+    GetDepthBuffer()->Fill(FLT_MAX); // Viewport->GetCamera()->MaxZ
 }

@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "Timer.h"
 #include "Framework/Core/Logging.h"
+#include "Framework/Input/InputHandler.h"
 #include "Framework/Renderer/Renderer.h"
 
 class PEngine
@@ -42,5 +43,5 @@ public:
     void OnLeftMouseDown(const FVector2& CursorPosition) const;
     void OnLeftMouseUp(const FVector2& CursorPosition) const;
     void OnMouseMiddleScrolled(float Delta) const;
-    void OnKeyPressed(int32 KeyCode) const;
+    void OnKeyPressed(EKey KeyCode);
 };
