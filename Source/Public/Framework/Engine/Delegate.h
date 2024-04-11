@@ -121,12 +121,12 @@ public:
     {
     }
 
-    virtual RetVal Execute(Args&&... args) override
+    RetVal Execute(Args&&... args) override
     {
         return Execute_Internal(std::forward<Args>(args)..., std::index_sequence_for<Args2...>());
     }
 
-    virtual void Clone(void* pDestination) override
+    void Clone(void* pDestination) override
     {
         new(pDestination) StaticDelegate(m_Function, m_Payload);
     }
@@ -211,7 +211,7 @@ public:
         return Execute_Internal(std::forward<Args>(args)..., std::index_sequence_for<Args2...>());
     }
 
-    virtual void Clone(void* pDestination) override
+    void Clone(void* pDestination) override
     {
         new(pDestination) LambdaDelegate(m_Lambda, m_Payload);
     }
@@ -250,17 +250,17 @@ public:
     {
     }
 
-    virtual RetVal Execute(Args&&... args) override
+    RetVal Execute(Args&&... args) override
     {
         return Execute_Internal(std::forward<Args>(args)..., std::index_sequence_for<Args2...>());
     }
 
-    virtual const void* GetOwner() const override
+    const void* GetOwner() const override
     {
         return m_pObject.expired() ? nullptr : m_pObject.lock().get();
     }
 
-    virtual void Clone(void* pDestination) override
+    void Clone(void* pDestination) override
     {
         new(pDestination) SPDelegate(m_pObject, m_pFunction, m_Payload);
     }
@@ -501,7 +501,6 @@ class DelegateBase
 public:
     //Default constructor
     constexpr DelegateBase() noexcept
-        : m_Allocator()
     {
     }
 
@@ -779,12 +778,12 @@ private:
 public:
     //Default constructor
     constexpr MulticastDelegate()
-        : m_Locks(0)
+        : Locks(0)
     {
     }
 
     //Default destructor
-    ~MulticastDelegate() noexcept = default;
+    ~MulticastDelegate() noexcept override = default;
 
     //Default copy constructor
     MulticastDelegate(const MulticastDelegate& other) = default;
@@ -794,16 +793,16 @@ public:
 
     //Move constructor
     MulticastDelegate(MulticastDelegate&& other) noexcept
-        : m_Events(std::move(other.m_Events)),
-          m_Locks(std::move(other.m_Locks))
+        : Events(std::move(other.Events)),
+          Locks(std::move(other.Locks))
     {
     }
 
     //Move assignment operator
     MulticastDelegate& operator=(MulticastDelegate&& other) noexcept
     {
-        m_Events = std::move(other.m_Events);
-        m_Locks = std::move(other.m_Locks);
+        Events = std::move(other.Events);
+        Locks = std::move(other.Locks);
         return *this;
     }
 
@@ -828,16 +827,16 @@ public:
     DelegateHandle Add(DelegateT&& handler) noexcept
     {
         //Favour an empty space over a possible array reallocation
-        for (size_t i = 0; i < m_Events.size(); ++i)
+        for (size_t i = 0; i < Events.size(); ++i)
         {
-            if (m_Events[i].Handle.IsValid() == false)
+            if (Events[i].Handle.IsValid() == false)
             {
-                m_Events[i] = DelegateHandlerPair(DelegateHandle(true), std::move(handler));
-                return m_Events[i].Handle;
+                Events[i] = DelegateHandlerPair(DelegateHandle(true), std::move(handler));
+                return Events[i].Handle;
             }
         }
-        m_Events.emplace_back(DelegateHandle(true), std::move(handler));
-        return m_Events.back().Handle;
+        Events.emplace_back(DelegateHandle(true), std::move(handler));
+        return Events.back().Handle;
     }
 
     //Bind a member function
@@ -875,55 +874,55 @@ public:
     }
 
     template <typename T, typename... Args2>
-    DelegateHandle AddSP(std::shared_ptr<T> pObject, ConstMemberFunction<T, Args2...> pFunction, Args2&&... args)
+    DelegateHandle AddSP(std::shared_ptr<T> Object, ConstMemberFunction<T, Args2...> Function, Args2&&... args)
     {
-        return Add(DelegateT::CreateSP(pObject, pFunction, std::forward<Args2>(args)...));
+        return Add(DelegateT::CreateSP(Object, Function, std::forward<Args2>(args)...));
     }
 
     //Removes all handles that are bound from a specific object
-    //Ignored when pObject is null
+    //Ignored when Object is null
     //Note: Only works on Raw and SP bindings
-    void RemoveObject(void* pObject)
+    void RemoveObject(void* Object)
     {
-        if (pObject != nullptr)
+        if (Object != nullptr)
         {
-            for (size_t i = 0; i < m_Events.size(); ++i)
+            for (size_t Index = 0; Index < Events.size(); ++Index)
             {
-                if (m_Events[i].Callback.GetOwner() == pObject)
+                if (Events[Index].Callback.GetOwner() == Object)
                 {
                     if (IsLocked())
                     {
-                        m_Events[i].Callback.Clear();
+                        Events[Index].Callback.Clear();
                     }
                     else
                     {
-                        std::swap(m_Events[i], m_Events[m_Events.size() - 1]);
-                        m_Events.pop_back();
+                        std::swap(Events[Index], Events[Events.size() - 1]);
+                        Events.pop_back();
                     }
                 }
             }
         }
     }
 
-    //Remove a function from the event list by the handle
-    bool Remove(DelegateHandle& handle)
+    //Remove a function from the event list by the Handle
+    bool Remove(DelegateHandle& Handle)
     {
-        if (handle.IsValid())
+        if (Handle.IsValid())
         {
-            for (size_t i = 0; i < m_Events.size(); ++i)
+            for (size_t i = 0; i < Events.size(); ++i)
             {
-                if (m_Events[i].Handle == handle)
+                if (Events[i].Handle == Handle)
                 {
                     if (IsLocked())
                     {
-                        m_Events[i].Callback.Clear();
+                        Events[i].Callback.Clear();
                     }
                     else
                     {
-                        std::swap(m_Events[i], m_Events[m_Events.size() - 1]);
-                        m_Events.pop_back();
+                        std::swap(Events[i], Events[Events.size() - 1]);
+                        Events.pop_back();
                     }
-                    handle.Reset();
+                    Handle.Reset();
                     return true;
                 }
             }
@@ -931,13 +930,13 @@ public:
         return false;
     }
 
-    bool IsBoundTo(const DelegateHandle& handle) const
+    bool IsBoundTo(const DelegateHandle& Handle) const
     {
-        if (handle.IsValid())
+        if (Handle.IsValid())
         {
-            for (size_t i = 0; i < m_Events.size(); ++i)
+            for (size_t Index = 0; Index < Events.size(); ++Index)
             {
-                if (m_Events[i].Handle == handle)
+                if (Events[Index].Handle == Handle)
                 {
                     return true;
                 }
@@ -951,33 +950,33 @@ public:
     {
         if (IsLocked())
         {
-            for (DelegateHandlerPair& handler : m_Events)
+            for (DelegateHandlerPair& Handler : Events)
             {
-                handler.Callback.Clear();
+                Handler.Callback.Clear();
             }
         }
         else
         {
-            m_Events.clear();
+            Events.clear();
         }
     }
 
-    void Compress(const size_t maxSpace = 0)
+    void Compress(const size_t MaxSpace = 0)
     {
         if (IsLocked() == false)
         {
-            size_t toDelete = 0;
-            for (size_t i = 0; i < m_Events.size() - toDelete; ++i)
+            size_t ToDelete = 0;
+            for (size_t i = 0; i < Events.size() - ToDelete; ++i)
             {
-                if (m_Events[i].Handle.IsValid() == false)
+                if (Events[i].Handle.IsValid() == false)
                 {
-                    std::swap(m_Events[i], m_Events[toDelete]);
-                    ++toDelete;
+                    std::swap(Events[i], Events[ToDelete]);
+                    ++ToDelete;
                 }
             }
-            if (toDelete > maxSpace)
+            if (ToDelete > MaxSpace)
             {
-                m_Events.resize(m_Events.size() - toDelete);
+                Events.resize(Events.size() - ToDelete);
             }
         }
     }
@@ -986,11 +985,11 @@ public:
     void Broadcast(Args... args)
     {
         Lock();
-        for (size_t i = 0; i < m_Events.size(); ++i)
+        for (size_t i = 0; i < Events.size(); ++i)
         {
-            if (m_Events[i].Handle.IsValid())
+            if (Events[i].Handle.IsValid())
             {
-                m_Events[i].Callback.Execute(std::forward<Args>(args)...);
+                Events[i].Callback.Execute(std::forward<Args>(args)...);
             }
         }
         Unlock();
@@ -998,29 +997,29 @@ public:
 
     size_t GetSize() const
     {
-        return m_Events.size();
+        return Events.size();
     }
 
 private:
     void Lock()
     {
-        ++m_Locks;
+        ++Locks;
     }
 
     void Unlock()
     {
         //Unlock() should never be called more than Lock()!
         DELEGATE_ASSERT(m_Locks > 0);
-        --m_Locks;
+        --Locks;
     }
 
     //Returns true is the delegate is currently broadcasting
     //If this is true, the order of the array should not be changed otherwise this causes undefined behaviour
     bool IsLocked() const
     {
-        return m_Locks > 0;
+        return Locks > 0;
     }
 
-    std::vector<DelegateHandlerPair> m_Events;
-    unsigned int m_Locks;
+    std::vector<DelegateHandlerPair> Events;
+    unsigned int Locks;
 };

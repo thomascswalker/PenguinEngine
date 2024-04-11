@@ -3,7 +3,8 @@
 #define P_PI 3.14159265358979323846f
 #define P_EPSILON FLT_EPSILON
 #define P_SINGULARITY_THRESHOLD 0.4999995f
-#define P_RAD_TO_DEG (180.0f / P_PI)
+#define P_DEG_TO_RAD 0.0174533f
+#define P_RAD_TO_DEG 57.2958f
 #define P_MIN_Z 0.001f
 #define P_MAX_Z 100000.0f
 #define P_ZERO_PRECISION = 0.0f
@@ -135,7 +136,7 @@ enum class EAxis : uint8
     Z // Foward
 };
 
-enum class EBufferType : uint8
+enum class EChannelType : uint8
 {
     Data,
     Color

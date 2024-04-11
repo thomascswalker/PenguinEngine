@@ -1,4 +1,7 @@
-﻿#include <algorithm>
+﻿// ReSharper disable CppClangTidyBugproneNarrowingConversions
+// ReSharper disable CppClangTidyClangDiagnosticFloatConversion
+// ReSharper disable CppClangTidyClangDiagnosticImplicitIntFloatConversion
+
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 
@@ -6,7 +9,6 @@
 #define DRAW_WIREFRAME 0
 #define DRAW_SHADED 1
 #define DEPTH_TEST 1
-#define SCANLINE 0
 
 /* Renderer */
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
@@ -14,8 +16,8 @@ PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
     Viewport = std::make_shared<PViewport>(InWidth, InHeight);
     Grid = std::make_unique<FGrid>(8, 4.0f);
 
-    AddBuffer(EBufferType::Data, "Depth");
-    AddBuffer(EBufferType::Color, "Color");
+    AddChannel(EChannelType::Data, "Depth");
+    AddChannel(EChannelType::Color, "Color");
 }
 
 void PRenderer::Resize(uint32 InWidth, uint32 InHeight) const
@@ -142,7 +144,7 @@ void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor&
     {
         for (int32 X = A.X; X < B.X; ++X)
         {
-            GetColorBuffer()->SetPixel(Y, X, Color);
+            GetColorChannel()->SetPixel(Y, X, Color);
             ErrorCount += DeltaError;
             if (ErrorCount > DeltaX)
             {
@@ -155,7 +157,7 @@ void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor&
     {
         for (int32 X = A.X; X < B.X; ++X)
         {
-            GetColorBuffer()->SetPixel(X, Y, Color);
+            GetColorChannel()->SetPixel(X, Y, Color);
             ErrorCount += DeltaError;
             if (ErrorCount > DeltaX)
             {
@@ -171,11 +173,20 @@ void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
     DrawLine(Line.A, Line.B, Color);
 }
 
+
+void PRenderer::DrawTriangle(float* Data) const
+{
+    DrawTriangle(
+        {Data[0], Data[1], Data[2]},
+        {Data[3], Data[4], Data[5]},
+        {Data[6], Data[7], Data[8]}
+    );
+}
+
+
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
     // Screen points
-    int32 Width = GetWidth();
-    int32 Height = GetHeight();
     FVector3 S0, S1, S2;
 
     // Project the world-space points to screen-space
@@ -195,12 +206,11 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     // Reverse the order to CCW if the order is CW
     switch (Math::GetVertexOrder(S0, S1, S2))
     {
-    case EWindingOrder::CW :
-        std::swap(S0, S1);
-        break;
+    case EWindingOrder::CW : // Triangle is back-facing, exit
+        return; //std::swap(S0, S1);
     case EWindingOrder::CCW :
         break;
-    case EWindingOrder::CL :
+    case EWindingOrder::CL : // Triangle has zero area, exit
         return;
     }
 
@@ -234,74 +244,6 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
     int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
 
-#if SCANLINE
-    std::vector<IVector2> Points;
-    Math::GetLine(S0, S1, Points, Width, Height);
-    Math::GetLine(S1, S2, Points, Width, Height);
-    Math::GetLine(S2, S0, Points, Width, Height);
-
-    // Clip points to screen boundaries
-    for (auto& Point : Points)
-    {
-        Point.X = Math::Max(0, Math::Min(Point.X, Width - 1));
-        Point.Y = Math::Max(0, Math::Min(Point.Y, Height - 1));
-    }
-
-    // Filling the triangle
-    for (int Y = MinY; Y < MaxY; ++Y)
-    {
-        std::vector<int> Intersections;
-        for (size_t Index = 0; Index < Points.size(); ++Index)
-        {
-            int NextIndex = (Index + 1) % Points.size();
-            int X0 = Points[Index].X;
-            int Y0 = Points[Index].Y;
-            int X1 = Points[NextIndex].X;
-            int Y1 = Points[NextIndex].Y;
-
-            // Check if the scanline intersects with the edge
-            if ((Y0 <= Y && Y1 > Y) || (Y1 <= Y && Y0 > Y))
-            {
-                int XIntersection = (X0 + (static_cast<double>(Y - Y0) / static_cast<double>(Y1 - Y0)) * (X1 - X0));
-                Intersections.push_back(XIntersection);
-            }
-        }
-
-        // Sort intersections to get the pairs of x coordinates for the scanline
-        std::ranges::sort(Intersections);
-        for (size_t Index = 0; Index < Intersections.size(); Index += 2)
-        {
-            int32 X0 = Intersections[Index];
-            int32 X1 = Intersections[Index + 1];
-            for (int32 X = X0; X < X1; ++X)
-            {
-#if DEPTH_TEST
-                // Calculate new depth
-                FVector3 UVW = Math::GetBarycentric(FVector3{static_cast<float>(X), static_cast<float>(Y)}, S0, S1, S2, UVW);
-                const float NewDepth = 1.0f / (UVW.X * S0.Z + UVW.Y * S1.Z + UVW.Z * S2.Z);
-
-                // Compare the new depth to the current depth at this pixel. If the new depth is further than
-                // the current depth, continue.
-                const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
-                if (NewDepth > CurrentDepth)
-                {
-                    continue;
-                }
-
-                // If the new depth is closer than the current depth, set the current depth
-                // at this pixel to the new depth we just got.
-                GetDepthBuffer()->SetPixel(X, Y, NewDepth);
-                const float RemappedDepth = Math::Remap(NewDepth, 1.0f, 10.0f, 0.0f, 1.0f);
-                uint8 R = static_cast<uint8>(RemappedDepth * 255.0f);
-#else
-                uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
-#endif // Depth test
-                GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
-            }
-        }
-    }
-
-#else // Normal barycentric
     for (int32 Y = MinY; Y < MaxY; Y++)
     {
         for (int32 X = MinX; X < MaxX; X++)
@@ -322,7 +264,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
             // Compare the new depth to the current depth at this pixel. If the new depth is further than
             // the current depth, continue.
-            const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
+            const float CurrentDepth = static_cast<float>(GetDepthChannel()->GetPixel(X, Y));
             if (NewDepth >= CurrentDepth)
             {
                 continue;
@@ -330,16 +272,15 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
             // If the new depth is closer than the current depth, set the current depth
             // at this pixel to the new depth we just got.
-            GetDepthBuffer()->SetPixel(X, Y, NewDepth);
+            GetDepthChannel()->SetPixel(X, Y, NewDepth);
             const float RemappedDepth = Math::Remap(NewDepth, 0.0f, 2.0f, 0.0f, 1.0f);
             const uint8 R = static_cast<uint8>(RemappedDepth * 255.0f);
 #else
                 const uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
 #endif // Depth test
-            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
+            GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
         }
     }
-#endif // Scanline
 #endif // Draw shaded
 
 #if DRAW_WIREFRAME
@@ -391,7 +332,7 @@ void PRenderer::Render() const
     Viewport->UpdateViewProjectionMatrix();
 
     // Reset all buffers to their default values (namely Z to Inf)
-    ClearBuffers();
+    ClearChannels();
 
     // Draw the world grid prior to drawing any geometry
     DrawGrid();
@@ -404,7 +345,7 @@ void PRenderer::Render() const
     }
 }
 
-void PRenderer::ClearBuffers() const
+void PRenderer::ClearChannels() const
 {
     // Set all channels to 0
     for (const auto& [Key, Channel] : Channels)
@@ -418,5 +359,5 @@ void PRenderer::ClearBuffers() const
     }
 
     // Fill the depth buffer with the Max Z-depth
-    GetDepthBuffer()->Fill(FLT_MAX); // Viewport->GetCamera()->MaxZ
+    GetDepthChannel()->Fill(FLT_MAX); // Viewport->GetCamera()->MaxZ
 }

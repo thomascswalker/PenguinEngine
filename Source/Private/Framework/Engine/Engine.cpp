@@ -56,7 +56,7 @@ void PEngine::Tick()
     StartTime = PTimer::Now();
 
     // Update camera movement
-    if (IInputHandler* Input = PWin32InputHandler::GetInstance())
+    if (const IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
         // Update camera position
         PCamera* Camera = GetViewportCamera();
@@ -95,7 +95,7 @@ void PEngine::Tick()
 
 void PEngine::LoadSceneGeometry()
 {
-    if (auto Mesh = PMesh::CreateTeapot(4))
+    if (std::shared_ptr<PMesh> Mesh = PMesh::CreateTeapot(4))
     {
         Meshes.emplace_back(Mesh);
     }
@@ -105,7 +105,7 @@ void PEngine::OnKeyPressed(EKey KeyCode)
 {
     switch (KeyCode)
     {
-    case EKey::Escape:
+    case EKey::Escape :
         {
             bRunning = false;
             break;

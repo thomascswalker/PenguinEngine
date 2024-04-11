@@ -1,9 +1,7 @@
 ﻿#pragma once
 
-#include "Delegate.h"
 #include "Mesh.h"
 #include "Timer.h"
-#include "Framework/Core/Logging.h"
 #include "Framework/Input/InputHandler.h"
 #include "Framework/Renderer/Renderer.h"
 
@@ -17,6 +15,9 @@ class PEngine
 
     float CameraSpeed = .01f;
     float CameraSpeedMultiplier = 1.0f;
+
+    std::vector<float*> Vertexes;
+    std::vector<uint32*> Indexes;
 
 public:
     static PEngine* Instance;

@@ -171,7 +171,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             }
 
             // Get the current window size from the buffer
-            const std::shared_ptr<PChannel> Buffer = Renderer->GetColorBuffer();
+            const std::shared_ptr<PChannel> Buffer = Renderer->GetColorChannel();
             const uint32 Width = Buffer->Width;
             const uint32 Height = Buffer->Height;
 
