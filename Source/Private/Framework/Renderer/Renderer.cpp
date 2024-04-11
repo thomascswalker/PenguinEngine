@@ -1,90 +1,130 @@
-﻿#include <algorithm>
+﻿// ReSharper disable CppClangTidyBugproneNarrowingConversions
+// ReSharper disable CppClangTidyClangDiagnosticFloatConversion
+// ReSharper disable CppClangTidyClangDiagnosticImplicitIntFloatConversion
+
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 
 
-#define DRAW_WIREFRAME 1
-#define DRAW_SHADED 0
+#define DRAW_WIREFRAME 0
+#define DRAW_SHADED 1
 #define DEPTH_TEST 1
-#define TWO_SIDED 1
 
 /* Renderer */
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 {
     Viewport = std::make_shared<PViewport>(InWidth, InHeight);
-    Grid = std::make_unique<PGrid>(8, 4.0f);
+    Grid = std::make_unique<FGrid>(8, 4.0f);
 
-    AddBuffer(EBufferType::Data, "Depth");
-    AddBuffer(EBufferType::Color, "Color");
+    AddChannel(EChannelType::Data, "Depth");
+    AddChannel(EChannelType::Color, "Color");
 }
 
 void PRenderer::Resize(uint32 InWidth, uint32 InHeight) const
 {
     Viewport->Resize(InWidth, InHeight);
-    for (auto B : Buffers | std::views::values)
+    for (auto B : Channels | std::views::values)
     {
         B->Resize(InWidth, InHeight);
     }
 }
 
-bool PRenderer::ClipLine(const FVector2& InA, const FVector2& InB, FVector2& OutA, FVector2& OutB) const
+bool PRenderer::ClipLine(FVector2* A, FVector2* B) const
 {
-    float Width = GetWidth();
-    float Height = GetHeight();
+    const int32 MinX = 0;
+    const int32 MinY = 0;
+    const int32 MaxX = GetWidth() - 1;
+    const int32 MaxY = GetHeight() - 1;
 
-    float X1 = InA.X;
-    float Y1 = InA.Y;
-    float X2 = InB.X;
-    float Y2 = InB.Y;
+    // Cohen-Sutherland line clipping algorithm
+    // Compute region codes for both endpoints
+    int32 Code1 = (A->X < MinX) << 3 | (A->X > MaxX) << 2 | (A->Y < MinY) << 1 | (A->Y > MaxY);
+    int32 Code2 = (B->X < MinX) << 3 | (B->X > MaxX) << 2 | (B->Y < MinY) << 1 | (B->Y > MaxY);
 
-    float X[2] = {X1, X2};
-    float Y[2] = {Y1, Y2};
-    for (int32 Index = 0; Index < 2; Index++)
+    while (Code1 || Code2)
     {
-        if (X[Index] < 0.0f)
+        // If both endpoints are inside the viewport, exit loop
+        if (!(Code1 | Code2))
         {
-            X[Index] = 0.0f;
-            Y[Index] = (Y2 - Y1) / (X2 - X1) * (0.0f - X1) + Y1;
-        }
-        else if (X[Index] > Width)
-        {
-            X[Index] = Width;
-            Y[Index] = (Y2 - Y1) / (X2 - X1) * (Width - X1) + Y1;
+            break;
         }
 
-        if (Y[Index] < 0.0f)
+        // If both endpoints are outside the viewport and on the same side, discard the line
+        if (Code1 & Code2)
         {
-            Y[Index] = 0.0f;
-            X[Index] = (X2 - X1) / (Y2 - Y1) * (0.0f - Y1) + X1;
+            return false;
         }
-        else if (Y[Index] > Height)
+
+        // Find the endpoint outside the viewport
+        int32 Code = Code1 ? Code1 : Code2;
+        int32 X, Y;
+
+        // Find intersection point using the parametric equation of the line
+        if (Code & 1)
         {
-            Y[Index] = Height;
-            X[Index] = (X2 - X1) / (Y2 - Y1) * (Height - Y1) + X1;
+            // Top edge
+            X = A->X + (B->X - A->X) * (MaxY - A->Y) / (B->Y - A->Y);
+            Y = MaxY;
+        }
+        else if (Code & 2)
+        {
+            // Bottom edge
+            X = A->X + (B->X - A->X) * (MinY - A->Y) / (B->Y - A->Y);
+            Y = MinY;
+        }
+        else if (Code & 4)
+        {
+            // Right edge
+            Y = A->Y + (B->Y - A->Y) * (MaxX - A->X) / (B->X - A->X);
+            X = MaxX;
+        }
+        else
+        {
+            // Left edge
+            Y = A->Y + (B->Y - A->Y) * (MinX - A->X) / (B->X - A->X);
+            X = MinX;
+        }
+
+        // Update the endpoint
+        if (Code == Code1)
+        {
+            A->X = X;
+            A->Y = Y;
+            Code1 = (A->X < MinX) << 3 | (A->X > MaxX) << 2 | (A->Y < MinY) << 1 | (A->Y > MaxY);
+        }
+        else
+        {
+            B->X = X;
+            B->Y = Y;
+            Code2 = (B->X < MinX) << 3 | (B->X > MaxX) << 2 | (B->Y < MinY) << 1 | (B->Y > MaxY);
         }
     }
 
-    OutA.X = X[0];
-    OutA.Y = Y[0];
-    OutB.X = X[1];
-    OutB.Y = Y[1];
-
     return true;
 }
-void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor& Color) const
-{
-    FVector2 OutA;
-    FVector2 OutB;
-    ClipLine(InA, InB, OutA, OutB);
 
-    IVector2 A(OutA.X, OutA.Y); // NOLINT
-    IVector2 B(OutB.X, OutB.Y); // NOLINT
+bool PRenderer::ClipLine(FLine* Line) const
+{
+    return ClipLine(&Line->A, &Line->B);
+}
+
+void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const
+{
+    FVector2 A(InA.X, InA.Y); // NOLINT
+    FVector2 B(InB.X, InB.Y); // NOLINT
+
+    // Clip the screen points within the viewport. If the line points are outside the viewport entirely
+    // then just return.
+    if (!ClipLine(&A, &B))
+    {
+        return;
+    }
 
     bool bIsSteep = false;
     if (Math::Abs(A.X - B.X) < Math::Abs(A.Y - B.Y))
     {
-        A = IVector2(A.Y, A.X);
-        B = IVector2(B.Y, B.X);
+        A = FVector2(A.Y, A.X);
+        B = FVector2(B.Y, B.X);
         bIsSteep = true;
     }
 
@@ -104,7 +144,7 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
     {
         for (int32 X = A.X; X < B.X; ++X)
         {
-            GetColorBuffer()->SetPixel(Y, X, Color);
+            GetColorChannel()->SetPixel(Y, X, Color);
             ErrorCount += DeltaError;
             if (ErrorCount > DeltaX)
             {
@@ -117,7 +157,7 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
     {
         for (int32 X = A.X; X < B.X; ++X)
         {
-            GetColorBuffer()->SetPixel(X, Y, Color);
+            GetColorChannel()->SetPixel(X, Y, Color);
             ErrorCount += DeltaError;
             if (ErrorCount > DeltaX)
             {
@@ -128,14 +168,32 @@ void PRenderer::DrawLine(const FVector2& InA, const FVector2& InB, const PColor&
     }
 }
 
+void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
+{
+    DrawLine(Line.A, Line.B, Color);
+}
+
+
+void PRenderer::DrawTriangle(float* Data) const
+{
+    DrawTriangle(
+        {Data[0], Data[1], Data[2]},
+        {Data[3], Data[4], Data[5]},
+        {Data[6], Data[7], Data[8]}
+    );
+}
+
+
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
+    // Screen points
+    FVector3 S0, S1, S2;
+
     // Project the world-space points to screen-space
-    FVector3 ScreenPoints[3];
     bool bTriangleOnScreen = false;
-    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V0, ScreenPoints[0]);
-    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V1, ScreenPoints[1]);
-    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V2, ScreenPoints[2]);
+    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V0, S0);
+    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V1, S1);
+    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V2, S2);
 
     // If none of the points are on the screen, the triangle is not in the frame, so exit
     // drawing this triangle
@@ -146,83 +204,89 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
 #if DRAW_SHADED
     // Reverse the order to CCW if the order is CW
-    const EWindingOrder WindingOrder = FTriangle::GetVertexOrder(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
-    switch (WindingOrder)
+    switch (Math::GetVertexOrder(S0, S1, S2))
     {
-    case EWindingOrder::CW :
-        std::swap(ScreenPoints[0], ScreenPoints[1]);
-        break;
+    case EWindingOrder::CW : // Triangle is back-facing, exit
+        return; //std::swap(S0, S1);
     case EWindingOrder::CCW :
         break;
-    case EWindingOrder::CL :
+    case EWindingOrder::CL : // Triangle has zero area, exit
         return;
     }
 
-    auto Camera = Viewport->GetCamera();
+    // Get the current camera attributes
+    const PCamera* Camera = Viewport->GetCamera();
     const FVector3 LookAtTranslation = Camera->TargetTranslation;
     const FVector3 CameraTranslation = Camera->GetTranslation();
 
+    // Calculate the camera normal (direction) and the world normal of the triangle
     const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
-    const FVector3 WorldNormal = FTriangle::GetSurfaceNormal(V0, V1, V2);
+    const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
 
-    // Facing ratio in radians (-1 to 1)
-    float FacingRatio = Math::Dot(WorldNormal, CameraNormal);
+    // Calculate the Camera to Triangle ratio
+    const float FacingRatio = Math::Dot(CameraNormal, WorldNormal);
 
-    // If the triangle is not facing the camera, then return
-    // if (FacingRatio <= -0.5f || FacingRatio >= 0.5f)
-    // {
-    //     return;
-    // }
-
-#if TWO_SIDED
-    FacingRatio = Math::Abs(Math::Min(FacingRatio, 1.0f));
-#else
-    FacingRatio = Math::Max(0.0f, Math::Min(FacingRatio, 1.0f));
-#endif
-
-    // Get the bounding box of the 2d triangle
-    FRect BB = FRect::MakeBoundingBox(ScreenPoints[0], ScreenPoints[1], ScreenPoints[2]);
-    BB.Clamp({0, 0, static_cast<float>(GetWidth()), static_cast<float>(GetHeight())});
-
-    for (int32 Y = BB.Min().Y; Y < BB.Max().Y; Y++)
+    // If FacingRatio is above 0, the two normals are facing opposite directions, and the face
+    // is facing away from the camera.
+    if (FacingRatio > 0.0f)
     {
-        for (int32 X = BB.Min().X; X < BB.Max().X; X++)
+        return;
+    }
+
+    // Get the bounding box of the 2d triangle clipped to the viewport
+    FRect TriangleRect = FRect::MakeBoundingBox(S0, S1, S2);
+    const FRect ViewportRect = {0, 0, static_cast<float>(GetWidth()), static_cast<float>(GetHeight())};
+    TriangleRect.Clamp(ViewportRect);
+
+    // Loop through all pixels in the screen bounding box.
+    int32 MinX = static_cast<int32>(TriangleRect.Min().X);
+    int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
+    int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
+    int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
+
+    for (int32 Y = MinY; Y < MaxY; Y++)
+    {
+        for (int32 X = MinX; X < MaxX; X++)
         {
-            FVector3 P = FVector3(static_cast<float>(X), static_cast<float>(Y), 0.0f);
+            FVector3 P(static_cast<float>(X), static_cast<float>(Y), 0.0f);
+
+            // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
+            // the pixel is not within the triangle.
             FVector3 UVW;
-            if (!FTriangle::GetBarycentric(P, ScreenPoints[0], ScreenPoints[1], ScreenPoints[2], UVW))
+            if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
             {
                 continue;
             }
 
-            uint8 R = 128;
 #if DEPTH_TEST
             // Calculate new depth
-            const float NewDepth = UVW.X * ScreenPoints[0].Z + UVW.Y * ScreenPoints[1].Z + UVW.Z * ScreenPoints[2].Z;
+            const float NewDepth = 1.0f / (UVW.X * S0.Z + UVW.Y * S1.Z + UVW.Z * S2.Z);
 
             // Compare the new depth to the current depth at this pixel. If the new depth is further than
-            // the current depth, continue
-            const float CurrentDepth = static_cast<float>(GetDepthBuffer()->GetPixel(X, Y));
+            // the current depth, continue.
+            const float CurrentDepth = static_cast<float>(GetDepthChannel()->GetPixel(X, Y));
             if (NewDepth >= CurrentDepth)
             {
                 continue;
             }
-            GetDepthBuffer()->SetPixel(X, Y, NewDepth);
-            
-            float RemappedDepth = Math::Remap(NewDepth, -1.0f, 1.0f, 0.0f, 1.0f);
-            R = RemappedDepth * 255;
 
-#endif
-            // Set the color buffer to this new color
-            GetColorBuffer()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
+            // If the new depth is closer than the current depth, set the current depth
+            // at this pixel to the new depth we just got.
+            GetDepthChannel()->SetPixel(X, Y, NewDepth);
+            const float RemappedDepth = Math::Remap(NewDepth, 0.0f, 2.0f, 0.0f, 1.0f);
+            const uint8 R = static_cast<uint8>(RemappedDepth * 255.0f);
+#else
+                const uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
+#endif // Depth test
+            GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
         }
     }
-#endif
+#endif // Draw shaded
 
 #if DRAW_WIREFRAME
-    DrawLine({ScreenPoints[0].X, ScreenPoints[0].Y}, {ScreenPoints[1].X, ScreenPoints[1].Y}, WireColor);
-    DrawLine({ScreenPoints[1].X, ScreenPoints[1].Y}, {ScreenPoints[2].X, ScreenPoints[2].Y}, WireColor);
-    DrawLine({ScreenPoints[2].X, ScreenPoints[2].Y}, {ScreenPoints[0].X, ScreenPoints[0].Y}, WireColor);
+    DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
+    DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
+    DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
 #endif
 }
 
@@ -233,44 +297,47 @@ void PRenderer::DrawMesh(const PMesh* Mesh) const
     {
         const uint32 StartIndex = Index * 3;
 
-        const uint32 I0 = Mesh->Indices[StartIndex];
-        const uint32 I1 = Mesh->Indices[StartIndex + 1];
-        const uint32 I2 = Mesh->Indices[StartIndex + 2];
+        const uint32 Index0 = Mesh->Indices[StartIndex];
+        const uint32 Index1 = Mesh->Indices[StartIndex + 1];
+        const uint32 Index2 = Mesh->Indices[StartIndex + 2];
 
-        const FVector3* V0 = &Mesh->Vertices[I0];
-        const FVector3* V1 = &Mesh->Vertices[I1];
-        const FVector3* V2 = &Mesh->Vertices[I2];
-
-        DrawTriangle(*V0, *V1, *V2);
+        DrawTriangle(Mesh->Positions[Index0], Mesh->Positions[Index1], Mesh->Positions[Index2]);
     }
 }
 
 
 void PRenderer::DrawGrid() const
 {
-    for (const PLine3& Line : Grid->Lines)
+    for (const FLine3d& Line : Grid->Lines)
     {
         // Project the world-space points to screen-space
-        FVector3 ScreenPoints[2];
+        FVector3 S0, S1;
         bool bLineOnScreen = false;
-        bLineOnScreen |= Viewport->ProjectWorldToScreen(Line.A, ScreenPoints[0]);
-        bLineOnScreen |= Viewport->ProjectWorldToScreen(Line.B, ScreenPoints[1]);
+        bLineOnScreen |= Viewport->ProjectWorldToScreen(Line.A, S0);
+        bLineOnScreen |= Viewport->ProjectWorldToScreen(Line.B, S1);
+
+        // If neither of the points are on the screen, return
         if (!bLineOnScreen)
         {
             return;
         }
 
-        DrawLine(FVector2{ScreenPoints[0].X, ScreenPoints[0].Y}, FVector2{ScreenPoints[1].X, ScreenPoints[1].Y}, GridColor);
+        DrawLine(S0, S1, GridColor);
     }
 }
 
 void PRenderer::Render() const
 {
+    // Recalculate the view-projection matrix of the camera
     Viewport->UpdateViewProjectionMatrix();
-    ClearBuffers();
 
+    // Reset all buffers to their default values (namely Z to Inf)
+    ClearChannels();
+
+    // Draw the world grid prior to drawing any geometry
     DrawGrid();
 
+    // Draw each mesh
     const PEngine* Engine = PEngine::GetInstance();
     for (const auto& Mesh : Engine->GetMeshes())
     {
@@ -278,13 +345,19 @@ void PRenderer::Render() const
     }
 }
 
-void PRenderer::ClearBuffers() const
+void PRenderer::ClearChannels() const
 {
-    for (const auto& B : Buffers | std::views::values)
+    // Set all channels to 0
+    for (const auto& [Key, Channel] : Channels)
     {
-        B->Clear();
+        // Ignore the depth channel, we'll handle that later
+        if (Key == "Depth") // NOLINT
+        {
+            continue;
+        }
+        Channel->Clear();
     }
 
     // Fill the depth buffer with the Max Z-depth
-    GetDepthBuffer()->Fill(Viewport->GetCamera()->MaxZ);
+    GetDepthChannel()->Fill(FLT_MAX); // Viewport->GetCamera()->MaxZ
 }

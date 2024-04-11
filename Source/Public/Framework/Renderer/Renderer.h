@@ -15,16 +15,16 @@ enum
     BYTES_PER_PIXEL = 32
 };
 
-struct PBuffer
+struct PChannel
 {
     void* Memory; // Memory Order BB GG RR XX
     uint32 ChannelCount = BYTES_PER_PIXEL / BYTES_PER_CHANNEL; // 4
     uint32 Width;
     uint32 Height;
     uint32 Pitch;
-    EBufferType Type;
+    EChannelType Type;
 
-    PBuffer(EBufferType InType, uint32 InWidth, uint32 InHeight) : Type(InType)
+    PChannel(EChannelType InType, uint32 InWidth, uint32 InHeight) : Type(InType)
     {
         Resize(InWidth, InHeight);
     }
@@ -43,22 +43,22 @@ struct PBuffer
     constexpr uint32 GetOffset(const uint32 X, const uint32 Y) const { return (Y * (Pitch / ChannelCount)) + X; }
     constexpr uint32 GetPixelCount() const { return Width * Height; }
     constexpr uint32 GetMemorySize() const { return Width * Height * BYTES_PER_PIXEL * ChannelCount; }
-    
+
     void SetPixel(uint32 X, uint32 Y, const float Value) const
     {
-        assert(Type == EBufferType::Data);
+        assert(Type == EChannelType::Data);
         if (X < 0 || X >= Width || Y < 0 || Y >= Height)
         {
             return;
         }
-        
+
         float* Ptr = static_cast<float*>(Memory) + GetOffset(X, Y);
         *Ptr = Value;
     }
-    
+
     void SetPixel(uint32 X, uint32 Y, const PColor& Color) const
     {
-        assert(Type == EBufferType::Color);
+        assert(Type == EChannelType::Color);
         if (X < 0 || X >= Width || Y < 0 || Y >= Height)
         {
             return;
@@ -71,12 +71,12 @@ struct PBuffer
         // 00 00 00 00
         *Ptr = ((Color.R << 16) | Color.G << 8) | Color.B; // TODO: Disregard alpha channel for now
     }
-    
+
     uint32 GetPixel(uint32 X, uint32 Y) const
     {
         return *(static_cast<uint32*>(Memory) + GetOffset(X, Y));
     }
-    
+
     void Clear() const
     {
         PPlatformMemory::Fill(Memory, Width * Height * 4, 0);
@@ -89,14 +89,51 @@ struct PBuffer
     }
 };
 
+enum class EDataType
+{
+    Int8,
+    Int16,
+    Int32,
+    UInt8,
+    UInt16,
+    UInt32,
+    Float
+};
+
+enum class EBufferType
+{
+    Array,
+    ElementArray
+};
+
+template <typename T>
+struct PBufferObject
+{
+    std::vector<T> Memory;
+    EDataType DataType;
+    EBufferType BufferType;
+    size_t Size = 0;
+
+    PBufferObject(const EDataType InDataType, const EBufferType InBufferType)
+    {
+        DataType = InDataType;
+        BufferType = InBufferType;
+    }
+};
+
 class PRenderer
 {
-    std::map<const char*, std::shared_ptr<PBuffer>> Buffers;
-    std::shared_ptr<PColorBuffer> ColorBuffer;
-    std::shared_ptr<PDataBuffer> DepthBuffer;
+    // Render channels
+    std::map<const char*, std::shared_ptr<PChannel>> Channels;
+    std::shared_ptr<PColorChannel> ColorChannel;
+    std::shared_ptr<PDataChannel> DepthChannel;
     std::shared_ptr<PViewport> Viewport;
-    std::unique_ptr<PGrid> Grid;
+    std::unique_ptr<FGrid> Grid;
+    
+    std::unique_ptr<PBufferObject<float>> VertexBuffer;
+    std::unique_ptr<PBufferObject<uint32>> IndexBuffer;
 
+    // Constants
     const PColor WireColor = PColor::FromRgba(255, 175, 50);
     const PColor GridColor = PColor::FromRgba(128, 128, 128);
 
@@ -104,29 +141,32 @@ public:
     PRenderer(uint32 InWidth, uint32 InHeight);
     void Resize(uint32 InWidth, uint32 InHeight) const;
 
-    void AddBuffer(EBufferType Type, const char* Name)
+    void AddChannel(EChannelType Type, const char* Name)
     {
-        Buffers.emplace(Name, std::make_shared<PBuffer>(Type, GetWidth(), GetHeight()));
+        Channels.emplace(Name, std::make_shared<PChannel>(Type, GetWidth(), GetHeight()));
     }
-    std::shared_ptr<PBuffer> GetBuffer(const char* Name) const
+    std::shared_ptr<PChannel> GetChannel(const char* Name) const
     {
-        return Buffers.at(Name);
+        return Channels.at(Name);
     }
 
-    std::shared_ptr<PBuffer> GetColorBuffer() const { return Buffers.at("Color"); }
-    std::shared_ptr<PBuffer> GetDepthBuffer() const { return Buffers.at("Depth"); }
-    
+    std::shared_ptr<PChannel> GetColorChannel() const { return Channels.at("Color"); }
+    std::shared_ptr<PChannel> GetDepthChannel() const { return Channels.at("Depth"); }
+
     uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
     uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
 
     PViewport* GetViewport() const { return Viewport.get(); }
 
     // Drawing
-    bool ClipLine(const FVector2& InA, const FVector2& InB, FVector2& OutA, FVector2& OutB) const;
-    void DrawLine(const FVector2& InA, const FVector2& InB, const PColor& Color) const;
+    bool ClipLine(FVector2* A, FVector2* B) const;
+    bool ClipLine(FLine* Line) const;
+    void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
+    void DrawLine(const FLine3d& Line, const PColor& Color) const;
     void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
+    void DrawTriangle(float* Data) const;
     void DrawMesh(const PMesh* Mesh) const;
     void DrawGrid() const;
     void Render() const;
-    void ClearBuffers() const;
+    void ClearChannels() const;
 };

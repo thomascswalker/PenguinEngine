@@ -169,7 +169,10 @@ struct TVector3
     {
         CheckNaN();
     }
-    TVector3(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]){}
+    TVector3(const TVector2<T>& V, T InZ = T(1)) : X(V.X), Y(V.Y), Z(InZ)
+    {
+        CheckNaN();
+    }
     TVector3(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
@@ -336,7 +339,9 @@ struct TVector4
     {
         CheckNaN();
     }
-    TVector4(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]), W(Values[3]){}
+    TVector4(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]), W(Values[3])
+    {
+    }
     TVector4(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
@@ -503,12 +508,8 @@ namespace Math
         }
         return Result;
     }
-}
 
-
-template <typename T>
-struct TTriangle
-{
+    template <typename T>
     static T Area(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         T A = V0.X * (V1.Y - V2.Y);
@@ -518,18 +519,21 @@ struct TTriangle
     }
 
     // Vector Sign
+    template <typename T>
     static bool EdgeSign(const TVector2<T>& A, const TVector2<T>& B, const TVector2<T>& C)
     {
         T Result = (C[0] - A[0]) * (B[1] - A[1]) - (C[1] - A[1]) * (B[0] - A[0]);
         return Math::Sign(Result);
     }
 
+    template <typename T>
     static float EdgeValue(const TVector2<T>& A, const TVector2<T>& B, const TVector2<T>& P)
     {
         return Math::Cross(B - A, P - A);
     }
 
     // Muller-Trumbore ray triangle intersect
+    template <typename T>
     static bool GetBarycentric(const TVector3<T>& P,
                                const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2,
                                TVector3<T>& UVW,
@@ -563,6 +567,7 @@ struct TTriangle
             (T(1) - Sum) < Tolerance);
     }
 
+    template <typename T>
     static EWindingOrder GetVertexOrder(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         const float Result = (V1.Y - V0.Y) * (V2.X - V1.X) - (V1.X - V0.X) * (V2.Y - V1.Y);
@@ -573,15 +578,55 @@ struct TTriangle
         return Result > T(0) ? EWindingOrder::CW : EWindingOrder::CCW;
     }
 
+    template <typename T>
+    static void GetLine(const TVector3<T>& A, const TVector3<T>& B, std::vector<IVector2>& Points, int32 Width, int32 Height)
+    {
+        int32 X0 = static_cast<int32>(A.X);
+        int32 Y0 = static_cast<int32>(A.Y);
+        int32 X1 = static_cast<int32>(B.X);
+        int32 Y1 = static_cast<int32>(B.Y);
+        int32 DeltaX = Abs(X1 - X0);
+        int32 DeltaY = Abs(Y1 - Y0);
+        int32 StepX = (X0 < X1) ? 1 : -1;
+        int32 StepY = (Y0 < Y1) ? 1 : -1;
+        int32 Error = DeltaX - DeltaY;
+
+        while (true)
+        {
+            if (X0 >= 0 && X0 < Width && Y0 >= 0 && Y0 < Height)
+            {
+                Points.emplace_back(X0, Y0);
+            }
+
+            if (X0 == X1 && Y0 == Y1)
+            {
+                break;
+            }
+
+            const int32 DoubleError = Error * 2;
+            if (DoubleError > -DeltaY)
+            {
+                Error -= DeltaY;
+                X0 += StepX;
+            }
+            if (DoubleError < DeltaX)
+            {
+                Error += DeltaX;
+                Y0 += StepY;
+            }
+        }
+    }
+
+    template <typename T>
     static T GetDepth(const TVector3<T>& P, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         // Calculate area of this triangle
-        T A = TTriangle::Area(V0, V1, V2);
+        T A = Math::Area(V0, V1, V2);
 
         // Calculate depth
-        T W0 = TTriangle::Area(V1, V2, P);
-        T W1 = TTriangle::Area(V2, V0, P);
-        T W2 = TTriangle::Area(V0, V1, P);
+        T W0 = Math::Area(V1, V2, P);
+        T W1 = Math::Area(V2, V0, P);
+        T W2 = Math::Area(V0, V1, P);
 
         if (W0 < T(0) && W1 < T(0) && W2 < T(0))
         {
@@ -596,14 +641,12 @@ struct TTriangle
     }
 
     // // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
+    template <typename T>
     static TVector3<T> GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
-        TVector3<T> Normal;
-        const TVector3<T> U = V1 - V0;
-        const TVector3<T> V = V2 - V0;
-        Normal.X = (U.Y * V.Z) - (U.Z * V.Y);
-        Normal.Y = (U.Z * V.X) - (U.X * V.Z);
-        Normal.Z = (U.X * V.Y) - (U.Y * V.X);
+        TVector3<T> Edge0 = V1 - V0;
+        TVector3<T> Edge1 = V2 - V0;
+        TVector3<T> Normal = Math::Cross(Edge0, Edge1);
         return Normal.Normalized();
     }
 };

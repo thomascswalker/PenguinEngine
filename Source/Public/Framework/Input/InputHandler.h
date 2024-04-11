@@ -4,18 +4,6 @@
 #include "Math/Vector.h"
 #include "Framework/Engine/Delegate.h"
 
-DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseLeftDown, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseLeftUp, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseRightDown, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseRightUp, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleDown, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleUp, const FVector2&);
-
-
-DECLARE_MULTICAST_DELEGATE(FKeyPressed, int32);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleScrolled, float);
-
 class IInputHandler;
 class PWin32InputHandler;
 class PMacOSInputHandler;
@@ -29,10 +17,85 @@ enum class EMouseButtonType : uint8
     Middle
 };
 
+enum class EKey : uint8
+{
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Zero,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    Escape,
+    Spacebar,
+    Enter,
+    LeftCtrl,
+    RightCtrl,
+    LeftShift,
+    RightShift,
+    CapsLock,
+    Backspace,
+
+    // Meta
+    Count
+};
+
 struct FKey
 {
     const char* Name;
 };
+
+DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseLeftDown, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseLeftUp, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseRightDown, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseRightUp, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleDown, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleUp, const FVector2&);
+
+DECLARE_MULTICAST_DELEGATE(FKeyPressed, EKey);
+DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleScrolled, float);
 
 class IInputHandler
 {
@@ -50,13 +113,14 @@ protected:
     FVector2 CurrentCursorPosition;
     FVector2 DeltaCursorPosition;
 
-    std::map<int32, bool> KeyStateMap;
+    std::map<EKey, bool> KeyStateMap;
 
     IInputHandler()
     {
-        for (uint8 Index = 32; Index < 127; Index++) // ASCII Space -> ~
+        const uint8 KeyCount = static_cast<uint8>(EKey::Count);
+        for (uint8 Index = 0; Index < KeyCount; Index++)
         {
-            KeyStateMap.emplace(Index, false);
+            KeyStateMap.emplace(static_cast<EKey>(Index), false);
         }
     }
     ~IInputHandler() = default;
@@ -91,9 +155,9 @@ public:
     }
 
     // Keys
-    virtual std::vector<int32> GetKeysDown() const
+    virtual std::vector<EKey> GetKeysDown() const
     {
-        std::vector<int32> Keys;
+        std::vector<EKey> Keys;
         for (const auto& [K, V] : KeyStateMap)
         {
             if (V)
@@ -103,10 +167,10 @@ public:
         }
         return Keys;
     }
-    virtual bool OnKeyDown(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
-    virtual bool OnKeyUp(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
-    virtual bool IsKeyDown(int32 KeyCode) const { return false; }
-    virtual void ConsumeKey(int32 KeyCode)
+    virtual bool OnKeyDown(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
+    virtual bool OnKeyUp(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
+    virtual bool IsKeyDown(EKey KeyCode) const { return false; }
+    virtual void ConsumeKey(const EKey KeyCode)
     {
         KeyStateMap.at(KeyCode) = false;
     }
@@ -222,20 +286,20 @@ public:
         return bMouseLeftDown || bMouseRightDown || bMouseMiddleDown;
     }
 
-    bool OnKeyDown(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) override
+    bool OnKeyDown(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) override
     {
         KeyStateMap[KeyCode] = true;
         return true;
     }
 
-    bool OnKeyUp(int32 KeyCode, int32 KeyFlags, bool bIsRepeat) override
+    bool OnKeyUp(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) override
     {
         KeyStateMap[KeyCode] = false;
         KeyPressed.Broadcast(KeyCode);
         return true;
     }
 
-    bool IsKeyDown(int32 KeyCode) const override
+    bool IsKeyDown(EKey KeyCode) const override
     {
         return KeyStateMap.at(KeyCode);
     }

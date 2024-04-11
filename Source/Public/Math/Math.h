@@ -220,7 +220,13 @@ namespace Math
     template <typename T>
     constexpr static T DegreesToRadians(T Degrees)
     {
-        return Degrees * (P_PI / 180.f);
+        return Degrees * P_DEG_TO_RAD;
+    }
+
+    template <typename T>
+    constexpr static T RadiansToDegrees(T Radians)
+    {
+        return Radians * P_RAD_TO_DEG;
     }
 
     template <typename T>

@@ -25,7 +25,10 @@ struct PPlatformMemory
 
     static void* Realloc(void* Memory, const size_t Size)
     {
-        Free(Memory);
+        if (Memory != nullptr)
+        {
+            Free(Memory);
+        }
         return Alloc(Size);
     }
 

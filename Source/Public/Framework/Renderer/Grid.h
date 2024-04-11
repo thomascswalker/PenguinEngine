@@ -2,20 +2,31 @@
 
 #include "Math/MathCommon.h"
 
-struct PLine3
+template <typename T>
+struct TLine
 {
-    FVector3 A;
-    FVector3 B;
-    PLine3(const FVector3& InA, const FVector3& InB) : A(InA), B(InB)
+    TVector2<T> A;
+    TVector2<T> B;
+    TLine(const TVector2<T>& InA, const TVector2<T>& InB) : A(InA), B(InB)
     {
     }
 };
 
-struct PGrid
+template <typename T>
+struct TLine3d
 {
-    std::vector<PLine3> Lines;
+    TVector3<T> A;
+    TVector3<T> B;
+    TLine3d(const TVector3<T>& InA, const TVector3<T>& InB) : A(InA), B(InB)
+    {
+    }
+};
 
-    PGrid(float Divisions, float CellSize)
+struct FGrid
+{
+    std::vector<FLine3d> Lines;
+
+    FGrid(float Divisions, float CellSize)
     {
         for (float Step = 0; Step <= Divisions; Step += CellSize)
         {

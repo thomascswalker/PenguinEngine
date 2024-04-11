@@ -18,9 +18,9 @@ namespace Math
     TVector3<T> Rotate(const TVector3<T>& V, const TQuat<T> Q)
     {
         TMatrix<T> M;
-        const T A = Q.W;
-        const T C = Math::Cos(A);
-        const T S = Math::Sin(A);
+        const T A = Q.W; // Angle is the W component of the quaternion
+        const T C = Math::Cos(A); // Cosine of Angle
+        const T S = Math::Sin(A); // Sin of Angle
 
         TVector3<T> Normal = {Q.X, Q.Y, Q.Z};
         TVector3<T> Axis = Normal.Normalized();

@@ -11,6 +11,52 @@
     #define WINDOWS_TIMER_ID 1001
 #endif
 
+std::map<int32, EKey> Win32KeyMap
+{
+    {'A', EKey::A},
+    {'B', EKey::B},
+    {'C', EKey::C},
+    {'D', EKey::D},
+    {'E', EKey::E},
+    {'F', EKey::F},
+    {'G', EKey::G},
+    {'H', EKey::H},
+    {'I', EKey::I},
+    {'J', EKey::J},
+    {'K', EKey::K},
+    {'L', EKey::L},
+    {'M', EKey::M},
+    {'N', EKey::N},
+    {'O', EKey::O},
+    {'P', EKey::P},
+    {'Q', EKey::Q},
+    {'R', EKey::R},
+    {'S', EKey::S},
+    {'T', EKey::T},
+    {'U', EKey::U},
+    {'V', EKey::V},
+    {'W', EKey::W},
+    {'X', EKey::X},
+    {'Y', EKey::Y},
+    {'Z', EKey::Z},
+    {VK_ESCAPE, EKey::Escape},
+    {VK_SPACE, EKey::Spacebar},
+    {VK_SHIFT, EKey::LeftShift},
+    {VK_DELETE, EKey::Backspace},
+    {VK_F1, EKey::F1},
+    {VK_F2, EKey::F2},
+    {VK_F3, EKey::F3},
+    {VK_F4, EKey::F4},
+    {VK_F5, EKey::F5},
+    {VK_F6, EKey::F6},
+    {VK_F7, EKey::F7},
+    {VK_F8, EKey::F8},
+    {VK_F9, EKey::F9},
+    {VK_F10, EKey::F10},
+    {VK_F11, EKey::F11},
+    {VK_F12, EKey::F12},
+};
+
 LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
     LRESULT Result = 0;
@@ -89,23 +135,23 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             InputHandler->OnMouseMove(CursorPosition);
             return 0;
         }
-    case WM_MOUSEWHEEL:
+    case WM_MOUSEWHEEL :
         {
             const float DeltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
-            InputHandler->OnMouseWheel(DeltaScroll / 120.0f);
+            InputHandler->OnMouseWheel(-DeltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
             return 0;
         }
     // Keyboard input
     case WM_KEYDOWN :
         {
             const int32 Char = static_cast<int32>(wParam);
-            InputHandler->OnKeyDown(Char, 0, false);
+            InputHandler->OnKeyDown(Win32KeyMap.at(Char), 0, false);
             return 0;
         }
     case WM_KEYUP :
         {
             const int32 Char = static_cast<int32>(wParam);
-            InputHandler->OnKeyUp(Char, 0, false);
+            InputHandler->OnKeyUp(Win32KeyMap.at(Char), 0, false);
             return 0;
         }
     case WM_PAINT :
@@ -117,15 +163,15 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             }
 
             // Draw mouse cursor line from click origin
-            FVector2 A = InputHandler->GetClickPosition();
-            if (A != 0)
+            FVector3 A = InputHandler->GetClickPosition();
+            if (A.X != 0.0f && A.Y != 0.0f)
             {
-                FVector2 B = InputHandler->GetCurrentCursorPosition();
+                FVector3 B = InputHandler->GetCurrentCursorPosition();
                 Renderer->DrawLine(A, B, PColor::Red());
             }
 
             // Get the current window size from the buffer
-            const std::shared_ptr<PBuffer> Buffer = Renderer->GetColorBuffer();
+            const std::shared_ptr<PChannel> Buffer = Renderer->GetColorChannel();
             const uint32 Width = Buffer->Width;
             const uint32 Height = Buffer->Height;
 

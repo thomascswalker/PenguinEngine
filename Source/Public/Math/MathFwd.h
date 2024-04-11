@@ -3,7 +3,8 @@
 #define P_PI 3.14159265358979323846f
 #define P_EPSILON FLT_EPSILON
 #define P_SINGULARITY_THRESHOLD 0.4999995f
-#define P_RAD_TO_DEG (180.0f / P_PI)
+#define P_DEG_TO_RAD 0.0174533f
+#define P_RAD_TO_DEG 57.2958f
 #define P_MIN_Z 0.001f
 #define P_MAX_Z 100000.0f
 #define P_ZERO_PRECISION = 0.0f
@@ -25,9 +26,9 @@ typedef unsigned long long uint64;
 
 // Buffer
 template <int32 N>
-struct TBuffer;
-typedef TBuffer<4> PColorBuffer;
-typedef TBuffer<1> PDataBuffer;
+struct TChannel;
+typedef TChannel<4> PColorChannel;
+typedef TChannel<1> PDataChannel;
 
 // Rect
 template <typename T>
@@ -35,6 +36,15 @@ struct TRect;
 typedef TRect<float> FRect;
 typedef TRect<double> DRect;
 typedef TRect<int32> IRect;
+
+// Lines
+template <typename T>
+struct TLine;
+typedef TLine<float> FLine;
+
+template <typename T>
+struct TLine3d;
+typedef TLine3d<float> FLine3d;
 
 // Vector
 template <typename T>
@@ -45,11 +55,13 @@ typedef TVector2<double> DVector2;
 
 template <typename T>
 struct TVector3;
+typedef TVector3<int32> IVector3;
 typedef TVector3<float> FVector3;
 typedef TVector3<double> DVector3;
 
 template <typename T>
 struct TVector4;
+typedef TVector4<int32> IVector4;
 typedef TVector4<float> FVector4;
 typedef TVector4<double> DVector4;
 
@@ -124,7 +136,7 @@ enum class EAxis : uint8
     Z // Foward
 };
 
-enum class EBufferType : uint8
+enum class EChannelType : uint8
 {
     Data,
     Color
