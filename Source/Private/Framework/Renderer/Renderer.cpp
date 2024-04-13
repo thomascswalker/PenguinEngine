@@ -379,5 +379,5 @@ void PRenderer::ClearChannels() const
     }
 
     // Fill the depth buffer with the Max Z-depth
-    GetDepthChannel()->Fill(FLT_MAX); // Viewport->GetCamera()->MaxZ
+    GetDepthChannel()->Fill(FLT_MAX);
 }

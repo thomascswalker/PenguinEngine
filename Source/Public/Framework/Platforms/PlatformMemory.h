@@ -4,7 +4,6 @@
 #include <windows.h>
 #endif
 
-#include "Framework/Core/Core.h"
 #include "Math/MathFwd.h"
 
 struct PPlatformMemory

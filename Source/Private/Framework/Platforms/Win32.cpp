@@ -1,5 +1,4 @@
-﻿#include <cassert>
-#include <windowsx.h>
+﻿#include <windowsx.h>
 
 #include "Framework/Application.h"
 #include "Framework/Platforms/Win32Platform.h"
