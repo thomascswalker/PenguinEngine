@@ -72,9 +72,10 @@ struct PChannel
         *Ptr = ((Color.R << 16) | Color.G << 8) | Color.B; // TODO: Disregard alpha channel for now
     }
 
-    uint32 GetPixel(uint32 X, uint32 Y) const
+    template<typename T>
+    T GetPixel(uint32 X, uint32 Y) const
     {
-        return *(static_cast<uint32*>(Memory) + GetOffset(X, Y));
+        return *(static_cast<T*>(Memory) + GetOffset(X, Y));
     }
 
     void Clear() const

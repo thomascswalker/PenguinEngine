@@ -95,7 +95,7 @@ void PEngine::Tick()
 
 void PEngine::LoadSceneGeometry()
 {
-    if (std::shared_ptr<PMesh> Mesh = PMesh::CreateTeapot(4))
+    if (std::shared_ptr<PMesh> Mesh = PMesh::CreateTeapot(5))
     {
         Meshes.emplace_back(Mesh);
     }

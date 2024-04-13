@@ -207,7 +207,8 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     switch (Math::GetVertexOrder(S0, S1, S2))
     {
     case EWindingOrder::CW : // Triangle is back-facing, exit
-        return; //std::swap(S0, S1);
+        std::swap(S0, S1);
+        break;
     case EWindingOrder::CCW :
         break;
     case EWindingOrder::CL : // Triangle has zero area, exit
@@ -224,11 +225,11 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
 
     // Calculate the Camera to Triangle ratio
-    const float FacingRatio = Math::Dot(CameraNormal, WorldNormal);
+    const float FacingRatio = Math::Dot(WorldNormal, CameraNormal);
 
-    // If FacingRatio is above 0, the two normals are facing opposite directions, and the face
+    // If FacingRatio is below 0, the two normals are facing opposite directions, and the face
     // is facing away from the camera.
-    if (FacingRatio > 0.0f)
+    if (FacingRatio < 0.0f)
     {
         return;
     }
@@ -244,6 +245,8 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
     int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
 
+    float Area = Math::Area(S0, S1, S2);
+    
     for (int32 Y = MinY; Y < MaxY; Y++)
     {
         for (int32 X = MinX; X < MaxX; X++)
@@ -260,11 +263,24 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
 #if DEPTH_TEST
             // Calculate new depth
-            const float NewDepth = 1.0f / (UVW.X * S0.Z + UVW.Y * S1.Z + UVW.Z * S2.Z);
+            float W0 = Math::Area(S1, S2, P);
+            float W1 = Math::Area(S2, S0, P);
+            float W2 = Math::Area(S0, S1, P);
+
+            if (W0 < 0.0f && W1 < 0.0f && W2 < 0.0f)
+            {
+                continue;
+            }
+
+            W0 /= Area;
+            W1 /= Area;
+            W2 /= Area;
+            
+            const float NewDepth = 1.0f / (W0 * S0.Z + W1 * S1.Z + W2 * S2.Z);
 
             // Compare the new depth to the current depth at this pixel. If the new depth is further than
             // the current depth, continue.
-            const float CurrentDepth = static_cast<float>(GetDepthChannel()->GetPixel(X, Y));
+            const float CurrentDepth = GetDepthChannel()->GetPixel<float>(X, Y);
             if (NewDepth >= CurrentDepth)
             {
                 continue;
@@ -273,12 +289,11 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
             // If the new depth is closer than the current depth, set the current depth
             // at this pixel to the new depth we just got.
             GetDepthChannel()->SetPixel(X, Y, NewDepth);
-            const float RemappedDepth = Math::Remap(NewDepth, 0.0f, 2.0f, 0.0f, 1.0f);
-            const uint8 R = static_cast<uint8>(RemappedDepth * 255.0f);
 #else
-                const uint8 R = static_cast<uint8>(Math::Abs(FacingRatio) * 255.0f);
+
 #endif // Depth test
-            GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, 0, 0));
+            uint8 R = FacingRatio * 255.0f;
+            GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
         }
     }
 #endif // Draw shaded

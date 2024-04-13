@@ -88,7 +88,6 @@ public:
     void UpdateViewProjectionMatrix();
     FMatrix* GetViewProjectionMatrix() { return &MVP; }
     bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const;
-    bool ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const;
 
     void FormatDebugText();
     std::string GetDebugText() const { return DebugText; }
