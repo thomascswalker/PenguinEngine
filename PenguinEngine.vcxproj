@@ -187,7 +187,9 @@
     <ClInclude Include="Source\Public\Framework\Application.h" />
     <ClInclude Include="Source\Public\Framework\Core\Core.h" />
     <ClInclude Include="Source\Public\Framework\Core\ErrorCodes.h" />
+    <ClInclude Include="Source\Public\Framework\Core\IO.h" />
     <ClInclude Include="Source\Public\Framework\Core\Logging.h" />
+    <ClInclude Include="Source\Public\Framework\Core\String.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Delegate.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Engine.h" />
     <ClInclude Include="Source\Public\Framework\Engine\Mesh.h" />
@@ -195,6 +197,7 @@
     <ClInclude Include="Source\Public\Framework\Engine\Timer.h" />
     <ClInclude Include="Source\Public\Framework\Input\InputHandler.h" />
     <ClInclude Include="Source\Public\Framework\Input\MouseTracker.h" />
+    <ClInclude Include="Source\Public\Framework\Importers\MeshImporter.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformInterface.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformMemory.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\Win32Platform.h" />
@@ -212,6 +215,10 @@
     <ClInclude Include="Source\Public\Math\MathFwd.h" />
     <ClInclude Include="Source\Public\Math\Transform.h" />
     <ClInclude Include="Source\Public\Math\Vector.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Examples\Cow.obj" />
+    <Content Include="Examples\Cube.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -3,6 +3,7 @@
 #include "Framework/Engine/Timer.h"
 #include "Framework/Input/InputHandler.h"
 #include "Framework/Application.h"
+#include "Framework/Importers/MeshImporter.h"
 
 PEngine* PEngine::Instance = GetInstance();
 
@@ -95,10 +96,9 @@ void PEngine::Tick()
 
 void PEngine::LoadSceneGeometry()
 {
-    if (std::shared_ptr<PMesh> Mesh = PMesh::CreateTeapot(5))
-    {
-        Meshes.emplace_back(Mesh);
-    }
+    std::shared_ptr<PMesh> Mesh = std::make_shared<PMesh>();
+    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Cow.obj", Mesh.get());
+    Meshes.emplace_back(Mesh);
 }
 
 void PEngine::OnKeyPressed(EKey KeyCode)
