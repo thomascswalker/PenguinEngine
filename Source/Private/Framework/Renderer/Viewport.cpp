@@ -6,7 +6,7 @@
 FMatrix PCamera::ComputeViewProjectionMatrix()
 {
     const float Scale = 1.0f / Math::Tan(Math::DegreesToRadians(Fov / 2.0f));
-    ViewMatrix = FLookAtMatrix(GetTranslation(), TargetTranslation, FVector3::UpVector());
+    ViewMatrix = FLookAtMatrix(-GetTranslation(), TargetTranslation, FVector3::UpVector());
     ProjectionMatrix = FPerspectiveMatrix(Scale, GetAspect(), MinZ, MaxZ);
     return ProjectionMatrix * ViewMatrix * FMatrix::GetIdentity();
 }
@@ -23,7 +23,7 @@ void PCamera::Orbit(const float DX, const float DY)
     // Individually rotate the direction by X (Yaw), then Y (Pitch)
     const FMatrix RotY = FMatrix::MakeFromY(RX);
     Direction = RotY * Direction;
-    
+
     const FMatrix RotZ = FMatrix::MakeFromZ(RY);
     Direction = RotZ * Direction;
 
@@ -71,47 +71,37 @@ void PViewport::UpdateViewProjectionMatrix()
     MVP = Camera->ComputeViewProjectionMatrix();
 }
 
-
 /**
- * \brief Same purpose as the other ProjectWorldToScreen, but uses the current ViewProjectionMatrix of the viewport.
- * This assumes it has already been pre-computed and set.
+ * \brief Projects the specified `WorldPosition` into the in/out `ScreenPosition` using the specified `ViewProjectionMatrix`.
  * \param WorldPosition The world position of the point to be projected.
  * \param ScreenPosition The out screen position.
  * \return True if the position could be projected, false otherwise.
  */
 bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const
 {
-    return ProjectWorldToScreen(WorldPosition, MVP, ScreenPosition);
-}
-
-
-/**
- * \brief Projects the specified `WorldPosition` into the in/out `ScreenPosition` using the specified `ViewProjectionMatrix`.
- * \param WorldPosition The world position of the point to be projected.
- * \param ViewProjectionMatrix The view projection matrix of the current view (View * Projection)
- * \param ScreenPosition The out screen position.
- * \return True if the position could be projected, false otherwise.
- */
-bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, const FMatrix& ViewProjectionMatrix, FVector3& ScreenPosition) const
-{
-    const FVector4 Result = ViewProjectionMatrix * FVector4(WorldPosition, 1.0f);
+    // Clip space
+    const FVector4 Result = MVP * FVector4(WorldPosition, 1.0f);
     if (Result.W > 0.0f)
     {
-        // Normalized device coordinates
-        const float NormalizedX = (Result.X / (Result.W * 2.0f)) + 0.5f;
-        const float NormalizedY = 1.0f - (Result.Y / (Result.W * 2.0f)) - 0.5f;
-        const float NormalizedZ = Result.Z != 0.0f ? 1.0f / (Result.Z / (Result.W * 2.0f)) : 0.0f;
+        // Apply perspective correction
+        const FVector3 ClipPosition{
+            Result.X / Result.W,
+            Result.Y / Result.W,
+            Result.Z / Result.W
+        };
 
-        // If Z is less than zero, it's behind the camera
-        if (NormalizedZ < 0.0f)
-        {
-            return false;
-        }
-        
+        // Normalized device coordinates
+        const FVector2 NormalizedPosition{
+            (ClipPosition.X / 2.0f) + 0.5f,
+            (ClipPosition.Y / 2.0f) + 0.5f,
+        };
+
         // Apply the current render width and height
-        ScreenPosition = FVector3(NormalizedX * static_cast<float>(Camera->Width),
-                                  NormalizedY * static_cast<float>(Camera->Height),
-                                  NormalizedZ);
+        ScreenPosition = FVector3{
+            NormalizedPosition.X * static_cast<float>(Camera->Width),
+            NormalizedPosition.Y * static_cast<float>(Camera->Height),
+            ClipPosition.Z
+        };
         return true;
     }
 

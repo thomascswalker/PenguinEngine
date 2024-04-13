@@ -72,9 +72,10 @@ struct PChannel
         *Ptr = ((Color.R << 16) | Color.G << 8) | Color.B; // TODO: Disregard alpha channel for now
     }
 
-    uint32 GetPixel(uint32 X, uint32 Y) const
+    template <typename T>
+    T GetPixel(uint32 X, uint32 Y) const
     {
-        return *(static_cast<uint32*>(Memory) + GetOffset(X, Y));
+        return *(static_cast<T*>(Memory) + GetOffset(X, Y));
     }
 
     void Clear() const
@@ -129,7 +130,7 @@ class PRenderer
     std::shared_ptr<PDataChannel> DepthChannel;
     std::shared_ptr<PViewport> Viewport;
     std::unique_ptr<FGrid> Grid;
-    
+
     std::unique_ptr<PBufferObject<float>> VertexBuffer;
     std::unique_ptr<PBufferObject<uint32>> IndexBuffer;
 
@@ -140,6 +141,11 @@ class PRenderer
 public:
     PRenderer(uint32 InWidth, uint32 InHeight);
     void Resize(uint32 InWidth, uint32 InHeight) const;
+    uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
+    uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
+    PViewport* GetViewport() const { return Viewport.get(); }
+
+    /* Channels */
 
     void AddChannel(EChannelType Type, const char* Name)
     {
@@ -149,16 +155,13 @@ public:
     {
         return Channels.at(Name);
     }
+    void ClearChannels() const;
 
     std::shared_ptr<PChannel> GetColorChannel() const { return Channels.at("Color"); }
     std::shared_ptr<PChannel> GetDepthChannel() const { return Channels.at("Depth"); }
+    
+    /* Drawing */
 
-    uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
-    uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
-
-    PViewport* GetViewport() const { return Viewport.get(); }
-
-    // Drawing
     bool ClipLine(FVector2* A, FVector2* B) const;
     bool ClipLine(FLine* Line) const;
     void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
@@ -168,5 +171,4 @@ public:
     void DrawMesh(const PMesh* Mesh) const;
     void DrawGrid() const;
     void Render() const;
-    void ClearChannels() const;
 };

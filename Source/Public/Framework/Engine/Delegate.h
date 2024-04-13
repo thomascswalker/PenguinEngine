@@ -1009,7 +1009,7 @@ private:
     void Unlock()
     {
         //Unlock() should never be called more than Lock()!
-        DELEGATE_ASSERT(m_Locks > 0);
+        DELEGATE_ASSERT(Locks > 0);
         --Locks;
     }
 
