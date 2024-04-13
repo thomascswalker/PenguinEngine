@@ -119,6 +119,11 @@ void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor&
     {
         return;
     }
+    /* TODO: This is a temporary fix to prevent lines getting clipped and setting one of the points to [0,0]. */
+    if (A == 0.0f || B == 0.0f)
+    {
+        return;
+    }
 
     bool bIsSteep = false;
     if (Math::Abs(A.X - B.X) < Math::Abs(A.Y - B.Y))
