@@ -97,7 +97,7 @@ void PEngine::Tick()
 void PEngine::LoadSceneGeometry()
 {
     std::shared_ptr<PMesh> Mesh = std::make_shared<PMesh>();
-    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Cow.obj", Mesh.get());
+    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Bunny.obj", Mesh.get());
     Meshes.emplace_back(Mesh);
 }
 

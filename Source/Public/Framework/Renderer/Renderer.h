@@ -167,7 +167,6 @@ public:
     void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
     void DrawLine(const FLine3d& Line, const PColor& Color) const;
     void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
-    void DrawTriangle(float* Data) const;
     void DrawMesh(const PMesh* Mesh) const;
     void DrawGrid() const;
     void Render() const;

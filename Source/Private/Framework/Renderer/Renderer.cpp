@@ -178,17 +178,6 @@ void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
     DrawLine(Line.A, Line.B, Color);
 }
 
-
-void PRenderer::DrawTriangle(float* Data) const
-{
-    DrawTriangle(
-        {Data[0], Data[1], Data[2]},
-        {Data[3], Data[4], Data[5]},
-        {Data[6], Data[7], Data[8]}
-    );
-}
-
-
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
     // Screen points
@@ -230,7 +219,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
     const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
 
     // Calculate the Camera to Triangle ratio
-    const float FacingRatio = Math::Dot(WorldNormal, CameraNormal);
+    const float FacingRatio = Math::Dot(-WorldNormal, CameraNormal);
 
     // If FacingRatio is below 0, the two normals are facing opposite directions, and the face
     // is facing away from the camera.
