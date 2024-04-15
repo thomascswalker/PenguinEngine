@@ -185,6 +185,7 @@
   <ItemGroup>
     <ClInclude Include="Source\Private\Math\MathCommon.cpp" />
     <ClInclude Include="Source\Public\Framework\Application.h" />
+    <ClInclude Include="Source\Public\Framework\Core\Bitmask.h" />
     <ClInclude Include="Source\Public\Framework\Core\Core.h" />
     <ClInclude Include="Source\Public\Framework\Core\ErrorCodes.h" />
     <ClInclude Include="Source\Public\Framework\Core\IO.h" />

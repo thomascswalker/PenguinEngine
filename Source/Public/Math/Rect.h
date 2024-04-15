@@ -73,4 +73,20 @@ struct TRect
         Width = Math::Min(Width, Other.Width);
         Height = Math::Min(Height, Other.Height);
     }
+
+    void Grow(T Value)
+    {
+        X -= Value;
+        Y -= Value;
+        Width += Value;
+        Height += Value;
+    }
+
+    void Shrink(T Value)
+    {
+        X += Value;
+        Y += Value;
+        Width -= Value;
+        Height += Value;
+    }
 };

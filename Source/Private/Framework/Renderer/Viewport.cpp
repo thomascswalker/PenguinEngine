@@ -115,26 +115,21 @@ void PViewport::FormatDebugText()
     std::string MousePosition = InputHandler->GetCurrentCursorPosition().ToString();
     std::string MouseDelta = (InputHandler->GetCurrentCursorPosition() - InputHandler->GetClickPosition()).ToString();
 
-    FVector3 Translation = Camera->GetTranslation();
-    FRotator Rotation = Camera->GetRotation();
+    auto Renderer = Engine->GetRenderer();
 
     DebugText = std::format(
-        "Click and drag to orbit\n"
-        "Press 'T' to toggle debug text\n\n"
+        "Stats\n"
         "FPS: {}\n"
-        "Size: {}\n"
-        "Mouse Position: {}\n"
-        "Mouse Delta: {}\n"
-        "Camera Position: {}\n"
-        "Camera Rotation: {}\n"
-        "Camera zoom: {}"
+        "Size: {}\n\n"
+        "Controls\n"
+        "Wireframe (F1): {}\n"
+        "Shaded (F2): {}\n"
+        "Depth (F3): {}\n"
         ,
         Engine->GetFps(),
         GetSize().ToString(),
-        MousePosition,
-        MouseDelta,
-        Translation.ToString(),
-        Rotation.ToString(),
-        Camera->Zoom
+        Renderer->GetRenderFlag(ERenderFlags::Wireframe),
+        Renderer->GetRenderFlag(ERenderFlags::Shaded),
+        Renderer->GetRenderFlag(ERenderFlags::Depth)
     );
 }

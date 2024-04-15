@@ -120,6 +120,21 @@ void PEngine::OnKeyPressed(EKey KeyCode)
             GetViewport()->ResetView();
             break;
         }
+    case EKey::F1 :
+        {
+            Renderer->ToggleRenderFlag(ERenderFlags::Wireframe);
+            break;
+        }
+    case EKey::F2 :
+        {
+            Renderer->ToggleRenderFlag(ERenderFlags::Shaded);
+            break;
+        }
+    case EKey::F3 :
+        {
+            Renderer->ToggleRenderFlag(ERenderFlags::Depth);
+            break;
+        }
     default :
         break;
     }

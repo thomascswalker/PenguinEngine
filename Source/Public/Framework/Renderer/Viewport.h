@@ -3,8 +3,8 @@
 #include "Framework/Engine/Object.h"
 #include "Math/MathCommon.h"
 
-#define DEFAULT_VIEWPORT_WIDTH 320
-#define DEFAULT_VIEWPORT_HEIGHT 240
+#define DEFAULT_VIEWPORT_WIDTH 656 // 640
+#define DEFAULT_VIEWPORT_HEIGHT 519 // 480
 
 #define DEFAULT_FOV 90.0f
 #define DEFAULT_MINZ 1.0f

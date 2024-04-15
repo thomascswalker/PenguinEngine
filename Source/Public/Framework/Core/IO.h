@@ -2,6 +2,8 @@
 #include <filesystem>
 #include <fstream>
 
+#include "String.h"
+
 namespace IO
 {
     static bool Exists(const std::string& FileName)
@@ -18,16 +20,41 @@ namespace IO
     {
         if (!Exists(FileName))
         {
+            LOG_ERROR("File %s not found.", FileName.c_str());
             return false;
         }
         std::ifstream Stream(FileName, std::ios::in | std::ios::binary);
         if (Stream.bad())
         {
+            LOG_ERROR("Unable to read file %s.", FileName.c_str());
             return false;
         }
-        const auto Size = std::filesystem::file_size(FileName);
+        const uint64 Size = std::filesystem::file_size(FileName);
         Buffer.resize(Size, '\0');
         Stream.read(Buffer.data(), Size);
+        return true;
+    }
+
+    static bool ReadFile(const std::string& FileName, std::vector<std::string>& Lines)
+    {
+        if (!Exists(FileName))
+        {
+            LOG_ERROR("File %s not found.", FileName.c_str());
+            return false;
+        }
+        std::ifstream Stream(FileName, std::ios::in | std::ios::binary);
+        if (Stream.bad())
+        {
+            LOG_ERROR("Unable to read file %s.", FileName.c_str());
+            return false;
+        }
+        const uint64 Size = std::filesystem::file_size(FileName);
+        std::string Buffer;
+        Buffer.resize(Size, '\0');
+        Stream.read(Buffer.data(), Size);
+
+        Strings::Split(Buffer, Lines, "\n");
+        
         return true;
     }
 
@@ -86,6 +113,4 @@ namespace IO
             }
         }
     }
-
-
 }
