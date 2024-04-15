@@ -8,6 +8,7 @@
 #include "Framework/Engine/Mesh.h"
 #include "Math/MathCommon.h"
 #include "Framework/Platforms/PlatformMemory.h"
+#include "Framework/Core/Bitmask.h"
 
 enum
 {
@@ -122,8 +123,21 @@ struct PBufferObject
     }
 };
 
+enum ERenderFlags : uint8
+{
+    None = 0,
+    Wireframe = 1 << 0,
+    Shaded = 1 << 2,
+    Depth = 1 << 3,
+};
+DEFINE_BITMASK_OPERATORS(ERenderFlags);
+
+
 class PRenderer
 {
+    // Settings
+    ERenderFlags RenderFlags;
+
     // Render channels
     std::map<const char*, std::shared_ptr<PChannel>> Channels;
     std::shared_ptr<PColorChannel> ColorChannel;
@@ -145,6 +159,24 @@ public:
     uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
     PViewport* GetViewport() const { return Viewport.get(); }
 
+    /* Settings */
+
+    bool GetRenderFlag(const ERenderFlags Flag) const
+    {
+        return (RenderFlags & Flag) == Flag;
+    }
+    void SetRenderFlag(const ERenderFlags Flag, const bool bState)
+    {
+        uint8 CurrentFlag = RenderFlags;
+        bState ? CurrentFlag |= Flag : CurrentFlag &= ~Flag;
+        RenderFlags = static_cast<ERenderFlags>(CurrentFlag);
+    }
+    void ToggleRenderFlag(const ERenderFlags Flag)
+    {
+        const bool bState = GetRenderFlag(Flag); // Flip the state
+        SetRenderFlag(Flag, !bState);
+    }
+
     /* Channels */
 
     void AddChannel(EChannelType Type, const char* Name)
@@ -159,7 +191,7 @@ public:
 
     std::shared_ptr<PChannel> GetColorChannel() const { return Channels.at("Color"); }
     std::shared_ptr<PChannel> GetDepthChannel() const { return Channels.at("Depth"); }
-    
+
     /* Drawing */
 
     bool ClipLine(FVector2* A, FVector2* B) const;
@@ -167,7 +199,6 @@ public:
     void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
     void DrawLine(const FLine3d& Line, const PColor& Color) const;
     void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
-    void DrawTriangle(float* Data) const;
     void DrawMesh(const PMesh* Mesh) const;
     void DrawGrid() const;
     void Render() const;

@@ -5,12 +5,8 @@
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 
-
-#define DRAW_WIREFRAME 0
-#define DRAW_SHADED 1
-#define DEPTH_TEST 1
-
 /* Renderer */
+
 PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 {
     Viewport = std::make_shared<PViewport>(InWidth, InHeight);
@@ -18,6 +14,9 @@ PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 
     AddChannel(EChannelType::Data, "Depth");
     AddChannel(EChannelType::Color, "Color");
+
+    // Set default render flags
+    RenderFlags = ERenderFlags::Shaded | ERenderFlags::Depth;
 }
 
 void PRenderer::Resize(uint32 InWidth, uint32 InHeight) const
@@ -178,17 +177,6 @@ void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
     DrawLine(Line.A, Line.B, Color);
 }
 
-
-void PRenderer::DrawTriangle(float* Data) const
-{
-    DrawTriangle(
-        {Data[0], Data[1], Data[2]},
-        {Data[3], Data[4], Data[5]},
-        {Data[6], Data[7], Data[8]}
-    );
-}
-
-
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
 {
     // Screen points
@@ -207,107 +195,113 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
         return;
     }
 
-#if DRAW_SHADED
-    // Reverse the order to CCW if the order is CW
-    switch (Math::GetVertexOrder(S0, S1, S2))
+    if (GetRenderFlag(ERenderFlags::Shaded))
     {
-    case EWindingOrder::CW : // Triangle is back-facing, exit
-        std::swap(S0, S1);
-        break;
-    case EWindingOrder::CCW :
-        break;
-    case EWindingOrder::CL : // Triangle has zero area, exit
-        return;
-    }
-
-    // Get the current camera attributes
-    const PCamera* Camera = Viewport->GetCamera();
-    const FVector3 LookAtTranslation = Camera->TargetTranslation;
-    const FVector3 CameraTranslation = Camera->GetTranslation();
-
-    // Calculate the camera normal (direction) and the world normal of the triangle
-    const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
-    const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
-
-    // Calculate the Camera to Triangle ratio
-    const float FacingRatio = Math::Dot(WorldNormal, CameraNormal);
-
-    // If FacingRatio is below 0, the two normals are facing opposite directions, and the face
-    // is facing away from the camera.
-    if (FacingRatio < 0.0f)
-    {
-        return;
-    }
-
-    // Get the bounding box of the 2d triangle clipped to the viewport
-    FRect TriangleRect = FRect::MakeBoundingBox(S0, S1, S2);
-    const FRect ViewportRect = {0, 0, static_cast<float>(GetWidth()), static_cast<float>(GetHeight())};
-    TriangleRect.Clamp(ViewportRect);
-
-    // Loop through all pixels in the screen bounding box.
-    int32 MinX = static_cast<int32>(TriangleRect.Min().X);
-    int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
-    int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
-    int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
-
-    float Area = Math::Area(S0, S1, S2);
-    
-    for (int32 Y = MinY; Y < MaxY; Y++)
-    {
-        for (int32 X = MinX; X < MaxX; X++)
+        // Reverse the order to CCW if the order is CW
+        switch (Math::GetVertexOrder(S0, S1, S2))
         {
-            FVector3 P(static_cast<float>(X), static_cast<float>(Y), 0.0f);
+        case EWindingOrder::CW : // Triangle is back-facing, exit
+            std::swap(S0, S1);
+            break;
+        case EWindingOrder::CCW :
+            break;
+        case EWindingOrder::CL : // Triangle has zero area, exit
+            return;
+        }
 
-            // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
-            // the pixel is not within the triangle.
-            FVector3 UVW;
-            if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
+        // Get the current camera attributes
+        const PCamera* Camera = Viewport->GetCamera();
+        const FVector3 LookAtTranslation = Camera->TargetTranslation;
+        const FVector3 CameraTranslation = Camera->GetTranslation();
+
+        // Calculate the camera normal (direction) and the world normal of the triangle
+        const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
+        const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
+
+        // Calculate the Camera to Triangle ratio
+        const float FacingRatio = Math::Dot(-WorldNormal, CameraNormal);
+
+        // If FacingRatio is below 0, the two normals are facing opposite directions, and the face
+        // is facing away from the camera.
+        if (FacingRatio < 0.0f)
+        {
+            return;
+        }
+
+        // Get the bounding box of the 2d triangle clipped to the viewport
+        FRect TriangleRect = FRect::MakeBoundingBox(S0, S1, S2);
+
+        // Grow by one pixel to accomodate gaps between triangles
+        TriangleRect.Grow(1.0f);
+
+        // Clamp the triangle bounds to the viewport bounds
+        const FRect ViewportRect = {0, 0, static_cast<float>(GetWidth()), static_cast<float>(GetHeight())};
+        TriangleRect.Clamp(ViewportRect);
+
+        // Loop through all pixels in the screen bounding box.
+        int32 MinX = static_cast<int32>(TriangleRect.Min().X);
+        int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
+        int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
+        int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
+
+        float Area = Math::Area(S0, S1, S2);
+
+        for (int32 Y = MinY; Y < MaxY; Y++)
+        {
+            for (int32 X = MinX; X < MaxX; X++)
             {
-                continue;
+                FVector3 P(static_cast<float>(X), static_cast<float>(Y), 0.0f);
+
+                // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
+                // the pixel is not within the triangle.
+                FVector3 UVW;
+                if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
+                {
+                    continue;
+                }
+
+                if (GetRenderFlag(ERenderFlags::Depth))
+                {
+                    // Calculate new depth
+                    float W0 = Math::Area(S1, S2, P);
+                    float W1 = Math::Area(S2, S0, P);
+                    float W2 = Math::Area(S0, S1, P);
+
+                    if (W0 < 0.0f && W1 < 0.0f && W2 < 0.0f)
+                    {
+                        continue;
+                    }
+
+                    W0 /= Area;
+                    W1 /= Area;
+                    W2 /= Area;
+
+                    const float NewDepth = 1.0f / (W0 * S0.Z + W1 * S1.Z + W2 * S2.Z);
+
+                    // Compare the new depth to the current depth at this pixel. If the new depth is further than
+                    // the current depth, continue.
+                    const float CurrentDepth = GetDepthChannel()->GetPixel<float>(X, Y);
+                    if (NewDepth >= CurrentDepth)
+                    {
+                        continue;
+                    }
+
+                    // If the new depth is closer than the current depth, set the current depth
+                    // at this pixel to the new depth we just got.
+                    GetDepthChannel()->SetPixel(X, Y, NewDepth);
+                }
+                uint8 R = FacingRatio * 255.0f;
+                GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, R, 255));
             }
-
-#if DEPTH_TEST
-            // Calculate new depth
-            float W0 = Math::Area(S1, S2, P);
-            float W1 = Math::Area(S2, S0, P);
-            float W2 = Math::Area(S0, S1, P);
-
-            if (W0 < 0.0f && W1 < 0.0f && W2 < 0.0f)
-            {
-                continue;
-            }
-
-            W0 /= Area;
-            W1 /= Area;
-            W2 /= Area;
-            
-            const float NewDepth = 1.0f / (W0 * S0.Z + W1 * S1.Z + W2 * S2.Z);
-
-            // Compare the new depth to the current depth at this pixel. If the new depth is further than
-            // the current depth, continue.
-            const float CurrentDepth = GetDepthChannel()->GetPixel<float>(X, Y);
-            if (NewDepth >= CurrentDepth)
-            {
-                continue;
-            }
-
-            // If the new depth is closer than the current depth, set the current depth
-            // at this pixel to the new depth we just got.
-            GetDepthChannel()->SetPixel(X, Y, NewDepth);
-#else
-
-#endif // Depth test
-            uint8 R = FacingRatio * 255.0f;
-            GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, R, R));
         }
     }
-#endif // Draw shaded
 
-#if DRAW_WIREFRAME
-    DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
-    DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
-    DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
-#endif
+    if (GetRenderFlag(ERenderFlags::Wireframe))
+    {
+        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
+        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
+        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
+    }
 }
 
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
@@ -379,5 +373,5 @@ void PRenderer::ClearChannels() const
     }
 
     // Fill the depth buffer with the Max Z-depth
-    GetDepthChannel()->Fill(FLT_MAX); // Viewport->GetCamera()->MaxZ
+    GetDepthChannel()->Fill(FLT_MAX);
 }

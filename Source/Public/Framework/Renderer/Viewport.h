@@ -3,15 +3,15 @@
 #include "Framework/Engine/Object.h"
 #include "Math/MathCommon.h"
 
-#define DEFAULT_VIEWPORT_WIDTH 320
-#define DEFAULT_VIEWPORT_HEIGHT 240
+#define DEFAULT_VIEWPORT_WIDTH 656 // 640
+#define DEFAULT_VIEWPORT_HEIGHT 519 // 480
 
 #define DEFAULT_FOV 90.0f
 #define DEFAULT_MINZ 1.0f
 #define DEFAULT_MAXZ 1000.0f
 
 #define DEFAULT_ZOOM 10.0f
-#define MIN_ZOOM 5.0f
+#define MIN_ZOOM 1.0f
 #define MAX_ZOOM 30.0f
 
 #define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,(X))
