@@ -132,9 +132,6 @@ struct TQuat
         TQuat Out = Temp * QuatVector * Inverse;
         return {Out.X, Out.Y, Out.Z, Out.W};
     }
-
-    TRotator<T> Rotator();
-
     TQuat GetConjugate()
     {
         return {-X, -Y, -Z, W};
@@ -143,6 +140,13 @@ struct TQuat
     TQuat GetInverse()
     {
         return GetConjugate();
+    }
+    TVector3<T> RotateVector(TVector3<T> V)
+    {
+        const FVector3 Q(X, Y, Z);
+        const FVector3 TT = Math::Cross(Q, V) * 2.0f;
+        const FVector3 Result = V + (TT * W) + Math::Cross(Q, TT);
+        return Result;
     }
 };
 //

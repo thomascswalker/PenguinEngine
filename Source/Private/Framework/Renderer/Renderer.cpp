@@ -211,7 +211,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 
         // Get the current camera attributes
         const PCamera* Camera = Viewport->GetCamera();
-        const FVector3 LookAtTranslation = Camera->TargetTranslation;
+        const FVector3 LookAtTranslation = Camera->LookAt;
         const FVector3 CameraTranslation = Camera->GetTranslation();
 
         // Calculate the camera normal (direction) and the world normal of the triangle
@@ -250,7 +250,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
         {
             for (int32 X = MinX; X < MaxX; X++)
             {
-                FVector3 P(static_cast<float>(X), static_cast<float>(Y), 0.0f);
+                FVector3 P(static_cast<float>(X) + 1.0f, static_cast<float>(Y) + 1.0f, 0.0f);
 
                 // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
                 // the pixel is not within the triangle.

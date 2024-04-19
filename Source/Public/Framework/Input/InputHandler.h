@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <map>
+
+#include "Framework/Core/Bitmask.h"
 #include "Math/Vector.h"
 #include "Framework/Engine/Delegate.h"
 
@@ -70,16 +72,24 @@ enum class EKey : uint8
     Escape,
     Spacebar,
     Enter,
-    LeftCtrl,
-    RightCtrl,
-    LeftShift,
-    RightShift,
+    Ctrl,
+    Shift,
+    Alt,
     CapsLock,
     Backspace,
 
     // Meta
     Count
 };
+
+enum class EModifierKey : uint8
+{
+    None = 0x00,
+    Shift = 0x01,
+    Ctrl = 0x02,
+    Alt = 0x04
+};
+DEFINE_BITMASK_OPERATORS(EModifierKey)
 
 struct FKey
 {
@@ -114,6 +124,7 @@ protected:
     FVector2 DeltaCursorPosition;
 
     std::map<EKey, bool> KeyStateMap;
+    EModifierKey ModifierKeys = EModifierKey::None;
 
     IInputHandler()
     {
@@ -141,7 +152,7 @@ public:
     virtual bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
     virtual bool OnMouseUp(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
     virtual bool OnMouseWheel(float Delta) { return false; }
-    virtual bool OnMouseMove(FVector2 CursorPosition) { return false; }
+    virtual bool OnMouseMove(const FVector2& CursorPosition) { return false; }
     virtual bool IsMouseDown(EMouseButtonType ButtonType) const { return false; }
     virtual bool IsAnyMouseDown() const { return false; }
 
@@ -173,6 +184,18 @@ public:
     virtual void ConsumeKey(const EKey KeyCode)
     {
         KeyStateMap.at(KeyCode) = false;
+    }
+    virtual bool IsAltDown() const
+    {
+        return KeyStateMap.at(EKey::Alt);
+    }
+    virtual bool IsShiftDown() const
+    {
+        return KeyStateMap.at(EKey::Shift);
+    }
+    virtual bool IsCtrlDown() const
+    {
+        return KeyStateMap.at(EKey::Ctrl);
     }
 };
 
@@ -243,7 +266,7 @@ public:
         return true;
     }
 
-    bool OnMouseMove(FVector2 CursorPosition) override
+    bool OnMouseMove(const FVector2& CursorPosition) override
     {
         // Update current cursor position
         CurrentCursorPosition = CursorPosition;

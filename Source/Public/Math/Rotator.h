@@ -22,8 +22,6 @@ struct TRotator
     TRotator(const TVector3<T>& Euler);
 
     static TRotator Identity() { return TRotator(); }
-    TQuat<T> Quaternion() const;
-
     T NormalizeAxis(T Angle) const
     {
         T Remainder = Math::Mod(Angle, T(360));
@@ -55,6 +53,5 @@ struct TRotator
         return {Pitch * Scale, Yaw * Scale, Roll * Scale};
     }
 };
-
-template <>
-FQuat FRotator::Quaternion() const;
+//
+// TQuat<float> TRotator<float>::Quaternion() const;

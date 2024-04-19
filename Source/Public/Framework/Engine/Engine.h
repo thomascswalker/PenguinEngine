@@ -41,8 +41,8 @@ public:
 
     constexpr float GetFps() const { return 1000.0f / DeltaTime; }
 
-    void OnLeftMouseDown(const FVector2& CursorPosition) const;
-    void OnLeftMouseUp(const FVector2& CursorPosition) const;
+    void StoreInitialTransform(const FVector2& CursorPosition) const;
+    void StoreInitialViewDistance(const FVector2& CursorPosition) const;
     void OnMouseMiddleScrolled(float Delta) const;
     void OnKeyPressed(EKey KeyCode);
 };

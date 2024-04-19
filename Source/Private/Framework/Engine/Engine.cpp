@@ -32,8 +32,15 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     {
         Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
         Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
-        Input->MouseLeftDown.AddRaw(this, &PEngine::OnLeftMouseDown);
-        Input->MouseLeftUp.AddRaw(this, &PEngine::OnLeftMouseUp);
+
+        // Storing transforms
+        Input->MouseLeftDown.AddRaw(this, &PEngine::StoreInitialTransform);
+        Input->MouseLeftUp.AddRaw(this, &PEngine::StoreInitialTransform);
+        Input->MouseRightUp.AddRaw(this, &PEngine::StoreInitialTransform);
+
+        // Storing view distance
+        Input->MouseRightDown.AddRaw(this, &PEngine::StoreInitialViewDistance);
+        Input->MouseRightUp.AddRaw(this, &PEngine::StoreInitialViewDistance);
     }
 
     // Load all geometry into the scene
@@ -61,31 +68,26 @@ void PEngine::Tick()
     {
         // Update camera position
         PCamera* Camera = GetViewportCamera();
-        const float ScaledCameraSpeed = CameraSpeed * CameraSpeedMultiplier * DeltaTime;
+        FVector2 DeltaMouseCursor = Input->GetCurrentCursorPosition() - Input->GetClickPosition();
 
-        FVector3 DeltaTranslation;
-        if (Input->IsKeyDown(EKey::W)) { DeltaTranslation.Z = ScaledCameraSpeed; } // Forward
-        if (Input->IsKeyDown(EKey::S)) { DeltaTranslation.Z = -ScaledCameraSpeed; } // Backward
-        if (Input->IsKeyDown(EKey::D)) { DeltaTranslation.X = ScaledCameraSpeed; } // Right
-        if (Input->IsKeyDown(EKey::A)) { DeltaTranslation.X = -ScaledCameraSpeed; } // Left
-        if (Input->IsKeyDown(EKey::E)) { DeltaTranslation.Y = ScaledCameraSpeed; } // Up
-        if (Input->IsKeyDown(EKey::Q)) { DeltaTranslation.Y = -ScaledCameraSpeed; } // Down
-
-        // Move in world space
-        if (DeltaTranslation != 0.0f)
+        // Orbit
+        if (DeltaMouseCursor != 0)
         {
-            Camera->Translate(DeltaTranslation);
-        }
-
-        // Calculate rotation amount given the mouse delta
-        if (Input->IsMouseDown(EMouseButtonType::Left))
-        {
-            FVector2 DeltaMouseCursor = Input->GetCurrentCursorPosition() - Input->GetClickPosition();
-
-            // If there's actual movement on either the X or Y axis, move the camera
-            if (DeltaMouseCursor != 0)
+            if (Input->IsMouseDown(EMouseButtonType::Left) && Input->IsAltDown())
             {
                 Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y); // Swap X and Y
+            }
+
+            // Pan
+            if (Input->IsMouseDown(EMouseButtonType::Middle) && Input->IsAltDown())
+            {
+                Camera->Pan(DeltaMouseCursor.X, DeltaMouseCursor.Y);
+            }
+
+            // Zoom
+            if (Input->IsMouseDown(EMouseButtonType::Right) && Input->IsAltDown())
+            {
+                Camera->Zoom(DeltaMouseCursor.Y);
             }
         }
     }
@@ -140,18 +142,18 @@ void PEngine::OnKeyPressed(EKey KeyCode)
     }
 }
 
-void PEngine::OnLeftMouseDown(const FVector2& CursorPosition) const
+void PEngine::StoreInitialTransform(const FVector2& CursorPosition) const
 {
     // Store the original transform when a click begins
     PCamera* Camera = GetViewportCamera();
-    Camera->OriginalTransform = Camera->GetTransform();
+    Camera->InitialTransform = Camera->GetTransform();
 }
 
-void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
+void PEngine::StoreInitialViewDistance(const FVector2& CursorPosition) const
 {
     // Store the original transform when a click begins
     PCamera* Camera = GetViewportCamera();
-    Camera->OriginalTransform = Camera->GetTransform();
+    Camera->InitialViewDistance = Math::Distance(Camera->GetTranslation(), Camera->LookAt);
 }
 
 void PEngine::OnMouseMiddleScrolled(float Delta) const

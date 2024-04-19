@@ -73,27 +73,6 @@ TRotator<T>::TRotator(const TVector3<T>& Euler)
     Roll = Euler.X;
 }
 
-// Rotator to Quaternion
-template <typename T>
-TQuat<T> TRotator<T>::Quaternion() const
-{
-    return TQuat<T>(T(Pitch), T(Yaw), T(Roll));
-}
-
-
-// Quat
-// Quaternion to Rotator
-template <typename T>
-TRotator<T> TQuat<T>::Rotator()
-{
-    T Roll = Math::ATan2(2.0f * Y * W - 2.0f * X * Z, 1.0f - 2.0f * Y * Y - 2.0f * Z * Z);
-    T Pitch = Math::ATan2(2.0f * X * W - 2.0f * Y * Z, 1.0f - 2.0f * X * X - 2.0f * Z * Z);
-    T Yaw = Math::ASin(2.0f * X * Y + 2.0f * Z * W);
-
-    TRotator Result(Pitch, Yaw, Roll);
-    return Result;
-}
-
 // Instantiate for the linker
 template struct TRotator<float>;
 template struct TRotator<double>;
