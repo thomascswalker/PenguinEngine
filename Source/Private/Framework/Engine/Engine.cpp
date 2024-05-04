@@ -36,6 +36,8 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
         // Storing transforms
         Input->MouseLeftDown.AddRaw(this, &PEngine::StoreInitialTransform);
         Input->MouseLeftUp.AddRaw(this, &PEngine::StoreInitialTransform);
+        Input->MouseMiddleDown.AddRaw(this, &PEngine::StoreInitialTransform);
+        Input->MouseMiddleUp.AddRaw(this, &PEngine::StoreInitialTransform);
         Input->MouseRightUp.AddRaw(this, &PEngine::StoreInitialTransform);
 
         // Storing view distance
@@ -147,6 +149,7 @@ void PEngine::StoreInitialTransform(const FVector2& CursorPosition) const
     // Store the original transform when a click begins
     PCamera* Camera = GetViewportCamera();
     Camera->InitialTransform = Camera->GetTransform();
+    Camera->InitialLookAt = Camera->LookAt;
 }
 
 void PEngine::StoreInitialViewDistance(const FVector2& CursorPosition) const
@@ -154,6 +157,7 @@ void PEngine::StoreInitialViewDistance(const FVector2& CursorPosition) const
     // Store the original transform when a click begins
     PCamera* Camera = GetViewportCamera();
     Camera->InitialViewDistance = Math::Distance(Camera->GetTranslation(), Camera->LookAt);
+    Camera->InitialLookAt = Camera->LookAt;
 }
 
 void PEngine::OnMouseMiddleScrolled(float Delta) const

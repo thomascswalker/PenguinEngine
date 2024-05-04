@@ -33,6 +33,7 @@ public:
 
 
     FVector3 LookAt = FVector3::ZeroVector(); // Origin
+    FVector3 InitialLookAt = LookAt;
     FTransform InitialTransform;
     float InitialViewDistance;
     
@@ -53,6 +54,7 @@ public:
     void Pan(float DX, float DY);
     void Zoom(float Value);
     void SetFov(float NewFov);
+    void SetLookAt(const FVector3& NewLookAt) { LookAt = NewLookAt; }
 };
 
 class PViewport
@@ -78,6 +80,7 @@ public:
     void UpdateViewProjectionMatrix();
     FMatrix* GetViewProjectionMatrix() { return &MVP; }
     bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const;
+    bool ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth, FVector3& WorldPosition);
 
     void FormatDebugText();
     std::string GetDebugText() const { return DebugText; }

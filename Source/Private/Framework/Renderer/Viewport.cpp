@@ -50,9 +50,23 @@ void PCamera::Orbit(const float DX, const float DY)
 
 void PCamera::Pan(float DX, float DY)
 {
-    FVector3 ViewTranslation = Transform.Translation;
-    FVector3 ViewDirection = (ViewTranslation - LookAt).Normalized();
-    float ViewDistance = Math::Distance(ViewTranslation, LookAt);
+    const float PanSpeed = 0.2f;
+    // Find out which way is forward
+    FVector3 ViewTranslation = InitialTransform.Translation;
+    const FRotator ViewRotation = InitialTransform.Rotation;
+    const FRotator RollRotation(0, 0, ViewRotation.Roll);
+
+    // Get right vector
+    const FVector3 RightDirection = FRotationMatrix(RollRotation).GetAxisNormalized(EAxis::Z);
+    FVector3 RightOffset = RightDirection * DX * PanSpeed;
+
+    // Get up vector
+    const FVector3 UpDirection = FRotationMatrix(RollRotation).GetAxisNormalized(EAxis::Y);
+    FVector3 UpOffset = UpDirection * DY * PanSpeed;
+
+    FVector3 Offset = RightOffset + UpOffset;
+    SetTranslation(ViewTranslation + Offset);
+    SetLookAt(InitialLookAt + Offset);
 }
 
 void PCamera::Zoom(float Value)
@@ -92,6 +106,7 @@ void PViewport::ResetView()
 {
     Camera->SetTranslation(DEFAULT_CAMERA_TRANSLATION);
     Camera->SetRotation(FRotator());
+    Camera->InitialLookAt = FVector3::ZeroVector();
     UpdateViewProjectionMatrix();
 }
 
@@ -135,6 +150,24 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& Sc
     }
 
     return false;
+}
+
+bool PViewport::ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth, FVector3& WorldPosition)
+{
+    FMatrix InvMatrix = MVP.GetInverse();
+    int32 PixelX = Math::Truncate(ScreenPosition.X);
+    int32 PixelY = Math::Truncate(ScreenPosition.Y);
+    
+    const float NormalizedX = (float)PixelX / (float)GetWidth();
+    const float NormalizedY = (float)PixelY / (float)GetHeight();
+
+    const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
+    const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
+
+    const FVector4 RayStartProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
+    const FVector4 RayEndProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
+    
+    return true;
 }
 
 void PViewport::FormatDebugText()
