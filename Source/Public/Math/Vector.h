@@ -493,9 +493,10 @@ namespace Math
     template <typename T>
     static T Distance(const TVector3<T> V0, const TVector3<T>& V1)
     {
-        T A = Math::Pow(V1.X - V0.X, 2.0f);
-        T B = Math::Pow(V1.Y - V0.Y, 2.0f);
-        return Math::Sqrt(A + B);
+        T A = Math::Square(V1.X - V0.X);
+        T B = Math::Square(V1.Y - V0.Y);
+        T C = Math::Square(V1.Z - V0.Z);
+        return Math::Sqrt(A + B + C);
     }
 
     template <typename T>

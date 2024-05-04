@@ -318,6 +318,11 @@ struct TMatrix
         return TVector3<T>::ZeroVector();
     }
 
+    TVector3<T> GetAxisNormalized(const EAxis InAxis) const
+    {
+        return GetAxis(InAxis).Normalized();
+    }
+
     TRotator<T> GetRotator() const
     {
         const TVector3 XAxis = GetAxis(EAxis::X);

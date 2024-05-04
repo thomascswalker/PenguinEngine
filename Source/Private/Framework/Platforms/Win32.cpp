@@ -40,8 +40,10 @@ std::map<int32, EKey> Win32KeyMap
     {'Z', EKey::Z},
     {VK_ESCAPE, EKey::Escape},
     {VK_SPACE, EKey::Spacebar},
-    {VK_SHIFT, EKey::LeftShift},
+    {VK_SHIFT, EKey::Shift},
     {VK_DELETE, EKey::Backspace},
+    {VK_CONTROL, EKey::Ctrl},
+    {VK_MENU, EKey::Alt},
     {VK_F1, EKey::F1},
     {VK_F2, EKey::F2},
     {VK_F3, EKey::F3},
@@ -141,12 +143,14 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             return 0;
         }
     // Keyboard input
+    case WM_SYSKEYDOWN :
     case WM_KEYDOWN :
         {
             const int32 Char = static_cast<int32>(wParam);
             InputHandler->OnKeyDown(Win32KeyMap.at(Char), 0, false);
             return 0;
         }
+    case WM_SYSKEYUP :
     case WM_KEYUP :
         {
             const int32 Char = static_cast<int32>(wParam);
@@ -162,11 +166,14 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             }
 
             // Draw mouse cursor line from click origin
-            FVector3 A = InputHandler->GetClickPosition();
-            if (A.X != 0.0f && A.Y != 0.0f)
+            if (InputHandler->IsMouseDown(EMouseButtonType::Left) && InputHandler->IsAltDown())
             {
-                FVector3 B = InputHandler->GetCurrentCursorPosition();
-                Renderer->DrawLine(A, B, PColor::Red());
+                FVector3 A = InputHandler->GetClickPosition();
+                if (A.X != 0.0f && A.Y != 0.0f)
+                {
+                    FVector3 B = InputHandler->GetCurrentCursorPosition();
+                    Renderer->DrawLine(A, B, PColor::Red());
+                }
             }
 
             // Get the current window size from the buffer

@@ -61,4 +61,37 @@ namespace Math
         // Rotate the vector with the quaternion and return the result
         return Rotate(V, Q);
     }
+
+    // Rotator to Quaternion
+    template <typename T>
+    TQuat<T> ToQuat(TRotator<T> R)
+    {
+        return TQuat<T>(T(R.Pitch), T(R.Yaw), T(R.Roll));
+    }
+
+    // Quaternion to Rotator
+    template <typename T>
+    TRotator<T> ToRot(TQuat<T> Q)
+    {
+        T Roll = Math::ATan2(2.0f * Q.Y * Q.W - 2.0f * Q.X * Q.Z, 1.0f - 2.0f * Q.Y * Q.Y - 2.0f * Q.Z * Q.Z);
+        T Pitch = Math::ATan2(2.0f * Q.X * Q.W - 2.0f * Q.Y * Q.Z, 1.0f - 2.0f * Q.X * Q.X - 2.0f * Q.Z * Q.Z);
+        T Yaw = Math::ASin(2.0f * Q.X * Q.Y + 2.0f * Q.Z * Q.W);
+
+        TRotator Result(Pitch, Yaw, Roll);
+        return Result;
+    }
+
+    /*
+     * Transform the specified TVector4 by the specified TMatrix.
+     */
+    template <typename T>
+    TVector4<T> VectorTransformMatrix(const TVector4<T>& V, const TMatrix<T>& M)
+    {
+        return FVector4{
+            (V.X * M.M[0][0]) + (V.Y * M.M[1][0]) + (V.Z * M.M[2][0]) + (V.W * M.M[3][0]),
+            (V.X * M.M[0][1]) + (V.Y * M.M[1][1]) + (V.Z * M.M[2][1]) + (V.W * M.M[3][1]),
+            (V.X * M.M[0][2]) + (V.Y * M.M[1][2]) + (V.Z * M.M[2][2]) + (V.W * M.M[3][2]),
+            (V.X * M.M[0][3]) + (V.Y * M.M[1][3]) + (V.Z * M.M[2][3]) + (V.W * M.M[3][3])
+        };
+    }
 }

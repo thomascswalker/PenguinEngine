@@ -240,4 +240,9 @@ namespace Math
     {
         return (((Value - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin;
     }
+
+    constexpr int32 Truncate(float Value)
+    {
+        return static_cast<int32>(Value);
+    }
 };

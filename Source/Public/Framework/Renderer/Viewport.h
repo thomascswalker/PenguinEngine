@@ -10,11 +10,8 @@
 #define DEFAULT_MINZ 1.0f
 #define DEFAULT_MAXZ 1000.0f
 
-#define DEFAULT_ZOOM 10.0f
-#define MIN_ZOOM 1.0f
-#define MAX_ZOOM 30.0f
-
-#define DEFAULT_CAMERA_TRANSLATION(X) FVector3(0,0,(X))
+#define DEFAULT_MIN_ZOOM 10.0f
+#define DEFAULT_CAMERA_TRANSLATION FVector3(-DEFAULT_MIN_ZOOM, -DEFAULT_MIN_ZOOM / 2.0f, -DEFAULT_MIN_ZOOM)
 
 enum EViewportType
 {
@@ -31,15 +28,14 @@ public:
     float Fov = DEFAULT_FOV;
     float MinZ = 1.0f;
     float MaxZ = 10.0f;
-    float Zoom = DEFAULT_ZOOM;
-    float MinZoom = MIN_ZOOM;
-    float MaxZoom = MAX_ZOOM;
     float MinFov = 20.0f;
     float MaxFov = 120.0f;
 
-    FVector3 TargetTranslation = FVector3::ZeroVector(); // Origin
 
-    FTransform OriginalTransform;
+    FVector3 LookAt = FVector3::ZeroVector(); // Origin
+    FVector3 InitialLookAt = LookAt;
+    FTransform InitialTransform;
+    float InitialViewDistance;
     
     FMatrix ProjectionMatrix;
     FMatrix ViewMatrix;
@@ -50,19 +46,15 @@ public:
     }
     void Init()
     {
-        SetTranslation(DEFAULT_CAMERA_TRANSLATION(Zoom));
+        SetTranslation(DEFAULT_CAMERA_TRANSLATION);
     }
     constexpr float GetAspect() const { return static_cast<float>(Width) / static_cast<float>(Height); }
     FMatrix ComputeViewProjectionMatrix();
     void Orbit(float DX, float DY);
-    void SetFov(float NewFov)
-    {
-        Fov = Math::Clamp(NewFov, MinFov, MaxFov);
-    }
-    void SetZoom(float NewZoom)
-    {
-        Zoom = Math::Clamp(NewZoom, MinZoom, MaxZoom);
-    }
+    void Pan(float DX, float DY);
+    void Zoom(float Value);
+    void SetFov(float NewFov);
+    void SetLookAt(const FVector3& NewLookAt) { LookAt = NewLookAt; }
 };
 
 class PViewport
@@ -88,6 +80,7 @@ public:
     void UpdateViewProjectionMatrix();
     FMatrix* GetViewProjectionMatrix() { return &MVP; }
     bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const;
+    bool ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth, FVector3& WorldPosition);
 
     void FormatDebugText();
     std::string GetDebugText() const { return DebugText; }
