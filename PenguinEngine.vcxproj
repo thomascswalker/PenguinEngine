@@ -99,7 +99,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\include\glm\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\Include\glm\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -117,7 +117,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\include\glm\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\Include\glm\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -137,7 +137,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\include\glm\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\Include\glm\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -159,7 +159,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\include\glm\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Public\;$(SolutionDir)\Include\glm\</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -179,6 +179,7 @@
     <ClCompile Include="Source\Private\Framework\Input\InputHandler.cpp" />
     <ClCompile Include="Source\Private\Framework\Platforms\PlatformInterface.cpp" />
     <ClCompile Include="Source\Private\Framework\Platforms\Win32.cpp" />
+    <ClCompile Include="Source\Private\Framework\Renderer\Camera.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Renderer.cpp" />
     <ClCompile Include="Source\Private\Framework\Renderer\Viewport.cpp" />
   </ItemGroup>
@@ -202,7 +203,10 @@
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformInterface.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\PlatformMemory.h" />
     <ClInclude Include="Source\Public\Framework\Platforms\Win32Platform.h" />
+    <ClInclude Include="Source\Public\Framework\Renderer\Camera.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Grid.h" />
+    <ClInclude Include="Source\Public\Framework\Renderer\Settings.h" />
+    <ClInclude Include="Source\Public\Framework\Renderer\Shader.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Viewport.h" />
     <ClInclude Include="Source\Public\Framework\Renderer\Renderer.h" />
     <ClInclude Include="Source\Public\Math\Math.h" />
@@ -218,8 +222,9 @@
     <ClInclude Include="Source\Public\Math\Vector.h" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Examples\Bunny.obj" />
     <Content Include="Examples\Cow.obj" />
-    <Content Include="Examples\Cube.obj" />
+    <Content Include="Examples\Penguin.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -172,7 +172,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 if (A.X != 0.0f && A.Y != 0.0f)
                 {
                     FVector3 B = InputHandler->GetCurrentCursorPosition();
-                    Renderer->DrawLine(A, B, PColor::Red());
+                    Renderer->DrawLine(A, B, FColor::Red());
                 }
             }
 
@@ -236,13 +236,20 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
 
             // Update the renderer size
             Renderer->Resize(Width, Height);
+            BitmapInfo.bmiHeader.biWidth = static_cast<int32>(Engine->GetRenderer()->GetWidth());
+            BitmapInfo.bmiHeader.biHeight = -(static_cast<int32>(Engine->GetRenderer()->GetHeight()));
+
+            const HDC DeviceContext = GetDC(Hwnd);
+            const HDC MemoryContext = CreateCompatibleDC(DeviceContext);
+            PPlatformMemory::Realloc(DisplayBuffer, Width * Height * BYTES_PER_PIXEL * 4);
+            DisplayBitmap = CreateDIBSection(MemoryContext, &BitmapInfo, DIB_RGB_COLORS, (void**)DisplayBuffer, nullptr, 0);
+
             break;
         }
     case WM_EXITSIZEMOVE :
     case WM_ERASEBKGND :
         {
-            InvalidateRect(Hwnd, nullptr, TRUE);
-            break;
+            return 1;
         }
     // Timer called every ms to update
     case WM_TIMER :
@@ -337,13 +344,28 @@ uint32 PWin32Platform::Start()
         return PlatformStartError; // Start failure
     }
 
-    // Start the actual engine
+    // Construct the engine
     PEngine* Engine = PEngine::GetInstance();
 
     // Initialize the engine
     RECT ClientRect;
     GetClientRect(Hwnd, &ClientRect);
     Engine->Startup(ClientRect.right, ClientRect.bottom);
+
+    // Initialize Win32 members
+    const HDC DeviceContext = GetDC(Hwnd);
+    const HDC MemoryContext = CreateCompatibleDC(DeviceContext);
+
+    BitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    BitmapInfo.bmiHeader.biWidth = static_cast<int32>(Engine->GetRenderer()->GetWidth());
+    BitmapInfo.bmiHeader.biHeight = -(static_cast<int32>(Engine->GetRenderer()->GetHeight()));
+    BitmapInfo.bmiHeader.biPlanes = 1;
+    BitmapInfo.bmiHeader.biBitCount = 32;
+    BitmapInfo.bmiHeader.biCompression = BI_RGB;
+
+    PRenderer* Renderer = Engine->GetRenderer();
+    DisplayBitmap = CreateDIBSection(MemoryContext, &BitmapInfo, DIB_RGB_COLORS, (void**)DisplayBuffer, nullptr, 0);
+    PPlatformMemory::Realloc(DisplayBuffer, DefaultWidth * DefaultHeight * BYTES_PER_PIXEL * 4);
 
     // Process all messages and update the window
     LOG_DEBUG("Engine loop start")
@@ -372,11 +394,15 @@ uint32 PWin32Platform::Loop()
     {
         Engine->Tick();
 
-        // Render the frame
-        if (const PRenderer* Renderer = Engine->GetRenderer())
+        // Draw the frame
+        if (PRenderer* Renderer = Engine->GetRenderer())
         {
-            // Render the actual frame
-            Renderer->Render();
+            // Draw the actual frame
+            Renderer->Draw();
+            if (DisplayBuffer)
+            {
+                Swap();
+            }
 
             // Return
             return Success;
@@ -393,6 +419,19 @@ uint32 PWin32Platform::Paint()
 uint32 PWin32Platform::End()
 {
     return Success;
+}
+
+uint32 PWin32Platform::Swap()
+{
+    PEngine* Engine = PEngine::GetInstance();
+    PRenderer* Renderer = Engine->GetRenderer();
+
+    // Copy from the color channel into the display buffer
+    void* Src = Renderer->GetColorChannel()->Memory;
+    void* Dst = DisplayBuffer;
+    size_t Size = Renderer->GetColorChannel()->GetMemorySize();
+    memcpy(Dst, Src, Size);
+    return 0;
 }
 
 FRect PWin32Platform::GetSize()

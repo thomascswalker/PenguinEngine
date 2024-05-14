@@ -22,6 +22,7 @@ public:
     virtual uint32 Loop() = 0;
     virtual uint32 Paint() = 0;
     virtual uint32 End() = 0;
+    virtual uint32 Swap() = 0;
     virtual bool IsInitialized() const = 0;
 
     // Properties

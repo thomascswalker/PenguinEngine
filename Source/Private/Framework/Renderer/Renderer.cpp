@@ -4,6 +4,7 @@
 
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
+#include "Framework/Renderer/Shader.h"
 
 /* Renderer */
 
@@ -16,7 +17,7 @@ PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
     AddChannel(EChannelType::Color, "Color");
 
     // Set default render flags
-    RenderFlags = ERenderFlags::Shaded | ERenderFlags::Depth;
+    Settings = Renderer::PRenderSettings();
 }
 
 void PRenderer::Resize(uint32 InWidth, uint32 InHeight) const
@@ -107,7 +108,7 @@ bool PRenderer::ClipLine(FLine* Line) const
     return ClipLine(&Line->A, &Line->B);
 }
 
-void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const
+void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const FColor& Color) const
 {
     FVector2 A(InA.X, InA.Y); // NOLINT
     FVector2 B(InB.X, InB.Y); // NOLINT
@@ -172,140 +173,37 @@ void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const PColor&
     }
 }
 
-void PRenderer::DrawLine(const FLine3d& Line, const PColor& Color) const
+void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
 {
     DrawLine(Line.A, Line.B, Color);
 }
 
-void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const
+void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2)
 {
-    // Screen points
-    FVector3 S0, S1, S2;
-
-    // Project the world-space points to screen-space
-    bool bTriangleOnScreen = false;
-    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V0, S0);
-    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V1, S1);
-    bTriangleOnScreen |= Viewport->ProjectWorldToScreen(V2, S2);
-
-    // If none of the points are on the screen, the triangle is not in the frame, so exit
-    // drawing this triangle
-    if (!bTriangleOnScreen)
+    auto Camera = Viewport->GetCamera();
+    const FVector3 CameraNormal = (Camera->LookAt - Camera->GetTranslation()).Normalized();
+    CurrentShader = new DefaultShader();
+    CurrentShader->Init(
+        Camera->ViewProjectionMatrix,
+        V0, V1, V2,
+        CameraNormal,
+        Camera->GetTranslation(),
+        Camera->Width, Camera->Height
+    );
+    
+    if (!CurrentShader->ComputeVertexShader())
     {
         return;
     }
 
-    if (GetRenderFlag(ERenderFlags::Shaded))
+    if (Settings.GetRenderFlag(ERenderFlags::Shaded))
     {
-        // Reverse the order to CCW if the order is CW
-        switch (Math::GetVertexOrder(S0, S1, S2))
-        {
-        case EWindingOrder::CW : // Triangle is back-facing, exit
-            std::swap(S0, S1);
-            break;
-        case EWindingOrder::CCW :
-            break;
-        case EWindingOrder::CL : // Triangle has zero area, exit
-            return;
-        }
-
-        // Get the current camera attributes
-        const PCamera* Camera = Viewport->GetCamera();
-        const FVector3 LookAtTranslation = Camera->LookAt;
-        const FVector3 CameraTranslation = Camera->GetTranslation();
-
-        // Calculate the camera normal (direction) and the world normal of the triangle
-        const FVector3 CameraNormal = (LookAtTranslation - CameraTranslation).Normalized();
-        const FVector3 WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
-
-        // Calculate the Camera to Triangle ratio
-        const float FacingRatio = Math::Dot(-WorldNormal, CameraNormal);
-
-        // If FacingRatio is below 0, the two normals are facing opposite directions, and the face
-        // is facing away from the camera.
-        if (FacingRatio < 0.0f)
-        {
-            return;
-        }
-
-        // Get the bounding box of the 2d triangle clipped to the viewport
-        FRect TriangleRect = FRect::MakeBoundingBox(S0, S1, S2);
-
-        // Grow by one pixel to accomodate gaps between triangles
-        TriangleRect.Grow(1.0f);
-
-        // Clamp the triangle bounds to the viewport bounds
-        const FRect ViewportRect = {0, 0, static_cast<float>(GetWidth()), static_cast<float>(GetHeight())};
-        TriangleRect.Clamp(ViewportRect);
-
-        // Loop through all pixels in the screen bounding box.
-        int32 MinX = static_cast<int32>(TriangleRect.Min().X);
-        int32 MinY = static_cast<int32>(TriangleRect.Min().Y);
-        int32 MaxX = static_cast<int32>(TriangleRect.Max().X);
-        int32 MaxY = static_cast<int32>(TriangleRect.Max().Y);
-
-        float Area = Math::Area(S0, S1, S2);
-
-        for (int32 Y = MinY; Y < MaxY; Y++)
-        {
-            for (int32 X = MinX; X < MaxX; X++)
-            {
-                FVector3 P(static_cast<float>(X) + 1.0f, static_cast<float>(Y) + 1.0f, 0.0f);
-
-                // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
-                // the pixel is not within the triangle.
-                FVector3 UVW;
-                if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
-                {
-                    continue;
-                }
-
-                if (GetRenderFlag(ERenderFlags::Depth))
-                {
-                    // Calculate new depth
-                    float W0 = Math::Area(S1, S2, P);
-                    float W1 = Math::Area(S2, S0, P);
-                    float W2 = Math::Area(S0, S1, P);
-
-                    if (W0 < 0.0f && W1 < 0.0f && W2 < 0.0f)
-                    {
-                        continue;
-                    }
-
-                    W0 /= Area;
-                    W1 /= Area;
-                    W2 /= Area;
-
-                    const float NewDepth = 1.0f / (W0 * S0.Z + W1 * S1.Z + W2 * S2.Z);
-
-                    // Compare the new depth to the current depth at this pixel. If the new depth is further than
-                    // the current depth, continue.
-                    const float CurrentDepth = GetDepthChannel()->GetPixel<float>(X, Y);
-                    if (NewDepth >= CurrentDepth)
-                    {
-                        continue;
-                    }
-
-                    // If the new depth is closer than the current depth, set the current depth
-                    // at this pixel to the new depth we just got.
-                    GetDepthChannel()->SetPixel(X, Y, NewDepth);
-                }
-                uint8 R = FacingRatio * 255.0f;
-                GetColorChannel()->SetPixel(X, Y, PColor::FromRgba(R, R, 255));
-            }
-        }
-    }
-
-    if (GetRenderFlag(ERenderFlags::Wireframe))
-    {
-        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
-        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
-        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
+        ScanlineFast();
     }
 }
 
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
-void PRenderer::DrawMesh(const PMesh* Mesh) const
+void PRenderer::DrawMesh(const PMesh* Mesh)
 {
     for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
     {
@@ -318,8 +216,6 @@ void PRenderer::DrawMesh(const PMesh* Mesh) const
         DrawTriangle(Mesh->Positions[Index0], Mesh->Positions[Index1], Mesh->Positions[Index2]);
     }
 }
-
-
 void PRenderer::DrawGrid() const
 {
     for (const FLine3d& Line : Grid->Lines)
@@ -340,10 +236,10 @@ void PRenderer::DrawGrid() const
     }
 }
 
-void PRenderer::Render() const
+void PRenderer::Draw()
 {
     // Recalculate the view-projection matrix of the camera
-    Viewport->UpdateViewProjectionMatrix();
+    Viewport->GetCamera()->ComputeViewProjectionMatrix();
 
     // Reset all buffers to their default values (namely Z to Inf)
     ClearChannels();
@@ -358,20 +254,129 @@ void PRenderer::Render() const
         DrawMesh(Mesh.get());
     }
 }
-
-void PRenderer::ClearChannels() const
+void PRenderer::Scanline()
 {
-    // Set all channels to 0
-    for (const auto& [Key, Channel] : Channels)
+    auto S0 = CurrentShader->S0;
+    auto S1 = CurrentShader->S1;
+    auto S2 = CurrentShader->S2;
+    auto Bounds = CurrentShader->ScreenBounds;
+    
+    // Loop through all pixels in the screen bounding box.
+    int32 MinX = static_cast<int32>(Bounds.Min().X);
+    int32 MinY = static_cast<int32>(Bounds.Min().Y);
+    int32 MaxX = static_cast<int32>(Bounds.Max().X);
+    int32 MaxY = static_cast<int32>(Bounds.Max().Y);
+
+    for (int32 Y = MinY; Y <= MaxY; Y++)
     {
-        // Ignore the depth channel, we'll handle that later
-        if (Key == "Depth") // NOLINT
+        for (int32 X = MinX; X <= MaxX; X++)
         {
-            continue;
+            FVector3 P(
+                static_cast<float>(X) + 0.5f,
+                static_cast<float>(Y) + 0.5f,
+                0.0f
+            );
+
+            // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
+            // the pixel is not within the triangle.
+            FVector3 UVW;
+            if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
+            {
+                continue;
+            }
+            
+            if (Settings.GetRenderFlag(ERenderFlags::Depth))
+            {
+                const float NewDepth = UVW.Z;
+
+                // Compare the new depth to the current depth at this pixel. If the new depth is further than
+                // the current depth, continue.
+                const float CurrentDepth = GetDepthChannel()->GetPixel<float>(X, Y);
+                if (NewDepth >= CurrentDepth)
+                {
+                    continue;
+                }
+
+                // If the new depth is closer than the current depth, set the current depth
+                // at this pixel to the new depth we just got.
+                GetDepthChannel()->SetPixel(X, Y, NewDepth);
+            }
+            CurrentShader->ComputePixelShader();
+            GetColorChannel()->SetPixel(X, Y, CurrentShader->OutColor);
         }
-        Channel->Clear();
+    }
+}
+
+// https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
+void PRenderer::ScanlineFast()
+{
+    auto V0 = CurrentShader->S0;
+    auto V1 = CurrentShader->S1;
+    auto V2 = CurrentShader->S2;
+    auto Bounds = CurrentShader->ScreenBounds;
+    
+    int32 A01 = V0.Y - V1.Y;
+    int32 A12 = V1.Y - V2.Y;
+    int32 A20 = V2.Y - V0.Y;
+    int32 B01 = V1.X - V0.X;
+    int32 B12 = V2.X - V1.X;
+    int32 B20 = V0.X - V2.X;
+
+    IVector3 Point = FVector3(Bounds.Min().X, Bounds.Min().Y, 0).ToType<int32>();
+    int32 C0 = Math::Orient2D(V1.ToType<int32>(), V2.ToType<int32>(), Point);
+    int32 C1 = Math::Orient2D(V2.ToType<int32>(), V0.ToType<int32>(), Point);
+    int32 C2 = Math::Orient2D(V0.ToType<int32>(), V1.ToType<int32>(), Point);
+
+    int32 MinX = static_cast<int32>(Bounds.Min().X);
+    int32 MinY = static_cast<int32>(Bounds.Min().Y);
+    int32 MaxX = static_cast<int32>(Bounds.Max().X);
+    int32 MaxY = static_cast<int32>(Bounds.Max().Y);
+    
+    for (Point.Y = MinY; Point.Y <= MaxY; Point.Y++)
+    {
+        int32 W0 = C0;
+        int32 W1 = C1;
+        int32 W2 = C2;
+
+        for (Point.X = MinX; Point.X <= MaxX; Point.X++)
+        {
+            if (W0 >= 0 && W1 >= 0 && W2 >= 0)
+            {
+                // Inside triangle
+                if (Settings.GetRenderFlag(ERenderFlags::Depth))
+                {
+                    const float NewDepth = V0.Z;
+
+                    // Compare the new depth to the current depth at this pixel. If the new depth is further than
+                    // the current depth, continue.
+                    const float CurrentDepth = GetDepthChannel()->GetPixel<float>(Point.X, Point.Y);
+                    if (NewDepth >= CurrentDepth)
+                    {
+                        continue;
+                    }
+
+                    // If the new depth is closer than the current depth, set the current depth
+                    // at this pixel to the new depth we just got.
+                    GetDepthChannel()->SetPixel(Point.X, Point.Y, NewDepth);
+                }
+                CurrentShader->ComputePixelShader();
+                GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
+            }
+
+            W0 += A12;
+            W1 += A20;
+            W2 += A01;
+        }
+
+        C0 += B12;
+        C1 += B20;
+        C2 += B01;
     }
 
-    // Fill the depth buffer with the Max Z-depth
-    GetDepthChannel()->Fill(FLT_MAX);
+    if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
+    {
+        DrawLine({V0.X, V0.Y}, {V1.X, V1.Y}, WireColor);
+        DrawLine({V1.X, V1.Y}, {V2.X, V2.Y}, WireColor);
+        DrawLine({V2.X, V2.Y}, {V0.X, V0.Y}, WireColor);
+    }
 }

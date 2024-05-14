@@ -13,9 +13,9 @@ struct TTransform
 
     TTransform()
     {
-        Rotation = TRotator<T>();
-        Translation = TVector3<T>();
-        Scale = TVector3<T>();
+        Rotation = TRotator<T>(0,0,0);
+        Translation = TVector3<T>(0);
+        Scale = TVector3<T>(1);
     }
     explicit TTransform(const TVector3<T>& InTranslation)
     {

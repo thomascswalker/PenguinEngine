@@ -121,6 +121,7 @@ protected:
 
     FVector2 ClickPosition;
     FVector2 CurrentCursorPosition;
+    FVector2 PreviousCursorPosition;
     FVector2 DeltaCursorPosition;
 
     std::map<EKey, bool> KeyStateMap;
@@ -158,6 +159,7 @@ public:
 
     virtual FVector2 GetClickPosition() const { return ClickPosition; }
     virtual FVector2 GetCurrentCursorPosition() const { return CurrentCursorPosition; }
+    virtual FVector2 GetPreviousCursorPosition() const { return PreviousCursorPosition; }
     virtual FVector2 GetDeltaCursorPosition() const { return DeltaCursorPosition; }
     virtual void ResetDeltaCursorPosition()
     {
@@ -269,14 +271,14 @@ public:
     bool OnMouseMove(const FVector2& CursorPosition) override
     {
         // Update current cursor position
+        PreviousCursorPosition = CurrentCursorPosition;
         CurrentCursorPosition = CursorPosition;
         MouseMoved.Broadcast(CurrentCursorPosition);
 
         // Update delta cursor position if any of the mouse buttons are down
-        if (IsAnyMouseDown())
+        if (IsAnyMouseDown() && CurrentCursorPosition != PreviousCursorPosition)
         {
-            DeltaCursorPosition.X = CursorPosition.X - ClickPosition.X;
-            DeltaCursorPosition.Y = CursorPosition.Y - ClickPosition.Y;
+            DeltaCursorPosition = CurrentCursorPosition - PreviousCursorPosition;
         }
         // If no mouse buttons are down, zero the delta cursor position
         else

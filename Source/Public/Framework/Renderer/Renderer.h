@@ -1,14 +1,15 @@
 ﻿#pragma once
 
-#include <memory>
 #include <map>
+#include <memory>
 
 #include "Grid.h"
+#include "Settings.h"
+#include "Shader.h"
 #include "Viewport.h"
 #include "Framework/Engine/Mesh.h"
-#include "Math/MathCommon.h"
 #include "Framework/Platforms/PlatformMemory.h"
-#include "Framework/Core/Bitmask.h"
+#include "Math/MathCommon.h"
 
 enum
 {
@@ -57,7 +58,7 @@ struct PChannel
         *Ptr = Value;
     }
 
-    void SetPixel(uint32 X, uint32 Y, const PColor& Color) const
+    void SetPixel(uint32 X, uint32 Y, const FColor& Color) const
     {
         assert(Type == EChannelType::Color);
         if (X < 0 || X >= Width || Y < 0 || Y >= Height)
@@ -123,25 +124,10 @@ struct PBufferObject
     }
 };
 
-enum ERenderFlags : uint8
-{
-    None = 0,
-    Wireframe = 1 << 0,
-    Shaded = 1 << 2,
-    Depth = 1 << 3,
-};
-DEFINE_BITMASK_OPERATORS(ERenderFlags);
-
-
 class PRenderer
 {
-    // Settings
-    ERenderFlags RenderFlags;
-
-    // Render channels
+    // Draw channels
     std::map<const char*, std::shared_ptr<PChannel>> Channels;
-    std::shared_ptr<PColorChannel> ColorChannel;
-    std::shared_ptr<PDataChannel> DepthChannel;
     std::shared_ptr<PViewport> Viewport;
     std::unique_ptr<FGrid> Grid;
 
@@ -149,33 +135,21 @@ class PRenderer
     std::unique_ptr<PBufferObject<uint32>> IndexBuffer;
 
     // Constants
-    const PColor WireColor = PColor::FromRgba(255, 175, 50);
-    const PColor GridColor = PColor::FromRgba(128, 128, 128);
+    const FColor WireColor = FColor::FromRgba(255, 175, 50);
+    const FColor GridColor = FColor::FromRgba(128, 128, 128);
+
+    // Shaders
+    IShader* CurrentShader = nullptr;
 
 public:
+    // Settings
+    Renderer::PRenderSettings Settings;
+
     PRenderer(uint32 InWidth, uint32 InHeight);
     void Resize(uint32 InWidth, uint32 InHeight) const;
     uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
     uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
     PViewport* GetViewport() const { return Viewport.get(); }
-
-    /* Settings */
-
-    bool GetRenderFlag(const ERenderFlags Flag) const
-    {
-        return (RenderFlags & Flag) == Flag;
-    }
-    void SetRenderFlag(const ERenderFlags Flag, const bool bState)
-    {
-        uint8 CurrentFlag = RenderFlags;
-        bState ? CurrentFlag |= Flag : CurrentFlag &= ~Flag;
-        RenderFlags = static_cast<ERenderFlags>(CurrentFlag);
-    }
-    void ToggleRenderFlag(const ERenderFlags Flag)
-    {
-        const bool bState = GetRenderFlag(Flag); // Flip the state
-        SetRenderFlag(Flag, !bState);
-    }
 
     /* Channels */
 
@@ -187,7 +161,22 @@ public:
     {
         return Channels.at(Name);
     }
-    void ClearChannels() const;
+    void ClearChannels() const
+    {
+        // Set all channels to 0
+        for (const auto& [Key, Channel] : Channels)
+        {
+            // Ignore the depth channel, we'll handle that later
+            if (Key == "Depth") // NOLINT
+            {
+                continue;
+            }
+            Channel->Clear();
+        }
+
+        // Fill the depth buffer with the Max Z-depth
+        GetDepthChannel()->Fill(DEFAULT_MAXZ);
+    }
 
     std::shared_ptr<PChannel> GetColorChannel() const { return Channels.at("Color"); }
     std::shared_ptr<PChannel> GetDepthChannel() const { return Channels.at("Depth"); }
@@ -196,10 +185,15 @@ public:
 
     bool ClipLine(FVector2* A, FVector2* B) const;
     bool ClipLine(FLine* Line) const;
-    void DrawLine(const FVector3& InA, const FVector3& InB, const PColor& Color) const;
-    void DrawLine(const FLine3d& Line, const PColor& Color) const;
-    void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2) const;
-    void DrawMesh(const PMesh* Mesh) const;
+    void DrawLine(const FVector3& InA, const FVector3& InB, const FColor& Color) const;
+    void DrawLine(const FLine3d& Line, const FColor& Color) const;
+    void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2);
+    void DrawMesh(const PMesh* Mesh);
     void DrawGrid() const;
-    void Render() const;
+    void Draw();
+
+    // Rasterizing triangles
+    
+    void Scanline();
+    void ScanlineFast();
 };

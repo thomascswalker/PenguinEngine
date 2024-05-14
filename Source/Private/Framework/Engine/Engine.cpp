@@ -70,7 +70,7 @@ void PEngine::Tick()
     {
         // Update camera position
         PCamera* Camera = GetViewportCamera();
-        FVector2 DeltaMouseCursor = Input->GetCurrentCursorPosition() - Input->GetClickPosition();
+        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition();
 
         // Orbit
         if (DeltaMouseCursor != 0)
@@ -101,7 +101,7 @@ void PEngine::Tick()
 void PEngine::LoadSceneGeometry()
 {
     std::shared_ptr<PMesh> Mesh = std::make_shared<PMesh>();
-    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Bunny.obj", Mesh.get());
+    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Penguin.obj", Mesh.get());
     Meshes.emplace_back(Mesh);
 }
 
@@ -126,17 +126,23 @@ void PEngine::OnKeyPressed(EKey KeyCode)
         }
     case EKey::F1 :
         {
-            Renderer->ToggleRenderFlag(ERenderFlags::Wireframe);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Wireframe);
             break;
         }
     case EKey::F2 :
         {
-            Renderer->ToggleRenderFlag(ERenderFlags::Shaded);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Shaded);
             break;
         }
     case EKey::F3 :
         {
-            Renderer->ToggleRenderFlag(ERenderFlags::Depth);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Depth);
+            break;
+        }
+    case EKey::F4:
+        {
+            bool bState = Renderer->Settings.GetUseGlm();
+            Renderer->Settings.SetUseGlm(!bState);
             break;
         }
     default :
@@ -163,5 +169,5 @@ void PEngine::StoreInitialViewDistance(const FVector2& CursorPosition) const
 void PEngine::OnMouseMiddleScrolled(float Delta) const
 {
     PCamera* Camera = GetViewportCamera();
-    Camera->SetFov(Camera->Fov + Delta);
+    Camera->SetFov(Camera->Fov + (Delta));
 }

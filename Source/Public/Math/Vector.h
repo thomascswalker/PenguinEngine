@@ -59,6 +59,14 @@ struct TVector2
     }
     static TVector2 ZeroVector() { return TVector2(); }
     static TVector2 IdentityVector() { return TVector2(1); }
+
+
+    template <typename ToType>
+    TVector2<ToType> ToType() const
+    {
+        return {static_cast<ToType>(X), static_cast<ToType>(Y)};
+    }
+    
     void Normalize()
     {
         X = 1.0f / X;
@@ -194,6 +202,12 @@ struct TVector3
         {
             LOG_ERROR("Vector [{}, {}, {}] contains NaN", X, Y, Z)
         }
+    }
+
+    template <typename ToType>
+    TVector3<ToType> ToType() const
+    {
+        return TVector3<ToType>{static_cast<ToType>(X), static_cast<ToType>(Y), static_cast<ToType>(Z)};
     }
 
     void Normalize()
@@ -365,6 +379,15 @@ struct TVector4
             LOG_ERROR("Vector [{}, {}, {}, {}] contains NaN", X, Y, Z, W)
         }
     }
+
+
+    template <typename ToType>
+    TVector4<ToType> ToType() const
+    {
+        return {static_cast<ToType>(X), static_cast<ToType>(Y), static_cast<ToType>(Z), static_cast<ToType>(W)};
+    }
+
+
     void Normalize()
     {
         X = T(1.0) / X;
@@ -559,13 +582,13 @@ namespace Math
         UVW.Y = V;
         UVW.Z = W;
 
-        T Sum = UVW.X + UVW.Y + UVW.Z;
-        T OneMinusSum = T(1) - Sum;
+        T OneMinusSum = T(1) - (UVW.X + UVW.Y + UVW.Z);
         return (
-            UVW.X > T(0) &&
-            UVW.Y > T(0) &&
-            UVW.Z > T(0) &&
-            (T(1) - Sum) < Tolerance);
+            UVW.X >= T(0) &&
+            UVW.Y >= T(0) &&
+            UVW.Z >= T(0) &&
+            OneMinusSum <= P_EPSILON
+        );
     }
 
     template <typename T>

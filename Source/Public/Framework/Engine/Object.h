@@ -37,7 +37,24 @@ public:
     }
 
     // Axes
-    FVector3 GetForwardVector() const { return Transform.ToMatrix().GetAxis(EAxis::X); }
-    FVector3 GetRightVector() const { return Transform.ToMatrix().GetAxis(EAxis::Z); }
-    FVector3 GetUpVector() const { return Transform.ToMatrix().GetAxis(EAxis::Y); }
+    FVector3 GetForwardVector() const
+    {
+        FRotator R = Transform.Rotation;
+        FVector3 Forward;
+        Forward.X = Math::Sin(R.Yaw);
+        Forward.Y = -(Math::Sin(R.Pitch) * Math::Cos(R.Yaw));
+        Forward.Z = -(Math::Cos(R.Pitch) * Math::Cos(R.Yaw));
+        return Forward;
+    }
+    FVector3 GetRightVector() const
+    {
+        const FVector3 Forward = GetForwardVector();
+        return (Math::Cross(Forward, FVector3::UpVector())).Normalized();
+    }
+    FVector3 GetUpVector() const
+    {
+        const FVector3 Forward = GetForwardVector();
+        const FVector3 Right = GetRightVector();
+        return (Math::Cross(Forward, Right)).Normalized();
+    }
 };
