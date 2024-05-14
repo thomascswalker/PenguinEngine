@@ -4,87 +4,6 @@
 #include "Math/MathCommon.h"
 #include "Math/Vector.h"
 
-// View Camera
-FMatrix PCamera::ComputeViewProjectionMatrix()
-{
-    const float Scale = 1.0f / Math::Tan(Math::DegreesToRadians(Fov / 2.0f));
-    ViewMatrix = FLookAtMatrix(-GetTranslation(), LookAt, FVector3::UpVector());
-    ProjectionMatrix = FPerspectiveMatrix(Scale, GetAspect(), MinZ, MaxZ);
-    return ProjectionMatrix * ViewMatrix * FMatrix::GetIdentity();
-}
-
-
-void PCamera::Orbit(const float DX, const float DY)
-{
-    // Convert degrees to radians
-    const float Yaw = Math::DegreesToRadians(DX);
-    const float Pitch = Math::DegreesToRadians(DY);
-
-    // Get the camera's direction
-    FVector3 ViewTranslation = InitialTransform.Translation;
-    FVector3 ViewDirection = (ViewTranslation - LookAt).Normalized();
-
-    // Individually rotate the direction by X (Yaw), then Y (Pitch)
-    const FMatrix RotX = FMatrix::MakeFromX(0);
-    ViewDirection = RotX * ViewDirection;
-    
-    const FMatrix RotY = FMatrix::MakeFromY(Yaw);
-    ViewDirection = RotY * ViewDirection;
-
-    const FMatrix RotZ = FMatrix::MakeFromZ(Pitch);
-    ViewDirection = RotZ * ViewDirection;
-
-    // Set the final translation to be the new rotated direction * the zoom distance
-    const float ViewDistance = Math::Distance(InitialTransform.Translation, LookAt);
-    ViewTranslation = ViewDirection * ViewDistance;
-    SetTranslation(ViewTranslation);
-
-    // Construct a new rotator from the LookAt matrix
-    FRotator ViewRotation = (RotX * RotY * RotZ).GetRotator();
-    ViewRotation.Roll = 0.0f; // Force Roll to always be 0
-    SetRotation(ViewRotation);
-
-    // Force scale to always be [1,1,1]
-    SetScale(FVector3(1, 1, 1));
-}
-
-void PCamera::Pan(float DX, float DY)
-{
-    const float PanSpeed = 0.2f;
-    // Find out which way is forward
-    FVector3 ViewTranslation = InitialTransform.Translation;
-    const FRotator ViewRotation = InitialTransform.Rotation;
-    const FRotator RollRotation(0, 0, ViewRotation.Roll);
-
-    // Get right vector
-    const FVector3 RightDirection = FRotationMatrix(RollRotation).GetAxisNormalized(EAxis::Z);
-    FVector3 RightOffset = RightDirection * DX * PanSpeed;
-
-    // Get up vector
-    const FVector3 UpDirection = FRotationMatrix(RollRotation).GetAxisNormalized(EAxis::Y);
-    FVector3 UpOffset = UpDirection * DY * PanSpeed;
-
-    FVector3 Offset = RightOffset + UpOffset;
-    SetTranslation(ViewTranslation + Offset);
-    SetLookAt(InitialLookAt + Offset);
-}
-
-void PCamera::Zoom(float Value)
-{
-    FVector3 ViewTranslation = InitialTransform.Translation;
-    FVector3 ViewDirection = (ViewTranslation - LookAt).Normalized();
-    float ViewDistance = Math::Distance(ViewTranslation, LookAt);
-    ViewDistance = Math::Max(DEFAULT_MIN_ZOOM, ViewDistance + (Value * 0.25f));
-    SetTranslation(ViewDirection * ViewDistance);
-}
-
-void PCamera::SetFov(float NewFov)
-{
-    Fov = Math::Clamp(NewFov, MinFov, MaxFov);
-}
-
-// Viewport
-
 PViewport::PViewport(const uint32 InWidth, const uint32 InHeight)
 {
     Camera = std::make_shared<PCamera>();
@@ -106,13 +25,10 @@ void PViewport::ResetView()
 {
     Camera->SetTranslation(DEFAULT_CAMERA_TRANSLATION);
     Camera->SetRotation(FRotator());
-    Camera->InitialLookAt = FVector3::ZeroVector();
-    UpdateViewProjectionMatrix();
-}
 
-void PViewport::UpdateViewProjectionMatrix()
-{
-    MVP = Camera->ComputeViewProjectionMatrix();
+    Camera->LookAt = FVector3::ZeroVector();
+    Camera->InitialLookAt = FVector3::ZeroVector();
+    Camera->ComputeViewProjectionMatrix();
 }
 
 /**
@@ -124,7 +40,10 @@ void PViewport::UpdateViewProjectionMatrix()
 bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const
 {
     // Clip space
-    const FVector4 Result = MVP * FVector4(WorldPosition, 1.0f);
+    glm::mat4 Model(1.0f);
+    glm::mat4 MVP = Camera->ViewProjectionMatrix * Model;
+    glm::vec4 ResultGlm = MVP * glm::vec4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
+    FVector4 Result{ResultGlm.x, ResultGlm.y, ResultGlm.z, ResultGlm.w};
     if (Result.W > 0.0f)
     {
         // Apply perspective correction
@@ -144,7 +63,7 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& Sc
         ScreenPosition = FVector3{
             NormalizedPosition.X * static_cast<float>(Camera->Width),
             NormalizedPosition.Y * static_cast<float>(Camera->Height),
-            ClipPosition.Z
+            (Result.Z + 1.0f) * 0.5f
         };
         return true;
     }
@@ -152,21 +71,21 @@ bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& Sc
     return false;
 }
 
-bool PViewport::ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth, FVector3& WorldPosition)
+bool PViewport::ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth, FVector3& WorldPosition) const
 {
-    FMatrix InvMatrix = MVP.GetInverse();
-    int32 PixelX = Math::Truncate(ScreenPosition.X);
-    int32 PixelY = Math::Truncate(ScreenPosition.Y);
-    
-    const float NormalizedX = (float)PixelX / (float)GetWidth();
-    const float NormalizedY = (float)PixelY / (float)GetHeight();
+    // FMatrix InvMatrix = Camera->ViewProjectionMatrix;
+    // int32 PixelX = Math::Truncate(ScreenPosition.X);
+    // int32 PixelY = Math::Truncate(ScreenPosition.Y);
+    //
+    // const float NormalizedX = (float)PixelX / (float)GetWidth();
+    // const float NormalizedY = (float)PixelY / (float)GetHeight();
+    //
+    // const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
+    // const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
+    //
+    // const FVector4 RayStartProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
+    // const FVector4 RayEndProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
 
-    const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
-    const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
-
-    const FVector4 RayStartProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
-    const FVector4 RayEndProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
-    
     return true;
 }
 
@@ -174,24 +93,27 @@ void PViewport::FormatDebugText()
 {
     const PEngine* Engine = PEngine::GetInstance();
     const IInputHandler* InputHandler = IInputHandler::GetInstance();
-    std::string MousePosition = InputHandler->GetCurrentCursorPosition().ToString();
-    std::string MouseDelta = (InputHandler->GetCurrentCursorPosition() - InputHandler->GetClickPosition()).ToString();
+    FVector2 MouseDelta = InputHandler->GetDeltaCursorPosition();
 
     auto Renderer = Engine->GetRenderer();
 
     DebugText = std::format(
         "Stats\n"
         "FPS: {}\n"
-        "Size: {}\n\n"
+        "Size: {}\n"
+        "Delta Mouse: {}\n"
         "Controls\n"
         "Wireframe (F1): {}\n"
         "Shaded (F2): {}\n"
         "Depth (F3): {}\n"
+        "Use GLM (F4): {}"
         ,
         Engine->GetFps(),
         GetSize().ToString(),
-        Renderer->GetRenderFlag(ERenderFlags::Wireframe),
-        Renderer->GetRenderFlag(ERenderFlags::Shaded),
-        Renderer->GetRenderFlag(ERenderFlags::Depth)
+        MouseDelta.ToString(),
+        Renderer->Settings.GetRenderFlag(ERenderFlags::Wireframe),
+        Renderer->Settings.GetRenderFlag(ERenderFlags::Shaded),
+        Renderer->Settings.GetRenderFlag(ERenderFlags::Depth),
+        Renderer->Settings.GetUseGlm()
     );
 }

@@ -2,10 +2,10 @@
 
 #include "MathFwd.h"
 
-struct PColor;
-struct PLinearColor;
+struct FColor;
+struct FLinearColor;
 
-struct PColor
+struct FColor
 {
     union
     {
@@ -20,7 +20,7 @@ struct PColor
     };
 
 protected:
-    PColor(uint8 InR, uint8 InG, uint8 InB, uint8 InA = 255)
+    FColor(uint8 InR, uint8 InG, uint8 InB, uint8 InA = 255)
     {
         R = InR;
         G = InG;
@@ -29,22 +29,22 @@ protected:
     }
 
 public:
-    static PColor Red() { return FromRgba(255, 0, 0); }
-    static PColor Blue() { return FromRgba(0, 255, 0); }
-    static PColor Green() { return FromRgba(0, 0, 255); }
+    static FColor Red() { return FromRgba(255, 0, 0); }
+    static FColor Blue() { return FromRgba(0, 255, 0); }
+    static FColor Green() { return FromRgba(0, 0, 255); }
 
-    static PColor Yellow() { return FromRgba(255, 255, 0); }
-    static PColor Cyan() { return FromRgba(0, 255, 255); }
-    static PColor Magenta() { return FromRgba(255, 0, 255); }
+    static FColor Yellow() { return FromRgba(255, 255, 0); }
+    static FColor Cyan() { return FromRgba(0, 255, 255); }
+    static FColor Magenta() { return FromRgba(255, 0, 255); }
 
-    static PColor White() { return FromRgba(255, 255, 255); }
-    static PColor Gray() { return FromRgba(128,128,128); }
-    static PColor Black() { return FromRgba(0, 0, 0); }
+    static FColor White() { return FromRgba(255, 255, 255); }
+    static FColor Gray() { return FromRgba(128,128,128); }
+    static FColor Black() { return FromRgba(0, 0, 0); }
 
-    static PColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
+    static FColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
 };
 
-struct PLinearColor
+struct FLinearColor
 {
     union
     {
@@ -58,9 +58,9 @@ struct PLinearColor
         float RGBA[4];
     };
 
-    static PLinearColor FromRgba(float R, float G, float B, float A = 1.0f)
+    static FLinearColor FromRgba(float R, float G, float B, float A = 1.0f)
     {
-        PLinearColor Color;
+        FLinearColor Color;
         Color.R = R;
         Color.G = G;
         Color.B = B;
@@ -75,5 +75,4 @@ struct PLinearColor
             V = V > 1.0f ? 1.0f : V;
         }
     }
-
 };

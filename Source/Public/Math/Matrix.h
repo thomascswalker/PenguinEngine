@@ -85,6 +85,27 @@ struct TMatrix
         CheckNaN();
     }
 
+    TMatrix(T M0, T M1, T M2, T M3, T M4, T M5, T M6, T M7, T M8, T M9, T M10, T M11, T M12, T M13, T M14, T M15)
+    {
+        M[0][0] = M0;
+        M[0][1] = M1;
+        M[0][2] = M2;
+        M[0][3] = M3;
+        M[1][0] = M4;
+        M[1][1] = M5;
+        M[1][2] = M6;
+        M[1][3] = M7;
+        M[2][0] = M8;
+        M[2][1] = M9;
+        M[2][2] = M10;
+        M[2][3] = M11;
+        M[3][0] = M12;
+        M[3][1] = M13;
+        M[3][2] = M14;
+        M[3][3] = M15;
+        CheckNaN();
+    }
+
     TMatrix(const TMatrix& Other)
     {
         std::memcpy(M, &Other.M, 16 * sizeof(T));
@@ -179,6 +200,26 @@ struct TMatrix
         M[3][1] = 0;
         M[3][2] = 0;
         M[3][3] = 1;
+    }
+
+    void SetZero()
+    {
+        M[0][0] = 0;
+        M[0][1] = 0;
+        M[0][2] = 0;
+        M[0][3] = 0;
+        M[1][0] = 0;
+        M[1][1] = 0;
+        M[1][2] = 0;
+        M[1][3] = 0;
+        M[2][0] = 0;
+        M[2][1] = 0;
+        M[2][2] = 0;
+        M[2][3] = 0;
+        M[3][0] = 0;
+        M[3][1] = 0;
+        M[3][2] = 0;
+        M[3][3] = 0;
     }
 
     constexpr T GetDeterminant() const
@@ -356,7 +397,7 @@ struct TMatrix
             TPlane<T>(0, 0, 0, 1)
         );
     }
-    
+
     static TMatrix MakeFromY(T Angle)
     {
         T C = Math::Cos(Angle);
@@ -405,10 +446,10 @@ struct TMatrix
     {
         std::string Output;
 
-        Output += std::format("[{} {} {} {}] ", M[0][0], M[0][1], M[0][2], M[0][3]);
-        Output += std::format("[{} {} {} {}] ", M[1][0], M[1][1], M[1][2], M[1][3]);
-        Output += std::format("[{} {} {} {}] ", M[2][0], M[2][1], M[2][2], M[2][3]);
-        Output += std::format("[{} {} {} {}] ", M[3][0], M[3][1], M[3][2], M[3][3]);
+        Output += std::format("[{} {} {} {}]\n", M[0][0], M[0][1], M[0][2], M[0][3]);
+        Output += std::format("[{} {} {} {}]\n", M[1][0], M[1][1], M[1][2], M[1][3]);
+        Output += std::format("[{} {} {} {}]\n", M[2][0], M[2][1], M[2][2], M[2][3]);
+        Output += std::format("[{} {} {} {}]\n", M[3][0], M[3][1], M[3][2], M[3][3]);
 
         return Output;
     }
@@ -522,35 +563,47 @@ struct TMatrix
 template <typename T>
 constexpr TMatrix<T> operator*(const TMatrix<T>& M0, const TMatrix<T>& M1)
 {
-    auto A0 = M0.GetRow(0);
-    auto A1 = M0.GetRow(1);
-    auto A2 = M0.GetRow(2);
-    auto A3 = M0.GetRow(3);
+    typedef float Float4x4[4][4];
+    const Float4x4& A = *((const Float4x4*)M0.M);
+    const Float4x4& B = *((const Float4x4*)M1.M);
+    Float4x4 Temp;
+    Temp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
+    Temp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
+    Temp[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2] + A[0][3] * B[3][2];
+    Temp[0][3] = A[0][0] * B[0][3] + A[0][1] * B[1][3] + A[0][2] * B[2][3] + A[0][3] * B[3][3];
 
-    auto B0 = M1.GetRow(0);
-    auto B1 = M1.GetRow(1);
-    auto B2 = M1.GetRow(2);
-    auto B3 = M1.GetRow(3);
+    Temp[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0] + A[1][3] * B[3][0];
+    Temp[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1] + A[1][3] * B[3][1];
+    Temp[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2] + A[1][3] * B[3][2];
+    Temp[1][3] = A[1][0] * B[0][3] + A[1][1] * B[1][3] + A[1][2] * B[2][3] + A[1][3] * B[3][3];
 
-    auto C0 = A0 * B0[0] + A1 * B0[1] + A2 * B0[2] + A3 * B0[3];
-    auto C1 = A0 * B1[0] + A1 * B1[1] + A2 * B1[2] + A3 * B1[3];
-    auto C2 = A0 * B2[0] + A1 * B2[1] + A2 * B2[2] + A3 * B2[3];
-    auto C3 = A0 * B3[0] + A1 * B3[1] + A2 * B3[2] + A3 * B3[3];
+    Temp[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0] + A[2][3] * B[3][0];
+    Temp[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1] + A[2][3] * B[3][1];
+    Temp[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2] + A[2][3] * B[3][2];
+    Temp[2][3] = A[2][0] * B[0][3] + A[2][1] * B[1][3] + A[2][2] * B[2][3] + A[2][3] * B[3][3];
 
-    return {C0, C1, C2, C3};
+    Temp[3][0] = A[3][0] * B[0][0] + A[3][1] * B[1][0] + A[3][2] * B[2][0] + A[3][3] * B[3][0];
+    Temp[3][1] = A[3][0] * B[0][1] + A[3][1] * B[1][1] + A[3][2] * B[2][1] + A[3][3] * B[3][1];
+    Temp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
+    Temp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
+
+    FMatrix Result;
+    memcpy(&Result.M, &Temp, 16 * sizeof(float));
+    return Result;
 }
 
 template <typename T>
 struct TPerspectiveMatrix : TMatrix<T>
 {
-    TPerspectiveMatrix(T Scale, T Aspect, T MinZ, T MaxZ = P_MAX_Z) : TMatrix<T>()
+    TPerspectiveMatrix(T Fov, T Aspect, T MinZ, T MaxZ = P_MAX_Z) : TMatrix<T>()
     {
-        this->M[0][0] = T(1) / (Aspect * Scale);
-        this->M[1][1] = T(1) / Scale;
+        this->SetZero();
+        const T TanHalfFov = Math::Tan(Fov / 2.0f);
+        this->M[0][0] = T(1) / (Aspect * TanHalfFov);
+        this->M[1][1] = T(1) / TanHalfFov;
         this->M[2][2] = (MaxZ + MinZ) / (MaxZ - MinZ);
-        this->M[2][3] = T(1);
-        this->M[3][2] = (T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
-        this->M[3][3] = T(0);
+        this->M[3][2] = T(1);
+        this->M[2][3] = (T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
     }
 };
 
@@ -568,23 +621,22 @@ struct TLookAtMatrix : TMatrix<T>
         // Up vector
         const TVector3<T> Up = Math::Cross(Right, Forward);
 
-        //  Rx |  Ux | -Fx | 0
-        //  Ry |  Uy | -Fy | 0
-        //  Rz |  Uz | -Fz | 0
-        // -Tx | -Ty | -Tz | 1
+        //  Rx |  Ux | -Fx | -Tx
+        //  Ry |  Uy | -Fy | -Ty
+        //  Rz |  Uz | -Fz | -Tz
+        //  0  |  0  |  0  |  1
         this->M[0][0] = Right[0];
-        this->M[1][0] = Right[1];
-        this->M[2][0] = Right[2];
-        this->M[3][0] = Math::Dot(Right, -EyePosition);
-        this->M[0][1] = Up[0];
+        this->M[0][1] = Right[1];
+        this->M[0][2] = Right[2];
+        this->M[1][0] = Up[0];
         this->M[1][1] = Up[1];
-        this->M[2][1] = Up[2];
-        this->M[3][1] = Math::Dot(Up, -EyePosition);
-        this->M[0][2] = -Forward[0];
-        this->M[1][2] = -Forward[1];
+        this->M[1][2] = Up[2];
+        this->M[2][0] = -Forward[0];
+        this->M[2][1] = -Forward[1];
         this->M[2][2] = -Forward[2];
-        this->M[3][2] = Math::Dot(Forward, -EyePosition);
-        
+        this->M[0][3] = -Math::Dot(Right, EyePosition);
+        this->M[1][3] = -Math::Dot(Up, EyePosition);
+        this->M[2][3] = -Math::Dot(Forward, EyePosition);
         this->M[3][3] = 1.0f;
     }
 };
@@ -609,7 +661,7 @@ struct TRotationMatrix : TMatrix<T>
         Pitch = Math::DegreesToRadians(Pitch);
         Yaw = Math::DegreesToRadians(Yaw);
         Roll = Math::DegreesToRadians(Roll);
-        
+
         T CP = Math::Cos(Pitch);
         T SP = Math::Sin(Pitch);
         T CY = Math::Cos(Yaw);
@@ -619,7 +671,7 @@ struct TRotationMatrix : TMatrix<T>
 
         T CPSY = CP * SY;
         T SPSY = SP * SY;
-        
+
         this->M[0][0] = CY * CR;
         this->M[0][1] = -CY * SR;
         this->M[0][2] = SY;

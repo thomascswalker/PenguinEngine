@@ -17,6 +17,10 @@ class PWin32Platform : public IPlatform
     int32 DefaultWidth = DEFAULT_VIEWPORT_WIDTH;
     int32 DefaultHeight = DEFAULT_VIEWPORT_HEIGHT;
 
+    inline static BITMAPINFO BitmapInfo;
+    inline static HBITMAP DisplayBitmap;
+    inline static int8* DisplayBuffer;
+
     bool bInitialized = false;
 
     HINSTANCE HInstance;
@@ -30,6 +34,7 @@ public:
     uint32 Loop() override;
     uint32 Paint() override;
     uint32 End() override;
+    uint32 Swap() override;
     bool IsInitialized() const override { return bInitialized; }
 
     // Windows
