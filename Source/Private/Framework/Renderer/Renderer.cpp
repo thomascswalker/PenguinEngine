@@ -181,8 +181,7 @@ void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2)
 {
     auto Camera = Viewport->GetCamera();
-    const FVector3 CameraNormal = (Camera->LookAt - Camera->GetTranslation()).Normalized();
-    CurrentShader = new DefaultShader();
+    const FVector3 CameraNormal = (Camera->Target - Camera->GetTranslation()).Normalized();
     CurrentShader->Init(
         Camera->ViewProjectionMatrix,
         V0, V1, V2,
@@ -205,6 +204,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
 void PRenderer::DrawMesh(const PMesh* Mesh)
 {
+    CurrentShader = std::make_shared<DefaultShader>();
     for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
     {
         const uint32 StartIndex = Index * 3;

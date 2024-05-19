@@ -30,19 +30,12 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     // Bind input events
     if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
+        // Any key press
         Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
+
+        // Adjust FOV
         Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
-
-        // Storing transforms
-        Input->MouseLeftDown.AddRaw(this, &PEngine::StoreInitialTransform);
-        Input->MouseLeftUp.AddRaw(this, &PEngine::StoreInitialTransform);
-        Input->MouseMiddleDown.AddRaw(this, &PEngine::StoreInitialTransform);
-        Input->MouseMiddleUp.AddRaw(this, &PEngine::StoreInitialTransform);
-        Input->MouseRightUp.AddRaw(this, &PEngine::StoreInitialTransform);
-
-        // Storing view distance
-        Input->MouseRightDown.AddRaw(this, &PEngine::StoreInitialViewDistance);
-        Input->MouseRightUp.AddRaw(this, &PEngine::StoreInitialViewDistance);
+        Input->MouseLeftUp.AddRaw(this, &PEngine::OnLeftMouseUp);
     }
 
     // Load all geometry into the scene
@@ -77,7 +70,7 @@ void PEngine::Tick()
         {
             if (Input->IsMouseDown(EMouseButtonType::Left) && Input->IsAltDown())
             {
-                Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y); // Swap X and Y
+                Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y);
             }
 
             // Pan
@@ -93,6 +86,9 @@ void PEngine::Tick()
             }
         }
     }
+
+    // Tick every object
+    GetViewportCamera()->Update(DeltaTime);
 
     // Format debug text
     GetViewport()->FormatDebugText();
@@ -139,7 +135,7 @@ void PEngine::OnKeyPressed(EKey KeyCode)
             Renderer->Settings.ToggleRenderFlag(ERenderFlags::Depth);
             break;
         }
-    case EKey::F4:
+    case EKey::F4 :
         {
             bool bState = Renderer->Settings.GetUseGlm();
             Renderer->Settings.SetUseGlm(!bState);
@@ -150,20 +146,13 @@ void PEngine::OnKeyPressed(EKey KeyCode)
     }
 }
 
-void PEngine::StoreInitialTransform(const FVector2& CursorPosition) const
+void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
 {
-    // Store the original transform when a click begins
     PCamera* Camera = GetViewportCamera();
-    Camera->InitialTransform = Camera->GetTransform();
-    Camera->InitialLookAt = Camera->LookAt;
-}
+    Camera->SphericalDelta.Phi = 0.0f;
+    Camera->SphericalDelta.Theta = 0.0f;
 
-void PEngine::StoreInitialViewDistance(const FVector2& CursorPosition) const
-{
-    // Store the original transform when a click begins
-    PCamera* Camera = GetViewportCamera();
-    Camera->InitialViewDistance = Math::Distance(Camera->GetTranslation(), Camera->LookAt);
-    Camera->InitialLookAt = Camera->LookAt;
+    Camera->PanOffset = 0;
 }
 
 void PEngine::OnMouseMiddleScrolled(float Delta) const

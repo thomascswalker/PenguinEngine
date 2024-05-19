@@ -40,9 +40,9 @@ public:
     std::vector<std::shared_ptr<PMesh>> GetMeshes() const { return Meshes; }
 
     constexpr float GetFps() const { return 1000.0f / DeltaTime; }
-
-    void StoreInitialTransform(const FVector2& CursorPosition) const;
-    void StoreInitialViewDistance(const FVector2& CursorPosition) const;
+    
     void OnMouseMiddleScrolled(float Delta) const;
     void OnKeyPressed(EKey KeyCode);
+
+    void OnLeftMouseUp(const FVector2& CursorPosition) const;
 };

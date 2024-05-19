@@ -274,19 +274,7 @@ public:
         PreviousCursorPosition = CurrentCursorPosition;
         CurrentCursorPosition = CursorPosition;
         MouseMoved.Broadcast(CurrentCursorPosition);
-
-        // Update delta cursor position if any of the mouse buttons are down
-        if (IsAnyMouseDown() && CurrentCursorPosition != PreviousCursorPosition)
-        {
-            DeltaCursorPosition = CurrentCursorPosition - PreviousCursorPosition;
-        }
-        // If no mouse buttons are down, zero the delta cursor position
-        else
-        {
-            DeltaCursorPosition.X = 0.0f;
-            DeltaCursorPosition.Y = 0.0f;
-        }
-
+        DeltaCursorPosition = CurrentCursorPosition - PreviousCursorPosition;
         return true;
     }
 

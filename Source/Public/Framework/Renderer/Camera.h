@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Framework/Engine/Object.h"
+#include "Math/Spherical.h"
 #include "glm.hpp"
 
 #define DEFAULT_VIEWPORT_WIDTH 656 // 640
@@ -32,10 +33,16 @@ public:
     float MinFov = 20.0f;
     float MaxFov = 120.0f;
     
-    FVector3 LookAt = FVector3::ZeroVector(); // Origin
-    FVector3 InitialLookAt = LookAt;
+    FVector3 Target = FVector3::ZeroVector(); // Origin
+    FVector3 InitialLookAt = Target;
     FTransform InitialTransform;
     float InitialViewDistance;
+    
+    FSphericalCoords Spherical;
+    FSphericalCoords SphericalDelta;
+    float MinPolarAngle = 0.0f;
+    float MaxPolarAngle = P_PI;
+    FVector3 PanOffset;
 
     glm::mat4 ProjectionMatrix;
     glm::mat4 ViewMatrix;
@@ -55,5 +62,7 @@ public:
     void Pan(float DX, float DY);
     void Zoom(float Value);
     void SetFov(float NewFov);
-    void SetLookAt(const FVector3& NewLookAt) { LookAt = NewLookAt; }
+    void SetLookAt(const FVector3& NewLookAt) { Target = NewLookAt; }
+
+    void Update(float DeltaTime) override;
 };

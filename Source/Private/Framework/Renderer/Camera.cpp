@@ -11,7 +11,7 @@ void PCamera::ComputeViewProjectionMatrix()
 {
     FVector3 Translation = GetTranslation();
     glm::vec3 Eye = {Translation.X, Translation.Y, Translation.Z};
-    glm::vec3 Center = {LookAt.X, LookAt.Y, LookAt.Z};
+    glm::vec3 Center = {Target.X, Target.Y, Target.Z};
     glm::vec3 Up = {0.0f, -1.0f, 0.0f}; // Negative UP value
     ViewMatrix = glm::lookAt(Eye, Center, Up);
     ProjectionMatrix = glm::perspective(Math::DegreesToRadians(Fov), GetAspect(), MinZ, MaxZ);
@@ -20,48 +20,68 @@ void PCamera::ComputeViewProjectionMatrix()
 
 void PCamera::Orbit(const float DX, const float DY)
 {
-    const float Yaw = Math::DegreesToRadians(DX);
-    const float Pitch = Math::DegreesToRadians(DY);
-    float RotationSpeed = 0.1f;
-
-    glm::mat4 Temp(1.0f);
-    glm::mat4 OrbitTranslation = glm::translate(Temp, glm::vec3(Yaw, Pitch, 0.0f));
-    glm::mat4 OrbitRotation = glm::rotate(OrbitTranslation, RotationSpeed, glm::vec3(DX, DY, 0.0f));
-
-    glm::vec3 Scale;
-    glm::quat Orientation;
-    glm::vec3 Translation;
-    glm::vec3 Skew;
-    glm::vec4 Perspective;
-    glm::decompose(OrbitRotation, Scale, Orientation, Translation, Skew, Perspective);
-    FVector3 Offset(Translation.x, Translation.y, Translation.z);
-    SetTranslation(GetTranslation() + Offset);
+    SphericalDelta.Theta = Math::DegreesToRadians(DX); // Horizontal
+    SphericalDelta.Phi = Math::DegreesToRadians(DY); // Vertical
 }
 
 void PCamera::Pan(float DX, float DY)
 {
-    const float PanSpeed = 0.01f;
-    // Find out which way is forward
-    FVector3 ViewTranslation = GetTranslation();
-    auto Front = (LookAt - ViewTranslation).Normalized();
-    auto Right = (Math::Cross(Front, FVector3::UpVector())).Normalized();
-    auto Up = (Math::Cross(Front, Right)).Normalized();
+    float DampingFactor = 0.1f;
 
-    FVector3 Offset = ((Right * DX) + (Up * DY)) * PanSpeed;
-    SetTranslation(ViewTranslation - Offset);
-    SetLookAt(LookAt - Offset);
+    // Compute target distance
+    FVector3 Position = GetTranslation();
+    FVector3 Offset = Position - Target;
+    float TargetDistance = Offset.Length();
+
+    // Scale target distance to account for FOV
+    TargetDistance *= Math::Tan((Fov / 2.0f) * P_PI / 180.0f);
+
+    // Pan left/right
+    FVector3 XOffset = {ViewMatrix[0][0], ViewMatrix[0][1], ViewMatrix[0][2]}; // X Rotation, column 0
+    XOffset.Normalize();
+    XOffset *= DX * DampingFactor * TargetDistance / static_cast<float>(Height);
+    PanOffset = XOffset;
+
+    // Pan up/down
+    FVector3 YOffset = {ViewMatrix[1][0], ViewMatrix[1][1], ViewMatrix[1][2]}; // Y Rotation, column 1
+    YOffset.Normalize();
+    YOffset *= DY * DampingFactor * TargetDistance / static_cast<float>(Height);
+    PanOffset += YOffset;
 }
 
 void PCamera::Zoom(float Value)
 {
-    FVector3 ViewTranslation = GetTranslation();
-    FVector3 ViewDirection = (ViewTranslation - LookAt).Normalized();
-    float ViewDistance = Math::Distance(ViewTranslation, LookAt);
-    ViewDistance = Math::Max(DEFAULT_MIN_ZOOM, ViewDistance + (Value * 0.25f));
-    SetTranslation(ViewDirection * ViewDistance);
+    Spherical.Radius -= Value;
 }
 
 void PCamera::SetFov(float NewFov)
 {
     Fov = Math::Clamp(NewFov, MinFov, MaxFov);
+}
+
+void PCamera::Update(float DeltaTime)
+{
+    // Get the offset from the current camera position to the target position
+    FVector3 Position = GetTranslation();
+    FVector3 Offset = Position - Target;
+
+    // Convert offset to spherical coordinates
+    Spherical.SetFromCartesian(Offset.X, Offset.Y, Offset.Z);
+
+    // Offset spherical coordinates by the current spherical delta
+    Spherical.Theta += SphericalDelta.Theta;
+    Spherical.Phi += SphericalDelta.Phi;
+
+    // Restrict Phi to min/max polar angle to prevent locking
+    Spherical.Phi = Math::Max(MinPolarAngle, Math::Min(MaxPolarAngle, Spherical.Phi));
+    Spherical.MakeSafe();
+
+    // Convert spherical coordinates back to position
+    Offset = Spherical.ToCartesian();
+
+    // Offset the target position based on the computed PanOffset (PCamera::Pan)
+    Target += PanOffset;
+
+    // Set the camera position to the target position + offset
+    SetTranslation(Target + Offset);
 }

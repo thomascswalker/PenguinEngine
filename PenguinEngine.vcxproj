@@ -218,6 +218,7 @@
     <ClInclude Include="Source\Public\Math\Rect.h" />
     <ClInclude Include="Source\Public\Math\Rotator.h" />
     <ClInclude Include="Source\Public\Math\MathFwd.h" />
+    <ClInclude Include="Source\Public\Math\Spherical.h" />
     <ClInclude Include="Source\Public\Math\Transform.h" />
     <ClInclude Include="Source\Public\Math\Vector.h" />
   </ItemGroup>

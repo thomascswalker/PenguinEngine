@@ -14,6 +14,9 @@ protected:
     FTransform Transform;
 
 public:
+    virtual ~PObject() = default;
+    virtual void Update(float DeltaTime){};
+    
     // Getters
     FTransform GetTransform() const { return Transform; }
     FVector3 GetTranslation() const { return Transform.Translation; }

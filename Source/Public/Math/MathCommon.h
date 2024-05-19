@@ -14,36 +14,20 @@ namespace Math
 {
     // Rotate a vector with the specified quaternion.
     // https://github.com/g-truc/glm/blob/master/glm/ext/matrix_transform.inl#L18
+    // https://github.com/mrdoob/three.js/blob/dev/src/math/Vector3.js#L252
     template <typename T>
     TVector3<T> Rotate(const TVector3<T>& V, const TQuat<T> Q)
     {
-        TMatrix<T> M;
-        const T A = Q.W; // Angle is the W component of the quaternion
-        const T C = Math::Cos(A); // Cosine of Angle
-        const T S = Math::Sin(A); // Sin of Angle
+        T TX = T(2) * (Q.Y * V.Z - Q.Z * V.Y);
+        T TY = T(2) * (Q.Z * V.X - Q.X * V.Z);
+        T TZ = T(2) * (Q.X * V.Y - Q.Y * V.X);
+        TVector3<T> Out;
 
-        TVector3<T> Normal = {Q.X, Q.Y, Q.Z};
-        TVector3<T> Axis = Normal.Normalized();
+        Out.X = V.X + Q.W * TX + Q.Y * TZ - Q.Z * TY;
+        Out.Y = V.Y + Q.W * TY + Q.Z * TX - Q.X * TZ;
+        Out.Z = V.Z + Q.W * TZ + Q.X * TY - Q.Y * TX;
 
-        TMatrix<T> Rotation = TMatrix<T>::GetIdentity();
-        T One = static_cast<T>(1);
-        T Zero = static_cast<T>(0);
-        Rotation.Set(0, 0, C + (One - C) * Axis.X * Axis.X);
-        Rotation.Set(0, 1, (One - C) * Axis.X * Axis.Y + S * Axis.Z);
-        Rotation.Set(0, 2, (One - C) * Axis.X * Axis.Z - S * Axis.Y);
-        Rotation.Set(0, 3, Zero);
-        Rotation.Set(1, 0, (One - C) * Axis.Y * Axis.X - S * Axis.Z);
-        Rotation.Set(1, 1, C + (One - C) * Axis.Y * Axis.Y);
-        Rotation.Set(1, 2, (One - C) * Axis.Y * Axis.Z + S * Axis.X);
-        Rotation.Set(1, 3, Zero);
-        Rotation.Set(2, 0, (One - C) * Axis.Z * Axis.X + S * Axis.Y);
-        Rotation.Set(2, 1, (One - C) * Axis.Z * Axis.Y - S * Axis.X);
-        Rotation.Set(2, 2, C + (One - C) * Axis.Z * Axis.Z);
-        Rotation.Set(2, 3, Zero);
-
-        TTranslationMatrix<T> Translation(V);
-        TMatrix<T> Out = Translation * Rotation;
-        return Out.GetTranslation();
+        return Out;
     }
 
     // Rotate a vector with the specified Pitch, Yaw, and Roll (in degrees)
