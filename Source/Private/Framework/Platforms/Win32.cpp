@@ -265,6 +265,10 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
         }
     }
 
+    // If the mouse has not moved, and we move past all other messages, reset the delta cursor
+    // position to [0,0]
+    InputHandler->ResetDeltaCursorPosition();
+
     return Result;
 }
 

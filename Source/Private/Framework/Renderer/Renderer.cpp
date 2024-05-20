@@ -181,8 +181,7 @@ void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
 void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2)
 {
     auto Camera = Viewport->GetCamera();
-    const FVector3 CameraNormal = (Camera->LookAt - Camera->GetTranslation()).Normalized();
-    CurrentShader = new DefaultShader();
+    const FVector3 CameraNormal = (Camera->Target - Camera->GetTranslation()).Normalized();
     CurrentShader->Init(
         Camera->ViewProjectionMatrix,
         V0, V1, V2,
@@ -190,7 +189,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
         Camera->GetTranslation(),
         Camera->Width, Camera->Height
     );
-    
+
     if (!CurrentShader->ComputeVertexShader())
     {
         return;
@@ -205,6 +204,7 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
 void PRenderer::DrawMesh(const PMesh* Mesh)
 {
+    CurrentShader = std::make_shared<DefaultShader>();
     for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
     {
         const uint32 StartIndex = Index * 3;
@@ -260,7 +260,7 @@ void PRenderer::Scanline()
     auto S1 = CurrentShader->S1;
     auto S2 = CurrentShader->S2;
     auto Bounds = CurrentShader->ScreenBounds;
-    
+
     // Loop through all pixels in the screen bounding box.
     int32 MinX = static_cast<int32>(Bounds.Min().X);
     int32 MinY = static_cast<int32>(Bounds.Min().Y);
@@ -284,7 +284,7 @@ void PRenderer::Scanline()
             {
                 continue;
             }
-            
+
             if (Settings.GetRenderFlag(ERenderFlags::Depth))
             {
                 const float NewDepth = UVW.Z;
@@ -310,51 +310,65 @@ void PRenderer::Scanline()
 // https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
 void PRenderer::ScanlineFast()
 {
-    auto V0 = CurrentShader->S0;
-    auto V1 = CurrentShader->S1;
-    auto V2 = CurrentShader->S2;
-    auto Bounds = CurrentShader->ScreenBounds;
-    
-    int32 A01 = V0.Y - V1.Y;
-    int32 A12 = V1.Y - V2.Y;
-    int32 A20 = V2.Y - V0.Y;
-    int32 B01 = V1.X - V0.X;
-    int32 B12 = V2.X - V1.X;
-    int32 B20 = V0.X - V2.X;
+    const FVector3 S0 = CurrentShader->S0;
+    const FVector3 S1 = CurrentShader->S1;
+    const FVector3 S2 = CurrentShader->S2;
+    const FRect Bounds = CurrentShader->ScreenBounds;
 
+    // Difference in Y coordinate for each edge
+    const int32 Y01 = S0.Y - S1.Y;
+    const int32 Y12 = S1.Y - S2.Y;
+    const int32 Y20 = S2.Y - S0.Y;
+
+    // Difference in X coordinate for each edge
+    const int32 X10 = S1.X - S0.X;
+    const int32 X21 = S2.X - S1.X;
+    const int32 X02 = S0.X - S2.X;
+
+    // Start the point at the min X/Y coordinates (top-left)
     IVector3 Point = FVector3(Bounds.Min().X, Bounds.Min().Y, 0).ToType<int32>();
-    int32 C0 = Math::Orient2D(V1.ToType<int32>(), V2.ToType<int32>(), Point);
-    int32 C1 = Math::Orient2D(V2.ToType<int32>(), V0.ToType<int32>(), Point);
-    int32 C2 = Math::Orient2D(V0.ToType<int32>(), V1.ToType<int32>(), Point);
 
-    int32 MinX = static_cast<int32>(Bounds.Min().X);
-    int32 MinY = static_cast<int32>(Bounds.Min().Y);
-    int32 MaxX = static_cast<int32>(Bounds.Max().X);
-    int32 MaxY = static_cast<int32>(Bounds.Max().Y);
-    
+    // Use the EdgeFunction to compute each starting edge value
+    int32 Edge12 = Math::EdgeFunction(S1.ToType<int32>(), S2.ToType<int32>(), Point);
+    int32 Edge20 = Math::EdgeFunction(S2.ToType<int32>(), S0.ToType<int32>(), Point);
+    int32 Edge01 = Math::EdgeFunction(S0.ToType<int32>(), S1.ToType<int32>(), Point);
+
+    const int32 MinX = static_cast<int32>(Bounds.Min().X);
+    const int32 MinY = static_cast<int32>(Bounds.Min().Y);
+    const int32 MaxX = static_cast<int32>(Bounds.Max().X);
+    const int32 MaxY = static_cast<int32>(Bounds.Max().Y);
+
+    // Precompute the area of the screen triangle so we're not computing it every pixel
+    const float Area = Math::Area2D(S0, S1, S2);
+
+    // Vertical
     for (Point.Y = MinY; Point.Y <= MaxY; Point.Y++)
     {
-        int32 W0 = C0;
-        int32 W1 = C1;
-        int32 W2 = C2;
+        int32 TempEdge12 = Edge12;
+        int32 TempEdge20 = Edge20;
+        int32 TempEdge01 = Edge01;
 
+        // Horizontal
         for (Point.X = MinX; Point.X <= MaxX; Point.X++)
         {
-            if (W0 >= 0 && W1 >= 0 && W2 >= 0)
+            // Are we still inside the triangle, given the edges?
+            if (TempEdge12 >= 0 && TempEdge20 >= 0 && TempEdge01 >= 0)
             {
                 // Inside triangle
                 if (Settings.GetRenderFlag(ERenderFlags::Depth))
                 {
-                    const float NewDepth = V0.Z;
+                    const float NewDepth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
 
                     // Compare the new depth to the current depth at this pixel. If the new depth is further than
                     // the current depth, continue.
                     const float CurrentDepth = GetDepthChannel()->GetPixel<float>(Point.X, Point.Y);
                     if (NewDepth >= CurrentDepth)
                     {
+                        TempEdge12 += Y12;
+                        TempEdge20 += Y20;
+                        TempEdge01 += Y01;
                         continue;
                     }
-
                     // If the new depth is closer than the current depth, set the current depth
                     // at this pixel to the new depth we just got.
                     GetDepthChannel()->SetPixel(Point.X, Point.Y, NewDepth);
@@ -363,20 +377,20 @@ void PRenderer::ScanlineFast()
                 GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
             }
 
-            W0 += A12;
-            W1 += A20;
-            W2 += A01;
+            TempEdge12 += Y12;
+            TempEdge20 += Y20;
+            TempEdge01 += Y01;
         }
 
-        C0 += B12;
-        C1 += B20;
-        C2 += B01;
+        Edge12 += X21;
+        Edge20 += X02;
+        Edge01 += X10;
     }
 
     if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
     {
-        DrawLine({V0.X, V0.Y}, {V1.X, V1.Y}, WireColor);
-        DrawLine({V1.X, V1.Y}, {V2.X, V2.Y}, WireColor);
-        DrawLine({V2.X, V2.Y}, {V0.X, V0.Y}, WireColor);
+        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
+        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
+        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
     }
 }

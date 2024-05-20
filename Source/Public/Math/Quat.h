@@ -21,7 +21,7 @@ struct TQuat
     TQuat(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
     {
     }
-    
+
     // Quaternion constructed from euler angles specified (in radians)
     TQuat(const TVector3<T>& EulerAngles)
     {
@@ -44,7 +44,37 @@ struct TQuat
         Z = S * Axis.Z;
         W = C;
     }
-
+    TQuat(TVector3<T> From, TVector3<T> To)
+    {
+        T R = From.Dot(To) + T(1);
+        if (R < P_EPSILON)
+        {
+            R = 0;
+            if (Math::Abs(From.X) > Math::Abs(From.Z))
+            {
+                X = -From.Y;
+                Y = From.X;
+                Z = 0;
+                W = R;
+            }
+            else
+            {
+                X = 0;
+                Y = -From.Z;
+                Z = From.Y;
+                W = R;
+            }
+        }
+        else
+        {
+            X = From.Y * To.Z - From.Z * To.Y;
+            Y = From.Z * To.X - From.X * To.Z;
+            Z = From.X * To.Y - From.Y * To.X;
+            W = R;
+        }
+        Normalize();
+    }
+    
     TQuat(const TMatrix<T>& M)
     {
         //const MeReal *const t = (MeReal *) tm;
@@ -132,12 +162,12 @@ struct TQuat
         TQuat Out = Temp * QuatVector * Inverse;
         return {Out.X, Out.Y, Out.Z, Out.W};
     }
-    TQuat GetConjugate()
+    TQuat GetConjugate() const
     {
         return {-X, -Y, -Z, W};
     }
 
-    TQuat GetInverse()
+    TQuat GetInverse() const
     {
         return GetConjugate();
     }
@@ -147,6 +177,30 @@ struct TQuat
         const FVector3 TT = Math::Cross(Q, V) * 2.0f;
         const FVector3 Result = V + (TT * W) + Math::Cross(Q, TT);
         return Result;
+    }
+
+    T Length()
+    {
+        return Math::Sqrt(X * X + Y * Y + Z * Z + W * W);
+    }
+    void Normalize()
+    {
+        T L = Length();
+        if (L == 0)
+        {
+            X = T(0);
+            Y = T(0);
+            Z = T(0);
+            W = T(1);
+        }
+        else
+        {
+            L = T(1) / L;
+            X *= L;
+            Y *= L;
+            Z *= L;
+            W *= L;
+        }
     }
 };
 //

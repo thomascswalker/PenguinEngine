@@ -534,7 +534,7 @@ namespace Math
     }
 
     template <typename T>
-    static T Area(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+    static T Area2D(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
         T A = V0.X * (V1.Y - V2.Y);
         T B = V1.X * (V2.Y - V0.Y);
@@ -642,26 +642,24 @@ namespace Math
     }
 
     template <typename T>
-    static T GetDepth(const TVector3<T>& P, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+    static T EdgeFunction(const TVector3<T>& A, const TVector3<T>& B, const TVector3<T>& C)
     {
-        // Calculate area of this triangle
-        T A = Math::Area(V0, V1, V2);
+        return (B.X - A.X) * (C.Y - A.Y) - (B.Y - A.Y) * (C.X - A.X);
+    }
 
+    template <typename T>
+    static T GetDepth(const TVector3<T>& P, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2, T Area)
+    {
         // Calculate depth
-        T W0 = Math::Area(V1, V2, P);
-        T W1 = Math::Area(V2, V0, P);
-        T W2 = Math::Area(V0, V1, P);
+        T W0 = Math::EdgeFunction(V1, V2, P);
+        T W1 = Math::EdgeFunction(V2, V0, P);
+        T W2 = Math::EdgeFunction(V0, V1, P);
 
-        if (W0 < T(0) && W1 < T(0) && W2 < T(0))
-        {
-            return FLT_MAX;
-        }
+        W0 /= Area;
+        W1 /= Area;
+        W2 /= Area;
 
-        W0 /= A;
-        W1 /= A;
-        W2 /= A;
-
-        return W0 * V0.Z + W1 * V1.Z + W2 * V2.Z;
+        return V0.Z * W0 + V1.Z * W1 + V2.Z * W2;
     }
 
     // // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal

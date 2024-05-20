@@ -139,7 +139,7 @@ class PRenderer
     const FColor GridColor = FColor::FromRgba(128, 128, 128);
 
     // Shaders
-    IShader* CurrentShader = nullptr;
+    std::shared_ptr<IShader> CurrentShader = nullptr;
 
 public:
     // Settings
