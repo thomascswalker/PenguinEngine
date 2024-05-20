@@ -36,6 +36,7 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
         // Adjust FOV
         Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
         Input->MouseLeftUp.AddRaw(this, &PEngine::OnLeftMouseUp);
+        Input->MouseMiddleUp.AddRaw(this, &PEngine::OnMiddleMouseUp);
     }
 
     // Load all geometry into the scene
@@ -59,31 +60,28 @@ void PEngine::Tick()
     StartTime = PTimer::Now();
 
     // Update camera movement
-    if (const IInputHandler* Input = PWin32InputHandler::GetInstance())
+    if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
         // Update camera position
         PCamera* Camera = GetViewportCamera();
         FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition();
 
         // Orbit
-        if (DeltaMouseCursor != 0)
+        if (Input->IsMouseDown(EMouseButtonType::Left) && Input->IsAltDown())
         {
-            if (Input->IsMouseDown(EMouseButtonType::Left) && Input->IsAltDown())
-            {
-                Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y);
-            }
+            Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y);
+        }
 
-            // Pan
-            if (Input->IsMouseDown(EMouseButtonType::Middle) && Input->IsAltDown())
-            {
-                Camera->Pan(DeltaMouseCursor.X, DeltaMouseCursor.Y);
-            }
+        // Pan
+        if (Input->IsMouseDown(EMouseButtonType::Middle) && Input->IsAltDown())
+        {
+            Camera->Pan(DeltaMouseCursor.X, DeltaMouseCursor.Y);
+        }
 
-            // Zoom
-            if (Input->IsMouseDown(EMouseButtonType::Right) && Input->IsAltDown())
-            {
-                Camera->Zoom(DeltaMouseCursor.Y);
-            }
+        // Zoom
+        if (Input->IsMouseDown(EMouseButtonType::Right) && Input->IsAltDown())
+        {
+            Camera->Zoom(DeltaMouseCursor.Y);
         }
     }
 
@@ -97,7 +95,7 @@ void PEngine::Tick()
 void PEngine::LoadSceneGeometry()
 {
     std::shared_ptr<PMesh> Mesh = std::make_shared<PMesh>();
-    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Penguin.obj", Mesh.get());
+    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Cow.obj", Mesh.get());
     Meshes.emplace_back(Mesh);
 }
 
@@ -151,7 +149,10 @@ void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
     PCamera* Camera = GetViewportCamera();
     Camera->SphericalDelta.Phi = 0.0f;
     Camera->SphericalDelta.Theta = 0.0f;
-
+}
+void PEngine::OnMiddleMouseUp(const FVector2& CursorPosition) const
+{
+    PCamera* Camera = GetViewportCamera();
     Camera->PanOffset = 0;
 }
 

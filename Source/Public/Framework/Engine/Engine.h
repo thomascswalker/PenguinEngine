@@ -45,4 +45,5 @@ public:
     void OnKeyPressed(EKey KeyCode);
 
     void OnLeftMouseUp(const FVector2& CursorPosition) const;
+    void OnMiddleMouseUp(const FVector2& CursorPosition) const;
 };

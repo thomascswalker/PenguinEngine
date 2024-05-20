@@ -32,12 +32,10 @@ public:
     float MaxZ = 10.0f;
     float MinFov = 20.0f;
     float MaxFov = 120.0f;
+    float MinZoom = 2.0f;
+    float MaxZoom = 100.0f;
     
     FVector3 Target = FVector3::ZeroVector(); // Origin
-    FVector3 InitialLookAt = Target;
-    FTransform InitialTransform;
-    float InitialViewDistance;
-    
     FSphericalCoords Spherical;
     FSphericalCoords SphericalDelta;
     float MinPolarAngle = 0.0f;

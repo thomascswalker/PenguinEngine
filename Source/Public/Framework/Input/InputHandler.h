@@ -264,13 +264,18 @@ public:
     bool OnMouseWheel(float Delta) override
     {
         // Invert delta
-        MouseMiddleScrolled.Broadcast(-Delta);
+        MouseMiddleScrolled.Broadcast(Delta);
         return true;
     }
 
     bool OnMouseMove(const FVector2& CursorPosition) override
     {
         // Update current cursor position
+        if (CurrentCursorPosition == CursorPosition)
+        {
+            DeltaCursorPosition = 0;
+            return false;
+        }
         PreviousCursorPosition = CurrentCursorPosition;
         CurrentCursorPosition = CursorPosition;
         MouseMoved.Broadcast(CurrentCursorPosition);

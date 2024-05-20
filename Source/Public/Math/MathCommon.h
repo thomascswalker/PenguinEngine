@@ -78,10 +78,4 @@ namespace Math
             (V.X * M.M[0][3]) + (V.Y * M.M[1][3]) + (V.Z * M.M[2][3]) + (V.W * M.M[3][3])
         };
     }
-
-    template <typename T>
-    T Orient2D(const TVector3<T>& A, const TVector3<T>& B, const TVector3<T>& C)
-    {
-        return (B.X - A.X) * (C.Y - A.Y) - (B.Y - A.Y) * (C.X - A.X);
-    }
 }

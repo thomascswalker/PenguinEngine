@@ -27,7 +27,6 @@ void PViewport::ResetView()
     Camera->SetRotation(FRotator());
 
     Camera->Target = FVector3::ZeroVector();
-    Camera->InitialLookAt = FVector3::ZeroVector();
     Camera->ComputeViewProjectionMatrix();
 }
 

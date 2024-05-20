@@ -18,7 +18,7 @@ void PCamera::ComputeViewProjectionMatrix()
     ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 
-void PCamera::Orbit(const float DX, const float DY)
+void PCamera::Orbit(float DX, float DY)
 {
     SphericalDelta.Theta = Math::DegreesToRadians(DX); // Horizontal
     SphericalDelta.Phi = Math::DegreesToRadians(DY); // Vertical
@@ -26,8 +26,6 @@ void PCamera::Orbit(const float DX, const float DY)
 
 void PCamera::Pan(float DX, float DY)
 {
-    float DampingFactor = 0.1f;
-
     // Compute target distance
     FVector3 Position = GetTranslation();
     FVector3 Offset = Position - Target;
@@ -39,19 +37,23 @@ void PCamera::Pan(float DX, float DY)
     // Pan left/right
     FVector3 XOffset = {ViewMatrix[0][0], ViewMatrix[0][1], ViewMatrix[0][2]}; // X Rotation, column 0
     XOffset.Normalize();
-    XOffset *= DX * DampingFactor * TargetDistance / static_cast<float>(Height);
+    XOffset *= DX * TargetDistance / static_cast<float>(Height);
     PanOffset = XOffset;
 
     // Pan up/down
     FVector3 YOffset = {ViewMatrix[1][0], ViewMatrix[1][1], ViewMatrix[1][2]}; // Y Rotation, column 1
     YOffset.Normalize();
-    YOffset *= DY * DampingFactor * TargetDistance / static_cast<float>(Height);
+    YOffset *= DY * TargetDistance / static_cast<float>(Height);
     PanOffset += YOffset;
 }
 
 void PCamera::Zoom(float Value)
 {
-    Spherical.Radius -= Value;
+    FVector3 Translation = GetTranslation();
+    Spherical.SetFromCartesian(Translation.X, Translation.Y, Translation.Z);
+    Spherical.Radius = Math::Max(MinZoom, Math::Min(Spherical.Radius - (Value * 0.1f), MaxZoom));
+    Translation = Spherical.ToCartesian();
+    SetTranslation(Translation);
 }
 
 void PCamera::SetFov(float NewFov)
