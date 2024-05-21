@@ -7,8 +7,8 @@
 uint32 PMesh::AddVertex(const FVector3& V)
 {
     // Add new vert
-    Positions.emplace_back(V);
-    return static_cast<uint32>(Positions.size()) - 1; // NOLINT
+    VertexPositions.emplace_back(V);
+    return static_cast<uint32>(VertexPositions.size()) - 1; // NOLINT
 }
 
 void PMesh::AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& InV2)
@@ -17,9 +17,9 @@ void PMesh::AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& I
     uint32 V1Idx = AddVertex(InV1);
     uint32 V2Idx = AddVertex(InV2);
 
-    Indices.emplace_back(V0Idx);
-    Indices.emplace_back(V1Idx);
-    Indices.emplace_back(V2Idx);
+    VertexPositionIndexes.emplace_back(V0Idx);
+    VertexPositionIndexes.emplace_back(V1Idx);
+    VertexPositionIndexes.emplace_back(V2Idx);
 }
 
 void PMesh::AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, const FVector3& V3)
@@ -30,8 +30,8 @@ void PMesh::AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, 
 
 void PMesh::Empty()
 {
-    Positions.clear();
-    Indices.clear();
+    VertexPositions.clear();
+    VertexPositionIndexes.clear();
 }
 
 

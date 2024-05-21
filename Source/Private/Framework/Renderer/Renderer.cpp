@@ -209,11 +209,11 @@ void PRenderer::DrawMesh(const PMesh* Mesh)
     {
         const uint32 StartIndex = Index * 3;
 
-        const uint32 Index0 = Mesh->Indices[StartIndex];
-        const uint32 Index1 = Mesh->Indices[StartIndex + 1];
-        const uint32 Index2 = Mesh->Indices[StartIndex + 2];
+        const uint32 Index0 = Mesh->VertexPositionIndexes[StartIndex];
+        const uint32 Index1 = Mesh->VertexPositionIndexes[StartIndex + 1];
+        const uint32 Index2 = Mesh->VertexPositionIndexes[StartIndex + 2];
 
-        DrawTriangle(Mesh->Positions[Index0], Mesh->Positions[Index1], Mesh->Positions[Index2]);
+        DrawTriangle(Mesh->VertexPositions[Index0], Mesh->VertexPositions[Index1], Mesh->VertexPositions[Index2]);
     }
 }
 void PRenderer::DrawGrid() const

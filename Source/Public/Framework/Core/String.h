@@ -36,4 +36,14 @@ namespace Strings
             }
         }
     }
+    
+    static bool Contains(const std::string& InString, const char* Char)
+    {
+        return InString.find(Char) != std::string::npos;
+    }
+    
+    static bool Contains(const std::string& InString, const std::string& CompareString)
+    {
+        return InString.find(CompareString) != std::string::npos;
+    }
 }
