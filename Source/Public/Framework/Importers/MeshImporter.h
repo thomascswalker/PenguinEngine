@@ -10,25 +10,59 @@
 
 class ObjImporter
 {
-    static void ParseVertex(const std::string& Line, std::vector<FVector3>& Vertices)
+    static void ParseVector(const std::string& Line, std::vector<FVector3>* Normals)
     {
-        std::vector<std::string> StringPositions;
+        std::vector<std::string> Components;
 
-        Strings::Split(Line, StringPositions, " ");
+        Strings::Split(Line, Components, " ");
 
-        Vertices.emplace_back(std::stof(StringPositions[1]),
-                              std::stof(StringPositions[2]),
-                              std::stof(StringPositions[3]));
+        Normals->emplace_back(std::stof(Components[1]),
+                              std::stof(Components[2]),
+                              std::stof(Components[3]));
     }
-    static void ParseFace(const std::string& Line, std::vector<uint32>& Indices)
+
+    static void ParseFace(const std::string& Line,
+                          std::vector<uint32>* PositionIndexes,
+                          std::vector<uint32>* NormalIndexes,
+                          std::vector<uint32>* TexCoordIndexes)
     {
-        std::vector<std::string> StringIndices;
+        std::vector<std::string> IndexComponents;
 
-        Strings::Split(Line, StringIndices, " ");
+        // Split by spaces
+        Strings::Split(Line, IndexComponents, " "); // [f, v/vt/vn, v/vt/vn, v/vt/vn]
+        IndexComponents.erase(IndexComponents.begin()); // Remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
 
-        Indices.emplace_back(std::stoi(StringIndices[1]) - 1);
-        Indices.emplace_back(std::stoi(StringIndices[2]) - 1);
-        Indices.emplace_back(std::stoi(StringIndices[3]) - 1);
+        // For each index group...
+        for (const std::string& IndexGroup : IndexComponents) // [v/vt/vn]
+        {
+            std::vector<std::string> ComponentGroup;
+            Strings::Split(IndexGroup, ComponentGroup, "/"); // [v, vt, vn]
+
+            // https://paulbourke.net/dataformats/obj/
+            switch (ComponentGroup.size())
+            {
+            case 1 : // [v]
+                {
+                    PositionIndexes->emplace_back(std::stoi(IndexGroup) - 1);
+                    break;
+                }
+            case 2 : // [v/vn]
+                {
+                    PositionIndexes->emplace_back(std::stoi(ComponentGroup[0]) - 1);
+                    NormalIndexes->emplace_back(std::stoi(ComponentGroup[1]) - 1);
+                    break;
+                }
+            case 3 : // [v/vt/vn]
+                {
+                    PositionIndexes->emplace_back(std::stoi(ComponentGroup[0]) - 1);
+                    TexCoordIndexes->emplace_back(std::stoi(ComponentGroup[1]) - 1);
+                    NormalIndexes->emplace_back(std::stoi(ComponentGroup[2]) - 1);
+                    break;
+                }
+            default :
+                throw std::runtime_error("Invalid index format.");
+            }
+        }
     }
 
 public:
@@ -44,7 +78,12 @@ public:
         Stream << Buffer.data();
 
         std::vector<FVector3> Positions;
-        std::vector<uint32> Indices;
+        std::vector<FVector3> Normals;
+        std::vector<FVector3> TexCoords;
+
+        std::vector<uint32> PositionIndexes;
+        std::vector<uint32> NormalIndexes;
+        std::vector<uint32> TexCoordIndexes;
 
         while (Stream.peek() != -1)
         {
@@ -61,12 +100,23 @@ public:
             {
             case 'v' :
                 {
-                    ParseVertex(Line, Positions);
+                    if (Line.starts_with("vn"))
+                    {
+                        ParseVector(Line, &Normals);
+                    }
+                    else if (Line.starts_with("vt"))
+                    {
+                        ParseVector(Line, &TexCoords);
+                    }
+                    else
+                    {
+                        ParseVector(Line, &Positions);
+                    }
                     break;
                 }
             case 'f' :
                 {
-                    ParseFace(Line, Indices);
+                    ParseFace(Line, &PositionIndexes, &NormalIndexes, &TexCoordIndexes);
                     break;
                 }
             default :
@@ -75,8 +125,14 @@ public:
             }
         }
 
-        Mesh->Positions = Positions;
-        Mesh->Indices = Indices;
+        Mesh->VertexPositions = Positions;
+        Mesh->VertexPositionIndexes = PositionIndexes;
+
+        Mesh->VertexNormals = Normals;
+        Mesh->VertexNormalIndexes = NormalIndexes;
+
+        Mesh->VertexTexCoords = TexCoords;
+        Mesh->VertexTexCoordIndexes = TexCoordIndexes;
 
         return true;
     }
