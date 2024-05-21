@@ -225,6 +225,7 @@
   <ItemGroup>
     <Content Include="Examples\Bunny.obj" />
     <Content Include="Examples\Cow.obj" />
+    <Content Include="Examples\Cube.obj" />
     <Content Include="Examples\Penguin.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

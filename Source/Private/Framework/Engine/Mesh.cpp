@@ -4,11 +4,11 @@
 
 // Triangle
 
-uint32 PMesh::AddVertex(const FVector3& V)
+uint32 PMesh::AddVertex(const FVector3& Position, const FVector3& Normal = FVector3::ZeroVector(), const FVector3& TexCoord = FVector3::ZeroVector())
 {
     // Add new vert
-    VertexPositions.emplace_back(V);
-    return static_cast<uint32>(VertexPositions.size()) - 1; // NOLINT
+    Vertexes.emplace_back(Position, Normal, TexCoord);
+    return static_cast<uint32>(Vertexes.size()) - 1; // NOLINT
 }
 
 void PMesh::AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& InV2)
@@ -17,9 +17,9 @@ void PMesh::AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& I
     uint32 V1Idx = AddVertex(InV1);
     uint32 V2Idx = AddVertex(InV2);
 
-    VertexPositionIndexes.emplace_back(V0Idx);
-    VertexPositionIndexes.emplace_back(V1Idx);
-    VertexPositionIndexes.emplace_back(V2Idx);
+    PositionIndexes.emplace_back(V0Idx);
+    PositionIndexes.emplace_back(V1Idx);
+    PositionIndexes.emplace_back(V2Idx);
 }
 
 void PMesh::AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, const FVector3& V3)
@@ -30,8 +30,8 @@ void PMesh::AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, 
 
 void PMesh::Empty()
 {
-    VertexPositions.clear();
-    VertexPositionIndexes.clear();
+    Vertexes.clear();
+    PositionIndexes.clear();
 }
 
 
@@ -76,7 +76,7 @@ std::shared_ptr<PMesh> PMesh::CreatePlane(float Width, float Height)
 
 std::shared_ptr<PMesh> PMesh::CreateSphere(const float Radius, const int32 Segments)
 {
-    std::vector<FVector3> Vertices;
+    std::vector<FVector3> Positions;
     std::vector<uint32> Indices;
 
     const int32 SectorCount = Segments;
@@ -100,7 +100,7 @@ std::shared_ptr<PMesh> PMesh::CreateSphere(const float Radius, const int32 Segme
             // vertex position (x, y, z)
             float X = XY * Math::Cos(SectorAngle); // r * cos(u) * cos(v)
             float Y = XY * Math::Sin(SectorAngle); // r * cos(u) * sin(v)
-            Vertices.emplace_back(X, Y, Z);
+            Positions.emplace_back(X, Y, Z);
         }
     }
 
@@ -130,7 +130,12 @@ std::shared_ptr<PMesh> PMesh::CreateSphere(const float Radius, const int32 Segme
         }
     }
 
-    return std::make_shared<PMesh>(Vertices, Indices);
+    std::vector<PVertex> Vertexes;
+    for (int32 Index = 0; Index < Positions.size(); Index++)
+    {
+        Vertexes.emplace_back(Positions[Index]);
+    }
+    return std::make_shared<PMesh>(Vertexes, Indices);
 }
 
 std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
@@ -161,7 +166,7 @@ std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
         4, 5, 7
     };
 
-    std::vector Vertices{
+    std::vector Positions{
         FVector3(-Scale, -Scale, Scale), //0
         FVector3(Scale, -Scale, Scale), //1
         FVector3(-Scale, Scale, Scale), //2
@@ -172,12 +177,17 @@ std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
         FVector3(Scale, Scale, -Scale) //7
     };
 
-    return std::make_shared<PMesh>(Vertices, Indices);
+    std::vector<PVertex> Vertexes;
+    for (int32 Index = 0; Index < Positions.size(); Index++)
+    {
+        Vertexes.emplace_back(Positions[Index]);
+    }
+    return std::make_shared<PMesh>(Vertexes, Indices);
 }
 
 std::shared_ptr<PMesh> PMesh::CreateTeapot(float Scale = 1.0f)
 {
-    std::vector Vertices
+    std::vector Positions
     {
         FVector3(-0.3911f, 0.4617f, -0.4981f),
         FVector3(-0.5946f, 0.4617f, -0.0000f),
@@ -317,7 +327,7 @@ std::shared_ptr<PMesh> PMesh::CreateTeapot(float Scale = 1.0f)
         FVector3(-0.1858f, 0.4875f, 0.2929f),
         FVector3(-0.3544f, 0.4125f, 0.4615f)
     };
-    for (auto& V : Vertices)
+    for (auto& V : Positions)
     {
         V *= Scale;
         V.Y *= -1;
@@ -567,7 +577,12 @@ std::shared_ptr<PMesh> PMesh::CreateTeapot(float Scale = 1.0f)
         135, 122, 124
     };
 
-    return std::make_shared<PMesh>(Vertices, Indices);
+    std::vector<PVertex> Vertexes;
+    for (int32 Index = 0; Index < Positions.size(); Index++)
+    {
+        Vertexes.emplace_back(Positions[Index]);
+    }
+    return std::make_shared<PMesh>(Vertexes, Indices);
 }
 
 EWindingOrder Math::GetWindingOrder(const FVector3& V0, const FVector3& V1, const FVector3& V2)

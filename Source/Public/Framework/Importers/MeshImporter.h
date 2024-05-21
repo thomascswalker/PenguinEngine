@@ -79,7 +79,7 @@ public:
 
         std::vector<FVector3> Positions;
         std::vector<FVector3> Normals;
-        std::vector<FVector3> TexCoords;
+        std::vector<FVector3> TexCoord;
 
         std::vector<uint32> PositionIndexes;
         std::vector<uint32> NormalIndexes;
@@ -106,11 +106,16 @@ public:
                     }
                     else if (Line.starts_with("vt"))
                     {
-                        ParseVector(Line, &TexCoords);
+                        ParseVector(Line, &TexCoord);
+                    }
+                    else if (Line.starts_with("v"))
+                    {
+                        ParseVector(Line, &Positions);
                     }
                     else
                     {
-                        ParseVector(Line, &Positions);
+                        LOG_ERROR("Failed to parse line: {}", Line)
+                        return false;
                     }
                     break;
                 }
@@ -124,15 +129,23 @@ public:
                 break;
             }
         }
-
-        Mesh->VertexPositions = Positions;
-        Mesh->VertexPositionIndexes = PositionIndexes;
-
-        Mesh->VertexNormals = Normals;
-        Mesh->VertexNormalIndexes = NormalIndexes;
-
-        Mesh->VertexTexCoords = TexCoords;
-        Mesh->VertexTexCoordIndexes = TexCoordIndexes;
+        
+        for (int32 Index = 0; Index < Positions.size(); Index++)
+        {
+            PVertex V(Positions[Index]);
+            if (!Normals.empty())
+            {
+                V.Normal = Normals[Index];
+            }
+            if (!TexCoord.empty())
+            {
+                V.TexCoord = TexCoord[Index];
+            }
+            Mesh->Vertexes.emplace_back(V);
+        }
+        Mesh->PositionIndexes = PositionIndexes;
+        Mesh->NormalIndexes = NormalIndexes;
+        Mesh->TexCoordIndexes = TexCoordIndexes;
 
         return true;
     }

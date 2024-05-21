@@ -178,7 +178,7 @@ void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
     DrawLine(Line.A, Line.B, Color);
 }
 
-void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2)
+void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex& V2)
 {
     auto Camera = Viewport->GetCamera();
     const FVector3 CameraNormal = (Camera->Target - Camera->GetTranslation()).Normalized();
@@ -209,11 +209,11 @@ void PRenderer::DrawMesh(const PMesh* Mesh)
     {
         const uint32 StartIndex = Index * 3;
 
-        const uint32 Index0 = Mesh->VertexPositionIndexes[StartIndex];
-        const uint32 Index1 = Mesh->VertexPositionIndexes[StartIndex + 1];
-        const uint32 Index2 = Mesh->VertexPositionIndexes[StartIndex + 2];
+        const uint32 Index0 = Mesh->PositionIndexes[StartIndex];
+        const uint32 Index1 = Mesh->PositionIndexes[StartIndex + 1];
+        const uint32 Index2 = Mesh->PositionIndexes[StartIndex + 2];
 
-        DrawTriangle(Mesh->VertexPositions[Index0], Mesh->VertexPositions[Index1], Mesh->VertexPositions[Index2]);
+        DrawTriangle(Mesh->Vertexes[Index0], Mesh->Vertexes[Index1], Mesh->Vertexes[Index2]);
     }
 }
 void PRenderer::DrawGrid() const
@@ -301,7 +301,7 @@ void PRenderer::Scanline()
                 // at this pixel to the new depth we just got.
                 GetDepthChannel()->SetPixel(X, Y, NewDepth);
             }
-            CurrentShader->ComputePixelShader();
+            CurrentShader->ComputePixelShader(X, Y);
             GetColorChannel()->SetPixel(X, Y, CurrentShader->OutColor);
         }
     }
@@ -373,7 +373,7 @@ void PRenderer::ScanlineFast()
                     // at this pixel to the new depth we just got.
                     GetDepthChannel()->SetPixel(Point.X, Point.Y, NewDepth);
                 }
-                CurrentShader->ComputePixelShader();
+                CurrentShader->ComputePixelShader(Point.X, Point.Y);
                 GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
             }
 

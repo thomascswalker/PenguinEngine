@@ -2,13 +2,14 @@
 
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
+#include "Framework/Engine/Mesh.h"
 #include "glm.hpp"
 
 struct IShader
 {
     virtual ~IShader() = default;
     int32 Width, Height;
-    FVector3 V0, V1, V2;
+    PVertex V0, V1, V2;
     FVector3 S0, S1, S2;
     FVector3 CameraTranslation;
     FVector3 WorldNormal;
@@ -19,8 +20,8 @@ struct IShader
     
     FColor OutColor = FColor::Magenta();
     
-    void Init(glm::mat4 InMVP,
-        const FVector3& InV0, const FVector3& InV1, const FVector3& InV2,
+    void Init(const glm::mat4& InMVP,
+        const PVertex& InV0, const PVertex& InV1, const PVertex& InV2,
         const FVector3& InCameraNormal,
         const FVector3& InCameraTranslation,
         int32 InWidth, int32 InHeight)
@@ -29,7 +30,7 @@ struct IShader
         V0 = InV0;
         V1 = InV1;
         V2 = InV2;
-        WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
+        WorldNormal = Math::GetSurfaceNormal(V0.Position, V1.Position, V2.Position);
         CameraNormal = InCameraNormal;
         CameraTranslation = InCameraTranslation;
         Width = InWidth;
@@ -71,9 +72,9 @@ struct IShader
     {
         // Project the world-space points to screen-space
         bool bTriangleOnScreen = false;
-        bTriangleOnScreen |= Clip(V0, S0);
-        bTriangleOnScreen |= Clip(V1, S1);
-        bTriangleOnScreen |= Clip(V2, S2);
+        bTriangleOnScreen |= Clip(V0.Position, S0);
+        bTriangleOnScreen |= Clip(V1.Position, S1);
+        bTriangleOnScreen |= Clip(V2.Position, S2);
 
         if (!bTriangleOnScreen)
         {
@@ -109,12 +110,12 @@ struct IShader
     }
 
     // No default implementation
-    virtual void ComputePixelShader() = 0;
+    virtual void ComputePixelShader(float X, float Y) = 0;
 };
 
 struct DefaultShader : IShader
 {
-    void ComputePixelShader() override
+    void ComputePixelShader(float X, float Y) override
     {
         float RemappedFacingRatio = Math::Remap(FacingRatio, -1.0f, 1.0f, 0.0f, 1.0f);
         int8 R = static_cast<int8>(RemappedFacingRatio * 255.0f);

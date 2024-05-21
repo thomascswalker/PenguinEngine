@@ -11,30 +11,43 @@ enum EPrimitiveType
     Torus
 };
 
+struct PVertex
+{
+    FVector3 Position;
+    FVector3 Normal;
+    FVector3 TexCoord;
+
+    explicit PVertex(const FVector3& InPosition = FVector3::ZeroVector(),
+                     const FVector3& InNormal = FVector3::ZeroVector(),
+                     const FVector3& InTexCoord = FVector3::ZeroVector())
+        : Position(InPosition), Normal(InNormal), TexCoord(InTexCoord)
+    {
+    }
+};
+
 struct PMesh : PObject
 {
 protected:
-    uint32 AddVertex(const FVector3& V);
+    uint32 AddVertex(const FVector3& Position, const FVector3& Normal, const FVector3& TexCoord);
 
 public:
     // Properties
-    std::vector<FVector3> VertexPositions;
-    std::vector<uint32> VertexPositionIndexes;
-    
-    std::vector<FVector3> VertexNormals;
-    std::vector<uint32> VertexNormalIndexes;
-
-    std::vector<FVector3> VertexTexCoords;
-    std::vector<uint32> VertexTexCoordIndexes;
+    std::vector<PVertex> Vertexes;
+    std::vector<uint32> PositionIndexes;
+    std::vector<uint32> NormalIndexes;
+    std::vector<uint32> TexCoordIndexes;
 
     PMesh()
     {
     }
-    PMesh(const std::vector<FVector3>& InPositions, const std::vector<uint32>& InIndices) : VertexPositionIndexes(InIndices)
+    PMesh(const std::vector<PVertex>& InVertexes, const std::vector<uint32>& InIndexes) : Vertexes(InVertexes), PositionIndexes(InIndexes)
     {
-        for (const FVector3& Position : InPositions)
+    }
+    PMesh(const std::vector<FVector3>& InPositions)
+    {
+        for (const auto P : InPositions)
         {
-            VertexPositions.emplace_back(Position);
+            Vertexes.emplace_back(P);
         }
     }
 
@@ -42,9 +55,9 @@ public:
     void AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& InV2);
     void AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, const FVector3& V3);
     void Empty();
-    uint32 GetTriCount() const { return static_cast<uint32>(VertexPositionIndexes.size()) / 3; }
-    FVector3* GetVertexPosition(const uint32 Index) { return &VertexPositions[Index]; }
-    constexpr uint32 GetVertexCount() const { return static_cast<uint32>(VertexPositions.size()); }
+    uint32 GetTriCount() const { return static_cast<uint32>(PositionIndexes.size()) / 3; }
+    FVector3* GetVertexPosition(const uint32 Index) { return &Vertexes[Index].Position; }
+    constexpr uint32 GetVertexCount() const { return static_cast<uint32>(Vertexes.size()); }
 
     // Primitives
     static std::shared_ptr<PMesh> CreateTriangle(float Scale);

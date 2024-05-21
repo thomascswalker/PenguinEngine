@@ -187,7 +187,7 @@ public:
     bool ClipLine(FLine* Line) const;
     void DrawLine(const FVector3& InA, const FVector3& InB, const FColor& Color) const;
     void DrawLine(const FLine3d& Line, const FColor& Color) const;
-    void DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2);
+    void DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex& V2);
     void DrawMesh(const PMesh* Mesh);
     void DrawGrid() const;
     void Draw();
