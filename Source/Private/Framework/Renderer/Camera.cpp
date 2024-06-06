@@ -9,12 +9,13 @@
 // View Camera
 void PCamera::ComputeViewProjectionMatrix()
 {
-    FVector3 Translation = GetTranslation();
+    FVector3 Translation = Spherical.ToCartesian();
     glm::vec3 Eye = {Translation.X, Translation.Y, Translation.Z};
     glm::vec3 Center = {Target.X, Target.Y, Target.Z};
-    glm::vec3 Up = {0.0f, -1.0f, 0.0f}; // Negative UP value
-    ViewMatrix = glm::lookAt(Eye, Center, Up);
-    ProjectionMatrix = glm::perspective(Math::DegreesToRadians(Fov), GetAspect(), MinZ, MaxZ);
+    glm::vec3 Up = {0.0f, 1.0f, 0.0f}; // Negative UP
+
+    ViewMatrix = glm::lookAtRH(Eye, Center, Up);
+    ProjectionMatrix = glm::perspectiveFovRH_ZO(Math::DegreesToRadians(Fov), static_cast<float>(Width), static_cast<float>(Height), MinZ, MaxZ);
     ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 }
 
@@ -29,9 +30,13 @@ void PCamera::Pan(float DX, float DY)
     // Compute target distance
     FVector3 Position = GetTranslation();
     FVector3 Offset = Position - Target;
+
+    // The length of the Offset vector gives us the distance from the camera to the target.
     float TargetDistance = Offset.Length();
 
-    // Scale target distance to account for FOV
+    // Next, we need to scale this distance by the tangent of half the field of view.
+    // This is because the field of view is measured in degrees, but the tangent function expects an angle in radians.
+    // We also divide by the height of the viewport to account for the aspect ratio.
     TargetDistance *= Math::Tan((Fov / 2.0f) * P_PI / 180.0f);
 
     // Pan left/right
@@ -50,7 +55,7 @@ void PCamera::Pan(float DX, float DY)
 void PCamera::Zoom(float Value)
 {
     FVector3 Translation = GetTranslation();
-    Spherical.SetFromCartesian(Translation.X, Translation.Y, Translation.Z);
+    Spherical = FSphericalCoords::FromCartesian(Translation.X, Translation.Y, Translation.Z);
     Spherical.Radius = Math::Max(MinZoom, Math::Min(Spherical.Radius - (Value * 0.1f), MaxZoom));
     Translation = Spherical.ToCartesian();
     SetTranslation(Translation);
@@ -68,7 +73,7 @@ void PCamera::Update(float DeltaTime)
     FVector3 Offset = Position - Target;
 
     // Convert offset to spherical coordinates
-    Spherical.SetFromCartesian(Offset.X, Offset.Y, Offset.Z);
+    Spherical = FSphericalCoords::FromCartesian(Offset.X, Offset.Y, Offset.Z);
 
     // Offset spherical coordinates by the current spherical delta
     Spherical.Theta += SphericalDelta.Theta;
@@ -77,6 +82,14 @@ void PCamera::Update(float DeltaTime)
     // Restrict Phi to min/max polar angle to prevent locking
     Spherical.Phi = Math::Max(MinPolarAngle, Math::Min(MaxPolarAngle, Spherical.Phi));
     Spherical.MakeSafe();
+
+    // Set camera rotation pitch/yaw
+    FRotator NewRotation(
+        Math::RadiansToDegrees(Spherical.Theta), // Yaw
+        Math::RadiansToDegrees(Spherical.Phi), // Pitch
+        0.0f // Roll
+    );
+    SetRotation(NewRotation);
 
     // Convert spherical coordinates back to position
     Offset = Spherical.ToCartesian();

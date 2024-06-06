@@ -5,6 +5,24 @@
 #include "Framework/Engine/Mesh.h"
 #include "glm.hpp"
 
+struct PShaderData
+{
+    int32 Width, Height;
+    PVertex V0, V1, V2;
+    FVector3 S0, S1, S2;
+    FVector3 CameraTranslation;
+    FVector3 WorldNormal;
+    FVector3 ViewNormal;
+    FVector3 CameraNormal;
+    float FacingRatio;
+    FRect ScreenBounds;
+    glm::mat4 MVP;
+    FVector3 UVW;
+    
+    bool bHasNormals = false;
+    bool bHasTexCoords = false;
+};
+
 struct IShader
 {
     virtual ~IShader() = default;
@@ -13,24 +31,29 @@ struct IShader
     FVector3 S0, S1, S2;
     FVector3 CameraTranslation;
     FVector3 WorldNormal;
+    FVector3 ViewNormal;
     FVector3 CameraNormal;
     float FacingRatio;
     FRect ScreenBounds;
     glm::mat4 MVP;
-    
+    FVector3 UVW;
+
+    bool bHasNormals = false;
+    bool bHasTexCoords = false;
+
     FColor OutColor = FColor::Magenta();
-    
+
     void Init(const glm::mat4& InMVP,
-        const PVertex& InV0, const PVertex& InV1, const PVertex& InV2,
-        const FVector3& InCameraNormal,
-        const FVector3& InCameraTranslation,
-        int32 InWidth, int32 InHeight)
+              const PVertex& InV0, const PVertex& InV1, const PVertex& InV2,
+              const FVector3& InCameraNormal,
+              const FVector3& InCameraTranslation,
+              const int32 InWidth, const int32 InHeight)
     {
         MVP = InMVP;
         V0 = InV0;
         V1 = InV1;
         V2 = InV2;
-        WorldNormal = Math::GetSurfaceNormal(V0.Position, V1.Position, V2.Position);
+        
         CameraNormal = InCameraNormal;
         CameraTranslation = InCameraTranslation;
         Width = InWidth;
@@ -67,7 +90,7 @@ struct IShader
         }
         return false;
     }
-    
+
     virtual bool ComputeVertexShader()
     {
         // Project the world-space points to screen-space
@@ -76,6 +99,7 @@ struct IShader
         bTriangleOnScreen |= Clip(V1.Position, S1);
         bTriangleOnScreen |= Clip(V2.Position, S2);
 
+        // If the triangle is completely off screen, exit
         if (!bTriangleOnScreen)
         {
             return false;
@@ -90,21 +114,24 @@ struct IShader
         case EWindingOrder::CCW : // Triangle is front-facing, continue
             break;
         }
-        
+
         // Get the bounding box of the 2d triangle clipped to the viewport
         ScreenBounds = FRect::MakeBoundingBox(S0, S1, S2);
 
         // Grow by one pixel to accomodate gaps between triangles
         ScreenBounds.Grow(1.0f);
 
-        // Clamp the triangle bounds to the viewport bounds
+        // Clamp the bounds to the viewport
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);
 
-        // Get the current camera attributes
-        FacingRatio = Math::Dot(WorldNormal, CameraNormal);
         
-        // TODO: Figure out how to exit early if back-facing
+        FVector3 E0 = V1.Position - V0.Position;
+        FVector3 E1 = V2.Position - V0.Position;
+        WorldNormal = Math::Cross(E0, E1).Normalized();
+
+        // Calculate the triangle normal relative to the camera
+        ViewNormal = WorldNormal.Cross(CameraNormal).Normalized();
 
         return true;
     }
@@ -115,12 +142,22 @@ struct IShader
 
 struct DefaultShader : IShader
 {
-    void ComputePixelShader(float X, float Y) override
+    void ComputePixelShader(float U, float V) override
     {
-        float RemappedFacingRatio = Math::Remap(FacingRatio, -1.0f, 1.0f, 0.0f, 1.0f);
-        int8 R = static_cast<int8>(RemappedFacingRatio * 255.0f);
-        int8 G = static_cast<int8>(RemappedFacingRatio * 255.0f);
-        int8 B = static_cast<int8>(RemappedFacingRatio * 255.0f);
-        OutColor = FColor::FromRgba(R,G,B);
+        // Calculate smooth normals
+        // const FVector3 N0 = V0.Normal;
+        // const FVector3 N1 = V1.Normal;
+        // const FVector3 N2 = V2.Normal;
+
+        // WorldNormal = (N0 * UVW.X) + (N1 * UVW.Y) + (N2 * UVW.Z);
+        // WorldNormal.Normalize();
+        
+        // Calculate the dot product of the triangle normal and camera direction
+        FacingRatio = Math::Max(0.0f, Math::Dot(WorldNormal, CameraNormal));
+        
+        int8 R = static_cast<int8>(Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f));
+        int8 G = static_cast<int8>(Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f));
+        int8 B = static_cast<int8>(Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f));
+        OutColor = FColor::FromRgba(R, G, B);
     }
 };

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Math/MathCommon.h"
+#include "Math/Spherical.h"
 
 enum class ECoordinateSpace
 {
@@ -13,10 +14,25 @@ class PObject
 protected:
     FTransform Transform;
 
+    // Basis vectors
+    FVector3 ForwardVector;
+    FVector3 RightVector;
+    FVector3 UpVector;
+
 public:
     virtual ~PObject() = default;
-    virtual void Update(float DeltaTime){};
-    
+    virtual void Update(float DeltaTime)
+    {
+    }
+
+    void ComputeBasisVectors()
+    {
+        FSphericalCoords Temp = FSphericalCoords::FromRotation(Transform.Rotation);
+        ForwardVector = Temp.ToCartesian().Normalized();
+        RightVector = Math::Cross(FVector3::UpVector(), ForwardVector).Normalized();
+        UpVector = Math::Cross(ForwardVector, RightVector).Normalized();
+    }
+
     // Getters
     FTransform GetTransform() const { return Transform; }
     FVector3 GetTranslation() const { return Transform.Translation; }
@@ -25,7 +41,11 @@ public:
 
     // Setters
     void SetTranslation(const FVector3& NewTranslation) { Transform.Translation = NewTranslation; }
-    void SetRotation(const FRotator& NewRotation) { Transform.Rotation = NewRotation; }
+    void SetRotation(const FRotator& NewRotation)
+    {
+        Transform.Rotation = NewRotation;
+        ComputeBasisVectors();
+    }
     void SetScale(const FVector3& NewScale) { Transform.Scale = NewScale; }
 
     // Manipulators
@@ -37,27 +57,21 @@ public:
     {
         Transform.Rotation += FRotator(Pitch, Yaw, Roll);
         Transform.Rotation.Normalize();
+        ComputeBasisVectors();
     }
 
     // Axes
+
     FVector3 GetForwardVector() const
     {
-        FRotator R = Transform.Rotation;
-        FVector3 Forward;
-        Forward.X = Math::Sin(R.Yaw);
-        Forward.Y = -(Math::Sin(R.Pitch) * Math::Cos(R.Yaw));
-        Forward.Z = -(Math::Cos(R.Pitch) * Math::Cos(R.Yaw));
-        return Forward;
+        return ForwardVector;
     }
     FVector3 GetRightVector() const
     {
-        const FVector3 Forward = GetForwardVector();
-        return (Math::Cross(Forward, FVector3::UpVector())).Normalized();
+        return RightVector;
     }
     FVector3 GetUpVector() const
     {
-        const FVector3 Forward = GetForwardVector();
-        const FVector3 Right = GetRightVector();
-        return (Math::Cross(Forward, Right)).Normalized();
+        return UpVector;
     }
 };

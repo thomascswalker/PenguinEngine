@@ -584,17 +584,27 @@ std::shared_ptr<PMesh> PMesh::CreateTeapot(float Scale = 1.0f)
     }
     return std::make_shared<PMesh>(Vertexes, Indices);
 }
-
-EWindingOrder Math::GetWindingOrder(const FVector3& V0, const FVector3& V1, const FVector3& V2)
+std::shared_ptr<PMesh> PMesh::CreateCone()
 {
-    const float Result = (V1.X - V0.X) * (V2.Y - V0.Y) - (V2.X - V0.X) * (V1.Y - V0.Y);
-    if (Result > 0)
+    std::vector Positions = {
+        FVector3{0.000000f, -1.000000f, -1.000000f},
+        FVector3{-1.000000f, -1.000000f, -0.000000f},
+        FVector3{-0.000000f, -1.000000f, 1.000000f},
+        FVector3{1.000000f, -1.000000f, 0.000000f},
+        FVector3{0.000000f, 1.000000f, 0.000000f}
+    };
+    std::vector<uint32> Indexes{
+        0, 3, 1,
+        1, 3, 2,
+        0, 1, 4,
+        1, 2, 4,
+        2, 3, 4,
+        3, 0, 4,
+    };
+    std::vector<PVertex> Vertexes;
+    for (int32 Index = 0; Index < Positions.size(); Index++)
     {
-        return EWindingOrder::CCW;
+        Vertexes.emplace_back(Positions[Index]);
     }
-    if (Result < 0)
-    {
-        return EWindingOrder::CW;
-    }
-    return EWindingOrder::CL;
+    return std::make_shared<PMesh>(Vertexes, Indexes);
 }

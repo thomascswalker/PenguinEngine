@@ -75,6 +75,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
         }
     case WM_DESTROY :
         {
+            DeleteObject(DisplayBitmap);
             Engine->Shutdown();
             PostQuitMessage(0);
             return 0;
@@ -116,7 +117,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 return 1;
             }
 
-            const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(Renderer->GetHeight() - lParam));
             if (bMouseUp)
             {
                 InputHandler->OnMouseUp(ButtonType, CursorPosition);
@@ -132,7 +133,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
     case WM_MOUSEMOVE :
     case WM_INPUT :
         {
-            const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            const FVector2 CursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(Renderer->GetHeight() - lParam));
             InputHandler->OnMouseMove(CursorPosition);
             return 0;
         }
@@ -164,30 +165,19 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
                 break;
             }
-
-            // Draw mouse cursor line from click origin
-            if (InputHandler->IsMouseDown(EMouseButtonType::Left) && InputHandler->IsAltDown())
-            {
-                FVector3 A = InputHandler->GetClickPosition();
-                if (A.X != 0.0f && A.Y != 0.0f)
-                {
-                    FVector3 B = InputHandler->GetCurrentCursorPosition();
-                    Renderer->DrawLine(A, B, FColor::Red());
-                }
-            }
-
+            
             // Get the current window size from the buffer
             const std::shared_ptr<PChannel> Buffer = Renderer->GetColorChannel();
-            const uint32 Width = Buffer->Width;
-            const uint32 Height = Buffer->Height;
+            const int32 Width = Buffer->Width;
+            const int32 Height = Buffer->Height;
 
             // Create a bitmap with the current renderer buffer memory the size of the window
             InvalidateRect(Hwnd, nullptr, TRUE);
             PAINTSTRUCT Paint;
             const HDC DeviceContext = BeginPaint(Hwnd, &Paint);
             const HDC RenderContext = CreateCompatibleDC(DeviceContext);
-            const HBITMAP Bitmap = CreateBitmap(Width, Height, 1, 32, Buffer->Memory); // NOLINT
-            SelectObject(RenderContext, Bitmap);
+            SetDIBits(RenderContext, DisplayBitmap, 0, Height, Buffer->Memory, &BitmapInfo, 0);
+            SelectObject(RenderContext, DisplayBitmap);
             if (!BitBlt(DeviceContext, 0, 0, Width, Height, RenderContext, 0, 0, SRCCOPY)) // NOLINT
             {
                 LOG_ERROR("Failed during BitBlt")
@@ -219,7 +209,6 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             ReleaseDC(Hwnd, DeviceContext);
             DeleteDC(DeviceContext);
             DeleteDC(RenderContext);
-            DeleteObject(Bitmap);
             EndPaint(Hwnd, &Paint);
 
             break;
@@ -236,13 +225,13 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
 
             // Update the renderer size
             Renderer->Resize(Width, Height);
-            BitmapInfo.bmiHeader.biWidth = static_cast<int32>(Engine->GetRenderer()->GetWidth());
-            BitmapInfo.bmiHeader.biHeight = -(static_cast<int32>(Engine->GetRenderer()->GetHeight()));
+            BitmapInfo.bmiHeader.biWidth = Engine->GetRenderer()->GetWidth();
+            BitmapInfo.bmiHeader.biHeight = Engine->GetRenderer()->GetHeight();
 
             const HDC DeviceContext = GetDC(Hwnd);
             const HDC MemoryContext = CreateCompatibleDC(DeviceContext);
             PPlatformMemory::Realloc(DisplayBuffer, Width * Height * BYTES_PER_PIXEL * 4);
-            DisplayBitmap = CreateDIBSection(MemoryContext, &BitmapInfo, DIB_RGB_COLORS, (void**)DisplayBuffer, nullptr, 0);
+            DisplayBitmap = CreateDIBitmap(MemoryContext, &BitmapInfo.bmiHeader, DIB_RGB_COLORS, DisplayBuffer, &BitmapInfo, 0);
 
             break;
         }
@@ -361,8 +350,8 @@ uint32 PWin32Platform::Start()
     const HDC MemoryContext = CreateCompatibleDC(DeviceContext);
 
     BitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    BitmapInfo.bmiHeader.biWidth = static_cast<int32>(Engine->GetRenderer()->GetWidth());
-    BitmapInfo.bmiHeader.biHeight = -(static_cast<int32>(Engine->GetRenderer()->GetHeight()));
+    BitmapInfo.bmiHeader.biWidth = Engine->GetRenderer()->GetWidth();
+    BitmapInfo.bmiHeader.biHeight = Engine->GetRenderer()->GetHeight();
     BitmapInfo.bmiHeader.biPlanes = 1;
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;

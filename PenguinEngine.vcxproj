@@ -224,9 +224,13 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Examples\Bunny.obj" />
+    <Content Include="Examples\Cone.obj" />
     <Content Include="Examples\Cow.obj" />
     <Content Include="Examples\Cube.obj" />
+    <Content Include="Examples\Dragon.obj" />
+    <Content Include="Examples\Gizmo.obj" />
     <Content Include="Examples\Penguin.obj" />
+    <Content Include="Examples\Spot.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

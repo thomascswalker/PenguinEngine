@@ -180,14 +180,16 @@ void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
 
 void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex& V2)
 {
-    auto Camera = Viewport->GetCamera();
-    const FVector3 CameraNormal = (Camera->Target - Camera->GetTranslation()).Normalized();
+    PCamera* Camera = Viewport->GetCamera();
     CurrentShader->Init(
         Camera->ViewProjectionMatrix,
-        V0, V1, V2,
-        CameraNormal,
+        V0,
+        V1,
+        V2,
+        Camera->GetForwardVector(),
         Camera->GetTranslation(),
-        Camera->Width, Camera->Height
+        Camera->Width,
+        Camera->Height
     );
 
     if (!CurrentShader->ComputeVertexShader())
@@ -205,6 +207,8 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
 void PRenderer::DrawMesh(const PMesh* Mesh)
 {
     CurrentShader = std::make_shared<DefaultShader>();
+    CurrentShader->bHasNormals = Mesh->HasNormals();
+    CurrentShader->bHasTexCoords = Mesh->HasTexCoords();
     for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
     {
         const uint32 StartIndex = Index * 3;
@@ -253,12 +257,36 @@ void PRenderer::Draw()
     {
         DrawMesh(Mesh.get());
     }
+
+    // Draw mouse cursor line from click origin
+    IInputHandler* InputHandler = IInputHandler::GetInstance();
+    if (InputHandler->IsMouseDown(EMouseButtonType::Left) && InputHandler->IsAltDown())
+    {
+        FVector3 A = InputHandler->GetClickPosition();
+        if (A.X != 0.0f && A.Y != 0.0f)
+        {
+            FVector3 B = InputHandler->GetCurrentCursorPosition();
+            DrawLine(A, B, FColor::Red());
+        }
+    }
 }
 void PRenderer::Scanline()
 {
-    auto S0 = CurrentShader->S0;
-    auto S1 = CurrentShader->S1;
-    auto S2 = CurrentShader->S2;
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+
+    switch (Math::GetWindingOrder(S0, S1, S2))
+    {
+    case EWindingOrder::CCW:
+        break;
+    case EWindingOrder::CW:
+        std::swap(S0, S1);
+        break;
+    case EWindingOrder::CL:
+        return;
+    }
+    
     auto Bounds = CurrentShader->ScreenBounds;
 
     // Loop through all pixels in the screen bounding box.
@@ -310,9 +338,19 @@ void PRenderer::Scanline()
 // https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
 void PRenderer::ScanlineFast()
 {
-    const FVector3 S0 = CurrentShader->S0;
-    const FVector3 S1 = CurrentShader->S1;
-    const FVector3 S2 = CurrentShader->S2;
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+
+    switch (Math::GetWindingOrder(S0, S1, S2))
+    {
+    case EWindingOrder::CCW:
+        break;
+    case EWindingOrder::CW:
+    case EWindingOrder::CL:
+        return;
+    }
+    
     const FRect Bounds = CurrentShader->ScreenBounds;
 
     // Difference in Y coordinate for each edge
@@ -373,6 +411,9 @@ void PRenderer::ScanlineFast()
                     // at this pixel to the new depth we just got.
                     GetDepthChannel()->SetPixel(Point.X, Point.Y, NewDepth);
                 }
+                FVector3 UVW;
+                Math::GetBarycentric(Point.ToType<float>(), S0, S1, S2, UVW);
+                CurrentShader->UVW = UVW;
                 CurrentShader->ComputePixelShader(Point.X, Point.Y);
                 GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
             }

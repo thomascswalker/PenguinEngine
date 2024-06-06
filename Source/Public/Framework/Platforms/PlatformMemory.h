@@ -35,7 +35,7 @@ struct PPlatformMemory
     static void Fill(void* Memory, const size_t Size, T Value)
     {
         T* Ptr = static_cast<T*>(Memory);
-        for (int32 Index = 0; Index < Size; Index++)
+        for (size_t Index = 0; Index < Size; Index++)
         {
             *(Ptr++) = Value;
         }

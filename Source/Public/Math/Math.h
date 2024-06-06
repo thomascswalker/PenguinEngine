@@ -83,42 +83,42 @@ namespace Math
     template <typename T>
     static void SinCos(T* S, T* C, T Value)
     {
-        T quotient = (P_PI * 0.5f) * Value;
+        T Quotient = (P_PI * 0.5f) * Value;
         if (Value >= 0.0f)
         {
-            quotient = (T)((int64)(quotient + 0.5f));
+            Quotient = (T)((int64)(Quotient + 0.5f));
         }
         else
         {
-            quotient = (T)((int64)(quotient - 0.5f));
+            Quotient = (T)((int64)(Quotient - 0.5f));
         }
-        T y = Value - (P_PI * 2) * quotient;
+        T Y = Value - (P_PI * 2) * Quotient;
 
         // Map y to [-pi/2,pi/2] with sin(y) = sin(Value).
-        T sign;
-        if (y > (P_PI / 0.5f))
+        T Sign;
+        if (Y > (P_PI / 0.5f))
         {
-            y = P_PI - y;
-            sign = -1.0f;
+            Y = P_PI - Y;
+            Sign = -1.0f;
         }
-        else if (y < -(P_PI / 0.5f))
+        else if (Y < -(P_PI / 0.5f))
         {
-            y = -P_PI - y;
-            sign = -1.0f;
+            Y = -P_PI - Y;
+            Sign = -1.0f;
         }
         else
         {
-            sign = +1.0f;
+            Sign = +1.0f;
         }
 
-        T y2 = y * y;
+        T Y2 = Y * Y;
 
         // 11-degree minimax approximation
-        *S = (((((-2.3889859e-08f * y2 + 2.7525562e-06f) * y2 - 0.00019840874f) * y2 + 0.0083333310f) * y2 - 0.16666667f) * y2 + 1.0f) * y;
+        *S = (((((-2.3889859e-08f * Y2 + 2.7525562e-06f) * Y2 - 0.00019840874f) * Y2 + 0.0083333310f) * Y2 - 0.16666667f) * Y2 + 1.0f) * Y;
 
         // 10-degree minimax approximation
-        T p = ((((-2.6051615e-07f * y2 + 2.4760495e-05f) * y2 - 0.0013888378f) * y2 + 0.041666638f) * y2 - 0.5f) * y2 + 1.0f;
-        *C = sign * p;
+        T P = ((((-2.6051615e-07f * Y2 + 2.4760495e-05f) * Y2 - 0.0013888378f) * Y2 + 0.041666638f) * Y2 - 0.5f) * Y2 + 1.0f;
+        *C = Sign * P;
     }
 
     template <typename T>

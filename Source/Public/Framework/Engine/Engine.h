@@ -22,7 +22,7 @@ class PEngine
 public:
     static PEngine* Instance;
     static PEngine* GetInstance();
-
+    
     bool Startup(uint32 InWidth, uint32 InHeight);
     bool Shutdown();
 

@@ -17,20 +17,26 @@ enum
     BYTES_PER_PIXEL = 32
 };
 
+enum class EOrientation
+{
+    Horizontal,
+    Vertical
+};
+
 struct PChannel
 {
     void* Memory; // Memory Order BB GG RR XX
     uint32 ChannelCount = BYTES_PER_PIXEL / BYTES_PER_CHANNEL; // 4
-    uint32 Width;
-    uint32 Height;
+    int32 Width;
+    int32 Height;
     uint32 Pitch;
     EChannelType Type;
 
-    PChannel(EChannelType InType, uint32 InWidth, uint32 InHeight) : Type(InType)
+    PChannel(EChannelType InType, int32 InWidth, int32 InHeight) : Type(InType)
     {
         Resize(InWidth, InHeight);
     }
-    void Resize(uint32 InWidth, uint32 InHeight)
+    void Resize(int32 InWidth, int32 InHeight)
     {
         Width = InWidth;
         Height = InHeight;
@@ -42,11 +48,11 @@ struct PChannel
         Memory = PPlatformMemory::Realloc(Memory, GetMemorySize());
     }
 
-    constexpr uint32 GetOffset(const uint32 X, const uint32 Y) const { return (Y * (Pitch / ChannelCount)) + X; }
-    constexpr uint32 GetPixelCount() const { return Width * Height; }
-    constexpr uint32 GetMemorySize() const { return Width * Height * BYTES_PER_PIXEL * ChannelCount; }
+    constexpr int32 GetOffset(const int32 X, const int32 Y) const { return (Y * (Pitch / ChannelCount)) + X; }
+    constexpr int32 GetPixelCount() const { return Width * Height; }
+    constexpr int32 GetMemorySize() const { return Width * Height * BYTES_PER_PIXEL * ChannelCount; }
 
-    void SetPixel(uint32 X, uint32 Y, const float Value) const
+    void SetPixel(int32 X, int32 Y, const float Value) const
     {
         assert(Type == EChannelType::Data);
         if (X < 0 || X >= Width || Y < 0 || Y >= Height)
@@ -58,7 +64,7 @@ struct PChannel
         *Ptr = Value;
     }
 
-    void SetPixel(uint32 X, uint32 Y, const FColor& Color) const
+    void SetPixel(int32 X, int32 Y, const FColor& Color) const
     {
         assert(Type == EChannelType::Color);
         if (X < 0 || X >= Width || Y < 0 || Y >= Height)
@@ -66,7 +72,7 @@ struct PChannel
             return;
         }
 
-        uint32* Ptr = static_cast<uint32*>(Memory) + GetOffset(X, Y);
+        int32* Ptr = static_cast<int32*>(Memory) + GetOffset(X, Y);
 
         // Placing pixels in memory order within a uint32:
         // BB GG RR AA
@@ -75,20 +81,20 @@ struct PChannel
     }
 
     template <typename T>
-    T GetPixel(uint32 X, uint32 Y) const
+    T GetPixel(int32 X, int32 Y) const
     {
         return *(static_cast<T*>(Memory) + GetOffset(X, Y));
     }
 
     void Clear() const
     {
-        PPlatformMemory::Fill(Memory, Width * Height * 4, 0);
+        PPlatformMemory::Fill(Memory, static_cast<size_t>(Width * Height * 4), 0);
     }
 
     template <typename T>
     void Fill(T Value)
     {
-        PPlatformMemory::Fill(Memory, Width * Height * 4, Value);
+        PPlatformMemory::Fill(Memory, static_cast<size_t>(Width * Height * 4), Value);
     }
 };
 
@@ -147,8 +153,8 @@ public:
 
     PRenderer(uint32 InWidth, uint32 InHeight);
     void Resize(uint32 InWidth, uint32 InHeight) const;
-    uint32 GetWidth() const { return Viewport->GetCamera()->Width; }
-    uint32 GetHeight() const { return Viewport->GetCamera()->Height; }
+    int32 GetWidth() const { return Viewport->GetCamera()->Width; }
+    int32 GetHeight() const { return Viewport->GetCamera()->Height; }
     PViewport* GetViewport() const { return Viewport.get(); }
 
     /* Channels */

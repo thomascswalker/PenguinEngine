@@ -100,7 +100,7 @@ void PViewport::FormatDebugText()
         "Stats\n"
         "FPS: {}\n"
         "Size: {}\n"
-        "Delta Mouse: {}\n"
+        "Camera Variable: {}\n"
         "Controls\n"
         "Wireframe (F1): {}\n"
         "Shaded (F2): {}\n"
@@ -109,7 +109,7 @@ void PViewport::FormatDebugText()
         ,
         Engine->GetFps(),
         GetSize().ToString(),
-        MouseDelta.ToString(),
+        GetCamera()->TempVector.ToString(),
         Renderer->Settings.GetRenderFlag(ERenderFlags::Wireframe),
         Renderer->Settings.GetRenderFlag(ERenderFlags::Shaded),
         Renderer->Settings.GetRenderFlag(ERenderFlags::Depth),

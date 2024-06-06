@@ -4,15 +4,17 @@
 #include "Math/Spherical.h"
 #include "glm.hpp"
 
-#define DEFAULT_VIEWPORT_WIDTH 656 // 640
-#define DEFAULT_VIEWPORT_HEIGHT 519 // 480
+constexpr int32 WINDOW_WIDTH_CLIP = 16;
+constexpr int32 WINDOW_HEIGHT_CLIP = 39;
+constexpr int32 DEFAULT_VIEWPORT_WIDTH = 512 + WINDOW_WIDTH_CLIP;
+constexpr int32 DEFAULT_VIEWPORT_HEIGHT = 512 + WINDOW_HEIGHT_CLIP;
 
-#define DEFAULT_FOV 90.0f
-#define DEFAULT_MINZ 1.0f
-#define DEFAULT_MAXZ 1000.0f
+constexpr float DEFAULT_FOV = 54.3f;
+constexpr float DEFAULT_MINZ = 0.1f;
+constexpr float DEFAULT_MAXZ = 100.0f;
 
-#define DEFAULT_MIN_ZOOM 10.0f
-#define DEFAULT_CAMERA_TRANSLATION FVector3(DEFAULT_MIN_ZOOM, DEFAULT_MIN_ZOOM / 2.0f, DEFAULT_MIN_ZOOM)
+constexpr float DEFAULT_MIN_ZOOM = 10.0f;
+const FVector3 DEFAULT_CAMERA_TRANSLATION = FVector3(36, 30, 34);
 
 
 enum EViewportType
@@ -21,12 +23,11 @@ enum EViewportType
     Othographic
 };
 
-// Synonymous with a camera view
 class PCamera : public PObject
 {
 public:
-    uint32 Width = DEFAULT_VIEWPORT_WIDTH;
-    uint32 Height = DEFAULT_VIEWPORT_HEIGHT;
+    int32 Width = DEFAULT_VIEWPORT_WIDTH;
+    int32 Height = DEFAULT_VIEWPORT_HEIGHT;
     float Fov = DEFAULT_FOV;
     float MinZ = 1.0f;
     float MaxZ = 10.0f;
@@ -34,7 +35,7 @@ public:
     float MaxFov = 120.0f;
     float MinZoom = 2.0f;
     float MaxZoom = 100.0f;
-    
+
     FVector3 Target = FVector3::ZeroVector(); // Origin
     FSphericalCoords Spherical;
     FSphericalCoords SphericalDelta;
@@ -46,6 +47,12 @@ public:
     glm::mat4 ViewMatrix;
     glm::mat4 ViewProjectionMatrix;
 
+    FVector3 TempVector;
+
+    /**
+     * Constructor for the PCamera class.
+     * Initializes the camera by calling the Init() function.
+     */
     PCamera()
     {
         Init();
@@ -61,6 +68,7 @@ public:
     void Zoom(float Value);
     void SetFov(float NewFov);
     void SetLookAt(const FVector3& NewLookAt) { Target = NewLookAt; }
+    FVector3 GetDirectionVector() const { return (Target - GetTranslation()).Normalized(); }
 
     void Update(float DeltaTime) override;
 };
