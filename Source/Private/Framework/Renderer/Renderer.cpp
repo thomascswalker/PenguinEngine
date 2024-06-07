@@ -278,15 +278,13 @@ void PRenderer::Scanline()
 
     switch (Math::GetWindingOrder(S0, S1, S2))
     {
-    case EWindingOrder::CCW:
+    case EWindingOrder::CCW :
         break;
-    case EWindingOrder::CW:
-        std::swap(S0, S1);
-        break;
-    case EWindingOrder::CL:
+    case EWindingOrder::CW :
+    case EWindingOrder::CL :
         return;
     }
-    
+
     auto Bounds = CurrentShader->ScreenBounds;
 
     // Loop through all pixels in the screen bounding box.
@@ -344,13 +342,13 @@ void PRenderer::ScanlineFast()
 
     switch (Math::GetWindingOrder(S0, S1, S2))
     {
-    case EWindingOrder::CCW:
+    case EWindingOrder::CCW :
         break;
-    case EWindingOrder::CW:
-    case EWindingOrder::CL:
+    case EWindingOrder::CW :
+    case EWindingOrder::CL :
         return;
     }
-    
+
     const FRect Bounds = CurrentShader->ScreenBounds;
 
     // Difference in Y coordinate for each edge
@@ -392,15 +390,14 @@ void PRenderer::ScanlineFast()
             // Are we still inside the triangle, given the edges?
             if (TempEdge12 >= 0 && TempEdge20 >= 0 && TempEdge01 >= 0)
             {
-                // Inside triangle
                 if (Settings.GetRenderFlag(ERenderFlags::Depth))
                 {
-                    const float NewDepth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
+                    const float Depth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
 
                     // Compare the new depth to the current depth at this pixel. If the new depth is further than
                     // the current depth, continue.
                     const float CurrentDepth = GetDepthChannel()->GetPixel<float>(Point.X, Point.Y);
-                    if (NewDepth >= CurrentDepth)
+                    if (Depth >= CurrentDepth)
                     {
                         TempEdge12 += Y12;
                         TempEdge20 += Y20;
@@ -409,11 +406,12 @@ void PRenderer::ScanlineFast()
                     }
                     // If the new depth is closer than the current depth, set the current depth
                     // at this pixel to the new depth we just got.
-                    GetDepthChannel()->SetPixel(Point.X, Point.Y, NewDepth);
+                    GetDepthChannel()->SetPixel(Point.X, Point.Y, Depth);
                 }
                 FVector3 UVW;
                 Math::GetBarycentric(Point.ToType<float>(), S0, S1, S2, UVW);
                 CurrentShader->UVW = UVW;
+                CurrentShader->WorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
                 CurrentShader->ComputePixelShader(Point.X, Point.Y);
                 GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
             }

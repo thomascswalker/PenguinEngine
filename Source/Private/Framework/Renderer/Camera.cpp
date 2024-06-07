@@ -14,14 +14,15 @@ void PCamera::ComputeViewProjectionMatrix()
     glm::vec3 Center = {Target.X, Target.Y, Target.Z};
     glm::vec3 Up = {0.0f, 1.0f, 0.0f}; // Negative UP
 
-    ViewMatrix = glm::lookAtRH(Eye, Center, Up);
-    ProjectionMatrix = glm::perspectiveFovRH_ZO(Math::DegreesToRadians(Fov), static_cast<float>(Width), static_cast<float>(Height), MinZ, MaxZ);
+    ViewMatrix = glm::lookAt(Eye, Center, Up);
+    ProjectionMatrix = glm::perspective(Math::DegreesToRadians(Fov), GetAspect(), MinZ, MaxZ);
     ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+    InvViewProjectionMatrix = glm::inverse(ViewProjectionMatrix);
 }
 
 void PCamera::Orbit(float DX, float DY)
 {
-    SphericalDelta.Theta = Math::DegreesToRadians(DX); // Horizontal
+    SphericalDelta.Theta = Math::DegreesToRadians(-DX); // Horizontal
     SphericalDelta.Phi = Math::DegreesToRadians(DY); // Vertical
 }
 
@@ -99,4 +100,44 @@ void PCamera::Update(float DeltaTime)
 
     // Set the camera position to the target position + offset
     SetTranslation(Target + Offset);
+}
+
+void PCamera::DeprojectScreenToWorld(const FVector2& ScreenPoint, FVector3& OutWorldPosition, FVector3& OutWorldDirection) const
+{
+    int32 PixelX = static_cast<int32>(ScreenPoint.X);
+    int32 PixelY = static_cast<int32>(ScreenPoint.Y);
+
+    // Convert to 0..1
+    const float NormalizedX = (PixelX - 0.5f) / static_cast<float>(Width);
+    const float NormalizedY = (PixelY - 0.5f) / static_cast<float>(Height);
+
+    // Convert to -1..1
+    const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
+    const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
+
+    // Starting ray, Z=1, near
+    glm::vec4 RayStartProjectionSpace(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
+    // Ending ray Z=0.1, far, any distance in order to calculate the direction
+    glm::vec4 RayEndProjectionSpace(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
+
+    //
+    glm::vec4 HomoRayStartWorldSpace = InvViewProjectionMatrix * RayStartProjectionSpace;
+    glm::vec4 HomoRayEndWorldSpace = InvViewProjectionMatrix * RayEndProjectionSpace;
+    glm::vec3 RayStartWorldSpace(HomoRayStartWorldSpace.x, HomoRayStartWorldSpace.y, HomoRayStartWorldSpace.z);
+    glm::vec3 RayEndWorldSpace(HomoRayEndWorldSpace.x, HomoRayEndWorldSpace.y, HomoRayEndWorldSpace.z);
+
+    if (HomoRayStartWorldSpace.w != 0.0f)
+    {
+        RayStartWorldSpace /= HomoRayStartWorldSpace.w;
+    }
+    if (HomoRayEndWorldSpace.w != 0.0f)
+    {
+        RayEndWorldSpace /= HomoRayEndWorldSpace.w;
+    }
+
+    glm::vec3 RayDirWorldSpace = RayEndWorldSpace - RayStartWorldSpace;
+    RayDirWorldSpace = glm::normalize(RayDirWorldSpace);
+
+    OutWorldPosition = FVector3{RayStartWorldSpace.x, RayStartWorldSpace.y, RayStartWorldSpace.z};
+    OutWorldDirection = FVector3{RayDirWorldSpace.x, RayDirWorldSpace.y, RayDirWorldSpace.z};
 }

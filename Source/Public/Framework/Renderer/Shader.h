@@ -29,10 +29,11 @@ struct IShader
     int32 Width, Height;
     PVertex V0, V1, V2;
     FVector3 S0, S1, S2;
-    FVector3 CameraTranslation;
+    FVector3 CameraPosition;
     FVector3 WorldNormal;
     FVector3 ViewNormal;
     FVector3 CameraNormal;
+    FVector3 WorldPosition;
     float FacingRatio;
     FRect ScreenBounds;
     glm::mat4 MVP;
@@ -55,7 +56,7 @@ struct IShader
         V2 = InV2;
         
         CameraNormal = InCameraNormal;
-        CameraTranslation = InCameraTranslation;
+        CameraPosition = InCameraTranslation;
         Width = InWidth;
         Height = InHeight;
     }
@@ -73,18 +74,18 @@ struct IShader
                 Result.Y / Result.W,
                 Result.Z / Result.W
             };
-
+            
             // Normalized device coordinates
             const FVector2 NormalizedPosition{
                 (ClipPosition.X / 2.0f) + 0.5f,
                 (ClipPosition.Y / 2.0f) + 0.5f,
             };
-
+            
             // Apply the current render width and height
             ScreenPosition = FVector3{
                 NormalizedPosition.X * static_cast<float>(Width),
                 NormalizedPosition.Y * static_cast<float>(Height),
-                (Result.Z + 0.5f) * 0.5f
+                (ClipPosition.Z + 0.5f) * 0.5f
             };
             return true;
         }
@@ -124,7 +125,6 @@ struct IShader
         // Clamp the bounds to the viewport
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);
-
         
         FVector3 E0 = V1.Position - V0.Position;
         FVector3 E1 = V2.Position - V0.Position;
@@ -144,20 +144,14 @@ struct DefaultShader : IShader
 {
     void ComputePixelShader(float U, float V) override
     {
-        // Calculate smooth normals
-        // const FVector3 N0 = V0.Normal;
-        // const FVector3 N1 = V1.Normal;
-        // const FVector3 N2 = V2.Normal;
-
-        // WorldNormal = (N0 * UVW.X) + (N1 * UVW.Y) + (N2 * UVW.Z);
-        // WorldNormal.Normalize();
-        
         // Calculate the dot product of the triangle normal and camera direction
+        CameraNormal = (WorldPosition - CameraPosition).Normalized();
         FacingRatio = Math::Max(0.0f, Math::Dot(WorldNormal, CameraNormal));
         
         int8 R = static_cast<int8>(Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f));
         int8 G = static_cast<int8>(Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f));
         int8 B = static_cast<int8>(Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f));
+        
         OutColor = FColor::FromRgba(R, G, B);
     }
 };

@@ -688,7 +688,7 @@ namespace Math
         T W0 = Math::EdgeFunction(V1, V2, P);
         T W1 = Math::EdgeFunction(V2, V0, P);
         T W2 = Math::EdgeFunction(V0, V1, P);
-
+        
         W0 /= Area;
         W1 /= Area;
         W2 /= Area;

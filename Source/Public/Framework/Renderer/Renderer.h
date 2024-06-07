@@ -198,8 +198,10 @@ public:
     void DrawGrid() const;
     void Draw();
 
+
+
     // Rasterizing triangles
-    
+
     void Scanline();
     void ScanlineFast();
 };

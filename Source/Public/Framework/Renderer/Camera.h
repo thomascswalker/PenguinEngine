@@ -46,6 +46,7 @@ public:
     glm::mat4 ProjectionMatrix;
     glm::mat4 ViewMatrix;
     glm::mat4 ViewProjectionMatrix;
+    glm::mat4 InvViewProjectionMatrix;
 
     FVector3 TempVector;
 
@@ -71,4 +72,8 @@ public:
     FVector3 GetDirectionVector() const { return (Target - GetTranslation()).Normalized(); }
 
     void Update(float DeltaTime) override;
+
+    /* General Math */
+    // https://github.com/EpicGames/UnrealEngine/blob/c830445187784f1269f43b56f095493a27d5a636/Engine/Source/Runtime/Engine/Private/SceneView.cpp#L1431
+    void DeprojectScreenToWorld(const FVector2& ScreenPoint, FVector3& OutWorldPosition, FVector3& OutWorldDirection) const;
 };
