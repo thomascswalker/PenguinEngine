@@ -27,8 +27,8 @@ public:
 
     void ComputeBasisVectors()
     {
-        FSphericalCoords Temp = FSphericalCoords::FromRotation(Transform.Rotation);
-        ForwardVector = Temp.ToCartesian().Normalized();
+        FSphericalCoords Tmp = FSphericalCoords::FromRotation(Transform.Rotation);
+        ForwardVector = -Tmp.ToCartesian().Normalized(); // Negative because for some reason it defaults to the inverse
         RightVector = Math::Cross(FVector3::UpVector(), ForwardVector).Normalized();
         UpVector = Math::Cross(ForwardVector, RightVector).Normalized();
     }
@@ -66,12 +66,24 @@ public:
     {
         return ForwardVector;
     }
+    FVector3 GetBackwardVector() const
+    {
+        return -ForwardVector;
+    }
     FVector3 GetRightVector() const
     {
         return RightVector;
     }
+    FVector3 GetLeftVector() const
+    {
+        return -RightVector;
+    }
     FVector3 GetUpVector() const
     {
         return UpVector;
+    }
+    FVector3 GetDownVector() const
+    {
+        return -UpVector;
     }
 };

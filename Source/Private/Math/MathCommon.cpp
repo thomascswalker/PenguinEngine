@@ -1,4 +1,5 @@
 ﻿#include "Math/MathCommon.h"
+#include "Framework/Renderer/Camera.h"
 
 // Matrices
 
@@ -72,6 +73,7 @@ TRotator<T>::TRotator(const TVector3<T>& Euler)
     Yaw = Euler.Z;
     Roll = Euler.X;
 }
+
 
 // Instantiate for the linker
 template struct TRotator<float>;

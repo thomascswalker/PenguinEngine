@@ -141,51 +141,47 @@ std::shared_ptr<PMesh> PMesh::CreateSphere(const float Radius, const int32 Segme
 std::shared_ptr<PMesh> PMesh::CreateCube(float Scale)
 {
     std::vector<uint32> Indices{
-        //Top
-        2, 6, 7,
-        2, 3, 7,
-
-        //Bottom
-        0, 4, 5,
-        0, 1, 5,
-
-        //Left
-        0, 2, 6,
-        0, 4, 6,
-
-        //Right
-        1, 3, 7,
-        1, 5, 7,
-
-        //Front
-        0, 2, 3,
-        0, 1, 3,
-
-        //Back
-        4, 6, 7,
-        4, 5, 7
+        0, 2, 3, 0, 3, 1,
+        4, 6, 7, 4, 7, 5,
+        3, 2, 4, 3, 4, 5,
+        7, 6, 0, 7, 0, 1,
+        6, 4, 2, 6, 2, 0,
+        1, 3, 5, 1, 5, 7
     };
 
     std::vector Positions{
-        FVector3(-Scale, -Scale, Scale), //0
-        FVector3(Scale, -Scale, Scale), //1
-        FVector3(-Scale, Scale, Scale), //2
-        FVector3(Scale, Scale, Scale), //3
-        FVector3(-Scale, -Scale, -Scale), //4
-        FVector3(Scale, -Scale, -Scale), //5
-        FVector3(-Scale, Scale, -Scale), //6
-        FVector3(Scale, Scale, -Scale) //7
+        FVector3(-Scale, -Scale, -Scale),
+        FVector3(-Scale, -Scale, Scale),
+        FVector3(Scale, -Scale, -Scale),
+        FVector3(Scale, -Scale, Scale),
+        FVector3(Scale, Scale, -Scale),
+        FVector3(Scale, Scale, Scale),
+        FVector3(-Scale, Scale, -Scale),
+        FVector3(-Scale, Scale, Scale)
+    };
+
+    std::vector Normals{
+        0, -1, 0, // 0, nv front
+        0, 0, 1, // 1, nv top
+        0, 0, 0, // 2
+        1, 0, 0, // 3, nv right
+        0, 1, 0, // 4, nv back
+        0, 0, 0, // 5
+        0, 0, -1, // 6, nv bottom
+        -1, 0, 0, // 7, nv left 
     };
 
     std::vector<PVertex> Vertexes;
     for (int32 Index = 0; Index < Positions.size(); Index++)
     {
         Vertexes.emplace_back(Positions[Index]);
+        Vertexes.emplace_back(Normals[Index]);
     }
+
     return std::make_shared<PMesh>(Vertexes, Indices);
 }
 
-std::shared_ptr<PMesh> PMesh::CreateTeapot(float Scale = 1.0f)
+std::shared_ptr<PMesh> PMesh::CreateTeapot(float Scale)
 {
     std::vector Positions
     {

@@ -25,6 +25,13 @@ struct PVertex
     }
 };
 
+struct PFace
+{
+    std::vector<FVector3> PositionIndexes;
+    std::vector<FVector3> NormalIndexes;
+    std::vector<FVector2> TexCoordIndexes;
+};
+
 struct PMesh : PObject
 {
 protected:
@@ -63,12 +70,12 @@ public:
     bool HasTexCoords() const { return !TexCoordIndexes.empty(); }
 
     // Primitives
-    static std::shared_ptr<PMesh> CreateTriangle(float Scale);
-    static std::shared_ptr<PMesh> CreatePlane(float Size);
-    static std::shared_ptr<PMesh> CreatePlane(float Width, float Height);
-    static std::shared_ptr<PMesh> CreateSphere(float Radius, int32 Segments = 8);
-    static std::shared_ptr<PMesh> CreateCube(float Scale);
-    static std::shared_ptr<PMesh> CreateTeapot(float Scale);
+    static std::shared_ptr<PMesh> CreateTriangle(float Scale = 1.0f);
+    static std::shared_ptr<PMesh> CreatePlane(float Size = 1.0f);
+    static std::shared_ptr<PMesh> CreatePlane(float Width = 1.0f, float Height = 1.0f);
+    static std::shared_ptr<PMesh> CreateSphere(float Radius = 1.0f, int32 Segments = 8);
+    static std::shared_ptr<PMesh> CreateCube(float Scale = 1.0f);
+    static std::shared_ptr<PMesh> CreateTeapot(float Scale = 1.0f);
     static std::shared_ptr<PMesh> CreateCone();
 };
 

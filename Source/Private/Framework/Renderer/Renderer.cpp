@@ -181,25 +181,44 @@ void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
 void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex& V2)
 {
     PCamera* Camera = Viewport->GetCamera();
-    CurrentShader->Init(
-        Camera->ViewProjectionMatrix,
-        V0,
-        V1,
-        V2,
-        Camera->GetForwardVector(),
-        Camera->GetTranslation(),
-        Camera->Width,
-        Camera->Height
-    );
+    CurrentShader->Init(Camera->GetViewData());
 
-    if (!CurrentShader->ComputeVertexShader())
+    if (!CurrentShader->ComputeVertexShader(V0, V1, V2))
     {
         return;
     }
-
+    
     if (Settings.GetRenderFlag(ERenderFlags::Shaded))
     {
+        CurrentShader->ViewMatrix = Camera->ViewMatrix;
         ScanlineFast();
+    }
+
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+    if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
+    {
+        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
+        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
+        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
+    }
+    
+    // Draw normal direction
+    if (Settings.GetRenderFlag(ERenderFlags::Normals))
+    {
+        FVector3 TriangleCenter = (CurrentShader->V0.Position + CurrentShader->V1.Position + CurrentShader->V2.Position) / 3.0f;
+        FVector3 TriangleNormal = CurrentShader->TriangleWorldNormal;
+
+        FVector3 NormalStartScreen;
+        FVector3 NormalEndScreen;
+        Math::ProjectWorldToScreen(TriangleCenter, NormalStartScreen, Viewport->GetCamera()->GetViewData());
+        Math::ProjectWorldToScreen(TriangleCenter + TriangleNormal, NormalEndScreen, Viewport->GetCamera()->GetViewData());
+        DrawLine(
+            NormalStartScreen, // Start
+            NormalEndScreen, // End
+            FColor::Yellow()
+        );
     }
 }
 
@@ -411,7 +430,8 @@ void PRenderer::ScanlineFast()
                 FVector3 UVW;
                 Math::GetBarycentric(Point.ToType<float>(), S0, S1, S2, UVW);
                 CurrentShader->UVW = UVW;
-                CurrentShader->WorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
+                CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
+                CurrentShader->PixelWorldNormal = CurrentShader->V0.Normal * UVW.X + CurrentShader->V1.Normal * UVW.Y + CurrentShader->V2.Normal * UVW.Z;
                 CurrentShader->ComputePixelShader(Point.X, Point.Y);
                 GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
             }
@@ -424,12 +444,5 @@ void PRenderer::ScanlineFast()
         Edge12 += X21;
         Edge20 += X02;
         Edge01 += X10;
-    }
-
-    if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
-    {
-        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
-        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
-        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
     }
 }

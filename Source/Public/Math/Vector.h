@@ -194,8 +194,11 @@ struct TVector3
     static TVector3 ZeroVector() { return TVector3(); }
     static TVector3 IdentityVector() { return TVector3(1); }
     static TVector3 ForwardVector() { return TVector3(1, 0, 0); }
+    static TVector3 BackVector() { return TVector3(-1, 0, 0); }
     static TVector3 UpVector() { return TVector3(0, 1, 0); }
+    static TVector3 DownVector() { return TVector3(0, -1, 0); }
     static TVector3 RightVector() { return TVector3(0, 0, 1); }
+    static TVector3 LeftVector() { return TVector3(0, 0, -1); }
     void CheckNaN() const
     {
         if (!(Math::IsFinite(X) && Math::IsFinite(Y) && Math::IsFinite(Z)))
