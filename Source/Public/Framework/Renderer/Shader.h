@@ -51,7 +51,7 @@ struct IShader
         V0 = InV0;
         V1 = InV1;
         V2 = InV2;
-        
+
         // Project the world-space points to screen-space
         bool bTriangleOnScreen = false;
         bTriangleOnScreen |= Math::ProjectWorldToScreen(V0.Position, S0, ViewData);
@@ -84,14 +84,11 @@ struct IShader
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);
 
-        // if (V0.)
-        // FVector3 E0 = V1.Position - V0.Position;
-        // FVector3 E1 = V2.Position - V0.Position;
-        // TriangleWorldNormal = Math::Cross(E0, E1).Normalized();
+        // Average each of the vertices normals to get the triangle normal
         TriangleWorldNormal = (V0.Normal + V1.Normal + V2.Normal) / 3.0f;
 
         // Calculate the triangle normal relative to the camera
-        TriangleCameraNormal = CameraWorldDirection.Cross(TriangleWorldNormal).Normalized();
+        TriangleCameraNormal = TriangleWorldNormal.Cross(CameraWorldDirection);
 
         return true;
     }
@@ -105,11 +102,13 @@ struct DefaultShader : IShader
     void ComputePixelShader(float U, float V) override
     {
         // Calculate the dot product of the triangle normal and camera direction
-        FacingRatio = Math::Max(0.0f, Math::Dot(CameraWorldDirection, TriangleWorldNormal));
-        float ClampedFacingRatio = Math::Clamp(FacingRatio * 255.0f, 0.0f, 255.0f);
+        FacingRatio = Math::Max(0.0f, Math::Dot(-CameraWorldDirection, TriangleWorldNormal)); // Floor to a min of 0
+        float ClampedFacingRatio = Math::Min((1.0f - FacingRatio) * 255.0f, 255.0f);                   // Clamp to a max of 255
 
         uint8 R = static_cast<uint8>(ClampedFacingRatio);
+        uint8 G = static_cast<uint8>(ClampedFacingRatio);
+        uint8 B = static_cast<uint8>(ClampedFacingRatio);
 
-        OutColor = FColor::FromRgba(R, R, R);
+        OutColor = FColor::FromRgba(R, G, B);
     }
 };

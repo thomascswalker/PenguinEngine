@@ -94,10 +94,9 @@ void PEngine::Tick()
 
 void PEngine::LoadSceneGeometry()
 {
-    // auto ObjMesh = std::make_shared<PMesh>();
-    // ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Bunny.obj", ObjMesh.get());
-    // Meshes.emplace_back(ObjMesh);
-    Meshes.emplace_back(PMesh::CreateCube(5.0f));
+    auto ObjMesh = std::make_shared<PMesh>();
+    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Bunny.obj", ObjMesh.get());
+    Meshes.emplace_back(ObjMesh);
 }
 
 void PEngine::OnKeyPressed(EKey KeyCode)

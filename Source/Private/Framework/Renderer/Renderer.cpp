@@ -187,7 +187,7 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
     {
         return;
     }
-    
+
     if (Settings.GetRenderFlag(ERenderFlags::Shaded))
     {
         CurrentShader->ViewMatrix = Camera->ViewMatrix;
@@ -203,7 +203,7 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
         DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
         DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
     }
-    
+
     // Draw normal direction
     if (Settings.GetRenderFlag(ERenderFlags::Normals))
     {
@@ -216,7 +216,7 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
         Math::ProjectWorldToScreen(TriangleCenter + TriangleNormal, NormalEndScreen, Viewport->GetCamera()->GetViewData());
         DrawLine(
             NormalStartScreen, // Start
-            NormalEndScreen, // End
+            NormalEndScreen,   // End
             FColor::Yellow()
         );
     }
@@ -226,17 +226,13 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
 void PRenderer::DrawMesh(const PMesh* Mesh)
 {
     CurrentShader = std::make_shared<DefaultShader>();
-    CurrentShader->bHasNormals = Mesh->HasNormals();
-    CurrentShader->bHasTexCoords = Mesh->HasTexCoords();
-    for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
+    for (const auto& Triangle : Mesh->Triangles)
     {
-        const uint32 StartIndex = Index * 3;
-
-        const uint32 Index0 = Mesh->PositionIndexes[StartIndex];
-        const uint32 Index1 = Mesh->PositionIndexes[StartIndex + 1];
-        const uint32 Index2 = Mesh->PositionIndexes[StartIndex + 2];
-
-        DrawTriangle(Mesh->Vertexes[Index0], Mesh->Vertexes[Index1], Mesh->Vertexes[Index2]);
+        PVertex V0;
+        PVertex V1;
+        PVertex V2;
+        Mesh->ProcessTriangle(Triangle, &V0, &V1, &V2);
+        DrawTriangle(V0, V1, V2);
     }
 }
 void PRenderer::DrawGrid() const

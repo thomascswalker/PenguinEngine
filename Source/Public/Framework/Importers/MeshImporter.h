@@ -29,7 +29,7 @@ class ObjImporter
         {
             throw std::invalid_argument("Line does not contain enough components");
         }
-        
+
         // Create a new FVector3 from the components and add it to the vector
         V->emplace_back(std::stof(Components[1]),
                         std::stof(Components[2]));
@@ -71,14 +71,14 @@ class ObjImporter
      * @throws std::runtime_error If the index format is invalid.
      */
     static void ParseFace(const std::string& Line,
-                          std::vector<uint32>* PositionIndexes,
-                          std::vector<uint32>* NormalIndexes,
-                          std::vector<uint32>* TexCoordIndexes)
+                          std::vector<int32>* PositionIndexes,
+                          std::vector<int32>* NormalIndexes,
+                          std::vector<int32>* TexCoordIndexes)
     {
         std::vector<std::string> IndexComponents;
 
         // Split the face line by spaces
-        Strings::Split(Line, IndexComponents, " "); // [f, v/vt/vn, v/vt/vn, v/vt/vn]
+        Strings::Split(Line, IndexComponents, " ");     // [f, v/vt/vn, v/vt/vn, v/vt/vn]
         IndexComponents.erase(IndexComponents.begin()); // Remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
 
         // For each index group...
@@ -139,8 +139,10 @@ public:
         // Initialize vectors to store mesh data
         std::vector<FVector3> Positions;
         std::vector<FVector3> Normals;
-        std::vector<FVector2> TexCoord;
+        std::vector<FVector2> TexCoords;
 
+        std::vector<PTriangle> Triangles;
+        int32 TriangleCount = 0;
         std::vector<uint32> PositionIndexes;
         std::vector<uint32> NormalIndexes;
         std::vector<uint32> TexCoordIndexes;
@@ -168,7 +170,7 @@ public:
                     }
                     else if (Line.starts_with("vt"))
                     {
-                        ParseVector2(Line, &TexCoord);
+                        ParseVector2(Line, &TexCoords);
                     }
                     else if (Line.starts_with("v"))
                     {
@@ -184,7 +186,10 @@ public:
 
             case 'f' : // Parse face indices
                 {
-                    ParseFace(Line, &PositionIndexes, &NormalIndexes, &TexCoordIndexes);
+                    PTriangle T;
+                    ParseFace(Line, &T.PositionIndexes, &T.NormalIndexes, &T.TexCoordIndexes);
+                    Triangles.emplace_back(T);
+                    TriangleCount++;
                     break;
                 }
             default :
@@ -193,23 +198,10 @@ public:
             }
         }
 
-        // Create vertices and fill the mesh object
-        for (int32 Index = 0; Index < Positions.size(); Index++)
-        {
-            PVertex V(Positions[Index]);
-            if (!Normals.empty())
-            {
-                V.Normal = Normals[Index];
-            }
-            if (!TexCoord.empty())
-            {
-                V.TexCoord = TexCoord[Index];
-            }
-            Mesh->Vertexes.emplace_back(V);
-        }
-        Mesh->PositionIndexes = PositionIndexes;
-        Mesh->NormalIndexes = NormalIndexes;
-        Mesh->TexCoordIndexes = TexCoordIndexes;
+        Mesh->Triangles = Triangles;
+        Mesh->Positions = Positions;
+        Mesh->Normals = Normals;
+        Mesh->TexCoords = TexCoords;
 
         return true;
     }
