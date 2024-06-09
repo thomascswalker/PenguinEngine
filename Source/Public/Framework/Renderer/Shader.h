@@ -1,80 +1,64 @@
 ﻿#pragma once
 
+#include "Camera.h"
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
+#include "Framework/Engine/Mesh.h"
 #include "glm.hpp"
 
 struct IShader
 {
     virtual ~IShader() = default;
     int32 Width, Height;
-    FVector3 V0, V1, V2;
+    PVertex V0, V1, V2;
     FVector3 S0, S1, S2;
-    FVector3 CameraTranslation;
-    FVector3 WorldNormal;
-    FVector3 CameraNormal;
+
+    FVector3 CameraPosition;
+    FVector3 CameraWorldDirection;
+
+    FVector3 TriangleWorldNormal;
+    FVector3 TriangleCameraNormal;
+
+    FVector3 PixelWorldPosition;
+    FVector3 PixelWorldNormal;
     float FacingRatio;
+
     FRect ScreenBounds;
     glm::mat4 MVP;
-    
+    glm::mat4 ViewMatrix;
+    glm::mat4 ProjectionMatrix;
+    FVector3 UVW;
+
+    bool bHasNormals = false;
+    bool bHasTexCoords = false;
+
     FColor OutColor = FColor::Magenta();
-    
-    void Init(glm::mat4 InMVP,
-        const FVector3& InV0, const FVector3& InV1, const FVector3& InV2,
-        const FVector3& InCameraNormal,
-        const FVector3& InCameraTranslation,
-        int32 InWidth, int32 InHeight)
+
+    PViewData ViewData;
+
+    void Init(const PViewData& InViewData)
     {
-        MVP = InMVP;
+        ViewData = InViewData;
+        MVP = InViewData.ViewProjectionMatrix;
+        CameraWorldDirection = InViewData.Direction;
+        CameraPosition = InViewData.Translation;
+        Width = InViewData.Width;
+        Height = InViewData.Height;
+    }
+
+    virtual bool ComputeVertexShader(const PVertex& InV0, const PVertex& InV1, const PVertex& InV2)
+    {
         V0 = InV0;
         V1 = InV1;
         V2 = InV2;
-        WorldNormal = Math::GetSurfaceNormal(V0, V1, V2);
-        CameraNormal = InCameraNormal;
-        CameraTranslation = InCameraTranslation;
-        Width = InWidth;
-        Height = InHeight;
-    }
 
-    virtual bool Clip(const FVector3& WorldPosition, FVector3& ScreenPosition)
-    {
-        // Clip 
-        glm::vec4 ResultGlm = MVP * glm::vec4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
-        FVector4 Result{ResultGlm.x, ResultGlm.y, ResultGlm.z, ResultGlm.w};
-        if (Result.W > 0.0f)
-        {
-            // Apply perspective correction
-            const FVector3 ClipPosition{
-                Result.X / Result.W,
-                Result.Y / Result.W,
-                Result.Z / Result.W
-            };
-
-            // Normalized device coordinates
-            const FVector2 NormalizedPosition{
-                (ClipPosition.X / 2.0f) + 0.5f,
-                (ClipPosition.Y / 2.0f) + 0.5f,
-            };
-
-            // Apply the current render width and height
-            ScreenPosition = FVector3{
-                NormalizedPosition.X * static_cast<float>(Width),
-                NormalizedPosition.Y * static_cast<float>(Height),
-                (Result.Z + 0.5f) * 0.5f
-            };
-            return true;
-        }
-        return false;
-    }
-    
-    virtual bool ComputeVertexShader()
-    {
         // Project the world-space points to screen-space
         bool bTriangleOnScreen = false;
-        bTriangleOnScreen |= Clip(V0, S0);
-        bTriangleOnScreen |= Clip(V1, S1);
-        bTriangleOnScreen |= Clip(V2, S2);
+        bTriangleOnScreen |= Math::ProjectWorldToScreen(V0.Position, S0, ViewData);
+        bTriangleOnScreen |= Math::ProjectWorldToScreen(V1.Position, S1, ViewData);
+        bTriangleOnScreen |= Math::ProjectWorldToScreen(V2.Position, S2, ViewData);
 
+        // If the triangle is completely off screen, exit
         if (!bTriangleOnScreen)
         {
             return false;
@@ -89,37 +73,42 @@ struct IShader
         case EWindingOrder::CCW : // Triangle is front-facing, continue
             break;
         }
-        
+
         // Get the bounding box of the 2d triangle clipped to the viewport
         ScreenBounds = FRect::MakeBoundingBox(S0, S1, S2);
 
         // Grow by one pixel to accomodate gaps between triangles
         ScreenBounds.Grow(1.0f);
 
-        // Clamp the triangle bounds to the viewport bounds
+        // Clamp the bounds to the viewport
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);
 
-        // Get the current camera attributes
-        FacingRatio = Math::Dot(WorldNormal, CameraNormal);
-        
-        // TODO: Figure out how to exit early if back-facing
+        // Average each of the vertices normals to get the triangle normal
+        TriangleWorldNormal = (V0.Normal + V1.Normal + V2.Normal) / 3.0f;
+
+        // Calculate the triangle normal relative to the camera
+        TriangleCameraNormal = TriangleWorldNormal.Cross(CameraWorldDirection);
 
         return true;
     }
 
     // No default implementation
-    virtual void ComputePixelShader() = 0;
+    virtual void ComputePixelShader(float X, float Y) = 0;
 };
 
 struct DefaultShader : IShader
 {
-    void ComputePixelShader() override
+    void ComputePixelShader(float U, float V) override
     {
-        float RemappedFacingRatio = Math::Remap(FacingRatio, -1.0f, 1.0f, 0.0f, 1.0f);
-        int8 R = static_cast<int8>(RemappedFacingRatio * 255.0f);
-        int8 G = static_cast<int8>(RemappedFacingRatio * 255.0f);
-        int8 B = static_cast<int8>(RemappedFacingRatio * 255.0f);
-        OutColor = FColor::FromRgba(R,G,B);
+        // Calculate the dot product of the triangle normal and camera direction
+        FacingRatio = Math::Max(0.0f, Math::Dot(-CameraWorldDirection, TriangleWorldNormal)); // Floor to a min of 0
+        float ClampedFacingRatio = Math::Min((1.0f - FacingRatio) * 255.0f, 255.0f);                   // Clamp to a max of 255
+
+        uint8 R = static_cast<uint8>(ClampedFacingRatio);
+        uint8 G = static_cast<uint8>(ClampedFacingRatio);
+        uint8 B = static_cast<uint8>(ClampedFacingRatio);
+
+        OutColor = FColor::FromRgba(R, G, B);
     }
 };

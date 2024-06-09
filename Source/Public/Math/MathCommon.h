@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <vec4.hpp>
+
 #include "MathFwd.h"
 #include "Color.h"
 #include "Matrix.h"
@@ -77,5 +79,19 @@ namespace Math
             (V.X * M.M[0][2]) + (V.Y * M.M[1][2]) + (V.Z * M.M[2][2]) + (V.W * M.M[3][2]),
             (V.X * M.M[0][3]) + (V.Y * M.M[1][3]) + (V.Z * M.M[2][3]) + (V.W * M.M[3][3])
         };
+    }
+
+    template <typename T>
+    TVector3<T> ToVector(const TRotator<T>& Rot)
+    {
+        // Remove winding and clamp to [-360, 360]
+        const T PitchNoWinding = Math::Clamp(std::fmodf(Rot.Pitch, static_cast<T>(360.0)), T(-360), T(360));
+        const T YawNoWinding = Math::Clamp(std::fmodf(Rot.Yaw, static_cast<T>(360.0)), T(-360), T(360));
+
+        T CP, SP, CY, SY;
+        Math::SinCos(&SP, &CP, Math::DegreesToRadians(PitchNoWinding));
+        Math::SinCos(&SY, &CY, Math::DegreesToRadians(YawNoWinding));
+
+        return {CP * CY, CP * SY, SP};
     }
 }

@@ -178,26 +178,47 @@ void PRenderer::DrawLine(const FLine3d& Line, const FColor& Color) const
     DrawLine(Line.A, Line.B, Color);
 }
 
-void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVector3& V2)
+void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex& V2)
 {
-    auto Camera = Viewport->GetCamera();
-    const FVector3 CameraNormal = (Camera->Target - Camera->GetTranslation()).Normalized();
-    CurrentShader->Init(
-        Camera->ViewProjectionMatrix,
-        V0, V1, V2,
-        CameraNormal,
-        Camera->GetTranslation(),
-        Camera->Width, Camera->Height
-    );
+    PCamera* Camera = Viewport->GetCamera();
+    CurrentShader->Init(Camera->GetViewData());
 
-    if (!CurrentShader->ComputeVertexShader())
+    if (!CurrentShader->ComputeVertexShader(V0, V1, V2))
     {
         return;
     }
 
     if (Settings.GetRenderFlag(ERenderFlags::Shaded))
     {
+        CurrentShader->ViewMatrix = Camera->ViewMatrix;
         ScanlineFast();
+    }
+
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+    if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
+    {
+        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
+        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
+        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
+    }
+
+    // Draw normal direction
+    if (Settings.GetRenderFlag(ERenderFlags::Normals))
+    {
+        FVector3 TriangleCenter = (CurrentShader->V0.Position + CurrentShader->V1.Position + CurrentShader->V2.Position) / 3.0f;
+        FVector3 TriangleNormal = CurrentShader->TriangleWorldNormal;
+
+        FVector3 NormalStartScreen;
+        FVector3 NormalEndScreen;
+        Math::ProjectWorldToScreen(TriangleCenter, NormalStartScreen, Viewport->GetCamera()->GetViewData());
+        Math::ProjectWorldToScreen(TriangleCenter + TriangleNormal, NormalEndScreen, Viewport->GetCamera()->GetViewData());
+        DrawLine(
+            NormalStartScreen, // Start
+            NormalEndScreen,   // End
+            FColor::Yellow()
+        );
     }
 }
 
@@ -205,15 +226,13 @@ void PRenderer::DrawTriangle(const FVector3& V0, const FVector3& V1, const FVect
 void PRenderer::DrawMesh(const PMesh* Mesh)
 {
     CurrentShader = std::make_shared<DefaultShader>();
-    for (uint32 Index = 0; Index < Mesh->GetTriCount(); Index++)
+    for (const auto& Triangle : Mesh->Triangles)
     {
-        const uint32 StartIndex = Index * 3;
-
-        const uint32 Index0 = Mesh->VertexPositionIndexes[StartIndex];
-        const uint32 Index1 = Mesh->VertexPositionIndexes[StartIndex + 1];
-        const uint32 Index2 = Mesh->VertexPositionIndexes[StartIndex + 2];
-
-        DrawTriangle(Mesh->VertexPositions[Index0], Mesh->VertexPositions[Index1], Mesh->VertexPositions[Index2]);
+        PVertex V0;
+        PVertex V1;
+        PVertex V2;
+        Mesh->ProcessTriangle(Triangle, &V0, &V1, &V2);
+        DrawTriangle(V0, V1, V2);
     }
 }
 void PRenderer::DrawGrid() const
@@ -253,12 +272,34 @@ void PRenderer::Draw()
     {
         DrawMesh(Mesh.get());
     }
+
+    // Draw mouse cursor line from click origin
+    IInputHandler* InputHandler = IInputHandler::GetInstance();
+    if (InputHandler->IsMouseDown(EMouseButtonType::Left) && InputHandler->IsAltDown())
+    {
+        FVector3 A = InputHandler->GetClickPosition();
+        if (A.X != 0.0f && A.Y != 0.0f)
+        {
+            FVector3 B = InputHandler->GetCurrentCursorPosition();
+            DrawLine(A, B, FColor::Red());
+        }
+    }
 }
 void PRenderer::Scanline()
 {
-    auto S0 = CurrentShader->S0;
-    auto S1 = CurrentShader->S1;
-    auto S2 = CurrentShader->S2;
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+
+    switch (Math::GetWindingOrder(S0, S1, S2))
+    {
+    case EWindingOrder::CCW :
+        break;
+    case EWindingOrder::CW :
+    case EWindingOrder::CL :
+        return;
+    }
+
     auto Bounds = CurrentShader->ScreenBounds;
 
     // Loop through all pixels in the screen bounding box.
@@ -301,7 +342,7 @@ void PRenderer::Scanline()
                 // at this pixel to the new depth we just got.
                 GetDepthChannel()->SetPixel(X, Y, NewDepth);
             }
-            CurrentShader->ComputePixelShader();
+            CurrentShader->ComputePixelShader(X, Y);
             GetColorChannel()->SetPixel(X, Y, CurrentShader->OutColor);
         }
     }
@@ -310,9 +351,19 @@ void PRenderer::Scanline()
 // https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
 void PRenderer::ScanlineFast()
 {
-    const FVector3 S0 = CurrentShader->S0;
-    const FVector3 S1 = CurrentShader->S1;
-    const FVector3 S2 = CurrentShader->S2;
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+
+    switch (Math::GetWindingOrder(S0, S1, S2))
+    {
+    case EWindingOrder::CCW :
+        break;
+    case EWindingOrder::CW :
+    case EWindingOrder::CL :
+        return;
+    }
+
     const FRect Bounds = CurrentShader->ScreenBounds;
 
     // Difference in Y coordinate for each edge
@@ -354,15 +405,14 @@ void PRenderer::ScanlineFast()
             // Are we still inside the triangle, given the edges?
             if (TempEdge12 >= 0 && TempEdge20 >= 0 && TempEdge01 >= 0)
             {
-                // Inside triangle
                 if (Settings.GetRenderFlag(ERenderFlags::Depth))
                 {
-                    const float NewDepth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
+                    const float Depth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
 
                     // Compare the new depth to the current depth at this pixel. If the new depth is further than
                     // the current depth, continue.
                     const float CurrentDepth = GetDepthChannel()->GetPixel<float>(Point.X, Point.Y);
-                    if (NewDepth >= CurrentDepth)
+                    if (Depth >= CurrentDepth)
                     {
                         TempEdge12 += Y12;
                         TempEdge20 += Y20;
@@ -371,9 +421,14 @@ void PRenderer::ScanlineFast()
                     }
                     // If the new depth is closer than the current depth, set the current depth
                     // at this pixel to the new depth we just got.
-                    GetDepthChannel()->SetPixel(Point.X, Point.Y, NewDepth);
+                    GetDepthChannel()->SetPixel(Point.X, Point.Y, Depth);
                 }
-                CurrentShader->ComputePixelShader();
+                FVector3 UVW;
+                Math::GetBarycentric(Point.ToType<float>(), S0, S1, S2, UVW);
+                CurrentShader->UVW = UVW;
+                CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
+                CurrentShader->PixelWorldNormal = CurrentShader->V0.Normal * UVW.X + CurrentShader->V1.Normal * UVW.Y + CurrentShader->V2.Normal * UVW.Z;
+                CurrentShader->ComputePixelShader(Point.X, Point.Y);
                 GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
             }
 
@@ -385,12 +440,5 @@ void PRenderer::ScanlineFast()
         Edge12 += X21;
         Edge20 += X02;
         Edge01 += X10;
-    }
-
-    if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
-    {
-        DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
-        DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
-        DrawLine({S2.X, S2.Y}, {S0.X, S0.Y}, WireColor);
     }
 }

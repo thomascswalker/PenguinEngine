@@ -87,16 +87,16 @@ void PEngine::Tick()
 
     // Tick every object
     GetViewportCamera()->Update(DeltaTime);
-
+ 
     // Format debug text
     GetViewport()->FormatDebugText();
 }
 
 void PEngine::LoadSceneGeometry()
 {
-    std::shared_ptr<PMesh> Mesh = std::make_shared<PMesh>();
-    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Cow.obj", Mesh.get());
-    Meshes.emplace_back(Mesh);
+    auto ObjMesh = std::make_shared<PMesh>();
+    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Bunny.obj", ObjMesh.get());
+    Meshes.emplace_back(ObjMesh);
 }
 
 void PEngine::OnKeyPressed(EKey KeyCode)
@@ -135,8 +135,7 @@ void PEngine::OnKeyPressed(EKey KeyCode)
         }
     case EKey::F4 :
         {
-            bool bState = Renderer->Settings.GetUseGlm();
-            Renderer->Settings.SetUseGlm(!bState);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Normals);
             break;
         }
     default :

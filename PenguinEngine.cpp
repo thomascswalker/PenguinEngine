@@ -4,7 +4,7 @@
 #include "Framework/Core/ErrorCodes.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#define USE_GLM
+
 // Windows entry point
 #include "Source/Public/Framework/Platforms/Win32Platform.h"
 

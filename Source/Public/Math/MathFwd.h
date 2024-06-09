@@ -141,3 +141,7 @@ enum class EChannelType : uint8
     Data,
     Color
 };
+
+// Cameras
+
+struct PViewData;

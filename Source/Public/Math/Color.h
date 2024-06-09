@@ -30,12 +30,12 @@ protected:
 
 public:
     static FColor Red() { return FromRgba(255, 0, 0); }
-    static FColor Blue() { return FromRgba(0, 255, 0); }
-    static FColor Green() { return FromRgba(0, 0, 255); }
+    static FColor Green() { return FromRgba(0, 255, 0); }
+    static FColor Blue() { return FromRgba(0, 0, 255); }
 
     static FColor Yellow() { return FromRgba(255, 255, 0); }
-    static FColor Cyan() { return FromRgba(0, 255, 255); }
     static FColor Magenta() { return FromRgba(255, 0, 255); }
+    static FColor Cyan() { return FromRgba(0, 255, 255); }
 
     static FColor White() { return FromRgba(255, 255, 255); }
     static FColor Gray() { return FromRgba(128,128,128); }

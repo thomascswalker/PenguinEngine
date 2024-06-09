@@ -10,52 +10,92 @@ enum EPrimitiveType
     Sphere,
     Torus
 };
+//
+// struct PVertex
+// {
+//     FVector3 Position;
+//     FVector3 Normal;
+//     FVector2 TexCoord;
+//
+//     explicit PVertex(const FVector3& InPosition = FVector3::ZeroVector(),
+//                      const FVector3& InNormal = FVector3::ZeroVector(),
+//                      const FVector3& InTexCoord = FVector3::ZeroVector())
+//         : Position(InPosition), Normal(InNormal), TexCoord(InTexCoord)
+//     {
+//     }
+// };
+
+struct PVertex
+{
+    FVector3 Position;
+    FVector3 Normal;
+    FVector3 TexCoord;
+
+    PVertex(){}
+    PVertex(const FVector3& InPosition, const FVector3& InNormal, const FVector3& InTexCoord)
+        : Position(InPosition),
+          Normal(InNormal),
+          TexCoord(InTexCoord)
+    {
+    }
+};
+
+struct PTriangle
+{
+    std::vector<int32> PositionIndexes;
+    std::vector<int32> NormalIndexes;
+    std::vector<int32> TexCoordIndexes;
+
+    PTriangle(){}
+    PTriangle(const std::vector<int32>& InPositionIndexes, const std::vector<int32>& InNormalIndexes, const std::vector<int32>& InTexCoordIndexes)
+        : PositionIndexes(InPositionIndexes),
+          NormalIndexes(InNormalIndexes),
+          TexCoordIndexes(InTexCoordIndexes)
+    {
+    }
+};
 
 struct PMesh : PObject
 {
 protected:
-    uint32 AddVertex(const FVector3& V);
+    uint32 AddVertex(const FVector3& Position, const FVector3& Normal, const FVector3& TexCoord) { return 0; }
 
 public:
     // Properties
-    std::vector<FVector3> VertexPositions;
-    std::vector<uint32> VertexPositionIndexes;
-    
-    std::vector<FVector3> VertexNormals;
-    std::vector<uint32> VertexNormalIndexes;
+    std::vector<PTriangle> Triangles;
+    std::vector<FVector3> Positions;
+    std::vector<FVector3> Normals;
+    std::vector<FVector2> TexCoords;
 
-    std::vector<FVector3> VertexTexCoords;
-    std::vector<uint32> VertexTexCoordIndexes;
-
-    PMesh()
+    PMesh(){}
+    PMesh(const std::vector<PTriangle>& InTriangles, const std::vector<FVector3>& InPositions, const std::vector<FVector3>& InNormals = {}, const std::vector<FVector2>& InTexCoords = {})
+        : Triangles(InTriangles),
+          Positions(InPositions),
+          Normals(InNormals),
+          TexCoords(InTexCoords)
     {
     }
-    PMesh(const std::vector<FVector3>& InPositions, const std::vector<uint32>& InIndices) : VertexPositionIndexes(InIndices)
-    {
-        for (const FVector3& Position : InPositions)
-        {
-            VertexPositions.emplace_back(Position);
-        }
-    }
 
-    // Mesh Functions
-    void AddTri(const FVector3& InV0, const FVector3& InV1, const FVector3& InV2);
-    void AddQuad(const FVector3& V0, const FVector3& V1, const FVector3& V2, const FVector3& V3);
-    void Empty();
-    uint32 GetTriCount() const { return static_cast<uint32>(VertexPositionIndexes.size()) / 3; }
-    FVector3* GetVertexPosition(const uint32 Index) { return &VertexPositions[Index]; }
-    constexpr uint32 GetVertexCount() const { return static_cast<uint32>(VertexPositions.size()); }
+    void ProcessTriangle(const PTriangle& Triangle, PVertex* V0, PVertex* V1, PVertex* V2) const;
 
     // Primitives
-    static std::shared_ptr<PMesh> CreateTriangle(float Scale);
     static std::shared_ptr<PMesh> CreatePlane(float Size);
     static std::shared_ptr<PMesh> CreatePlane(float Width, float Height);
-    static std::shared_ptr<PMesh> CreateSphere(float Radius, int32 Segments = 8);
-    static std::shared_ptr<PMesh> CreateCube(float Scale);
-    static std::shared_ptr<PMesh> CreateTeapot(float Scale);
 };
 
 namespace Math
 {
-    static EWindingOrder GetWindingOrder(const FVector3& V0, const FVector3& V1, const FVector3& V2);
+    static EWindingOrder GetWindingOrder(const FVector3& V0, const FVector3& V1, const FVector3& V2)
+    {
+        const float Result = (V1.X - V0.X) * (V2.Y - V0.Y) - (V2.X - V0.X) * (V1.Y - V0.Y);
+        if (Result > 0)
+        {
+            return EWindingOrder::CCW;
+        }
+        if (Result < 0)
+        {
+            return EWindingOrder::CW;
+        }
+        return EWindingOrder::CL;
+    }
 }

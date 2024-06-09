@@ -194,8 +194,11 @@ struct TVector3
     static TVector3 ZeroVector() { return TVector3(); }
     static TVector3 IdentityVector() { return TVector3(1); }
     static TVector3 ForwardVector() { return TVector3(1, 0, 0); }
+    static TVector3 BackVector() { return TVector3(-1, 0, 0); }
     static TVector3 UpVector() { return TVector3(0, 1, 0); }
+    static TVector3 DownVector() { return TVector3(0, -1, 0); }
     static TVector3 RightVector() { return TVector3(0, 0, 1); }
+    static TVector3 LeftVector() { return TVector3(0, 0, -1); }
     void CheckNaN() const
     {
         if (!(Math::IsFinite(X) && Math::IsFinite(Y) && Math::IsFinite(Z)))
@@ -256,6 +259,22 @@ struct TVector3
     T Size() const
     {
         return Math::Sqrt(Math::Square(X) + Math::Square(Y) + Math::Square(Z));
+    }
+    TVector3 SwizzleXY() const
+    {
+        return {Y, X, Z};
+    }
+    TVector3 SwizzleXZ() const
+    {
+        return {Z, Y, X};
+    }
+    TVector3 SwizzleYZ() const
+    {
+        return {X, Z, Y};
+    }
+    TVector3 SwizzleXYZ() const
+    {
+        return {Z, X, Y};
     }
 
     std::string ToString() const { return std::format("[{}, {}, {}]", X, Y, Z); }
@@ -485,6 +504,13 @@ namespace Math
         return A.X * B.Y - A.Y * B.X;
     }
 
+    /**
+     * @brief Computes the cross product of two 3D vectors.
+     * @tparam T The type of the vector elements.
+     * @param A The first vector.
+     * @param B The second vector.
+     * @return The cross product of A and B.
+     */
     template <typename T>
     static TVector3<T> Cross(const TVector3<T>& A, const TVector3<T>& B)
     {
@@ -498,12 +524,8 @@ namespace Math
     template <typename T>
     static T Dot(const TVector3<T>& A, const TVector3<T>& B)
     {
-        T Result = T(0);
-        for (int32 Index = 0; Index < 3; Index++)
-        {
-            Result += A[Index] * B[Index];
-        }
-        return Result;
+        TVector3<T> Tmp = A * B;
+        return Tmp.X + Tmp.Y + Tmp.Z;
     }
 
     template <typename T>
@@ -556,38 +578,53 @@ namespace Math
         return Math::Cross(B - A, P - A);
     }
 
-    // Muller-Trumbore ray triangle intersect
+    /**
+     * Calculates the barycentric coordinates of a point P with respect to a triangle defined by vertices V0, V1, and V2.
+     * 
+     * @param P The point to calculate the barycentric coordinates for.
+     * @param V0 The first vertex of the triangle.
+     * @param V1 The second vertex of the triangle.
+     * @param V2 The third vertex of the triangle.
+     * @param UVW The output parameter that will store the calculated barycentric coordinates.
+     * @param Tolerance The tolerance value for determining if the point is inside the triangle.
+     * @return True if the point is inside the triangle, false otherwise.
+     */
     template <typename T>
     static bool GetBarycentric(const TVector3<T>& P,
                                const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2,
                                TVector3<T>& UVW,
                                T Tolerance = P_VERY_SMALL_NUMBER)
     {
+        // Calculate the vectors representing the edges of the triangle
         const TVector3<T> BA = V1 - V0;
         const TVector3<T> CA = V2 - V0;
         const TVector3<T> PA = P - V0;
 
-        const T D00 = Math::Dot(BA, BA);
-        const T D01 = Math::Dot(BA, CA);
-        const T D11 = Math::Dot(CA, CA);
-        const T D20 = Math::Dot(PA, BA);
-        const T D21 = Math::Dot(PA, CA);
+        // Calculate the dot products
+        const T D00 = BA.Dot(BA);
+        const T D01 = BA.Dot(CA);
+        const T D11 = CA.Dot(CA);
+        const T D20 = PA.Dot(BA);
+        const T D21 = PA.Dot(CA);
+
+        // Calculate the denominator of the formula
         const T Denom = T(1) / (D00 * D11 - D01 * D01);
 
+        // Calculate the barycentric coordinates
         const T V = (D11 * D20 - D01 * D21) * Denom;
         const T W = (D00 * D21 - D01 * D20) * Denom;
         const T U = T(1) - V - W;
 
+        // Store the barycentric coordinates in the output parameter
         UVW.X = U;
         UVW.Y = V;
         UVW.Z = W;
 
-        T OneMinusSum = T(1) - (UVW.X + UVW.Y + UVW.Z);
+        // Check if the point is inside the triangle
         return (
             UVW.X >= T(0) &&
             UVW.Y >= T(0) &&
-            UVW.Z >= T(0) &&
-            OneMinusSum <= P_EPSILON
+            UVW.Z >= T(0)
         );
     }
 
@@ -654,7 +691,7 @@ namespace Math
         T W0 = Math::EdgeFunction(V1, V2, P);
         T W1 = Math::EdgeFunction(V2, V0, P);
         T W2 = Math::EdgeFunction(V0, V1, P);
-
+        
         W0 /= Area;
         W1 /= Area;
         W2 /= Area;
@@ -666,8 +703,8 @@ namespace Math
     template <typename T>
     static TVector3<T> GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
     {
-        TVector3<T> Edge0 = V1 - V0;
-        TVector3<T> Edge1 = V2 - V0;
+        TVector3<T> Edge0 = V0 - V2;
+        TVector3<T> Edge1 = V1 - V2;
         TVector3<T> Normal = Math::Cross(Edge0, Edge1);
         return Normal.Normalized();
     }

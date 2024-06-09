@@ -8,7 +8,8 @@ enum ERenderFlags : uint8
     Shaded = 1 << 2,
     Depth = 1 << 3,
     Textures = 1 << 4,
-    Lights = 1 << 5
+    Lights = 1 << 5,
+    Normals = 1 << 6
 };
 DEFINE_BITMASK_OPERATORS(ERenderFlags);
 
