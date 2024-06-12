@@ -38,7 +38,7 @@ public:
     static FColor Cyan() { return FromRgba(0, 255, 255); }
 
     static FColor White() { return FromRgba(255, 255, 255); }
-    static FColor Gray() { return FromRgba(128,128,128); }
+    static FColor Gray() { return FromRgba(128, 128, 128); }
     static FColor Black() { return FromRgba(0, 0, 0); }
 
     static FColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
@@ -67,7 +67,7 @@ struct FLinearColor
         Color.A = A;
         return Color;
     }
-    
+
     void Clamp()
     {
         for (float& V : RGBA)

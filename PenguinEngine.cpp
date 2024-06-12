@@ -8,11 +8,11 @@
 // Windows entry point
 #include "Source/Public/Framework/Platforms/Win32Platform.h"
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
     PApplication* App = PApplication::GetInstance();
     App->Init<PWin32Platform>(hInstance);
-    const uint32 ExitCode = App->Run();
+    const int32 ExitCode = App->Run();
     delete App;
 
     if (ExitCode != Success)

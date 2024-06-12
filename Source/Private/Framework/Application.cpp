@@ -14,7 +14,7 @@ PApplication* PApplication::GetInstance()
     return Instance;
 }
 
-uint32 PApplication::Run() const
+int32 PApplication::Run() const
 {
     // Initialize the platform
     if (Platform->Create() != Success)

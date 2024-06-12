@@ -1,48 +1,49 @@
 ﻿#pragma once
 #include "Framework/Core/Bitmask.h"
 
-enum ERenderFlags : uint8
+enum ERenderFlag : uint8
 {
-    None = 0,
+    None      = 0,
     Wireframe = 1 << 0,
-    Shaded = 1 << 2,
-    Depth = 1 << 3,
-    Textures = 1 << 4,
-    Lights = 1 << 5,
-    Normals = 1 << 6
+    Shaded    = 1 << 2,
+    Depth     = 1 << 3,
+    Textures  = 1 << 4,
+    Lights    = 1 << 5,
+    Normals   = 1 << 6
 };
-DEFINE_BITMASK_OPERATORS(ERenderFlags);
+DEFINE_BITMASK_OPERATORS(ERenderFlag);
 
 namespace Renderer
 {
     struct PRenderSettings
     {
     private:
-        ERenderFlags RenderFlags = ERenderFlags::Wireframe;
+        ERenderFlag RenderFlags = ERenderFlag::Wireframe;
         bool bUseGlm = true;
 
     public:
         PRenderSettings()
         {
-            RenderFlags = ERenderFlags::Shaded | ERenderFlags::Depth;
+            RenderFlags = ERenderFlag::Shaded | ERenderFlag::Depth;
         }
-        
-        bool GetRenderFlag(const ERenderFlags Flag)
+
+        bool GetRenderFlag(const ERenderFlag Flag)
         {
             return (RenderFlags & Flag) == Flag;
         }
 
-        void SetRenderFlag(const ERenderFlags Flag, const bool bState)
+        void SetRenderFlag(const ERenderFlag Flag, const bool bState)
         {
             uint8 CurrentFlag = RenderFlags;
             bState ? CurrentFlag |= Flag : CurrentFlag &= ~Flag;
-            RenderFlags = static_cast<ERenderFlags>(CurrentFlag);
+            RenderFlags = static_cast<ERenderFlag>(CurrentFlag);
         }
 
-        void ToggleRenderFlag(const ERenderFlags Flag)
+        bool ToggleRenderFlag(const ERenderFlag Flag)
         {
             const bool bState = GetRenderFlag(Flag); // Flip the state
             SetRenderFlag(Flag, !bState);
+            return !bState;
         }
 
         bool GetUseGlm()

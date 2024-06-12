@@ -26,15 +26,19 @@ class PWin32Platform : public IPlatform
     HINSTANCE HInstance;
     bool Register();
 
+    HMENU MainMenu;
+    HMENU FileMenu;
+    HMENU DisplayMenu;
+
 public:
     // Platform interface
-    uint32 Create() override;
-    uint32 Show() override;
-    uint32 Start() override;
-    uint32 Loop() override;
-    uint32 Paint() override;
-    uint32 End() override;
-    uint32 Swap() override;
+    int32 Create() override;
+    int32 Show() override;
+    int32 Start() override;
+    int32 Loop() override;
+    int32 Paint() override;
+    int32 End() override;
+    int32 Swap() override;
     bool IsInitialized() const override { return bInitialized; }
 
     // Windows
@@ -46,5 +50,9 @@ public:
     void SetHInstance(HINSTANCE NewInstance) { HInstance = NewInstance; }
     FRect GetSize() override;
     EPlatformType GetPlatformType() override { return EPlatformType::Windows; }
-    // FRect GetSize() override;
+
+    // Menu bar
+    bool GetFileDialog(std::string& OutFileName) override;
+    void ConstructMenuBar() override;
+    void SetMenuItemChecked(EMenuAction ActionId, bool bChecked) override;
 };

@@ -2,9 +2,9 @@
 
 #include <chrono>
 
-typedef std::chrono::steady_clock SteadyClock;
-typedef std::chrono::time_point<std::chrono::steady_clock> TimePoint;
-typedef std::chrono::duration<float, std::milli> DurationMs;
+using SteadyClock = std::chrono::steady_clock;
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+using DurationMs = std::chrono::duration<float, std::milli>;
 
 struct PTimer
 {

@@ -1,4 +1,5 @@
 ﻿#include <windowsx.h>
+#include <codecvt>
 
 #include "Framework/Application.h"
 #include "Framework/Platforms/Win32Platform.h"
@@ -6,9 +7,7 @@
 #include "Framework/Engine/Engine.h"
 #include "Framework/Input/InputHandler.h"
 
-#ifndef WINDOWS_TIMER_ID
-    #define WINDOWS_TIMER_ID 1001
-#endif
+constexpr int32 WINDOWS_TIMER_ID = 1001;
 
 std::map<int32, EKey> Win32KeyMap
 {
@@ -88,7 +87,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
     case WM_MBUTTONDOWN :
         {
             bool bMouseUp = false;
-            auto ButtonType = EMouseButtonType::Invalid;
+            EMouseButtonType ButtonType;
 
             switch (Msg)
             {
@@ -165,7 +164,7 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
                 break;
             }
-            
+
             // Get the current window size from the buffer
             const std::shared_ptr<PChannel> Buffer = Renderer->GetColorChannel();
             const int32 Width = Buffer->Width;
@@ -197,10 +196,10 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 SetTextColor(DeviceContext, RGB(255, 255, 0));
                 SetBkColor(DeviceContext, TRANSPARENT);
                 DrawText(
-                    DeviceContext, // DC
+                    DeviceContext,                                                  // DC
                     std::wstring(OutputString.begin(), OutputString.end()).c_str(), // Message
                     -1,
-                    &ClientRect, // Client rectangle (the window)
+                    &ClientRect,     // Client rectangle (the window)
                     DT_TOP | DT_LEFT // Drawing options
                 );
             }
@@ -220,8 +219,8 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
                 LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_SIZE")
                 break;
             }
-            const int Width = LOWORD(lParam);
-            const int Height = HIWORD(lParam);
+            const int32 Width = LOWORD(lParam);
+            const int32 Height = HIWORD(lParam);
 
             // Update the renderer size
             Renderer->Resize(Width, Height);
@@ -230,7 +229,9 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
 
             const HDC DeviceContext = GetDC(Hwnd);
             const HDC MemoryContext = CreateCompatibleDC(DeviceContext);
-            PPlatformMemory::Realloc(DisplayBuffer, Width * Height * BYTES_PER_PIXEL * 4);
+
+            const int32 MemorySize = Width * Height * BYTES_PER_PIXEL * 4;
+            PPlatformMemory::Realloc(DisplayBuffer, static_cast<size_t>(MemorySize));
             DisplayBitmap = CreateDIBitmap(MemoryContext, &BitmapInfo.bmiHeader, DIB_RGB_COLORS, DisplayBuffer, &BitmapInfo, 0);
 
             break;
@@ -246,6 +247,11 @@ LRESULT PWin32Platform::WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lP
             InvalidateRect(Hwnd, nullptr, FALSE);
             UpdateWindow(Hwnd);
             break;
+        }
+    case WM_COMMAND :
+        {
+            auto ActionId = static_cast<EMenuAction>(LOWORD(wParam));
+            InputHandler->MenuActionPressed.Broadcast(ActionId);
         }
     default :
         {
@@ -305,7 +311,7 @@ bool PWin32Platform::Register()
     return true;
 }
 
-uint32 PWin32Platform::Create()
+int32 PWin32Platform::Create()
 {
     bInitialized = Register();
     if (!bInitialized)
@@ -313,10 +319,13 @@ uint32 PWin32Platform::Create()
         LOG_ERROR("Window failed to initialize (PWin32Platform::Create).")
         return PlatformInitError;
     }
+
+    ConstructMenuBar();
+
     return Success;
 }
 
-uint32 PWin32Platform::Show()
+int32 PWin32Platform::Show()
 {
     if (!bInitialized)
     {
@@ -329,7 +338,7 @@ uint32 PWin32Platform::Show()
     return Success;
 }
 
-uint32 PWin32Platform::Start()
+int32 PWin32Platform::Start()
 {
     if (!bInitialized)
     {
@@ -356,9 +365,10 @@ uint32 PWin32Platform::Start()
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-    PRenderer* Renderer = Engine->GetRenderer();
-    DisplayBitmap = CreateDIBSection(MemoryContext, &BitmapInfo, DIB_RGB_COLORS, (void**)DisplayBuffer, nullptr, 0);
-    PPlatformMemory::Realloc(DisplayBuffer, DefaultWidth * DefaultHeight * BYTES_PER_PIXEL * 4);
+    DisplayBitmap = CreateDIBSection(MemoryContext, &BitmapInfo, DIB_RGB_COLORS, reinterpret_cast<void**>(DisplayBuffer), nullptr, 0);
+
+    const int32 MemorySize = DefaultWidth * DefaultHeight * BYTES_PER_PIXEL * 4;
+    PPlatformMemory::Realloc(DisplayBuffer, static_cast<size_t>(MemorySize));
 
     // Process all messages and update the window
     LOG_DEBUG("Engine loop start")
@@ -369,7 +379,7 @@ uint32 PWin32Platform::Start()
         DispatchMessage(&Msg);
 
         // Loop, converting DeltaTime from milliseconds to seconds
-        if (const uint32 LoopResult = Loop())
+        if (const int32 LoopResult = Loop())
         {
             LOG_ERROR("Loop failed (PWin32Platform::Start).")
             return LoopResult; // Start failure
@@ -380,7 +390,7 @@ uint32 PWin32Platform::Start()
     return End();
 }
 
-uint32 PWin32Platform::Loop()
+int32 PWin32Platform::Loop()
 {
     // Tick the engine forward
     if (PEngine* Engine = PEngine::GetInstance())
@@ -404,17 +414,17 @@ uint32 PWin32Platform::Loop()
     return PlatformLoopError;
 }
 
-uint32 PWin32Platform::Paint()
+int32 PWin32Platform::Paint()
 {
     return 0;
 }
 
-uint32 PWin32Platform::End()
+int32 PWin32Platform::End()
 {
     return Success;
 }
 
-uint32 PWin32Platform::Swap()
+int32 PWin32Platform::Swap()
 {
     PEngine* Engine = PEngine::GetInstance();
     PRenderer* Renderer = Engine->GetRenderer();
@@ -440,4 +450,60 @@ FRect PWin32Platform::GetSize()
 
     LOG_ERROR("Unable to get window size (PWin32Platform::GetSize).")
     return {};
+}
+
+bool PWin32Platform::GetFileDialog(std::string& OutFileName)
+{
+    OPENFILENAME OFN;
+    TCHAR szFile[260] = {0};
+
+    ZeroMemory(&OFN, sizeof(OFN));
+    OFN.lStructSize = sizeof(OFN);
+    OFN.hwndOwner = Hwnd;
+    OFN.lpstrFile = szFile;
+    OFN.nMaxFile = sizeof(szFile);
+    OFN.lpstrFilter = static_cast<LPCWSTR>(L".obj\0*.obj\0");
+    OFN.nFilterIndex = 1;
+    OFN.lpstrFileTitle = nullptr;
+    OFN.nMaxFileTitle = 0;
+    OFN.lpstrInitialDir = nullptr;
+    OFN.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    if (!GetOpenFileName(&OFN))
+    {
+        return false;
+    }
+    int32 FileSize = WideCharToMultiByte(CP_UTF8, 0, OFN.lpstrFile, -1, nullptr, 0, nullptr, nullptr);
+    auto Tmp = new int8[FileSize];
+    WideCharToMultiByte(CP_UTF8, 0, OFN.lpstrFile, -1, Tmp, FileSize, nullptr, nullptr);
+    OutFileName = std::string(Tmp);
+    return true;
+}
+
+void PWin32Platform::ConstructMenuBar()
+{
+    MainMenu = CreateMenu();
+    FileMenu = CreateMenu();
+    DisplayMenu = CreateMenu();
+
+    // File menu
+    AppendMenuW(MainMenu, MF_POPUP, UINT_PTR(FileMenu), L"&File");
+    AppendMenuW(FileMenu, MF_STRING, UINT_PTR(EMenuAction::Open), L"&Open...");
+    AppendMenuW(FileMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(FileMenu, MF_STRING, UINT_PTR(EMenuAction::Quit), L"&Quit");
+
+    // Display menu
+    AppendMenuW(MainMenu, MF_POPUP, UINT_PTR(DisplayMenu), L"&Display");
+    AppendMenuW(DisplayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Wireframe), L"&Wireframe");
+    AppendMenuW(DisplayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Shaded), L"&Shaded");
+    AppendMenuW(DisplayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Depth), L"&Depth");
+    AppendMenuW(DisplayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Normals), L"&Normals");
+
+    // Add the main menubar to the window
+    SetMenu(Hwnd, MainMenu);
+}
+
+void PWin32Platform::SetMenuItemChecked(EMenuAction ActionId, const bool bChecked)
+{
+    CheckMenuItem(DisplayMenu, UINT_PTR(ActionId), bChecked ? MF_CHECKED : MF_UNCHECKED);
 }

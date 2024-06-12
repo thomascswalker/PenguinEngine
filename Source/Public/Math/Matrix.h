@@ -563,7 +563,7 @@ struct TMatrix
 template <typename T>
 constexpr TMatrix<T> operator*(const TMatrix<T>& M0, const TMatrix<T>& M1)
 {
-    typedef float Float4x4[4][4];
+    using Float4x4 = float[4][4];
     const Float4x4& A = *((const Float4x4*)M0.M);
     const Float4x4& B = *((const Float4x4*)M1.M);
     Float4x4 Temp;

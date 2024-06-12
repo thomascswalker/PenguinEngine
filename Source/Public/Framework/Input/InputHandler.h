@@ -84,16 +84,30 @@ enum class EKey : uint8
 
 enum class EModifierKey : uint8
 {
-    None = 0x00,
+    None  = 0x00,
     Shift = 0x01,
-    Ctrl = 0x02,
-    Alt = 0x04
+    Ctrl  = 0x02,
+    Alt   = 0x04
 };
 DEFINE_BITMASK_OPERATORS(EModifierKey)
 
 struct FKey
 {
     const char* Name;
+};
+
+enum class EMenuAction : uint16
+{
+    // File
+    Open,
+    Quit,
+
+    // Display
+    Wireframe,
+    Shaded,
+    Depth,
+    Normals,
+    VertexNormals
 };
 
 DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, const FVector2&);
@@ -104,8 +118,10 @@ DECLARE_MULTICAST_DELEGATE(FOnMouseRightUp, const FVector2&);
 DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleDown, const FVector2&);
 DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleUp, const FVector2&);
 
-DECLARE_MULTICAST_DELEGATE(FKeyPressed, EKey);
+DECLARE_MULTICAST_DELEGATE(FOnKeyPressed, EKey);
 DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleScrolled, float);
+
+DECLARE_MULTICAST_DELEGATE(FOnMenuActionPressed, EMenuAction);
 
 class IInputHandler
 {
@@ -147,7 +163,8 @@ public:
     FOnMouseRightUp MouseRightUp;
     FOnMouseMiddleUp MouseMiddleUp;
     FOnMouseMiddleScrolled MouseMiddleScrolled;
-    FKeyPressed KeyPressed;
+    FOnKeyPressed KeyPressed;
+    FOnMenuActionPressed MenuActionPressed;
 
     // Mouse
     virtual bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
@@ -199,6 +216,8 @@ public:
     {
         return KeyStateMap.at(EKey::Ctrl);
     }
+
+    virtual void OnMenuActionPressed(EMenuAction ActionId) = 0;
 };
 
 class PWin32InputHandler : public IInputHandler
@@ -320,5 +339,17 @@ public:
     bool IsKeyDown(EKey KeyCode) const override
     {
         return KeyStateMap.at(KeyCode);
+    }
+
+    void OnMenuActionPressed(EMenuAction ActionId) override
+    {
+        switch (ActionId)
+        {
+        case EMenuAction::Open :
+
+            break;
+        case EMenuAction::Quit :
+            break;
+        }
     }
 };

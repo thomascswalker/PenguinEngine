@@ -13,7 +13,7 @@ struct TTransform
 
     TTransform()
     {
-        Rotation = TRotator<T>(0,0,0);
+        Rotation = TRotator<T>(0, 0, 0);
         Translation = TVector3<T>(0);
         Scale = TVector3<T>(1);
     }
@@ -60,14 +60,13 @@ struct TTransform
 
         Rotation.Normalize();
     }
-    
+
     //  | rx0   | rx1   | rx2   | 0 |
     //  | ry0   | ry1   | ry2   | 0 |
     //  | rz0   | rz1   | rz2   | 0 |
     //  | tx*sx | ty*sy | tz*sz | 1 | 
     TMatrix<T> ToMatrix() const
     {
-
         // Apply translation
         TMatrix<T> Out = TTranslationMatrix<T>(Translation);
 

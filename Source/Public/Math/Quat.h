@@ -74,7 +74,7 @@ struct TQuat
         }
         Normalize();
     }
-    
+
     TQuat(const TMatrix<T>& M)
     {
         //const MeReal *const t = (MeReal *) tm;

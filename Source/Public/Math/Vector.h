@@ -66,7 +66,7 @@ struct TVector2
     {
         return {static_cast<ToType>(X), static_cast<ToType>(Y)};
     }
-    
+
     void Normalize()
     {
         X = 1.0f / X;
@@ -691,7 +691,7 @@ namespace Math
         T W0 = Math::EdgeFunction(V1, V2, P);
         T W1 = Math::EdgeFunction(V2, V0, P);
         T W2 = Math::EdgeFunction(V0, V1, P);
-        
+
         W0 /= Area;
         W1 /= Area;
         W2 /= Area;

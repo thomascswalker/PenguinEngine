@@ -54,7 +54,7 @@ namespace IO
         Stream.read(Buffer.data(), Size);
 
         Strings::Split(Buffer, Lines, "\n");
-        
+
         return true;
     }
 

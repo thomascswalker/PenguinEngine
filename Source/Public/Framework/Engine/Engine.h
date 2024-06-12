@@ -22,7 +22,7 @@ class PEngine
 public:
     static PEngine* Instance;
     static PEngine* GetInstance();
-    
+
     bool Startup(uint32 InWidth, uint32 InHeight);
     bool Shutdown();
 
@@ -34,16 +34,19 @@ public:
     bool IsRunning() const { return bRunning; }
     void SetRunning(bool bNewRunning) { bRunning = bNewRunning; }
 
-    void LoadSceneGeometry();
+    void OpenFile(const std::string& FileName);
 
     std::vector<std::shared_ptr<PMesh>> Meshes;
     std::vector<std::shared_ptr<PMesh>> GetMeshes() const { return Meshes; }
 
     constexpr float GetFps() const { return 1000.0f / DeltaTime; }
-    
+
     void OnMouseMiddleScrolled(float Delta) const;
     void OnKeyPressed(EKey KeyCode);
 
     void OnLeftMouseUp(const FVector2& CursorPosition) const;
     void OnMiddleMouseUp(const FVector2& CursorPosition) const;
+
+    void OnMenuActionPressed(EMenuAction ActionId);
+    void OnOpenPressed();
 };
