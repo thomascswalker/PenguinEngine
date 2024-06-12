@@ -49,7 +49,7 @@ struct TRect
 
         return TRect(BBMin, BBMax);
     }
-    
+
     static TRect MakeBoundingBox(const TVector2<T>& V0, const TVector2<T>& V1, const TVector2<T>& V2)
     {
         T XValues[3] = {V0.X, V1.X, V2.X};

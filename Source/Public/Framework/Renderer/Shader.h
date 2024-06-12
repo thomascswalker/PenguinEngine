@@ -101,14 +101,16 @@ struct DefaultShader : IShader
 {
     void ComputePixelShader(float U, float V) override
     {
+        // Calculate the weighted normal of the current point on this triangle. This uses the UVW
+        // barycentric coordinates to weight each vertex normal of the triangle.
+        const FVector3 WeightedWorldNormal = V0.Normal * UVW.X + V1.Normal * UVW.Y + V2.Normal * UVW.Z;
+
         // Calculate the dot product of the triangle normal and camera direction
-        FacingRatio = Math::Max(0.0f, Math::Dot(-CameraWorldDirection, TriangleWorldNormal)); // Floor to a min of 0
-        float ClampedFacingRatio = Math::Min((1.0f - FacingRatio) * 255.0f, 255.0f);                   // Clamp to a max of 255
+        FacingRatio = Math::Max(0.0f, Math::Dot(-CameraWorldDirection, WeightedWorldNormal)); // Floor to a min of 0
+        const float ClampedFacingRatio = Math::Min(FacingRatio * 255.0f, 255.0f);             // Clamp to a max of 255
 
         uint8 R = static_cast<uint8>(ClampedFacingRatio);
-        uint8 G = static_cast<uint8>(ClampedFacingRatio);
-        uint8 B = static_cast<uint8>(ClampedFacingRatio);
 
-        OutColor = FColor::FromRgba(R, G, B);
+        OutColor = FColor::FromRgba(R, R, R);
     }
 };

@@ -23,7 +23,7 @@ void PCamera::ComputeViewProjectionMatrix()
 void PCamera::Orbit(float DX, float DY)
 {
     SphericalDelta.Theta = Math::DegreesToRadians(-DX); // Horizontal
-    SphericalDelta.Phi = Math::DegreesToRadians(DY); // Vertical
+    SphericalDelta.Phi = Math::DegreesToRadians(DY);    // Vertical
 }
 
 void PCamera::Pan(float DX, float DY)
@@ -87,8 +87,8 @@ void PCamera::Update(float DeltaTime)
     // Set camera rotation pitch/yaw
     FRotator NewRotation(
         Math::RadiansToDegrees(Spherical.Theta), // Yaw
-        Math::RadiansToDegrees(Spherical.Phi), // Pitch
-        0.0f // Roll
+        Math::RadiansToDegrees(Spherical.Phi),   // Pitch
+        0.0f                                     // Roll
     );
     SetRotation(NewRotation);
 

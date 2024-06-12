@@ -38,7 +38,7 @@ namespace Math
     {
         return std::asinf(Value);
     }
-    
+
     static float Cos(float Value)
     {
         return std::cosf(Value);
@@ -49,7 +49,7 @@ namespace Math
         return std::cos(Value);
     }
 
-    
+
     template <typename T>
     constexpr static T Cos(T Value)
     {

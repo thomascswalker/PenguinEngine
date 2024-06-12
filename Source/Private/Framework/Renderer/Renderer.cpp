@@ -188,16 +188,16 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
         return;
     }
 
-    if (Settings.GetRenderFlag(ERenderFlags::Shaded))
+    if (Settings.GetRenderFlag(ERenderFlag::Shaded))
     {
         CurrentShader->ViewMatrix = Camera->ViewMatrix;
-        ScanlineFast();
+        Scanline();
     }
 
     FVector3 S0 = CurrentShader->S0;
     FVector3 S1 = CurrentShader->S1;
     FVector3 S2 = CurrentShader->S2;
-    if (Settings.GetRenderFlag(ERenderFlags::Wireframe))
+    if (Settings.GetRenderFlag(ERenderFlag::Wireframe))
     {
         DrawLine({S0.X, S0.Y}, {S1.X, S1.Y}, WireColor);
         DrawLine({S1.X, S1.Y}, {S2.X, S2.Y}, WireColor);
@@ -205,7 +205,7 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
     }
 
     // Draw normal direction
-    if (Settings.GetRenderFlag(ERenderFlags::Normals))
+    if (Settings.GetRenderFlag(ERenderFlag::Normals))
     {
         FVector3 TriangleCenter = (CurrentShader->V0.Position + CurrentShader->V1.Position + CurrentShader->V2.Position) / 3.0f;
         FVector3 TriangleNormal = CurrentShader->TriangleWorldNormal;
@@ -293,97 +293,16 @@ void PRenderer::Scanline()
 
     switch (Math::GetWindingOrder(S0, S1, S2))
     {
-    case EWindingOrder::CCW :
+    case EWindingOrder::CCW : // Correct order
         break;
-    case EWindingOrder::CW :
-    case EWindingOrder::CL :
-        return;
-    }
-
-    auto Bounds = CurrentShader->ScreenBounds;
-
-    // Loop through all pixels in the screen bounding box.
-    int32 MinX = static_cast<int32>(Bounds.Min().X);
-    int32 MinY = static_cast<int32>(Bounds.Min().Y);
-    int32 MaxX = static_cast<int32>(Bounds.Max().X);
-    int32 MaxY = static_cast<int32>(Bounds.Max().Y);
-
-    for (int32 Y = MinY; Y <= MaxY; Y++)
-    {
-        for (int32 X = MinX; X <= MaxX; X++)
-        {
-            FVector3 P(
-                static_cast<float>(X) + 0.5f,
-                static_cast<float>(Y) + 0.5f,
-                0.0f
-            );
-
-            // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
-            // the pixel is not within the triangle.
-            FVector3 UVW;
-            if (!Math::GetBarycentric(P, S0, S1, S2, UVW))
-            {
-                continue;
-            }
-
-            if (Settings.GetRenderFlag(ERenderFlags::Depth))
-            {
-                const float NewDepth = UVW.Z;
-
-                // Compare the new depth to the current depth at this pixel. If the new depth is further than
-                // the current depth, continue.
-                const float CurrentDepth = GetDepthChannel()->GetPixel<float>(X, Y);
-                if (NewDepth >= CurrentDepth)
-                {
-                    continue;
-                }
-
-                // If the new depth is closer than the current depth, set the current depth
-                // at this pixel to the new depth we just got.
-                GetDepthChannel()->SetPixel(X, Y, NewDepth);
-            }
-            CurrentShader->ComputePixelShader(X, Y);
-            GetColorChannel()->SetPixel(X, Y, CurrentShader->OutColor);
-        }
-    }
-}
-
-// https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
-void PRenderer::ScanlineFast()
-{
-    FVector3 S0 = CurrentShader->S0;
-    FVector3 S1 = CurrentShader->S1;
-    FVector3 S2 = CurrentShader->S2;
-
-    switch (Math::GetWindingOrder(S0, S1, S2))
-    {
-    case EWindingOrder::CCW :
-        break;
-    case EWindingOrder::CW :
-    case EWindingOrder::CL :
+    case EWindingOrder::CW : // Backfacing, exit
+    case EWindingOrder::CL : // Colinear, exit
         return;
     }
 
     const FRect Bounds = CurrentShader->ScreenBounds;
 
-    // Difference in Y coordinate for each edge
-    const int32 Y01 = S0.Y - S1.Y;
-    const int32 Y12 = S1.Y - S2.Y;
-    const int32 Y20 = S2.Y - S0.Y;
-
-    // Difference in X coordinate for each edge
-    const int32 X10 = S1.X - S0.X;
-    const int32 X21 = S2.X - S1.X;
-    const int32 X02 = S0.X - S2.X;
-
-    // Start the point at the min X/Y coordinates (top-left)
-    IVector3 Point = FVector3(Bounds.Min().X, Bounds.Min().Y, 0).ToType<int32>();
-
-    // Use the EdgeFunction to compute each starting edge value
-    int32 Edge12 = Math::EdgeFunction(S1.ToType<int32>(), S2.ToType<int32>(), Point);
-    int32 Edge20 = Math::EdgeFunction(S2.ToType<int32>(), S0.ToType<int32>(), Point);
-    int32 Edge01 = Math::EdgeFunction(S0.ToType<int32>(), S1.ToType<int32>(), Point);
-
+    // Loop through all pixels in the screen bounding box.
     const int32 MinX = static_cast<int32>(Bounds.Min().X);
     const int32 MinY = static_cast<int32>(Bounds.Min().Y);
     const int32 MaxX = static_cast<int32>(Bounds.Max().X);
@@ -392,53 +311,44 @@ void PRenderer::ScanlineFast()
     // Precompute the area of the screen triangle so we're not computing it every pixel
     const float Area = Math::Area2D(S0, S1, S2);
 
-    // Vertical
-    for (Point.Y = MinY; Point.Y <= MaxY; Point.Y++)
+    for (int32 Y = MinY; Y <= MaxY; Y++)
     {
-        int32 TempEdge12 = Edge12;
-        int32 TempEdge20 = Edge20;
-        int32 TempEdge01 = Edge01;
-
-        // Horizontal
-        for (Point.X = MinX; Point.X <= MaxX; Point.X++)
+        for (int32 X = MinX; X <= MaxX; X++)
         {
-            // Are we still inside the triangle, given the edges?
-            if (TempEdge12 >= 0 && TempEdge20 >= 0 && TempEdge01 >= 0)
-            {
-                if (Settings.GetRenderFlag(ERenderFlags::Depth))
-                {
-                    const float Depth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
+            FVector3 Point(
+                static_cast<float>(X) + 0.5f,
+                static_cast<float>(Y) + 0.5f,
+                0.0f
+            );
 
-                    // Compare the new depth to the current depth at this pixel. If the new depth is further than
-                    // the current depth, continue.
-                    const float CurrentDepth = GetDepthChannel()->GetPixel<float>(Point.X, Point.Y);
-                    if (Depth >= CurrentDepth)
-                    {
-                        TempEdge12 += Y12;
-                        TempEdge20 += Y20;
-                        TempEdge01 += Y01;
-                        continue;
-                    }
-                    // If the new depth is closer than the current depth, set the current depth
-                    // at this pixel to the new depth we just got.
-                    GetDepthChannel()->SetPixel(Point.X, Point.Y, Depth);
-                }
-                FVector3 UVW;
-                Math::GetBarycentric(Point.ToType<float>(), S0, S1, S2, UVW);
-                CurrentShader->UVW = UVW;
-                CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
-                CurrentShader->PixelWorldNormal = CurrentShader->V0.Normal * UVW.X + CurrentShader->V1.Normal * UVW.Y + CurrentShader->V2.Normal * UVW.Z;
-                CurrentShader->ComputePixelShader(Point.X, Point.Y);
-                GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
+            // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
+            // the pixel is not within the triangle.
+            FVector3 UVW;
+            if (!Math::GetBarycentric(Point, S0, S1, S2, UVW))
+            {
+                continue;
             }
 
-            TempEdge12 += Y12;
-            TempEdge20 += Y20;
-            TempEdge01 += Y01;
-        }
+            if (Settings.GetRenderFlag(ERenderFlag::Depth))
+            {
+                const float Depth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
 
-        Edge12 += X21;
-        Edge20 += X02;
-        Edge01 += X10;
+                // Compare the new depth to the current depth at this pixel. If the new depth is further than
+                // the current depth, continue.
+                const float CurrentDepth = GetDepthChannel()->GetPixel<float>(Point.X, Point.Y);
+                if (Depth >= CurrentDepth)
+                {
+                    continue;
+                }
+                // If the new depth is closer than the current depth, set the current depth
+                // at this pixel to the new depth we just got.
+                GetDepthChannel()->SetPixel(Point.X, Point.Y, Depth);
+            }
+            CurrentShader->UVW = UVW;
+            CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
+            CurrentShader->PixelWorldNormal = CurrentShader->V0.Normal * UVW.X + CurrentShader->V1.Normal * UVW.Y + CurrentShader->V2.Normal * UVW.Z;
+            CurrentShader->ComputePixelShader(Point.X, Point.Y);
+            GetColorChannel()->SetPixel(Point.X, Point.Y, CurrentShader->OutColor);
+        }
     }
 }

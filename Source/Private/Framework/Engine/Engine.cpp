@@ -5,6 +5,8 @@
 #include "Framework/Application.h"
 #include "Framework/Importers/MeshImporter.h"
 
+#include "Framework/Platforms/PlatformInterface.h"
+
 PEngine* PEngine::Instance = GetInstance();
 
 PEngine* PEngine::GetInstance()
@@ -30,17 +32,17 @@ bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
     // Bind input events
     if (IInputHandler* Input = PWin32InputHandler::GetInstance())
     {
-        // Any key press
+        // Keyboard
         Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
 
-        // Adjust FOV
+        // Mouse
         Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
         Input->MouseLeftUp.AddRaw(this, &PEngine::OnLeftMouseUp);
         Input->MouseMiddleUp.AddRaw(this, &PEngine::OnMiddleMouseUp);
-    }
 
-    // Load all geometry into the scene
-    LoadSceneGeometry();
+        // Menu
+        Input->MenuActionPressed.AddRaw(this, &PEngine::OnMenuActionPressed);
+    }
 
     LOG_INFO("Renderer constructed.")
     return true;
@@ -87,15 +89,16 @@ void PEngine::Tick()
 
     // Tick every object
     GetViewportCamera()->Update(DeltaTime);
- 
+
     // Format debug text
     GetViewport()->FormatDebugText();
 }
 
-void PEngine::LoadSceneGeometry()
+void PEngine::OpenFile(const std::string& FileName)
 {
+    Meshes.clear();
     auto ObjMesh = std::make_shared<PMesh>();
-    ObjImporter::Import("C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\p-engine\\Examples\\Bunny.obj", ObjMesh.get());
+    ObjImporter::Import(FileName, ObjMesh.get());
     Meshes.emplace_back(ObjMesh);
 }
 
@@ -103,11 +106,6 @@ void PEngine::OnKeyPressed(EKey KeyCode)
 {
     switch (KeyCode)
     {
-    case EKey::Escape :
-        {
-            bRunning = false;
-            break;
-        }
     case EKey::T :
         {
             GetViewport()->ToggleShowDebugText();
@@ -120,22 +118,22 @@ void PEngine::OnKeyPressed(EKey KeyCode)
         }
     case EKey::F1 :
         {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Wireframe);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Wireframe);
             break;
         }
     case EKey::F2 :
         {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Shaded);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Shaded);
             break;
         }
     case EKey::F3 :
         {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Depth);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Depth);
             break;
         }
     case EKey::F4 :
         {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlags::Normals);
+            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Normals);
             break;
         }
     default :
@@ -153,6 +151,43 @@ void PEngine::OnMiddleMouseUp(const FVector2& CursorPosition) const
 {
     PCamera* Camera = GetViewportCamera();
     Camera->PanOffset = 0;
+}
+
+void PEngine::OnMenuActionPressed(EMenuAction ActionId)
+{
+    PApplication* App = PApplication::GetInstance();
+    IPlatform* Platform = App->GetPlatform();
+    switch (ActionId)
+    {
+    case EMenuAction::Open :
+        OnOpenPressed();
+        break;
+    case EMenuAction::Quit :
+        bRunning = false;
+        break;
+    case EMenuAction::Wireframe:
+        Platform->SetMenuItemChecked(EMenuAction::Wireframe, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Wireframe));
+        break;
+    case EMenuAction::Shaded:
+        Platform->SetMenuItemChecked(EMenuAction::Shaded, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Shaded));
+        break;
+    case EMenuAction::Depth:
+        Platform->SetMenuItemChecked(EMenuAction::Depth, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Depth));
+        break;
+    case EMenuAction::Normals:
+        Platform->SetMenuItemChecked(EMenuAction::Normals, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Normals));
+    }
+}
+void PEngine::OnOpenPressed()
+{
+    PApplication* App = PApplication::GetInstance();
+    IPlatform* Platform = App->GetPlatform();
+    std::string FileName;
+    if (Platform->GetFileDialog(FileName))
+    {
+        // Load model
+        OpenFile(FileName);
+    }
 }
 
 void PEngine::OnMouseMiddleScrolled(float Delta) const

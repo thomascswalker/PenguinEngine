@@ -198,9 +198,17 @@ public:
             }
         }
 
+
         Mesh->Triangles = Triangles;
         Mesh->Positions = Positions;
-        Mesh->Normals = Normals;
+        if (!Normals.size())
+        {
+            Mesh->ComputeNormals();
+        }
+        else
+        {
+            Mesh->Normals = Normals;
+        }
         Mesh->TexCoords = TexCoords;
 
         return true;

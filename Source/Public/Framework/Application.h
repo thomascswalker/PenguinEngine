@@ -29,7 +29,7 @@ public:
         LOG_INFO("Initialized application.")
     }
 
-    uint32 Run() const;
+    int32 Run() const;
     IPlatform* GetPlatform() const { return Platform.get(); }
     PEngine* GetEngine() const { return Engine.get(); }
 

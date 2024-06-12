@@ -11,11 +11,10 @@
 #include "Framework/Platforms/PlatformMemory.h"
 #include "Math/MathCommon.h"
 
-enum
-{
-    BYTES_PER_CHANNEL = 8,
-    BYTES_PER_PIXEL = 32
-};
+
+constexpr int32 BYTES_PER_CHANNEL = 8;
+constexpr int32 BYTES_PER_PIXEL = 32;
+
 
 enum class EOrientation
 {
@@ -25,7 +24,7 @@ enum class EOrientation
 
 struct PChannel
 {
-    void* Memory; // Memory Order BB GG RR XX
+    void* Memory;                                              // Memory Order BB GG RR XX
     uint32 ChannelCount = BYTES_PER_PIXEL / BYTES_PER_CHANNEL; // 4
     int32 Width;
     int32 Height;
@@ -199,9 +198,6 @@ public:
     void Draw();
 
 
-
     // Rasterizing triangles
-
     void Scanline();
-    void ScanlineFast();
 };

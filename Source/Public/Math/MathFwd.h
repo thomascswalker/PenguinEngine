@@ -14,109 +14,109 @@
 #define P_VERY_LARGE_NUMBER 10000000.0f
 
 // Basic types
-typedef char int8;
-typedef short int16;
-typedef int int32;
-typedef long long int64;
+using int8 = char;
+using int16 = short;
+using int32 = int;
+using int64 = long long;
 
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned int uint32;
-typedef unsigned long long uint64;
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned int;
+using uint64 = unsigned long long;
 
 // Buffer
 template <int32 N>
 struct TChannel;
-typedef TChannel<4> PColorChannel;
-typedef TChannel<1> PDataChannel;
+using PColorChannel = TChannel<4>;
+using PDataChannel = TChannel<1>;
 
 // Rect
 template <typename T>
 struct TRect;
-typedef TRect<float> FRect;
-typedef TRect<double> DRect;
-typedef TRect<int32> IRect;
+using FRect = TRect<float>;
+using DRect = TRect<double>;
+using IRect = TRect<int32>;
 
 // Lines
 template <typename T>
 struct TLine;
-typedef TLine<float> FLine;
+using FLine = TLine<float>;
 
 template <typename T>
 struct TLine3d;
-typedef TLine3d<float> FLine3d;
+using FLine3d = TLine3d<float>;
 
 // Vector
 template <typename T>
 struct TVector2;
-typedef TVector2<int32> IVector2;
-typedef TVector2<float> FVector2;
-typedef TVector2<double> DVector2;
+using IVector2 = TVector2<int32>;
+using FVector2 = TVector2<float>;
+using DVector2 = TVector2<double>;
 
 template <typename T>
 struct TVector3;
-typedef TVector3<int32> IVector3;
-typedef TVector3<float> FVector3;
-typedef TVector3<double> DVector3;
+using IVector3 = TVector3<int32>;
+using FVector3 = TVector3<float>;
+using DVector3 = TVector3<double>;
 
 template <typename T>
 struct TVector4;
-typedef TVector4<int32> IVector4;
-typedef TVector4<float> FVector4;
-typedef TVector4<double> DVector4;
+using IVector4 = TVector4<int32>;
+using FVector4 = TVector4<float>;
+using DVector4 = TVector4<double>;
 
 template <typename T>
 struct TTriangle;
-typedef TTriangle<float> FTriangle;
-typedef TTriangle<double> DTriangle;
+using FTriangle = TTriangle<float>;
+using DTriangle = TTriangle<double>;
 
 // Matrix
 template <typename T>
 struct TMatrix;
-typedef TMatrix<float> FMatrix;
+using FMatrix = TMatrix<float>;
 
 template <typename T>
 struct TPerspectiveMatrix;
-typedef TPerspectiveMatrix<float> FPerspectiveMatrix;
+using FPerspectiveMatrix = TPerspectiveMatrix<float>;
 
 template <typename T>
 struct TLookAtMatrix;
-typedef TLookAtMatrix<float> FLookAtMatrix;
+using FLookAtMatrix = TLookAtMatrix<float>;
 
 template <typename T>
 struct TRotationMatrix;
-typedef TRotationMatrix<float> FRotationMatrix;
+using FRotationMatrix = TRotationMatrix<float>;
 
 template <typename T>
 struct TTranslationMatrix;
-typedef TTranslationMatrix<float> FTranslationMatrix;
+using FTranslationMatrix = TTranslationMatrix<float>;
 
 template <typename T>
 struct TRotationTranslationMatrix;
-typedef TRotationTranslationMatrix<float> FRotationTranslationMatrix;
+using FRotationTranslationMatrix = TRotationTranslationMatrix<float>;
 
 // Rotator
 template <typename T>
 struct TRotator;
-typedef TRotator<float> FRotator;
-typedef TRotator<double> DRotator;
+using FRotator = TRotator<float>;
+using DRotator = TRotator<double>;
 
 // Quaternion
 template <typename T>
 struct TQuat;
-typedef TQuat<float> FQuat;
-typedef TQuat<double> DQuat;
+using FQuat = TQuat<float>;
+using DQuat = TQuat<double>;
 
 // Transform
 template <typename T>
 struct TTransform;
-typedef TTransform<float> FTransform;
-typedef TTransform<double> DTransform;
+using FTransform = TTransform<float>;
+using DTransform = TTransform<double>;
 
 // Plane
 template <typename T>
 struct TPlane;
-typedef TPlane<float> FPlane;
+using FPlane = TPlane<float>;
 
 // Enums
 enum class EWindingOrder : uint8
@@ -131,8 +131,10 @@ enum class EWindingOrder : uint8
 // TODO: Swap Up and forward directions
 enum class EAxis : uint8
 {
-    X, // Right
-    Y, // Up
+    X,
+    // Right
+    Y,
+    // Up
     Z // Foward
 };
 

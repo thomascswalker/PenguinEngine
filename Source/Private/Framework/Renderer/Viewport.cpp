@@ -110,9 +110,9 @@ void PViewport::FormatDebugText()
         Engine->GetFps(),
         GetSize().ToString(),
         GetCamera()->GetForwardVector().ToString(),
-        Renderer->Settings.GetRenderFlag(ERenderFlags::Wireframe),
-        Renderer->Settings.GetRenderFlag(ERenderFlags::Shaded),
-        Renderer->Settings.GetRenderFlag(ERenderFlags::Depth),
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Wireframe),
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Shaded),
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Depth),
         Renderer->Settings.GetUseGlm()
     );
 }
