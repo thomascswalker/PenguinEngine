@@ -6,3 +6,7 @@ riderModule.iml
 /x64/
 /.idea/
 /.vs/
+*.sln
+*.sln.*
+*.vcxproj
+*.vcxproj.*
