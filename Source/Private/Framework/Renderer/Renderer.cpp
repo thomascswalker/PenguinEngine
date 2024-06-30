@@ -293,10 +293,10 @@ void PRenderer::Scanline()
 
     switch (Math::GetWindingOrder(S0, S1, S2))
     {
-    case EWindingOrder::CCW : // Correct order
+    case EWindingOrder::CCW : // Counter-clockwise, front-facing
         break;
-    case EWindingOrder::CW : // Backfacing, exit
-    case EWindingOrder::CL : // Colinear, exit
+    case EWindingOrder::CW : // Clockwise, back-facing; exit
+    case EWindingOrder::CL : // Co-linear; exit
         return;
     }
 
@@ -309,7 +309,7 @@ void PRenderer::Scanline()
     const int32 MaxY = static_cast<int32>(Bounds.Max().Y);
 
     // Precompute the area of the screen triangle so we're not computing it every pixel
-    const float Area = Math::Area2D(S0, S1, S2);
+    const float Area = Math::Area2D(S0, S1, S2) * 2;
 
     for (int32 Y = MinY; Y <= MaxY; Y++)
     {
@@ -321,13 +321,25 @@ void PRenderer::Scanline()
                 0.0f
             );
 
-            // Calculate barycentric coordinates at this pixel in the triangle. If this fails,
-            // the pixel is not within the triangle.
-            FVector3 UVW;
-            if (!Math::GetBarycentric(Point, S0, S1, S2, UVW))
+            // Use Pineda's edge function to determine if the current pixel is within the triangle.
+            float W0 = Math::EdgeFunction(S1, S2, Point);
+            float W1 = Math::EdgeFunction(S2, S0, Point);
+            float W2 = Math::EdgeFunction(S0, S1, Point);
+
+            if (W0 < 0 || W1 < 0 || W2 < 0)
             {
                 continue;
             }
+
+            // From the edge vectors, extrapolate the barycentric coordinates for this pixel.
+            W0 /= Area;
+            W1 /= Area;
+            W2 /= Area;
+
+            FVector3 UVW;
+            UVW.X = W0 * 1.0f + W0 * 0.0f + W0 * 0.0f ;
+            UVW.Y = W1 * 0.0f + W1 * 1.0f + W1 * 0.0f ;
+            UVW.Z = W2 * 0.0f + W2 * 0.0f + W2 * 1.0f ;
 
             if (Settings.GetRenderFlag(ERenderFlag::Depth))
             {

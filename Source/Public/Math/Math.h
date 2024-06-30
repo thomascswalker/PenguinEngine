@@ -245,4 +245,9 @@ namespace Math
     {
         return static_cast<int32>(Value);
     }
+    
+    constexpr bool CloseEnough(const float A, const float B)
+    {
+        return Math::Abs(A - B) < P_EPSILON;
+    }
 };
