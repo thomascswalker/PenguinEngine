@@ -10,3 +10,4 @@ riderModule.iml
 *.sln.*
 *.vcxproj
 *.vcxproj.*
+.idea/
