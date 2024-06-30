@@ -300,9 +300,8 @@ void PRenderer::Scanline()
         return;
     }
 
+    // Compute the bounds of just this triangle on the screen
     const FRect Bounds = CurrentShader->ScreenBounds;
-
-    // Loop through all pixels in the screen bounding box.
     const int32 MinX = static_cast<int32>(Bounds.Min().X);
     const int32 MinY = static_cast<int32>(Bounds.Min().Y);
     const int32 MaxX = static_cast<int32>(Bounds.Max().X);
@@ -311,6 +310,7 @@ void PRenderer::Scanline()
     // Precompute the area of the screen triangle so we're not computing it every pixel
     const float Area = Math::Area2D(S0, S1, S2) * 2;
 
+    // Loop through all pixels in the screen bounding box.
     for (int32 Y = MinY; Y <= MaxY; Y++)
     {
         for (int32 X = MinX; X <= MaxX; X++)
