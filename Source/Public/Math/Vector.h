@@ -32,21 +32,31 @@ struct TVector2
     // Constructors
     TVector2() : X(0), Y(0)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector2(T InX) : X(InX), Y(InX)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector2(T InX, T InY) : X(InX), Y(InY)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector2(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
         Y = *(Values.begin() + 1);
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
     }
 
     // Functions
@@ -71,7 +81,11 @@ struct TVector2
     {
         X = 1.0f / X;
         Y = 1.0f / Y;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
     }
     TVector2 Normalized() const { return {1.0f / X, 1.0f / Y}; }
 
@@ -83,7 +97,11 @@ struct TVector2
     {
         X += V.X;
         Y += V.Y;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector2 operator-(const TVector2& V) const { return {X - V.X, Y - V.Y}; }
@@ -91,7 +109,11 @@ struct TVector2
     {
         X -= V.X;
         Y -= V.Y;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector2 operator*(const TVector2& V) const { return {X * V.X, Y * V.Y}; }
@@ -99,7 +121,11 @@ struct TVector2
     {
         X *= V.X;
         Y *= V.Y;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector2 operator/(const TVector2& V) const { return {X / V.X, Y / V.Y}; }
@@ -107,7 +133,11 @@ struct TVector2
     {
         X /= V.X;
         Y /= V.Y;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector2 operator-()
@@ -167,26 +197,36 @@ struct TVector3
     // Constructors
     TVector3() : X(0), Y(0), Z(0)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector3(T InX) : X(InX), Y(InX), Z(InX)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector3(T InX, T InY, T InZ) : X(InX), Y(InY), Z(InZ)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector3(const TVector2<T>& V, T InZ = T(1)) : X(V.X), Y(V.Y), Z(InZ)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector3(const std::initializer_list<T>& Values)
     {
         X = *(Values.begin());
         Y = *(Values.begin() + 1);
         Z = *(Values.begin() + 2);
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
 
 
@@ -286,7 +326,11 @@ struct TVector3
         X += V.X;
         Y += V.Y;
         Z += V.Z;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector3 operator-(const TVector3& V) const { return {X - V.X, Y - V.Y, Z - V.Z}; }
@@ -295,7 +339,11 @@ struct TVector3
         X -= V.X;
         Y -= V.Y;
         Z -= V.Z;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector3 operator*(const TVector3& V) const { return {X * V.X, Y * V.Y, Z * V.Z}; }
@@ -304,7 +352,11 @@ struct TVector3
         X *= V.X;
         Y *= V.Y;
         Z *= V.Z;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     TVector3 operator/(const TVector3& V) const { return {X / V.X, Y / V.Y, Z / V.Z}; }
@@ -313,7 +365,11 @@ struct TVector3
         X /= V.X;
         Y /= V.Y;
         Z /= V.Z;
-        CheckNaN();
+        {
+#ifdef _DEBUG
+            CheckNaN();
+#endif
+        }
         return *this;
     }
     bool operator==(const TVector3& V) const { return X == V.X && Y == V.Y && Z == V.Z; }
@@ -362,15 +418,21 @@ struct TVector4
     // Constructors
     TVector4() : X(0), Y(0), Z(0), W(0)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector4(T InX) : X(InX), Y(InX), Z(InX), W(InX)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector4(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
     TVector4(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]), W(Values[3])
     {
@@ -381,11 +443,15 @@ struct TVector4
         Y = *(Values.begin() + 1);
         Z = *(Values.begin() + 2);
         W = *(Values.begin() + 3);
-        CheckNaN();
+#ifdef _DEBUG
+            CheckNaN();
+#endif
     }
     TVector4(const TVector3<T>& V, T InW = T(1)) : X(V.X), Y(V.Y), Z(V.Z), W(InW)
     {
+#ifdef _DEBUG
         CheckNaN();
+#endif
     }
 
     // Functions
@@ -436,7 +502,9 @@ struct TVector4
         Y += V.Y;
         Z += V.Z;
         W += V.W;
+#ifdef _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
     TVector4 operator-(const TVector4& V) const { return {X - V.X, Y - V.Y, Z - V.Z, W - V.W}; }
@@ -446,7 +514,9 @@ struct TVector4
         Y -= V.Y;
         Z -= V.Z;
         W -= V.W;
+#ifdef _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
     TVector4 operator*(const TVector4& V) const { return {X * V.X, Y * V.Y, Z * V.Z, W * V.W}; }
@@ -456,7 +526,9 @@ struct TVector4
         Y *= V.Y;
         Z *= V.Z;
         W *= V.W;
+#ifdef _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
     TVector4 operator/(const TVector4& V) const { return {X / V.X, Y / V.Y, Z / V.Z, W / V.W}; }
@@ -466,7 +538,9 @@ struct TVector4
         Y /= V.Y;
         Z /= V.Z;
         W /= V.W;
+#ifdef _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
     TVector4 operator-()
