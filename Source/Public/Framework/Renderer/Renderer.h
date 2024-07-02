@@ -26,10 +26,10 @@ struct PChannel
 {
     void* Memory;                                              // Memory Order BB GG RR XX
     uint32 ChannelCount = BYTES_PER_PIXEL / BYTES_PER_CHANNEL; // 4
-    int32 Width;
-    int32 Height;
-    uint32 Pitch;
-    EChannelType Type;
+    int32 Width; // Width of the frame in pixels
+    int32 Height; // Height of the frame in pixels
+    uint32 Pitch; // Count of bytes in a single row (equivalent to Width)
+    EChannelType Type; // Color (RGB, 8-bit) or Data (float, 32-bit) channel
 
     PChannel(EChannelType InType, int32 InWidth, int32 InHeight) : Type(InType)
     {
