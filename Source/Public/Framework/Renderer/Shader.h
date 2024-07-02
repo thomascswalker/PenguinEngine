@@ -84,7 +84,7 @@ struct IShader
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);
 
-        // Average each of the vertices normals to get the triangle normal
+        // Average each of the vertices' normals to get the triangle normal
         TriangleWorldNormal = (V0.Normal + V1.Normal + V2.Normal) / 3.0f;
 
         // Calculate the triangle normal relative to the camera

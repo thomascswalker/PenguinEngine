@@ -5,7 +5,7 @@
 #include "glm.hpp"
 
 constexpr int32 WINDOW_WIDTH_CLIP = 16;
-constexpr int32 WINDOW_HEIGHT_CLIP = 39;
+constexpr int32 WINDOW_HEIGHT_CLIP = 59;
 constexpr int32 DEFAULT_VIEWPORT_WIDTH = 512 + WINDOW_WIDTH_CLIP;
 constexpr int32 DEFAULT_VIEWPORT_HEIGHT = 512 + WINDOW_HEIGHT_CLIP;
 

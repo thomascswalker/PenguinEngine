@@ -42,6 +42,12 @@ public:
     static FColor Black() { return FromRgba(0, 0, 0); }
 
     static FColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
+
+
+    int32 ToInt32() const
+    {
+        return (R << 16) | (G << 8) | B | 0;
+    }
 };
 
 struct FLinearColor

@@ -752,6 +752,11 @@ namespace Math
         }
     }
 
+    static constexpr float EdgeFunction(float X0, float Y0, float X1, float Y1, float X2, float Y2)
+    {
+        return (X1 - X0) * (Y2 - Y0) - (Y1 - Y0) * (X2 - X0);
+    }
+    
     template <typename T>
     static T EdgeFunction(const TVector3<T>& A, const TVector3<T>& B, const TVector3<T>& C)
     {
