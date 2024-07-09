@@ -27,7 +27,7 @@ namespace Renderer
             RenderFlags = ERenderFlag::Shaded | ERenderFlag::Depth;
         }
 
-        bool GetRenderFlag(const ERenderFlag Flag)
+        constexpr bool GetRenderFlag(const ERenderFlag Flag)
         {
             return (RenderFlags & Flag) == Flag;
         }

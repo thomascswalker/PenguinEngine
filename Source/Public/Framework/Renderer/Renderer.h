@@ -63,7 +63,7 @@ struct PChannel
         *Ptr = Value;
     }
 
-    void SetPixel(int32 X, int32 Y, const FColor& Color) const
+    void SetPixel(const int32 X, const int32 Y, const FColor& Color) const
     {
         assert(Type == EChannelType::Color);
         if (X < 0 || X >= Width || Y < 0 || Y >= Height)

@@ -77,9 +77,9 @@ struct IShader
         // Get the bounding box of the 2d triangle clipped to the viewport
         ScreenBounds = FRect::MakeBoundingBox(S0, S1, S2);
 
-        // Grow by one pixel to accomodate gaps between triangles
+        // Grow the bounds by 1 pixel to account for gaps between pixels.
         ScreenBounds.Grow(1.0f);
-
+        
         // Clamp the bounds to the viewport
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);

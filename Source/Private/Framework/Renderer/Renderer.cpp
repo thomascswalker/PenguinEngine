@@ -207,13 +207,22 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
     // Draw normal direction
     if (Settings.GetRenderFlag(ERenderFlag::Normals))
     {
+        // Get the center of the triangle
         FVector3 TriangleCenter = (CurrentShader->V0.Position + CurrentShader->V1.Position + CurrentShader->V2.Position) / 3.0f;
+
+        // Get the computed triangle normal (average of the three normals)
         FVector3 TriangleNormal = CurrentShader->TriangleWorldNormal;
 
         FVector3 NormalStartScreen;
         FVector3 NormalEndScreen;
+
+        // Compute two screen-space points:
+        // 1. The center of the triangle
+        // 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
         Math::ProjectWorldToScreen(TriangleCenter, NormalStartScreen, Viewport->GetCamera()->GetViewData());
         Math::ProjectWorldToScreen(TriangleCenter + TriangleNormal, NormalEndScreen, Viewport->GetCamera()->GetViewData());
+
+        // Draw the line between the two points
         DrawLine(
             NormalStartScreen, // Start
             NormalEndScreen,   // End
@@ -301,29 +310,34 @@ void PRenderer::Scanline()
     }
 
     // Compute the bounds of just this triangle on the screen
+    int32 Width = GetWidth();
+    int32 Height = GetHeight();
     const FRect Bounds = CurrentShader->ScreenBounds;
-    const int32 MinX = static_cast<int32>(Bounds.Min().X);
-    const int32 MinY = static_cast<int32>(Bounds.Min().Y);
-    const int32 MaxX = static_cast<int32>(Bounds.Max().X);
-    const int32 MaxY = static_cast<int32>(Bounds.Max().Y);
+    const int32 MinX = Math::Max(static_cast<int32>(Bounds.Min().X), 0);
+    const int32 MinY = Math::Max(static_cast<int32>(Bounds.Min().Y), 0);
+    const int32 MaxX = Math::Min(static_cast<int32>(Bounds.Max().X), Width);
+    const int32 MaxY = Math::Min(static_cast<int32>(Bounds.Max().Y), Height);
 
     // Precompute the area of the screen triangle so we're not computing it every pixel
     const float Area = Math::Area2D(S0, S1, S2) * 2;
     const float OneOverArea = 1.0f / Area;
 
-    // todo:
-    // Compute the starting ptr for depth/color and instead of get/set pixel use this ptr and offset it each pixel
-    int32 Pitch = GetWidth();
-    int32 Offset = MinY * Pitch;
+    // TODO: For some reason the initial offset is itself offset by 1. Negating 1 to account for this (otherwise
+    // the furthest right pixels appear on the next line, at the furthest left point).
+    int32 InitialOffset = MinY * Width - 1; 
 
     auto DepthChannel = GetDepthChannel();
-    auto DepthMemory = static_cast<float*>(DepthChannel->Memory) + Offset; // float, 32-bytes
+    auto DepthMemory = static_cast<float*>(DepthChannel->Memory) + InitialOffset; // float, 32-bytes
 
     auto ColorChannel = GetColorChannel();
-    auto ColorMemory = static_cast<int32*>(ColorChannel->Memory) + Offset; // int32, 32-bytes
+    auto ColorMemory = static_cast<int32*>(ColorChannel->Memory) + InitialOffset; // int32, 32-bytes
 
     // Prior to the loop computing each pixel in the triangle, get the render settings
     const bool bRenderDepth = Settings.GetRenderFlag(ERenderFlag::Depth);
+    FVector3 UVW;
+    FVector3 Point;
+    float W0, W1, W2;
+    float Depth, CurrentDepth;
 
     // Loop through all pixels in the screen bounding box.
     for (int32 Y = MinY; Y <= MaxY; Y++)
@@ -333,29 +347,26 @@ void PRenderer::Scanline()
             float* DepthPixel = DepthMemory + X;
             int32* ColorPixel = ColorMemory + X;
 
-            FVector3 Point(
-                static_cast<float>(X) + 0.5f,
-                static_cast<float>(Y) + 0.5f,
-                0.0f
-            );
+            Point.X = static_cast<float>(X);
+            Point.Y = static_cast<float>(Y);
 
             // Use Pineda's edge function to determine if the current pixel is within the triangle.
-            float W0 = Math::EdgeFunction(S1.X, S1.Y, S2.X, S2.Y, Point.X, Point.Y);
-            float W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
-            float W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
+            W0 = Math::EdgeFunction(S1.X, S1.Y, S2.X, S2.Y, Point.X, Point.Y);
+            W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
+            W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
 
-            if (W0 < 0 || W1 < 0 || W2 < 0)
+            if (W0 <= 0 || W1 <= 0 || W2 <= 0)
             {
                 continue;
             }
 
             if (bRenderDepth)
             {
-                const float Depth = Math::GetDepth(Point.ToType<float>(), S0, S1, S2, Area);
+                Depth = Math::GetDepth(Point, S0, S1, S2, Area);
 
                 // Compare the new depth to the current depth at this pixel. If the new depth is further than
                 // the current depth, continue.
-                const float CurrentDepth = *DepthPixel;
+                CurrentDepth = *DepthPixel;
                 if (Depth >= CurrentDepth)
                 {
                     continue;
@@ -369,19 +380,24 @@ void PRenderer::Scanline()
             W0 *= OneOverArea;
             W1 *= OneOverArea;
             W2 *= OneOverArea;
-
-            FVector3 UVW;
             UVW.X = W0;
             UVW.Y = W1;
             UVW.Z = W2;
-
             CurrentShader->UVW = UVW;
+
+            // Compute world position
             CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
+
+            // Compute world normal
             CurrentShader->PixelWorldNormal = CurrentShader->V0.Normal * UVW.X + CurrentShader->V1.Normal * UVW.Y + CurrentShader->V2.Normal * UVW.Z;
+
+            // Compute the final color for this pixel
             CurrentShader->ComputePixelShader(Point.X, Point.Y);
+
+            // Set the current pixel in memory to the computed color
             *ColorPixel = CurrentShader->OutColor.ToInt32();
         }
-        DepthMemory += Pitch;
-        ColorMemory += Pitch;
+        DepthMemory += Width;
+        ColorMemory += Width;
     }
 }
