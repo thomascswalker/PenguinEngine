@@ -315,8 +315,8 @@ void PRenderer::Scanline()
     const FRect Bounds = CurrentShader->ScreenBounds;
     const int32 MinX = Math::Max(static_cast<int32>(Bounds.Min().X), 0);
     const int32 MinY = Math::Max(static_cast<int32>(Bounds.Min().Y), 0);
-    const int32 MaxX = Math::Min(static_cast<int32>(Bounds.Max().X), Width);
-    const int32 MaxY = Math::Min(static_cast<int32>(Bounds.Max().Y), Height);
+    const int32 MaxX = Math::Min(static_cast<int32>(Bounds.Max().X), Width - 1);
+    const int32 MaxY = Math::Min(static_cast<int32>(Bounds.Max().Y), Height - 1);
 
     // Precompute the area of the screen triangle so we're not computing it every pixel
     const float Area = Math::Area2D(S0, S1, S2) * 2;
@@ -324,7 +324,7 @@ void PRenderer::Scanline()
 
     // TODO: For some reason the initial offset is itself offset by 1. Negating 1 to account for this (otherwise
     // the furthest right pixels appear on the next line, at the furthest left point).
-    int32 InitialOffset = MinY * Width - 1; 
+    int32 InitialOffset = MinY * Width;
 
     auto DepthChannel = GetDepthChannel();
     auto DepthMemory = static_cast<float*>(DepthChannel->Memory) + InitialOffset; // float, 32-bytes

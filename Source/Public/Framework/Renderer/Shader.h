@@ -79,16 +79,26 @@ struct IShader
 
         // Grow the bounds by 1 pixel to account for gaps between pixels.
         ScreenBounds.Grow(1.0f);
-        
+
         // Clamp the bounds to the viewport
         const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
         ScreenBounds.Clamp(ViewportRect);
 
         // Average each of the vertices' normals to get the triangle normal
-        TriangleWorldNormal = (V0.Normal + V1.Normal + V2.Normal) / 3.0f;
+        FVector4 V01Normal;
+        VecAddVec(V0.Normal, V1.Normal, V01Normal);
+
+        FVector4 V012Normal;
+        VecAddVec(V01Normal, V2.Normal, V012Normal);
+
+        TriangleWorldNormal = V012Normal * 0.33333333f;
 
         // Calculate the triangle normal relative to the camera
-        TriangleCameraNormal = TriangleWorldNormal.Cross(CameraWorldDirection);
+        FVector4 Tmp;
+        VecCrossVec(TriangleWorldNormal, CameraWorldDirection, Tmp);
+        TriangleCameraNormal.X = Tmp.X;
+        TriangleCameraNormal.Y = Tmp.Y;
+        TriangleCameraNormal.Z = Tmp.Z;
 
         return true;
     }
@@ -106,8 +116,9 @@ struct DefaultShader : IShader
         const FVector3 WeightedWorldNormal = V0.Normal * UVW.X + V1.Normal * UVW.Y + V2.Normal * UVW.Z;
 
         // Calculate the dot product of the triangle normal and camera direction
-        FacingRatio = Math::Max(0.0f, Math::Dot(-CameraWorldDirection, WeightedWorldNormal)); // Floor to a min of 0
-        const float ClampedFacingRatio = Math::Min(FacingRatio * 255.0f, 255.0f);             // Clamp to a max of 255
+        VecDotVec(-CameraWorldDirection, WeightedWorldNormal, &FacingRatio);
+        FacingRatio = Math::Max(0.0f, FacingRatio);                               // Floor to a min of 0
+        const float ClampedFacingRatio = Math::Min(FacingRatio * 255.0f, 255.0f); // Clamp to a max of 255
 
         uint8 R = static_cast<uint8>(ClampedFacingRatio);
 

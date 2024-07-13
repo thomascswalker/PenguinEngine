@@ -7,12 +7,6 @@
 #include "Math.h"
 
 
-// Alias for 'float[4]'
-struct alignas(4) FVectorRegister
-{
-    float V[4];
-};
-
 template <typename T>
 struct TVector2
 {
@@ -481,16 +475,6 @@ struct TVector4
         W = T(1.0) / W;
     }
     TVector4 Normalized() const { return {T(1.0) / X, T(1.0) / Y, T(1.0) / Z, T(1.0) / W}; }
-
-    FVectorRegister Register() const
-    {
-        FVectorRegister Reg;
-        Reg.V[0] = X;
-        Reg.V[1] = Y;
-        Reg.V[2] = Z;
-        Reg.V[3] = W;
-        return Reg;
-    }
 
     std::string ToString() const { return std::format("[{}, {}, {}, {}]", X, Y, Z, W); }
 
