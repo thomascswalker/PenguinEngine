@@ -11,6 +11,7 @@
 #include "Rotator.h"
 #include "Transform.h"
 #include "Vector.h"
+#include "VectorIntrinsic.h"
 
 namespace Math
 {
