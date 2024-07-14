@@ -63,7 +63,7 @@ TVector3<T> TMatrix<T>::GetScale(T Tolerance)
 template <typename T>
 TRotator<T>::TRotator(TQuat<T>& Q)
 {
-    *this = Q.Rotator();
+    
 }
 
 template <typename T>

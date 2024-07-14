@@ -173,9 +173,9 @@ struct TQuat
     }
     TVector3<T> RotateVector(TVector3<T> V)
     {
-        const FVector3 Q(X, Y, Z);
-        const FVector3 TT = Math::Cross(Q, V) * 2.0f;
-        const FVector3 Result = V + (TT * W) + Math::Cross(Q, TT);
+        const TVector3<T> Q(X, Y, Z);
+        const TVector3<T> TT = Math::Cross(Q, V) * 2.0f;
+        const TVector3<T> Result = V + (TT * W) + Math::Cross(Q, TT);
         return Result;
     }
 
