@@ -587,7 +587,7 @@ constexpr TMatrix<T> operator*(const TMatrix<T>& M0, const TMatrix<T>& M1)
     Temp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
     Temp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
 
-    FMatrix Result;
+    TMatrix<T> Result;
     memcpy(&Result.M, &Temp, 16 * sizeof(float));
     return Result;
 }

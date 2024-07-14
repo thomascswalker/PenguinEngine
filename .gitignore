@@ -11,3 +11,8 @@ riderModule.iml
 *.vcxproj
 *.vcxproj.*
 .idea/
+/CMakeFiles
+*.cmake
+CMakeCache.txt
+/PenguinEngine.dir
+/Release

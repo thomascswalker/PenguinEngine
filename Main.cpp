@@ -6,7 +6,7 @@
 #if defined(_WIN32) || defined(_WIN64)
 
 // Windows entry point
-#include "Source/Public/Framework/Platforms/Win32Platform.h"
+#include "Framework/Platforms/Win32Platform.h"
 
 int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {

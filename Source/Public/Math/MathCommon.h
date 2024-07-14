@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <vec4.hpp>
+#include <glm/vec4.hpp>
 
 #include "MathFwd.h"
 #include "Color.h"

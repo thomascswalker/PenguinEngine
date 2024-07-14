@@ -2,9 +2,9 @@
 #include "Framework/Engine/Engine.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
-#include "glm.hpp"
-#include "gtx/matrix_decompose.hpp"
-#include "gtc/matrix_transform.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtx/matrix_decompose.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 
 // View Camera
 void PCamera::ComputeViewProjectionMatrix()

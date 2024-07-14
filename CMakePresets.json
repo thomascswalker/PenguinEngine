@@ -1,0 +1,12 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "default",
+            "description": "Default CMake preset.",
+            "hidden": false,
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${workspaceFolder}/Build"
+        }
+    ]
+}
