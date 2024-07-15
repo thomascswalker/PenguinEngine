@@ -345,8 +345,7 @@ void PRenderer::Scanline()
     const float Depth0 = Math::GetDepth(S0, S0, S1, S2, Area);
     const float Depth1 = Math::GetDepth(S1, S0, S1, S2, Area);
     const float Depth2 = Math::GetDepth(S2, S0, S1, S2, Area);
-
-
+    
     // Loop through all pixels in the screen bounding box.
     for (int32 Y = MinY; Y <= MaxY; Y++)
     {
@@ -367,7 +366,7 @@ void PRenderer::Scanline()
             W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
             W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
             
-            if (W0 <= 0 || W1 <= 0 || W2 <= 0)
+            if (W0 <= 0.0f || W1 <= 0.0f || W2 <= 0.0f)
             {
                 continue;
             }
@@ -395,7 +394,7 @@ void PRenderer::Scanline()
                 }
                 // If the new depth is closer than the current depth, set the current depth
                 // at this pixel to the new depth we just got.
-                *DepthPixel = Depth;
+                *DepthPixel = NewDepth;
             }
 
             // Compute world position
