@@ -1,5 +1,7 @@
 # Penguin Engine
 
+This is a personal project of mine to create a standalone software renderer without the usage of libraries like OpenGL, SDL2, etc.
+
 ## Requirements
 - C++ 20
 - Visual Studio 2022
