@@ -9,5 +9,5 @@
 Currently this only runs on Windows. In the future I plan to add support for Linux and MacOS.
 
 ## Building the project from source
-1. Open the root directory in a terminal window and run `sh Setup.sh`.
-2. Open the `PenguinEngine.sln` solution inside the `Build` directory.
+1. Open the root directory in a terminal window and run `Setup.sh`.
+3. Open the `PenguinEngine.sln` solution inside the `Build` directory.
