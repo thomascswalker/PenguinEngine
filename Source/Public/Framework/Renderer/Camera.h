@@ -3,7 +3,6 @@
 #include "Math/MathFwd.h"
 #include "Framework/Engine/Object.h"
 #include "Math/Spherical.h"
-#include <glm/glm.hpp>
 
 constexpr int32 WINDOW_WIDTH_CLIP = 16;
 constexpr int32 WINDOW_HEIGHT_CLIP = 59;
@@ -42,10 +41,10 @@ struct PViewData
     float MaxPolarAngle = P_PI;
     FVector3 PanOffset;
 
-    glm::mat4 ProjectionMatrix;
-    glm::mat4 ViewMatrix;
-    glm::mat4 ViewProjectionMatrix;
-    glm::mat4 InvViewProjectionMatrix;
+    FMatrix ProjectionMatrix;
+    FMatrix ViewMatrix;
+    FMatrix ViewProjectionMatrix;
+    FMatrix InvViewProjectionMatrix;
 
     FVector3 Direction;
     FVector3 Translation;
@@ -71,10 +70,10 @@ public:
     float MaxPolarAngle = P_PI;
     FVector3 PanOffset;
 
-    glm::mat4 ProjectionMatrix;
-    glm::mat4 ViewMatrix;
-    glm::mat4 ViewProjectionMatrix;
-    glm::mat4 InvViewProjectionMatrix;
+    FMatrix ProjectionMatrix;
+    FMatrix ViewMatrix;
+    FMatrix ViewProjectionMatrix;
+    FMatrix InvViewProjectionMatrix;
 
     /**
      * Constructor for the PCamera class.
@@ -129,8 +128,7 @@ namespace Math
     static bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition, const PViewData& ViewData)
     {
         // Clip 
-        glm::vec4 ResultGlm = ViewData.ViewProjectionMatrix * glm::vec4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
-        FVector4 Result{ResultGlm.x, ResultGlm.y, ResultGlm.z, ResultGlm.w};
+        FVector4 Result = ViewData.ViewProjectionMatrix * FVector4(WorldPosition, 1.0f);
         if (Result.W > 0.0f)
         {
             // Apply perspective correction

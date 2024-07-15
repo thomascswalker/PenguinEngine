@@ -26,7 +26,6 @@ foreach(source_file IN ITEMS ${source_list})
 endforeach()
 
 target_include_directories(PenguinEngine PUBLIC "${PROJECT_SOURCE_DIR}/Source/Public")
-target_include_directories(PenguinEngine PUBLIC "${PROJECT_SOURCE_DIR}/Include")
 
 # Options
 

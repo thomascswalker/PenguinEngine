@@ -19,7 +19,9 @@ struct TMatrix
     TMatrix()
     {
         SetIdentity();
+#if _DEBUG
         CheckNaN();
+#endif
     }
 
     TMatrix(const TPlane<T>& InX, const TPlane<T>& InY, const TPlane<T>& InZ, const TPlane<T>& InW)
@@ -40,7 +42,9 @@ struct TMatrix
         M[3][1] = InW.Y;
         M[3][2] = InW.Z;
         M[3][3] = InW.W;
+#if _DEBUG
         CheckNaN();
+#endif
     }
 
     TMatrix(const TVector3<T>& InX, const TVector3<T>& InY, const TVector3<T>& InZ, const TVector3<T>& InW)
@@ -61,7 +65,9 @@ struct TMatrix
         M[3][1] = InW.Y;
         M[3][2] = InW.Z;
         M[3][3] = 1.0f;
+#if _DEBUG
         CheckNaN();
+#endif
     }
 
     TMatrix(const TVector4<T>& InX, const TVector4<T>& InY, const TVector4<T>& InZ, const TVector4<T>& InW)
@@ -82,7 +88,9 @@ struct TMatrix
         M[3][1] = InW.Y;
         M[3][2] = InW.Z;
         M[3][3] = InW.W;
+#if _DEBUG
         CheckNaN();
+#endif
     }
 
     TMatrix(T M0, T M1, T M2, T M3, T M4, T M5, T M6, T M7, T M8, T M9, T M10, T M11, T M12, T M13, T M14, T M15)
@@ -103,18 +111,24 @@ struct TMatrix
         M[3][1] = M13;
         M[3][2] = M14;
         M[3][3] = M15;
+#if _DEBUG
         CheckNaN();
+#endif
     }
 
     TMatrix(const TMatrix& Other)
     {
         std::memcpy(M, &Other.M, 16 * sizeof(T));
+#if _DEBUG
         CheckNaN();
+#endif
     }
     TMatrix(TMatrix&& Other) noexcept
     {
         std::memcpy(M, &Other.M, 16 * sizeof(T));
+#if _DEBUG
         CheckNaN();
+#endif
     }
 
     void CheckNaN() const
@@ -314,7 +328,7 @@ struct TMatrix
         T A0113 = M[1][0] * M[3][1] - M[1][1] * M[3][0];
         T A0112 = M[1][0] * M[2][1] - M[1][1] * M[2][0];
 
-        T Result[4][4];
+        T Result[4][4]{};
 
         Result[0][0] = Determinant * (M[1][1] * A2323 - M[1][2] * A1323 + M[1][3] * A1223);
         Result[0][1] = Determinant * -(M[0][1] * A2323 - M[0][2] * A1323 + M[0][3] * A1223);
@@ -335,7 +349,9 @@ struct TMatrix
 
         TMatrix Out;
         std::memcpy(Out.M, &Result, 16 * sizeof(T));
-        Out.CheckNaN();
+#if _DEBUG
+        CheckNaN();
+#endif
         return Out;
     }
 
@@ -469,7 +485,9 @@ struct TMatrix
     TMatrix& operator+=(const TMatrix& Other)
     {
         *this = *this + Other;
+#if _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
     TMatrix operator-(const TMatrix& Other) const
@@ -487,14 +505,18 @@ struct TMatrix
     TMatrix& operator-=(const TMatrix& Other)
     {
         *this = *this - Other;
+#if _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
 
     TMatrix& operator*=(const TMatrix& Other)
     {
         *this = *this * Other;
+#if _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
     TMatrix operator/(const TMatrix& Other) const
@@ -512,7 +534,9 @@ struct TMatrix
     TMatrix& operator/=(const TMatrix& Other)
     {
         *this = *this / Other;
+#if _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
 
@@ -529,10 +553,10 @@ struct TMatrix
 
     TVector4<T> operator*(const TVector4<T>& V) const
     {
-        T TempX = V.X * M[0][0] + V.Y * M[1][0] + V.Z * M[2][0] + V.W * M[3][0];
-        T TempY = V.X * M[0][1] + V.Y * M[1][1] + V.Z * M[2][1] + V.W * M[3][1];
-        T TempZ = V.X * M[0][2] + V.Y * M[1][2] + V.Z * M[2][2] + V.W * M[3][2];
-        T TempW = V.X * M[0][3] + V.Y * M[1][3] + V.Z * M[2][3] + V.W * M[3][3];
+        T TempX = V.X * M[0][0] + V.Y * M[0][1] + V.Z * M[0][2] + V.W * M[0][3];
+        T TempY = V.X * M[1][0] + V.Y * M[1][1] + V.Z * M[1][2] + V.W * M[1][3];
+        T TempZ = V.X * M[2][0] + V.Y * M[2][1] + V.Z * M[2][2] + V.W * M[2][3];
+        T TempW = V.X * M[3][0] + V.Y * M[3][1] + V.Z * M[3][2] + V.W * M[3][3];
 
         return {TempX, TempY, TempZ, TempW};
     }
@@ -540,7 +564,9 @@ struct TMatrix
     TMatrix& operator=(const TMatrix& Other) // NOLINT
     {
         std::memcpy(M, &Other.M, 16 * sizeof(T));
+#if _DEBUG
         CheckNaN();
+#endif
         return *this;
     }
 
@@ -601,19 +627,23 @@ struct TPerspectiveMatrix : TMatrix<T>
         const T TanHalfFov = Math::Tan(Fov / 2.0f);
         this->M[0][0] = T(1) / (Aspect * TanHalfFov);
         this->M[1][1] = T(1) / TanHalfFov;
-        this->M[2][2] = (MaxZ + MinZ) / (MaxZ - MinZ);
-        this->M[3][2] = T(1);
-        this->M[2][3] = (T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
+
+        this->M[2][2] = -(MaxZ + MinZ) / (MaxZ - MinZ);
+        this->M[3][2] = -T(1);
+        this->M[2][3] = -(T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
+#if _DEBUG
+        this->CheckNaN();
+#endif
     }
 };
 
 template <typename T>
 struct TLookAtMatrix : TMatrix<T>
 {
-    TLookAtMatrix(const TVector3<T>& EyePosition, const TVector3<T>& LookAtPosition, const TVector3<T>& UpVector) : TMatrix<T>()
+    TLookAtMatrix(const TVector3<T>& Eye, const TVector3<T>& Center, const TVector3<T>& UpVector) : TMatrix<T>()
     {
         // Forward vector
-        const TVector3<T> Forward = (LookAtPosition - EyePosition).Normalized();
+        const TVector3<T> Forward = (Center - Eye).Normalized();
 
         // Right vector
         const TVector3<T> Right = (Math::Cross(Forward, UpVector)).Normalized();
@@ -623,21 +653,25 @@ struct TLookAtMatrix : TMatrix<T>
 
         //  Rx |  Ux | -Fx | -Tx
         //  Ry |  Uy | -Fy | -Ty
-        //  Rz |  Uz | -Fz | -Tz
+        //  Rz |  Uz | -Fz | -Tz 
         //  0  |  0  |  0  |  1
-        this->M[0][0] = Right[0];
-        this->M[0][1] = Right[1];
-        this->M[0][2] = Right[2];
-        this->M[1][0] = Up[0];
-        this->M[1][1] = Up[1];
-        this->M[1][2] = Up[2];
-        this->M[2][0] = -Forward[0];
-        this->M[2][1] = -Forward[1];
-        this->M[2][2] = -Forward[2];
-        this->M[0][3] = -Math::Dot(Right, EyePosition);
-        this->M[1][3] = -Math::Dot(Up, EyePosition);
-        this->M[2][3] = -Math::Dot(Forward, EyePosition);
-        this->M[3][3] = 1.0f;
+        this->SetIdentity();
+        this->M[0][0] = Right.X;
+        this->M[0][1] = Right.Y;
+        this->M[0][2] = Right.Z;
+        this->M[1][0] = Up.X;
+        this->M[1][1] = Up.Y;
+        this->M[1][2] = Up.Z;
+        this->M[2][0] = -Forward.X;
+        this->M[2][1] = -Forward.Y;
+        this->M[2][2] = -Forward.Z;
+        this->M[0][3] = -Math::Dot(Right, Eye);
+        this->M[1][3] = -Math::Dot(Up, Eye);
+        this->M[2][3] = Math::Dot(Forward, Eye);
+
+#if _DEBUG
+        this->CheckNaN();
+#endif
     }
 };
 
@@ -649,6 +683,10 @@ struct TTranslationMatrix : TMatrix<T>
         this->M[3][0] = Delta.X;
         this->M[3][1] = Delta.Y;
         this->M[3][2] = Delta.Z;
+
+#if _DEBUG
+        this->CheckNaN();
+#endif
     }
 };
 
@@ -681,11 +719,19 @@ struct TRotationMatrix : TMatrix<T>
         this->M[2][0] = -CPSY * CR + SP * SR;
         this->M[2][1] = CPSY * SR + SP * CR;
         this->M[2][2] = CP * CY;
+
+#if _DEBUG
+        this->CheckNaN();
+#endif
     }
 
     TRotationMatrix(const TRotator<T>& Rotation) : TMatrix<T>()
     {
         *this = TRotationMatrix(Rotation.Pitch, Rotation.Yaw, Rotation.Roll);
+
+#if _DEBUG
+        this->CheckNaN();
+#endif
     }
 };
 
@@ -697,5 +743,9 @@ struct TRotationTranslationMatrix : TMatrix<T>
         TMatrix<T> RotationMatrix = TRotationMatrix<T>(Rotation);
         TMatrix<T> TranslationMatrix = TTranslationMatrix<T>(Translation);
         *this = RotationMatrix * TranslationMatrix;
+
+#if _DEBUG
+        this->CheckNaN();
+#endif
     }
 };

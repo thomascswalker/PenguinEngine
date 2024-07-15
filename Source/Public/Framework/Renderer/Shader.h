@@ -4,7 +4,6 @@
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
 #include "Framework/Engine/Mesh.h"
-#include "glm/glm.hpp"
 
 struct IShader
 {
@@ -24,9 +23,9 @@ struct IShader
     float FacingRatio;
 
     FRect ScreenBounds;
-    glm::mat4 MVP;
-    glm::mat4 ViewMatrix;
-    glm::mat4 ProjectionMatrix;
+    FMatrix MVP;
+    FMatrix ViewMatrix;
+    FMatrix ProjectionMatrix;
     FVector3 UVW;
 
     bool bHasNormals = false;
