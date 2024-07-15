@@ -1,7 +1,5 @@
 ﻿#pragma once
 
-#include <glm/vec4.hpp>
-
 #include "MathFwd.h"
 #include "Color.h"
 #include "Matrix.h"

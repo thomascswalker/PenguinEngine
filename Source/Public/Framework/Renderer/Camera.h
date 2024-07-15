@@ -3,7 +3,6 @@
 #include "Math/MathFwd.h"
 #include "Framework/Engine/Object.h"
 #include "Math/Spherical.h"
-#include <glm/glm.hpp>
 
 constexpr int32 WINDOW_WIDTH_CLIP = 16;
 constexpr int32 WINDOW_HEIGHT_CLIP = 59;

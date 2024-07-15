@@ -4,7 +4,6 @@
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
 #include "Framework/Engine/Mesh.h"
-#include "glm/glm.hpp"
 
 struct IShader
 {
