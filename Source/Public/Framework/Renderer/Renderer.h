@@ -132,7 +132,7 @@ struct PBufferObject
 class PRenderer
 {
     // Draw channels
-    std::map<const char*, std::shared_ptr<PChannel>> Channels;
+    std::map<std::string, std::shared_ptr<PChannel>> Channels;
     std::shared_ptr<PViewport> Viewport;
     std::unique_ptr<FGrid> Grid;
 

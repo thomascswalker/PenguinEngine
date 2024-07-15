@@ -41,6 +41,7 @@ using IRect = TRect<int32>;
 template <typename T>
 struct TLine;
 using FLine = TLine<float>;
+using ILine = TLine<int32>;
 
 template <typename T>
 struct TLine3d;
