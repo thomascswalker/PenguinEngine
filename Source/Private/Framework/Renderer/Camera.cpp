@@ -10,14 +10,14 @@
 void PCamera::ComputeViewProjectionMatrix()
 {
     FVector3 Translation = Spherical.ToCartesian();
-    glm::vec3 Eye = {Translation.X, Translation.Y, Translation.Z};
-    glm::vec3 Center = {Target.X, Target.Y, Target.Z};
-    glm::vec3 Up = {0.0f, 1.0f, 0.0f}; // Negative UP
+    FVector3 Eye = Translation;
+    FVector3 Center = Target;
+    FVector3 Up = FVector3::UpVector();
 
-    ViewMatrix = glm::lookAt(Eye, Center, Up);
-    ProjectionMatrix = glm::perspective(Math::DegreesToRadians(Fov), GetAspect(), MinZ, MaxZ);
+    ViewMatrix = FLookAtMatrix(Eye, Center, Up);
+    ProjectionMatrix = FPerspectiveMatrix(Math::DegreesToRadians(Fov), GetAspect(), MinZ, MaxZ);
     ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-    InvViewProjectionMatrix = glm::inverse(ViewProjectionMatrix);
+    InvViewProjectionMatrix = ViewProjectionMatrix.GetInverse();
 }
 
 void PCamera::Orbit(float DX, float DY)
@@ -41,13 +41,13 @@ void PCamera::Pan(float DX, float DY)
     TargetDistance *= Math::Tan((Fov / 2.0f) * P_PI / 180.0f);
 
     // Pan left/right
-    FVector3 XOffset = {ViewMatrix[0][0], ViewMatrix[0][1], ViewMatrix[0][2]}; // X Rotation, column 0
+    FVector3 XOffset = {ViewMatrix.M[0][0], ViewMatrix.M[1][0], ViewMatrix.M[2][0]}; // X Rotation, column 0
     XOffset.Normalize();
     XOffset *= DX * TargetDistance / static_cast<float>(Height);
     PanOffset = XOffset;
 
     // Pan up/down
-    FVector3 YOffset = {ViewMatrix[1][0], ViewMatrix[1][1], ViewMatrix[1][2]}; // Y Rotation, column 1
+    FVector3 YOffset = {ViewMatrix.M[0][1], ViewMatrix.M[1][1], ViewMatrix.M[2][1]}; // Y Rotation, column 1
     YOffset.Normalize();
     YOffset *= DY * TargetDistance / static_cast<float>(Height);
     PanOffset += YOffset;
@@ -116,28 +116,28 @@ void PCamera::DeprojectScreenToWorld(const FVector2& ScreenPoint, FVector3& OutW
     const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
 
     // Starting ray, Z=1, near
-    glm::vec4 RayStartProjectionSpace(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
+    FVector4 RayStartProjectionSpace(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
     // Ending ray Z=0.1, far, any distance in order to calculate the direction
-    glm::vec4 RayEndProjectionSpace(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
+    FVector4 RayEndProjectionSpace(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
 
     //
-    glm::vec4 HomoRayStartWorldSpace = InvViewProjectionMatrix * RayStartProjectionSpace;
-    glm::vec4 HomoRayEndWorldSpace = InvViewProjectionMatrix * RayEndProjectionSpace;
-    glm::vec3 RayStartWorldSpace(HomoRayStartWorldSpace.x, HomoRayStartWorldSpace.y, HomoRayStartWorldSpace.z);
-    glm::vec3 RayEndWorldSpace(HomoRayEndWorldSpace.x, HomoRayEndWorldSpace.y, HomoRayEndWorldSpace.z);
+    FVector4 HomoRayStartWorldSpace = InvViewProjectionMatrix * RayStartProjectionSpace;
+    FVector4 HomoRayEndWorldSpace = InvViewProjectionMatrix * RayEndProjectionSpace;
+    FVector3 RayStartWorldSpace(HomoRayStartWorldSpace.X, HomoRayStartWorldSpace.Y, HomoRayStartWorldSpace.Z);
+    FVector3 RayEndWorldSpace(HomoRayEndWorldSpace.X, HomoRayEndWorldSpace.Y, HomoRayEndWorldSpace.Z);
 
-    if (HomoRayStartWorldSpace.w != 0.0f)
+    if (HomoRayStartWorldSpace.W != 0.0f)
     {
-        RayStartWorldSpace /= HomoRayStartWorldSpace.w;
+        RayStartWorldSpace /= HomoRayStartWorldSpace.W;
     }
-    if (HomoRayEndWorldSpace.w != 0.0f)
+    if (HomoRayEndWorldSpace.W != 0.0f)
     {
-        RayEndWorldSpace /= HomoRayEndWorldSpace.w;
+        RayEndWorldSpace /= HomoRayEndWorldSpace.W;
     }
 
-    glm::vec3 RayDirWorldSpace = RayEndWorldSpace - RayStartWorldSpace;
-    RayDirWorldSpace = glm::normalize(RayDirWorldSpace);
+    FVector3 RayDirWorldSpace = RayEndWorldSpace - RayStartWorldSpace;
+    RayDirWorldSpace = RayDirWorldSpace.Normalized();
 
-    OutWorldPosition = FVector3{RayStartWorldSpace.x, RayStartWorldSpace.y, RayStartWorldSpace.z};
-    OutWorldDirection = FVector3{RayDirWorldSpace.x, RayDirWorldSpace.y, RayDirWorldSpace.z};
+    OutWorldPosition = FVector3{RayStartWorldSpace.X, RayStartWorldSpace.Y, RayStartWorldSpace.Z};
+    OutWorldDirection = FVector3{RayDirWorldSpace.X, RayDirWorldSpace.Y, RayDirWorldSpace.Z};
 }

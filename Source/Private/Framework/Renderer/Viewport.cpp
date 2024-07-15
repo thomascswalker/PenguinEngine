@@ -39,10 +39,9 @@ void PViewport::ResetView()
 bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const
 {
     // Clip space
-    glm::mat4 Model(1.0f);
-    glm::mat4 MVP = Camera->ViewProjectionMatrix * Model;
-    glm::vec4 ResultGlm = MVP * glm::vec4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
-    FVector4 Result{ResultGlm.x, ResultGlm.y, ResultGlm.z, ResultGlm.w};
+    FMatrix Model;
+    FMatrix MVP = Camera->ViewProjectionMatrix * Model;
+    FVector4 Result = MVP * FVector4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
     if (Result.W > 0.0f)
     {
         // Apply perspective correction
@@ -104,15 +103,12 @@ void PViewport::FormatDebugText()
         "Controls\n"
         "Wireframe (F1): {}\n"
         "Shaded (F2): {}\n"
-        "Depth (F3): {}\n"
-        "Use GLM (F4): {}"
-        ,
+        "Depth (F3): {}\n",
         Engine->GetFps(),
         GetSize().ToString(),
         GetCamera()->GetForwardVector().ToString(),
         Renderer->Settings.GetRenderFlag(ERenderFlag::Wireframe),
         Renderer->Settings.GetRenderFlag(ERenderFlag::Shaded),
-        Renderer->Settings.GetRenderFlag(ERenderFlag::Depth),
-        Renderer->Settings.GetUseGlm()
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Depth)
     );
 }

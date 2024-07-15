@@ -573,9 +573,9 @@ namespace Math
     static TVector3<T> Cross(const TVector3<T>& A, const TVector3<T>& B)
     {
         return TVector3<T>{
-            A.Y * B.Z - A.Z * B.Y,
-            A.X * B.Z - A.Z * B.X,
-            A.X * B.Y - A.Y * B.X
+            A.Y * B.Z - B.Y * A.Z,
+            A.Z * B.X - B.Z * A.X,
+            A.X * B.Y - B.X * A.Y
         };
     }
 

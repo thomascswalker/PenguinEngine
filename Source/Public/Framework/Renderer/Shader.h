@@ -24,9 +24,9 @@ struct IShader
     float FacingRatio;
 
     FRect ScreenBounds;
-    glm::mat4 MVP;
-    glm::mat4 ViewMatrix;
-    glm::mat4 ProjectionMatrix;
+    FMatrix MVP;
+    FMatrix ViewMatrix;
+    FMatrix ProjectionMatrix;
     FVector3 UVW;
 
     bool bHasNormals = false;
