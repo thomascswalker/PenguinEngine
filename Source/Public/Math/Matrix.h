@@ -627,9 +627,10 @@ struct TPerspectiveMatrix : TMatrix<T>
         const T TanHalfFov = Math::Tan(Fov / 2.0f);
         this->M[0][0] = T(1) / (Aspect * TanHalfFov);
         this->M[1][1] = T(1) / TanHalfFov;
-        this->M[2][2] = (MaxZ + MinZ) / (MaxZ - MinZ);
-        this->M[3][2] = T(1);
-        this->M[2][3] = (T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
+
+        this->M[2][2] = -(MaxZ + MinZ) / (MaxZ - MinZ);
+        this->M[3][2] = -T(1);
+        this->M[2][3] = -(T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
 #if _DEBUG
         this->CheckNaN();
 #endif
@@ -655,18 +656,18 @@ struct TLookAtMatrix : TMatrix<T>
         //  Rz |  Uz | -Fz | -Tz 
         //  0  |  0  |  0  |  1
         this->SetIdentity();
-        this->M[0][0] = Right[0];
-        this->M[0][1] = Right[1];
-        this->M[0][2] = Right[2];
-        this->M[1][0] = Up[0];
-        this->M[1][1] = Up[1];
-        this->M[1][2] = Up[2];
-        this->M[2][0] = -Forward[0];
-        this->M[2][1] = -Forward[1];
-        this->M[2][2] = -Forward[2];
-        this->M[0][3] = Math::Dot(Right, -Eye);
-        this->M[1][3] = Math::Dot(Up, -Eye);
-        this->M[2][3] = Math::Dot(Forward, -Eye);
+        this->M[0][0] = Right.X;
+        this->M[0][1] = Right.Y;
+        this->M[0][2] = Right.Z;
+        this->M[1][0] = Up.X;
+        this->M[1][1] = Up.Y;
+        this->M[1][2] = Up.Z;
+        this->M[2][0] = -Forward.X;
+        this->M[2][1] = -Forward.Y;
+        this->M[2][2] = -Forward.Z;
+        this->M[0][3] = -Math::Dot(Right, Eye);
+        this->M[1][3] = -Math::Dot(Up, Eye);
+        this->M[2][3] = Math::Dot(Forward, Eye);
 
 #if _DEBUG
         this->CheckNaN();
