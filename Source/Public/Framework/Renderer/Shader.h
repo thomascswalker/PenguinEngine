@@ -19,7 +19,6 @@ struct IShader
     FVector3 TriangleCameraNormal;
 
     FVector3 PixelWorldPosition;
-    FVector3 PixelWorldNormal;
     float FacingRatio;
 
     FRect ScreenBounds;
@@ -91,6 +90,12 @@ struct IShader
         VecAddVec(V01Normal, V2.Normal, V012Normal);
 
         TriangleWorldNormal = V012Normal * 0.33333333f;
+
+        VecDotVec(-CameraWorldDirection, TriangleWorldNormal, &FacingRatio);
+        if (FacingRatio < 0.0f)
+        {
+            return false;
+        }
 
         // Calculate the triangle normal relative to the camera
         FVector4 Tmp;
