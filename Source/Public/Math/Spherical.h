@@ -10,9 +10,9 @@ struct FSphericalCoords
     float Theta = 0.0f; // Pitch, vertical angle in radians
     float Radius = 5.0f;
 
-    void MakeSafe()
+    void MakeSafe(const float Threshold = P_EPSILON)
     {
-        Phi = Math::Max(P_EPSILON, Math::Min(P_PI - P_EPSILON, Phi));
+        Phi = Math::Max(Threshold, Math::Min(P_PI - Threshold, Phi));
     }
 
     static FSphericalCoords FromCartesian(const float X, const float Y, const float Z)

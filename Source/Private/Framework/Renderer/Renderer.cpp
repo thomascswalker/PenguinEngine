@@ -300,97 +300,98 @@ void PRenderer::Scanline()
     FVector3 S1 = CurrentShader->S1;
     FVector3 S2 = CurrentShader->S2;
 
-    switch (Math::GetWindingOrder(S0, S1, S2))
-    {
-    case EWindingOrder::CCW : // Counter-clockwise, front-facing
-        break;
-    case EWindingOrder::CW : // Clockwise, back-facing; exit
-    case EWindingOrder::CL : // Co-linear; exit
-        return;
-    }
-
     // Compute the bounds of just this triangle on the screen
     int32 Width = GetWidth();
     int32 Height = GetHeight();
     const FRect Bounds = CurrentShader->ScreenBounds;
     const int32 MinX = Math::Max(static_cast<int32>(Bounds.Min().X), 0);
-    const int32 MinY = Math::Max(static_cast<int32>(Bounds.Min().Y), 0);
     const int32 MaxX = Math::Min(static_cast<int32>(Bounds.Max().X), Width - 1);
+    const int32 MinY = Math::Max(static_cast<int32>(Bounds.Min().Y), 0);
     const int32 MaxY = Math::Min(static_cast<int32>(Bounds.Max().Y), Height - 1);
 
     // Precompute the area of the screen triangle so we're not computing it every pixel
-    const float Area = Math::Area2D(S0, S1, S2) * 2;
+    const float Area = Math::Area2D(S0, S1, S2) * 2.0f;
     const float OneOverArea = 1.0f / Area;
 
-    // TODO: For some reason the initial offset is itself offset by 1. Negating 1 to account for this (otherwise
-    // the furthest right pixels appear on the next line, at the furthest left point).
     int32 InitialOffset = MinY * Width;
 
-    auto DepthChannel = GetDepthChannel();
-    auto DepthMemory = static_cast<float*>(DepthChannel->Memory) + InitialOffset; // float, 32-bytes
+    std::shared_ptr<PChannel> DepthChannel = GetDepthChannel();
+    float* DepthMemory = static_cast<float*>(DepthChannel->Memory) + InitialOffset; // float, 32-bytes
 
-    auto ColorChannel = GetColorChannel();
-    auto ColorMemory = static_cast<int32*>(ColorChannel->Memory) + InitialOffset; // int32, 32-bytes
+    std::shared_ptr<PChannel> ColorChannel = GetColorChannel();
+    int32* ColorMemory = static_cast<int32*>(ColorChannel->Memory) + InitialOffset; // int32, 32-bytes
 
     // Prior to the loop computing each pixel in the triangle, get the render settings
     const bool bRenderDepth = Settings.GetRenderFlag(ERenderFlag::Depth);
-    FVector3 UVW;
-    FVector3 Point;
-    float W0, W1, W2;
-    float Depth, CurrentDepth;
 
+    const FVector3 UVW0(1, 0, 0);
+    const FVector3 UVW1(0, 1, 0);
+    const FVector3 UVW2(0, 0, 1);
+
+    const FLine Line01(FVector2(S0.X, S0.Y), FVector2(S1.X, S1.Y));
+    const FLine Line12(FVector2(S1.X, S1.Y), FVector2(S2.X, S2.Y));
+    const FLine Line20(FVector2(S2.X, S2.Y), FVector2(S0.X, S0.Y));
+
+    const float Depth0 = Math::GetDepth(S0, S0, S1, S2, Area);
+    const float Depth1 = Math::GetDepth(S1, S0, S1, S2, Area);
+    const float Depth2 = Math::GetDepth(S2, S0, S1, S2, Area);
+    
     // Loop through all pixels in the screen bounding box.
     for (int32 Y = MinY; Y <= MaxY; Y++)
     {
+        FVector2 LeftMost(MinX, Y);
+        FVector2 RightMost(MaxX, Y);
+
+        FLine RowLine(LeftMost, RightMost);
+
         for (int32 X = MinX; X <= MaxX; X++)
         {
-            float* DepthPixel = DepthMemory + X;
-            int32* ColorPixel = ColorMemory + X;
-
-            Point.X = static_cast<float>(X);
-            Point.Y = static_cast<float>(Y);
+            FVector3 Point(X, Y, 0);
 
             // Use Pineda's edge function to determine if the current pixel is within the triangle.
-            W0 = Math::EdgeFunction(S1.X, S1.Y, S2.X, S2.Y, Point.X, Point.Y);
-            W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
-            W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
-
-            if (W0 <= 0 || W1 <= 0 || W2 <= 0)
+            float W0 = Math::EdgeFunction(S1.X, S1.Y, S2.X, S2.Y, Point.X, Point.Y);
+            float W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
+            float W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
+            
+            if (W0 <= 0.0f || W1 <= 0.0f || W2 <= 0.0f)
             {
                 continue;
             }
-
-            if (bRenderDepth)
-            {
-                Depth = Math::GetDepth(Point, S0, S1, S2, Area);
-
-                // Compare the new depth to the current depth at this pixel. If the new depth is further than
-                // the current depth, continue.
-                CurrentDepth = *DepthPixel;
-                if (Depth >= CurrentDepth)
-                {
-                    continue;
-                }
-                // If the new depth is closer than the current depth, set the current depth
-                // at this pixel to the new depth we just got.
-                *DepthPixel = Depth;
-            }
+            
+            FVector3 UVW;
+            float* DepthPixel = DepthMemory + X;
+            int32* ColorPixel = ColorMemory + X;
 
             // From the edge vectors, extrapolate the barycentric coordinates for this pixel.
             W0 *= OneOverArea;
             W1 *= OneOverArea;
             W2 *= OneOverArea;
+
             UVW.X = W0;
             UVW.Y = W1;
             UVW.Z = W2;
             CurrentShader->UVW = UVW;
+            
+            if (bRenderDepth)
+            {
+                // Interpolate depth given UVW
+                float NewDepth = UVW.X * Depth0 + UVW.Y * Depth1 + UVW.Z * Depth2;
+
+                // Compare the new depth to the current depth at this pixel. If the new depth is further than
+                // the current depth, continue.
+                float CurrentDepth = *DepthPixel;
+                if (NewDepth > CurrentDepth)
+                {
+                    continue;
+                }
+                // If the new depth is closer than the current depth, set the current depth
+                // at this pixel to the new depth we just got.
+                *DepthPixel = NewDepth;
+            }
 
             // Compute world position
             CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
-
-            // Compute world normal
-            CurrentShader->PixelWorldNormal = CurrentShader->V0.Normal * UVW.X + CurrentShader->V1.Normal * UVW.Y + CurrentShader->V2.Normal * UVW.Z;
-
+            
             // Compute the final color for this pixel
             CurrentShader->ComputePixelShader(Point.X, Point.Y);
 

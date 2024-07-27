@@ -77,7 +77,7 @@ void PCamera::Update(float DeltaTime)
 
     // Restrict Phi to min/max polar angle to prevent locking
     Spherical.Phi = Math::Max(MinPolarAngle, Math::Min(MaxPolarAngle, Spherical.Phi));
-    Spherical.MakeSafe();
+    Spherical.MakeSafe(0.1f);
 
     // Set camera rotation pitch/yaw
     FRotator NewRotation(
