@@ -10,20 +10,6 @@ enum EPrimitiveType
     Sphere,
     Torus
 };
-//
-// struct PVertex
-// {
-//     FVector3 Position;
-//     FVector3 Normal;
-//     FVector2 TexCoord;
-//
-//     explicit PVertex(const FVector3& InPosition = FVector3::ZeroVector(),
-//                      const FVector3& InNormal = FVector3::ZeroVector(),
-//                      const FVector3& InTexCoord = FVector3::ZeroVector())
-//         : Position(InPosition), Normal(InNormal), TexCoord(InTexCoord)
-//     {
-//     }
-// };
 
 struct PVertex
 {
@@ -48,9 +34,14 @@ struct PTriangle
     std::vector<int32> NormalIndexes;
     std::vector<int32> TexCoordIndexes;
 
+    PVertex V0;
+    PVertex V1;
+    PVertex V2;
+
     PTriangle()
     {
     }
+
     PTriangle(const std::vector<int32>& InPositionIndexes, const std::vector<int32>& InNormalIndexes, const std::vector<int32>& InTexCoordIndexes)
         : PositionIndexes(InPositionIndexes),
           NormalIndexes(InNormalIndexes),
@@ -61,45 +52,22 @@ struct PTriangle
 
 struct PMesh : PObject
 {
-protected:
-    uint32 AddVertex(const FVector3& Position, const FVector3& Normal, const FVector3& TexCoord) { return 0; }
-
-public:
     // Properties
     std::vector<PTriangle> Triangles;
     std::vector<FVector3> Positions;
     std::vector<FVector3> Normals;
     std::vector<FVector2> TexCoords;
-    
 
     PMesh()
     {
     }
     PMesh(const std::vector<PTriangle>& InTriangles, const std::vector<FVector3>& InPositions, const std::vector<FVector3>& InNormals = {}, const std::vector<FVector2>& InTexCoords = {})
-        : Triangles(InTriangles),
-          Positions(InPositions),
-          Normals(InNormals),
-          TexCoords(InTexCoords)
+        : Triangles(InTriangles), Positions(InPositions), Normals(InNormals), TexCoords(InTexCoords)
     {
+        ProcessTriangles();
     }
 
-    void ComputeNormals()
-    {
-        // Normals.clear();
-        // std::vector<FVector3> TriNormals;
-        // std::vector<FVector3> TriNormalsWeighted;
-        //
-        // for (const auto& Triangle : Triangles)
-        // {
-        //     FVector3 V0 = Positions[Triangle.PositionIndexes[0]];
-        //     FVector3 V1 = Positions[Triangle.PositionIndexes[1]];
-        //     FVector3 V2 = Positions[Triangle.PositionIndexes[2]];
-        //
-        //     FVector3 N = (V1 - V0).Cross(V2 - V0);
-        //     TriNormals.emplace_back(N);
-        // }
-    }
-    void ProcessTriangle(const PTriangle& Triangle, PVertex* V0, PVertex* V1, PVertex* V2) const;
+    void ProcessTriangles();
 
     // Primitives
     static std::shared_ptr<PMesh> CreatePlane(float Size);

@@ -99,7 +99,8 @@ void PEngine::OpenFile(const std::string& FileName)
     Meshes.clear();
     auto ObjMesh = std::make_shared<PMesh>();
     ObjImporter::Import(FileName, ObjMesh.get());
-    Meshes.emplace_back(ObjMesh);
+    ObjMesh->ProcessTriangles();
+    Meshes.push_back(ObjMesh);
 }
 
 void PEngine::OnKeyPressed(EKey KeyCode)

@@ -2,6 +2,19 @@
 
 #include "Vector.h"
 
+inline void VecLoadIn(const FVector4& In, float* Out)
+{
+    memcpy(Out, &In, 32);
+}
+
+inline void VecLoadOut(float* In, FVector4* Out)
+{
+    Out->X = In[0];
+    Out->Y = In[1];
+    Out->Z = In[2];
+    Out->W = In[3];
+}
+
 inline void VecAddVec(const FVector4& V0, const FVector4& V1, FVector4& Out)
 {
     const __m128 A = _mm_load_ps(V0.XYZW);

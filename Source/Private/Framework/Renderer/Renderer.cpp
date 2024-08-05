@@ -18,6 +18,9 @@ PRenderer::PRenderer(uint32 InWidth, uint32 InHeight)
 
     // Set default render flags
     Settings = Renderer::PRenderSettings();
+
+    // Default shader
+    CurrentShader = std::make_shared<DefaultShader>();
 }
 
 void PRenderer::Resize(uint32 InWidth, uint32 InHeight) const
@@ -232,18 +235,14 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
 }
 
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
-void PRenderer::DrawMesh(const PMesh* Mesh)
+void PRenderer::DrawMesh(PMesh* Mesh)
 {
-    CurrentShader = std::make_shared<DefaultShader>();
-    for (const auto& Triangle : Mesh->Triangles)
+    for (const auto& T : Mesh->Triangles)
     {
-        PVertex V0;
-        PVertex V1;
-        PVertex V2;
-        Mesh->ProcessTriangle(Triangle, &V0, &V1, &V2);
-        DrawTriangle(V0, V1, V2);
+        DrawTriangle(T.V0, T.V1, T.V2);
     }
 }
+
 void PRenderer::DrawGrid() const
 {
     for (const FLine3d& Line : Grid->Lines)
@@ -294,6 +293,7 @@ void PRenderer::Draw()
         }
     }
 }
+
 void PRenderer::Scanline()
 {
     FVector3 S0 = CurrentShader->S0;
@@ -324,26 +324,13 @@ void PRenderer::Scanline()
     // Prior to the loop computing each pixel in the triangle, get the render settings
     const bool bRenderDepth = Settings.GetRenderFlag(ERenderFlag::Depth);
 
-    const FVector3 UVW0(1, 0, 0);
-    const FVector3 UVW1(0, 1, 0);
-    const FVector3 UVW2(0, 0, 1);
-
-    const FLine Line01(FVector2(S0.X, S0.Y), FVector2(S1.X, S1.Y));
-    const FLine Line12(FVector2(S1.X, S1.Y), FVector2(S2.X, S2.Y));
-    const FLine Line20(FVector2(S2.X, S2.Y), FVector2(S0.X, S0.Y));
-
     const float Depth0 = Math::GetDepth(S0, S0, S1, S2, Area);
     const float Depth1 = Math::GetDepth(S1, S0, S1, S2, Area);
     const float Depth2 = Math::GetDepth(S2, S0, S1, S2, Area);
-    
+
     // Loop through all pixels in the screen bounding box.
     for (int32 Y = MinY; Y <= MaxY; Y++)
     {
-        FVector2 LeftMost(MinX, Y);
-        FVector2 RightMost(MaxX, Y);
-
-        FLine RowLine(LeftMost, RightMost);
-
         for (int32 X = MinX; X <= MaxX; X++)
         {
             FVector3 Point(X, Y, 0);
@@ -352,12 +339,12 @@ void PRenderer::Scanline()
             float W0 = Math::EdgeFunction(S1.X, S1.Y, S2.X, S2.Y, Point.X, Point.Y);
             float W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
             float W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
-            
+
             if (W0 <= 0.0f || W1 <= 0.0f || W2 <= 0.0f)
             {
                 continue;
             }
-            
+
             FVector3 UVW;
             float* DepthPixel = DepthMemory + X;
             int32* ColorPixel = ColorMemory + X;
@@ -371,7 +358,7 @@ void PRenderer::Scanline()
             UVW.Y = W1;
             UVW.Z = W2;
             CurrentShader->UVW = UVW;
-            
+
             if (bRenderDepth)
             {
                 // Interpolate depth given UVW
@@ -390,8 +377,12 @@ void PRenderer::Scanline()
             }
 
             // Compute world position
+            FVector3 UVWX(UVW.X);
+            FVector3 UVWY(UVW.Y);
+            FVector3 UVWZ(UVW.Z);
+
             CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
-            
+
             // Compute the final color for this pixel
             CurrentShader->ComputePixelShader(Point.X, Point.Y);
 
@@ -400,5 +391,187 @@ void PRenderer::Scanline()
         }
         DepthMemory += Width;
         ColorMemory += Width;
+    }
+}
+
+void PRenderer::ScanlineFast()
+{
+    FVector3 S0 = CurrentShader->S0;
+    FVector3 S1 = CurrentShader->S1;
+    FVector3 S2 = CurrentShader->S2;
+
+    FVector2 UV0, UV1, UV2;
+
+    // Sort by Y value
+    if (S1.Y < S0.Y)
+    {
+        std::swap(S0, S1);
+        std::swap(UV0, UV1);
+    }
+    if (S2.Y < S0.Y)
+    {
+        std::swap(S0, S2);
+        std::swap(UV0, UV2);
+    }
+    if (S2.Y < S1.Y)
+    {
+        std::swap(S1, S2);
+        std::swap(UV1, UV2);
+    }
+
+    int32 X0 = S0.X;
+    int32 X1 = S1.X;
+    int32 X2 = S2.X;
+    int32 Y0 = S0.Y;
+    int32 Y1 = S1.Y;
+    int32 Y2 = S2.Y;
+
+    float U0 = UV0.X;
+    float U1 = UV1.X;
+    float U2 = UV2.X;
+    float V0 = UV0.Y;
+    float V1 = UV1.Y;
+    float V2 = UV2.Y;
+
+    // Determine two edges
+    int32 DY0 = S1.Y - S0.Y;
+    int32 DX0 = S1.X - S0.X;
+    float DV0 = V1 - V0;
+    float DU0 = U1 - U0;
+
+    int32 DY1 = S2.Y - S0.Y;
+    int32 DX1 = S2.X - S0.X;
+    float DV1 = V2 - V0;
+    float DU1 = U2 - U0;
+
+    float TexU, TexV;
+    // Precompute the area of the screen triangle so we're not computing it every pixel
+    const float Area = Math::Area2D(S0, S1, S2) * 2.0f;
+    const float OneOverArea = 1.0f / Area;
+
+    // Delta X Step
+    float DAXS = 0;
+    float DBXS = 0;
+    float DU0S = 0;
+    float DV0S = 0;
+    float DU1S = 0;
+    float DV1S = 0;
+
+    if (DY0) { DAXS = DX0 / (float)std::abs(DY0); }
+    if (DY1) { DBXS = DX1 / (float)std::abs(DY1); }
+
+    if (DY0) { DU0S = DU0 / (float)std::abs(DY0); }
+    if (DY0) { DV0S = DV0 / (float)std::abs(DY0); }
+
+    if (DY1) { DU1S = DU1 / (float)std::abs(DY1); }
+    if (DY1) { DV1S = DV1 / (float)std::abs(DY1); }
+
+    std::shared_ptr<PChannel> ColorChannel = GetColorChannel();
+
+    // If our line exists vertically
+    if (DY0)
+    {
+        for (int32 Y = Y0; Y <= Y1; Y++)
+        {
+            int32 AX = X0 + (float)(Y - Y0) * DAXS;
+            int32 BX = X0 + (float)(Y - Y0) * DBXS;
+
+            float TexStartU = U0 + (float)(Y - Y0) * DU0S;
+            float TexStartV = V0 + (float)(Y - Y0) * DV0S;
+            float TexEndU = U0 + (float)(Y - Y0) * DU1S;
+            float TexEndV = V0 + (float)(Y - Y0) * DV1S;
+
+            if (AX > BX)
+            {
+                std::swap(AX, BX);
+                std::swap(TexStartU, TexEndU);
+                std::swap(TexStartV, TexEndV);
+            }
+
+            TexU = TexStartU;
+            TexV = TexStartV;
+
+            float LineStep = 1.0f / (float)(BX - AX); // bx - ax are the number of x pixels that make up the scanline
+            float CurrentStep = 0.0f;                 // How far across the scanline we are
+
+            for (int32 X = AX; X < BX; X++)
+            {
+                TexU = (1.0f - CurrentStep) * TexStartU + CurrentStep * TexEndU;
+                TexV = (1.0f - CurrentStep) * TexStartV + CurrentStep * TexEndV;
+
+                // Use Pineda's edge function to determine if the current pixel is within the triangle.
+                float W0 = Math::EdgeFunction(X1, Y1, X2, Y2, X, Y);
+                float W1 = Math::EdgeFunction(X2, Y2, X0, Y0, X, Y);
+                float W2 = Math::EdgeFunction(X0, Y0, X1, Y1, X, Y);
+
+                CurrentStep += LineStep;
+
+                W0 *= OneOverArea;
+                W1 *= OneOverArea;
+                W2 *= OneOverArea;
+
+                FVector3 UVW;
+                UVW.X = W0;
+                UVW.Y = W1;
+                UVW.Z = W2;
+
+                FColor Color = FColor::FromRgba(W0 * 255, W1 * 255, W2 * 255);
+
+                // Draw this pixel
+                ColorChannel->SetPixel(X, Y, Color.ToInt32());
+            }
+        }
+
+        DY0 = Y2 - Y1;
+        DX0 = X2 - X1;
+
+        if (DY0) { DAXS = DX0 / (float)std::abs(DY0); }
+        if (DY1) { DBXS = DX1 / (float)std::abs(DY1); }
+
+        for (int32 Y = Y1; Y <= Y2; Y++)
+        {
+            int32 AX = X1 + (float)(Y - Y1) * DAXS;
+            int32 BX = X0 + (float)(Y - Y0) * DBXS;
+
+            float TexStartU = U1 + (float)(Y - Y1) * DU0S;
+            float TexStartV = V1 + (float)(Y - Y1) * DV0S;
+            float TexEndU = U0 + (float)(Y - Y0) * DU1S;
+            float TexEndV = V0 + (float)(Y - Y0) * DV1S;
+
+            if (AX > BX)
+            {
+                std::swap(AX, BX);
+                std::swap(TexStartU, TexEndU);
+                std::swap(TexStartV, TexEndV);
+            }
+
+            float LineStep = 1.0f / (float)(BX - AX); // bx - ax are the number of x pixels that make up the scanline
+            float CurrentStep = 0.0f;                 // How far across the scanline we are
+
+            for (int32 X = AX; X < BX; X++)
+            {
+                // Use Pineda's edge function to determine if the current pixel is within the triangle.
+                float W0 = Math::EdgeFunction(X1, Y1, X2, Y2, X, Y);
+                float W1 = Math::EdgeFunction(X2, Y2, X0, Y0, X, Y);
+                float W2 = Math::EdgeFunction(X0, Y0, X1, Y1, X, Y);
+
+                CurrentStep += LineStep;
+
+                W0 *= OneOverArea;
+                W1 *= OneOverArea;
+                W2 *= OneOverArea;
+
+
+                FVector3 UVW;
+                UVW.X = W0;
+                UVW.Y = W1;
+                UVW.Z = W2;
+
+                FColor Color = FColor::FromRgba(W0 * 255, W1 * 255, W2 * 255);
+
+                // Draw this pixel
+                ColorChannel->SetPixel(X, Y, Color.ToInt32());
+            }
+        }
     }
 }

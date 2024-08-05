@@ -201,11 +201,7 @@ public:
 
         Mesh->Triangles = Triangles;
         Mesh->Positions = Positions;
-        if (!Normals.size())
-        {
-            Mesh->ComputeNormals();
-        }
-        else
+        if (Normals.size())
         {
             Mesh->Normals = Normals;
         }

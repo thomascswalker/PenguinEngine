@@ -27,9 +27,5 @@ endforeach()
 
 target_include_directories(PenguinEngine PUBLIC "${PROJECT_SOURCE_DIR}/Source/Public")
 
-if(MSVC)
-    target_compile_options(<target> PRIVATE "/MP")
-endif()
-
 # Options
 
