@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <xmmintrin.h>
 #include "Vector.h"
 
 inline void VecLoadIn(const FVector4& In, float* Out)
@@ -60,10 +61,10 @@ inline void VecCrossVec(const FVector4& V0, const FVector4& V1, FVector4& Out)
     const __m128 A = _mm_load_ps(V0.XYZW);
     const __m128 B = _mm_load_ps(V1.XYZW);
 
-    __m128 Tmp0 = _mm_shuffle_ps(A, A,_MM_SHUFFLE(3, 0, 2, 1));
-    __m128 Tmp1 = _mm_shuffle_ps(B, B,_MM_SHUFFLE(3, 1, 0, 2));
-    __m128 Tmp2 = _mm_shuffle_ps(A, A,_MM_SHUFFLE(3, 1, 0, 2));
-    __m128 Tmp3 = _mm_shuffle_ps(B, B,_MM_SHUFFLE(3, 0, 2, 1));
+    __m128 Tmp0 = _mm_shuffle_ps(A, A, _MM_SHUFFLE(3, 0, 2, 1));
+    __m128 Tmp1 = _mm_shuffle_ps(B, B, _MM_SHUFFLE(3, 1, 0, 2));
+    __m128 Tmp2 = _mm_shuffle_ps(A, A, _MM_SHUFFLE(3, 1, 0, 2));
+    __m128 Tmp3 = _mm_shuffle_ps(B, B, _MM_SHUFFLE(3, 0, 2, 1));
 
     __m128 Result = _mm_sub_ps(
         _mm_mul_ps(Tmp0, Tmp1),
