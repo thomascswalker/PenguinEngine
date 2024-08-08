@@ -28,7 +28,7 @@ class PWin32Platform : public IPlatform
 
     HMENU MainMenu;
     HMENU FileMenu;
-    HMENU DisplayMenu;
+	HMENU SettingsMenu;
 
 public:
     // Platform interface

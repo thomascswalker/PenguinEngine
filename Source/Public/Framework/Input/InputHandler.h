@@ -107,7 +107,10 @@ enum class EMenuAction : uint16
     Shaded,
     Depth,
     Normals,
-    VertexNormals
+    VertexNormals,
+
+	// Settings
+	Multithreaded
 };
 
 DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, const FVector2&);

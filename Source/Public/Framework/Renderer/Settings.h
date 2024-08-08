@@ -19,7 +19,7 @@ namespace Renderer
     {
     private:
         ERenderFlag RenderFlags = ERenderFlag::Wireframe;
-        bool bUseGlm = true;
+        bool bMultithreaded = true;
 
     public:
         PRenderSettings()
@@ -46,14 +46,19 @@ namespace Renderer
             return !bState;
         }
 
-        bool GetUseGlm()
+        bool IsMultithreaded()
         {
-            return bUseGlm;
+            return bMultithreaded;
         }
 
-        void SetUseGlm(const bool bNewState)
+        void SetMultithreaded(const bool bNewState)
         {
-            bUseGlm = bNewState;
+            bMultithreaded = bNewState;
+        }
+        bool ToggleMultithreaded()
+        {
+	        bMultithreaded = !bMultithreaded;
+        	return bMultithreaded;
         }
     };
 }

@@ -5,11 +5,11 @@
 
 class PViewport
 {
-    std::shared_ptr<PCamera> Camera;
     bool bShowDebugText = true;
     std::string DebugText;
 
 public:
+    std::shared_ptr<PCamera> Camera;
     FTransform Transform;
 
     PViewport(uint32 InWidth, uint32 InHeight);

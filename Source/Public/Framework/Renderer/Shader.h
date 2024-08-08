@@ -79,8 +79,8 @@ struct IShader
         ScreenBounds.Grow(1.0f);
 
         // Clamp the bounds to the viewport
-        const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
-        ScreenBounds.Clamp(ViewportRect);
+    	const FRect ViewportRect = {0, 0, static_cast<float>(Width), static_cast<float>(Height)};
+    	ScreenBounds.Clamp(ViewportRect);
 
         // Average each of the vertices' normals to get the triangle normal
         FVector4 V01Normal;

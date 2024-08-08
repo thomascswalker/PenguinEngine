@@ -484,7 +484,7 @@ void PWin32Platform::ConstructMenuBar()
 {
     MainMenu = CreateMenu();
     FileMenu = CreateMenu();
-    DisplayMenu = CreateMenu();
+	SettingsMenu = CreateMenu();
 
     // File menu
     AppendMenuW(MainMenu, MF_POPUP, UINT_PTR(FileMenu), L"&File");
@@ -493,11 +493,16 @@ void PWin32Platform::ConstructMenuBar()
     AppendMenuW(FileMenu, MF_STRING, UINT_PTR(EMenuAction::Quit), L"&Quit");
 
     // Display menu
-    AppendMenuW(MainMenu, MF_POPUP, UINT_PTR(DisplayMenu), L"&Display");
-    AppendMenuW(DisplayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Wireframe), L"&Wireframe");
-    AppendMenuW(DisplayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Shaded), L"&Shaded");
-    AppendMenuW(DisplayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Depth), L"&Depth");
-    AppendMenuW(DisplayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Normals), L"&Normals");
+    AppendMenuW(MainMenu, MF_POPUP, UINT_PTR(SettingsMenu), L"&Settings");
+    AppendMenuW(SettingsMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Wireframe), L"&Wireframe");
+    AppendMenuW(SettingsMenu, MF_CHECKED, UINT_PTR(EMenuAction::Shaded), L"&Shaded");
+    AppendMenuW(SettingsMenu, MF_CHECKED, UINT_PTR(EMenuAction::Depth), L"&Depth");
+    AppendMenuW(SettingsMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Normals), L"&Normals");
+
+	AppendMenuW(SettingsMenu, MF_SEPARATOR, 0, L"");
+
+	// Multithreading
+	AppendMenuW(SettingsMenu, MF_CHECKED, UINT_PTR(EMenuAction::Multithreaded), L"&Multithreading");
 
     // Add the main menubar to the window
     SetMenu(Hwnd, MainMenu);
@@ -505,5 +510,5 @@ void PWin32Platform::ConstructMenuBar()
 
 void PWin32Platform::SetMenuItemChecked(EMenuAction ActionId, const bool bChecked)
 {
-    CheckMenuItem(DisplayMenu, UINT_PTR(ActionId), bChecked ? MF_CHECKED : MF_UNCHECKED);
+    CheckMenuItem(SettingsMenu, UINT_PTR(ActionId), bChecked ? MF_CHECKED : MF_UNCHECKED);
 }
