@@ -1,8 +1,8 @@
 ﻿#include "Framework/Renderer/Renderer.h"
 
-#include "Framework/Core/PThreadPool.h"
 #include "Framework/Engine/Engine.h"
 #include "Framework/Renderer/Shader.h"
+#include "Framework/Core/PThreadPool.h"
 
 /* Renderer */
 
@@ -113,8 +113,8 @@ bool PRenderer::ClipLine(FLine* Line) const
 
 void PRenderer::DrawLine(const FVector3& InA, const FVector3& InB, const FColor& Color) const
 {
-	FVector2 A(InA.X, InA.Y);	 // NOLINT
-	FVector2 B(InB.X, InB.Y);	 // NOLINT
+	FVector2 A(InA.X, InA.Y); // NOLINT
+	FVector2 B(InB.X, InB.Y); // NOLINT
 
 	// Clip the screen points within the viewport. If the line points are outside the viewport entirely
 	// then just return.
@@ -226,8 +226,8 @@ void PRenderer::DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex
 		Math::ProjectWorldToScreen(TriangleCenter + TriangleNormal, NormalEndScreen, Viewport->GetCamera()->GetViewData());
 
 		// Draw the line between the two points
-		DrawLine(NormalStartScreen,	   // Start
-			NormalEndScreen,		   // End
+		DrawLine(NormalStartScreen, // Start
+			NormalEndScreen,        // End
 			FColor::Yellow());
 	}
 }
@@ -357,8 +357,8 @@ void PRenderer::RasterizeTriangle(const PTriangleRenderData& RenderData)
 			*DepthPixel = NewDepth;
 
 			// Compute world position
-			CurrentShader->PixelWorldPosition =
-				CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y + CurrentShader->V2.Position * UVW.Z;
+			CurrentShader->PixelWorldPosition = CurrentShader->V0.Position * UVW.X + CurrentShader->V1.Position * UVW.Y +
+			                                    CurrentShader->V2.Position * UVW.Z;
 
 			// Compute the final color for this pixel
 			CurrentShader->ComputePixelShader(Point.X, Point.Y);
@@ -395,10 +395,10 @@ void PRenderer::Scanline()
 	int32 InitialOffset = static_cast<int32>(ScreenBounds.Y) * ScreenWidth;
 
 	std::shared_ptr<PChannel> DepthChannel = GetDepthChannel();
-	float* DepthMemory = static_cast<float*>(DepthChannel->Memory) + InitialOffset;	   // float, 32-bytes
+	float* DepthMemory = static_cast<float*>(DepthChannel->Memory) + InitialOffset; // float, 32-bytes
 
 	std::shared_ptr<PChannel> ColorChannel = GetColorChannel();
-	int32* ColorMemory = static_cast<int32*>(ColorChannel->Memory) + InitialOffset;	   // int32, 32-bytes
+	int32* ColorMemory = static_cast<int32*>(ColorChannel->Memory) + InitialOffset; // int32, 32-bytes
 
 	const float Depth0 = Math::GetDepth(S0, S0, S1, S2, Area);
 	const float Depth1 = Math::GetDepth(S1, S0, S1, S2, Area);
@@ -545,8 +545,8 @@ void PRenderer::ScanlineFast()
 			TexU = TexStartU;
 			TexV = TexStartV;
 
-			float LineStep = 1.0f / (float) (BX - AX);	  // bx - ax are the number of x pixels that make up the scanline
-			float CurrentStep = 0.0f;					  // How far across the scanline we are
+			float LineStep = 1.0f / (float) (BX - AX); // bx - ax are the number of x pixels that make up the scanline
+			float CurrentStep = 0.0f;                  // How far across the scanline we are
 
 			for (int32 X = AX; X < BX; X++)
 			{
@@ -605,8 +605,8 @@ void PRenderer::ScanlineFast()
 				std::swap(TexStartV, TexEndV);
 			}
 
-			float LineStep = 1.0f / (float) (BX - AX);	  // bx - ax are the number of x pixels that make up the scanline
-			float CurrentStep = 0.0f;					  // How far across the scanline we are
+			float LineStep = 1.0f / (float) (BX - AX); // bx - ax are the number of x pixels that make up the scanline
+			float CurrentStep = 0.0f;                  // How far across the scanline we are
 
 			for (int32 X = AX; X < BX; X++)
 			{
