@@ -90,11 +90,25 @@ bool PViewport::ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth
 void PViewport::FormatDebugText()
 {
     const PEngine* Engine = PEngine::GetInstance();
+    const IInputHandler* InputHandler = IInputHandler::GetInstance();
+    FVector2 MouseDelta = InputHandler->GetDeltaCursorPosition();
+
+    auto Renderer = Engine->GetRenderer();
+
     DebugText = std::format(
         "Stats\n"
         "FPS: {}\n"
-        "Size: {}\n",
+        "Size: {}\n"
+        "Camera Direction: {}\n"
+        "Controls\n"
+        "Wireframe (F1): {}\n"
+        "Shaded (F2): {}\n"
+        "Depth (F3): {}\n",
         Engine->GetFps(),
-        GetSize().ToString()
+        GetSize().ToString(),
+        GetCamera()->GetForwardVector().ToString(),
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Wireframe),
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Shaded),
+        Renderer->Settings.GetRenderFlag(ERenderFlag::Depth)
     );
 }
