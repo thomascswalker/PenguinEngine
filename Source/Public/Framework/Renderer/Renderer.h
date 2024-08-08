@@ -193,11 +193,12 @@ public:
     void DrawLine(const FVector3& InA, const FVector3& InB, const FColor& Color) const;
     void DrawLine(const FLine3d& Line, const FColor& Color) const;
     void DrawTriangle(const PVertex& V0, const PVertex& V1, const PVertex& V2);
-    void DrawMesh(const PMesh* Mesh);
+    void DrawMesh(PMesh* Mesh);
     void DrawGrid() const;
     void Draw();
 
 
     // Rasterizing triangles
     void Scanline();
+    void ScanlineFast();
 };

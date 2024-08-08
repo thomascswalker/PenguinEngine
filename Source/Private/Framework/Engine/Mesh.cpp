@@ -1,20 +1,23 @@
 ﻿#include "Framework/Engine/Mesh.h"
 
-void PMesh::ProcessTriangle(const PTriangle& Triangle, PVertex* V0, PVertex* V1, PVertex* V2) const
+
+void PMesh::ProcessTriangles()
 {
-    V0->Position = Positions[Triangle.PositionIndexes[0]];
-    V1->Position = Positions[Triangle.PositionIndexes[1]];
-    V2->Position = Positions[Triangle.PositionIndexes[2]];
+    for (PTriangle& Triangle : Triangles)
+    {
+        Triangle.V0.Position = Positions[Triangle.PositionIndexes[0]];
+        Triangle.V1.Position = Positions[Triangle.PositionIndexes[1]];
+        Triangle.V2.Position = Positions[Triangle.PositionIndexes[2]];
 
-    V0->Normal = Normals[Triangle.NormalIndexes[0]];
-    V1->Normal = Normals[Triangle.NormalIndexes[1]];
-    V2->Normal = Normals[Triangle.NormalIndexes[2]];
+        Triangle.V0.Normal = Normals[Triangle.NormalIndexes[0]];
+        Triangle.V1.Normal = Normals[Triangle.NormalIndexes[1]];
+        Triangle.V2.Normal = Normals[Triangle.NormalIndexes[2]];
 
-    V0->TexCoord = TexCoords[Triangle.TexCoordIndexes[0]];
-    V1->TexCoord = TexCoords[Triangle.TexCoordIndexes[1]];
-    V2->TexCoord = TexCoords[Triangle.TexCoordIndexes[2]];
+        Triangle.V0.TexCoord = TexCoords[Triangle.TexCoordIndexes[0]];
+        Triangle.V1.TexCoord = TexCoords[Triangle.TexCoordIndexes[1]];
+        Triangle.V2.TexCoord = TexCoords[Triangle.TexCoordIndexes[2]];
+    }
 }
-
 std::shared_ptr<PMesh> PMesh::CreatePlane(float Size)
 {
     return CreatePlane(Size, Size);
