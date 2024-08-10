@@ -5,79 +5,84 @@
 template <typename T>
 struct TLine
 {
-    TVector2<T> A;
-    TVector2<T> B;
-    TLine(){}
-    TLine(const TVector2<T>& InA, const TVector2<T>& InB) : A(InA), B(InB)
-    {
-    }
+	TVector2<T> m_a;
+	TVector2<T> m_b;
 
-    void Reverse()
-    {
-        TVector2<T> Tmp = A;
-        A = B;
-        B = Tmp;
-    }
-    
-    FLine GetReverse() const
-    {
-        return {B, A};
-    }
+	TLine()
+	{
+	}
 
-    bool Intersect(const TLine& Other, TVector2<T>& Out) const
-    {
-        // Line AB represented as a1x + b1y = c1
-        T a1 = B.X - A.X;
-        T b1 = A.X - B.Y;
+	TLine(const TVector2<T>& inA, const TVector2<T>& inB) : m_a(inA), m_b(inB)
+	{
+	}
 
-        T c1 = a1 * A.X + b1 * A.Y;
+	void reverse()
+	{
+		TVector2<T> tmp = m_a;
+		m_a = m_b;
+		m_b = tmp;
+	}
 
-        // Line CD represented as a2x + b2y = c2
-        T a2 = Other.B.Y - Other.A.Y;
-        T b2 = Other.A.X - Other.B.X;
-        T c2 = a2 * Other.A.X + b2 * Other.A.Y;
+	linef getReverse() const
+	{
+		return {m_b, m_a};
+	}
 
-        T Det = a1 * b2 - a2 * b1;
+	bool intersect(const TLine& other, TVector2<T>& out) const
+	{
+		// Line AB represented as a1x + b1y = c1
+		T a1 = m_b.X - m_a.X;
+		T b1 = m_a.X - m_b.Y;
 
-        if (Math::CloseEnough(Det, 0.0f))
-        {
-            // The lines are parallel. This is simplified
-            // by returning a pair of FLT_MAX
-            return false;
-        }
-        else
-        {
-            T x = (b2 * c1 - b1 * c2) / Det;
-            T y = (a1 * c2 - a2 * c1) / Det;
-            Out.X = x;
-            Out.Y = y;
-            return true;
-        }
-    }
+		T c1 = a1 * m_a.X + b1 * m_a.Y;
+
+		// Line CD represented as a2x + b2y = c2
+		T a2 = other.m_b.Y - other.m_a.Y;
+		T b2 = other.m_a.X - other.m_b.X;
+		T c2 = a2 * other.m_a.X + b2 * other.m_a.Y;
+
+		T det = a1 * b2 - a2 * b1;
+
+		if (Math::CloseEnough(det, 0.0f))
+		{
+			// The lines are parallel. This is simplified
+			// by returning a pair of FLT_MAX
+			return false;
+		}
+		else
+		{
+			T x = (b2 * c1 - b1 * c2) / det;
+			T y = (a1 * c2 - a2 * c1) / det;
+			out.X = x;
+			out.Y = y;
+			return true;
+		}
+	}
 };
 
 template <typename T>
 struct TLine3d
 {
-    TVector3<T> A;
-    TVector3<T> B;
-    TLine3d(const TVector3<T>& InA, const TVector3<T>& InB) : A(InA), B(InB)
-    {
-    }
+	TVector3<T> m_a;
+	TVector3<T> m_b;
+
+	TLine3d(const TVector3<T>& inA, const TVector3<T>& inB) : m_a(inA), m_b(inB)
+	{
+	}
 };
 
 struct FGrid
 {
-    std::vector<FLine3d> Lines;
+	std::vector<line3d> m_lines;
 
-    FGrid(float Divisions, float CellSize)
-    {
-        for (float Step = 0; Step <= Divisions; Step += CellSize)
-        {
-            Lines.emplace_back(FVector3(-Divisions, 0.0f, Step), FVector3(Divisions, 0.0f, Step));
-            Lines.emplace_back(FVector3(-Divisions, 0.0f, -Step), FVector3(Divisions, 0.0f, -Step));
-            Lines.emplace_back(FVector3(Step, 0.0f, -Divisions), FVector3(Step, 0.0f, Divisions));
-            Lines.emplace_back(FVector3(-Step, 0.0f, -Divisions), FVector3(-Step, 0.0f, Divisions));
-        }
-    }
+	FGrid(const float divisions, const float cellSize)
+	{
+		for (float step = 0; step <= divisions; step += cellSize)
+		{
+			m_lines.emplace_back(vec3f(-divisions, 0.0f, step), vec3f(divisions, 0.0f, step));
+			m_lines.emplace_back(vec3f(-divisions, 0.0f, -step), vec3f(divisions, 0.0f, -step));
+			m_lines.emplace_back(vec3f(step, 0.0f, -divisions), vec3f(step, 0.0f, divisions));
+			m_lines.emplace_back(vec3f(-step, 0.0f, -divisions), vec3f(-step, 0.0f, divisions));
+		}
+	}
 };

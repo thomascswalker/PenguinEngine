@@ -49,7 +49,7 @@ public:
 	static LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	HWND getHWnd() const { return m_hwnd; }
 	void setHInstance(const HINSTANCE newInstance) { m_hInstance = newInstance; }
-	FRect getSize() override;
+	rectf getSize() override;
 	EPlatformType getPlatformType() override { return EPlatformType::Windows; }
 
 	// Menu bar

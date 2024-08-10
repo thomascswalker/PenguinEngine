@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿// ReSharper disable CppInconsistentNaming
+#pragma once
 
 #include <map>
 
@@ -7,349 +8,358 @@
 #include "Framework/Engine/Delegate.h"
 
 class IInputHandler;
-class PWin32InputHandler;
-class PMacOSInputHandler;
-class PLinuxInputHandler;
+class Win32InputHandler;
+class MacOSInputHandler;
+class LinuxInputHandler;
 
 enum class EMouseButtonType : uint8
 {
-    Invalid,
-    Left,
-    Right,
-    Middle
+	Invalid,
+	Left,
+	Right,
+	Middle
 };
 
 enum class EKey : uint8
 {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-    I,
-    J,
-    K,
-    L,
-    M,
-    N,
-    O,
-    P,
-    Q,
-    R,
-    S,
-    T,
-    U,
-    V,
-    W,
-    X,
-    Y,
-    Z,
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    Zero,
-    F1,
-    F2,
-    F3,
-    F4,
-    F5,
-    F6,
-    F7,
-    F8,
-    F9,
-    F10,
-    F11,
-    F12,
-    Escape,
-    Spacebar,
-    Enter,
-    Ctrl,
-    Shift,
-    Alt,
-    CapsLock,
-    Backspace,
+	A,
+	B,
+	C,
+	D,
+	E,
+	F,
+	G,
+	H,
+	I,
+	J,
+	K,
+	L,
+	M,
+	N,
+	O,
+	P,
+	Q,
+	R,
+	S,
+	T,
+	U,
+	V,
+	W,
+	X,
+	Y,
+	Z,
+	One,
+	Two,
+	Three,
+	Four,
+	Five,
+	Six,
+	Seven,
+	Eight,
+	Nine,
+	Zero,
+	F1,
+	F2,
+	F3,
+	F4,
+	F5,
+	F6,
+	F7,
+	F8,
+	F9,
+	F10,
+	F11,
+	F12,
+	Escape,
+	Spacebar,
+	Enter,
+	Ctrl,
+	Shift,
+	Alt,
+	CapsLock,
+	Backspace,
 
-    // Meta
-    Count
+	// Meta
+	Count
 };
 
 enum class EModifierKey : uint8
 {
-    None  = 0x00,
-    Shift = 0x01,
-    Ctrl  = 0x02,
-    Alt   = 0x04
+	None = 0x00,
+	Shift = 0x01,
+	Ctrl = 0x02,
+	Alt = 0x04
 };
+
 DEFINE_BITMASK_OPERATORS(EModifierKey)
 
-struct FKey
+struct Key
 {
-    const char* Name;
+	const char* m_name;
 };
 
 enum class EMenuAction : uint16
 {
-    // File
-    Open,
-    Quit,
+	// File
+	Open,
+	Quit,
 
-    // Display
-    Wireframe,
-    Shaded,
-    Depth,
-    Normals,
-    VertexNormals
+	// Display
+	Wireframe,
+	Shaded,
+	Depth,
+	Normals,
+	VertexNormals
 };
 
-DECLARE_MULTICAST_DELEGATE(FOnMouseMoved, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseLeftDown, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseLeftUp, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseRightDown, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseRightUp, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleDown, const FVector2&);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleUp, const FVector2&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMoved, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseLeftDown, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseLeftUp, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseRightDown, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseRightUp, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleDown, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleUp, const vec2f&);
 
-DECLARE_MULTICAST_DELEGATE(FOnKeyPressed, EKey);
-DECLARE_MULTICAST_DELEGATE(FOnMouseMiddleScrolled, float);
+DECLARE_MULTICAST_DELEGATE(OnKeyPressed, EKey);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleScrolled, float);
 
-DECLARE_MULTICAST_DELEGATE(FOnMenuActionPressed, EMenuAction);
+DECLARE_MULTICAST_DELEGATE(OnMenuActionPressed, EMenuAction);
 
 class IInputHandler
 {
 public:
-    static IInputHandler* GetInstance();
+	static IInputHandler* getInstance();
 
-    // Events
+	// Events
 
 protected:
-    bool bMouseLeftDown = false;
-    bool bMouseRightDown = false;
-    bool bMouseMiddleDown = false;
+	bool m_mouseLeftDown = false;
+	bool m_mouseRightDown = false;
+	bool m_mouseMiddleDown = false;
 
-    FVector2 ClickPosition;
-    FVector2 CurrentCursorPosition;
-    FVector2 PreviousCursorPosition;
-    FVector2 DeltaCursorPosition;
+	vec2f m_clickPosition;
+	vec2f m_currentCursorPosition;
+	vec2f m_previousCursorPosition;
+	vec2f m_deltaCursorPosition;
 
-    std::map<EKey, bool> KeyStateMap;
-    EModifierKey ModifierKeys = EModifierKey::None;
+	std::map<EKey, bool> m_keyStateMap;
+	EModifierKey m_modifierKeys = EModifierKey::None;
 
-    IInputHandler()
-    {
-        const uint8 KeyCount = static_cast<uint8>(EKey::Count);
-        for (uint8 Index = 0; Index < KeyCount; Index++)
-        {
-            KeyStateMap.emplace(static_cast<EKey>(Index), false);
-        }
-    }
-    ~IInputHandler() = default;
+	IInputHandler()
+	{
+		constexpr uint8 keyCount = static_cast<uint8>(EKey::Count);
+		for (uint8 index = 0; index < keyCount; index++)
+		{
+			m_keyStateMap.emplace(static_cast<EKey>(index), false);
+		}
+	}
+
+	~IInputHandler() = default;
 
 public:
-    // Events
-    FOnMouseMoved MouseMoved;
-    FOnMouseLeftDown MouseLeftDown;
-    FOnMouseRightDown MouseRightDown;
-    FOnMouseMiddleDown MouseMiddleDown;
-    FOnMouseLeftUp MouseLeftUp;
-    FOnMouseRightUp MouseRightUp;
-    FOnMouseMiddleUp MouseMiddleUp;
-    FOnMouseMiddleScrolled MouseMiddleScrolled;
-    FOnKeyPressed KeyPressed;
-    FOnMenuActionPressed MenuActionPressed;
+	// Events
+	OnMouseMoved m_onMouseMoved;
+	OnMouseLeftDown m_onMouseLeftDown;
+	OnMouseRightDown m_onMouseRightDown;
+	OnMouseMiddleDown m_onMouseMiddleDown;
+	OnMouseLeftUp m_onMouseLeftUp;
+	OnMouseRightUp m_onMouseRightUp;
+	OnMouseMiddleUp m_onMouseMiddleUp;
+	OnMouseMiddleScrolled m_onMouseMiddleScrolled;
+	OnKeyPressed m_keyPressed;
+	OnMenuActionPressed m_menuActionPressed;
 
-    // Mouse
-    virtual bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
-    virtual bool OnMouseUp(EMouseButtonType ButtonType, const FVector2& CursorPosition) { return false; }
-    virtual bool OnMouseWheel(float Delta) { return false; }
-    virtual bool OnMouseMove(const FVector2& CursorPosition) { return false; }
-    virtual bool IsMouseDown(EMouseButtonType ButtonType) const { return false; }
-    virtual bool IsAnyMouseDown() const { return false; }
+	// Mouse
+	virtual bool onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition) { return false; }
+	virtual bool onMouseUp(EMouseButtonType buttonType, const vec2f& cursorPosition) { return false; }
+	virtual bool onMouseWheel(float delta) { return false; }
+	virtual bool onMouseMove(const vec2f& cursorPosition) { return false; }
+	virtual bool isMouseDown(EMouseButtonType buttonType) const { return false; }
+	virtual bool isAnyMouseDown() const { return false; }
 
-    virtual FVector2 GetClickPosition() const { return ClickPosition; }
-    virtual FVector2 GetCurrentCursorPosition() const { return CurrentCursorPosition; }
-    virtual FVector2 GetPreviousCursorPosition() const { return PreviousCursorPosition; }
-    virtual FVector2 GetDeltaCursorPosition() const { return DeltaCursorPosition; }
-    virtual void ResetDeltaCursorPosition()
-    {
-        DeltaCursorPosition.X = 0.0f;
-        DeltaCursorPosition.Y = 0.0f;
-    }
+	virtual vec2f getClickPosition() const { return m_clickPosition; }
+	virtual vec2f getCurrentCursorPosition() const { return m_currentCursorPosition; }
+	virtual vec2f getPreviousCursorPosition() const { return m_previousCursorPosition; }
+	virtual vec2f getDeltaCursorPosition() const { return m_deltaCursorPosition; }
 
-    // Keys
-    virtual std::vector<EKey> GetKeysDown() const
-    {
-        std::vector<EKey> Keys;
-        for (const auto& [K, V] : KeyStateMap)
-        {
-            if (V)
-            {
-                Keys.emplace_back(K);
-            }
-        }
-        return Keys;
-    }
-    virtual bool OnKeyDown(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
-    virtual bool OnKeyUp(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) { return false; }
-    virtual bool IsKeyDown(EKey KeyCode) const { return false; }
-    virtual void ConsumeKey(const EKey KeyCode)
-    {
-        KeyStateMap.at(KeyCode) = false;
-    }
-    virtual bool IsAltDown() const
-    {
-        return KeyStateMap.at(EKey::Alt);
-    }
-    virtual bool IsShiftDown() const
-    {
-        return KeyStateMap.at(EKey::Shift);
-    }
-    virtual bool IsCtrlDown() const
-    {
-        return KeyStateMap.at(EKey::Ctrl);
-    }
+	virtual void resetDeltaCursorPosition()
+	{
+		m_deltaCursorPosition.X = 0.0f;
+		m_deltaCursorPosition.Y = 0.0f;
+	}
 
-    virtual void OnMenuActionPressed(EMenuAction ActionId) = 0;
+	// Keys
+	virtual std::vector<EKey> getKeysDown() const
+	{
+		std::vector<EKey> keys;
+		for (const auto& [k, v] : m_keyStateMap)
+		{
+			if (v)
+			{
+				keys.emplace_back(k);
+			}
+		}
+		return keys;
+	}
+
+	virtual bool onKeyDown(EKey keyCode, int32 keyFlags, bool isRepeat) { return false; }
+	virtual bool onKeyUp(EKey keyCode, int32 keyFlags, bool isRepeat) { return false; }
+	virtual bool isKeyDown(EKey keyCode) const { return false; }
+
+	virtual void consumeKey(const EKey keyCode)
+	{
+		m_keyStateMap.at(keyCode) = false;
+	}
+
+	virtual bool isAltDown() const
+	{
+		return m_keyStateMap.at(EKey::Alt);
+	}
+
+	virtual bool isShiftDown() const
+	{
+		return m_keyStateMap.at(EKey::Shift);
+	}
+
+	virtual bool isCtrlDown() const
+	{
+		return m_keyStateMap.at(EKey::Ctrl);
+	}
+
+	virtual void onMenuActionPressed(EMenuAction actionId) = 0;
 };
 
-class PWin32InputHandler : public IInputHandler
+class Win32InputHandler : public IInputHandler
 {
 protected:
-    static PWin32InputHandler* Instance;
-    PWin32InputHandler() = default;
-    ~PWin32InputHandler() = default;
+	static Win32InputHandler* m_instance;
+	Win32InputHandler() = default;
+	~Win32InputHandler() = default;
 
 public:
-    static PWin32InputHandler* GetInstance();
+	static Win32InputHandler* getInstance();
 
-    bool OnMouseDown(EMouseButtonType ButtonType, const FVector2& CursorPosition) override
-    {
-        switch (ButtonType)
-        {
-        case EMouseButtonType::Left :
-            bMouseLeftDown = true;
-            MouseLeftDown.Broadcast(CursorPosition);
-            break;
-        case EMouseButtonType::Right :
-            bMouseRightDown = true;
-            MouseRightDown.Broadcast(CursorPosition);
-            break;
-        case EMouseButtonType::Middle :
-            bMouseMiddleDown = true;
-            MouseMiddleDown.Broadcast(CursorPosition);
-            break;
-        case EMouseButtonType::Invalid :
-        default :
-            return false;
-        }
+	bool onMouseDown(const EMouseButtonType buttonType, const vec2f& cursorPosition) override
+	{
+		switch (buttonType)
+		{
+		case EMouseButtonType::Left:
+			m_mouseLeftDown = true;
+			m_onMouseLeftDown.Broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Right:
+			m_mouseRightDown = true;
+			m_onMouseRightDown.Broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Middle:
+			m_mouseMiddleDown = true;
+			m_onMouseMiddleDown.Broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Invalid:
+		default:
+			return false;
+		}
 
-        ClickPosition = CursorPosition;
+		m_clickPosition = cursorPosition;
 
-        return true;
-    }
-    bool OnMouseUp(EMouseButtonType ButtonType, const FVector2& CursorPosition) override
-    {
-        switch (ButtonType)
-        {
-        case EMouseButtonType::Left :
-            bMouseLeftDown = false;
-            MouseLeftUp.Broadcast(CursorPosition);
-            break;
-        case EMouseButtonType::Right :
-            bMouseRightDown = false;
-            MouseRightUp.Broadcast(CursorPosition);
-            break;
-        case EMouseButtonType::Middle :
-            bMouseMiddleDown = false;
-            MouseMiddleUp.Broadcast(CursorPosition);
-            break;
-        case EMouseButtonType::Invalid :
-        default :
-            return false;
-        }
-        ClickPosition = 0;
+		return true;
+	}
 
-        return true;
-    }
+	bool onMouseUp(const EMouseButtonType buttonType, const vec2f& cursorPosition) override
+	{
+		switch (buttonType)
+		{
+		case EMouseButtonType::Left:
+			m_mouseLeftDown = false;
+			m_onMouseLeftUp.Broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Right:
+			m_mouseRightDown = false;
+			m_onMouseRightUp.Broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Middle:
+			m_mouseMiddleDown = false;
+			m_onMouseMiddleUp.Broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Invalid:
+		default:
+			return false;
+		}
+		m_clickPosition = 0;
 
-    bool OnMouseWheel(float Delta) override
-    {
-        // Invert delta
-        MouseMiddleScrolled.Broadcast(Delta);
-        return true;
-    }
+		return true;
+	}
 
-    bool OnMouseMove(const FVector2& CursorPosition) override
-    {
-        // Update current cursor position
-        if (CurrentCursorPosition == CursorPosition)
-        {
-            DeltaCursorPosition = 0;
-            return false;
-        }
-        PreviousCursorPosition = CurrentCursorPosition;
-        CurrentCursorPosition = CursorPosition;
-        MouseMoved.Broadcast(CurrentCursorPosition);
-        DeltaCursorPosition = CurrentCursorPosition - PreviousCursorPosition;
-        return true;
-    }
+	bool onMouseWheel(const float delta) override
+	{
+		// Invert delta
+		m_onMouseMiddleScrolled.Broadcast(delta);
+		return true;
+	}
 
-    bool IsMouseDown(EMouseButtonType ButtonType) const override
-    {
-        switch (ButtonType)
-        {
-        case EMouseButtonType::Left :
-            return bMouseLeftDown;
-        case EMouseButtonType::Right :
-            return bMouseRightDown;
-        case EMouseButtonType::Middle :
-            return bMouseMiddleDown;
-        case EMouseButtonType::Invalid :
-        default :
-            return false;
-        }
-    }
+	bool onMouseMove(const vec2f& cursorPosition) override
+	{
+		// Update current cursor position
+		if (m_currentCursorPosition == cursorPosition)
+		{
+			m_deltaCursorPosition = 0;
+			return false;
+		}
+		m_previousCursorPosition = m_currentCursorPosition;
+		m_currentCursorPosition = cursorPosition;
+		m_onMouseMoved.Broadcast(m_currentCursorPosition);
+		m_deltaCursorPosition = m_currentCursorPosition - m_previousCursorPosition;
+		return true;
+	}
 
-    bool IsAnyMouseDown() const override
-    {
-        return bMouseLeftDown || bMouseRightDown || bMouseMiddleDown;
-    }
+	bool isMouseDown(const EMouseButtonType buttonType) const override
+	{
+		switch (buttonType)
+		{
+		case EMouseButtonType::Left:
+			return m_mouseLeftDown;
+		case EMouseButtonType::Right:
+			return m_mouseRightDown;
+		case EMouseButtonType::Middle:
+			return m_mouseMiddleDown;
+		case EMouseButtonType::Invalid:
+		default:
+			return false;
+		}
+	}
 
-    bool OnKeyDown(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) override
-    {
-        KeyStateMap[KeyCode] = true;
-        return true;
-    }
+	bool isAnyMouseDown() const override
+	{
+		return m_mouseLeftDown || m_mouseRightDown || m_mouseMiddleDown;
+	}
 
-    bool OnKeyUp(EKey KeyCode, int32 KeyFlags, bool bIsRepeat) override
-    {
-        KeyStateMap[KeyCode] = false;
-        KeyPressed.Broadcast(KeyCode);
-        return true;
-    }
+	bool onKeyDown(const EKey keyCode, int32 keyFlags, bool isRepeat) override
+	{
+		m_keyStateMap[keyCode] = true;
+		return true;
+	}
 
-    bool IsKeyDown(EKey KeyCode) const override
-    {
-        return KeyStateMap.at(KeyCode);
-    }
+	bool onKeyUp(const EKey keyCode, int32 keyFlags, bool isRepeat) override
+	{
+		m_keyStateMap[keyCode] = false;
+		m_keyPressed.Broadcast(keyCode);
+		return true;
+	}
 
-    void OnMenuActionPressed(EMenuAction ActionId) override
-    {
-        switch (ActionId)
-        {
-        case EMenuAction::Open :
+	bool isKeyDown(const EKey keyCode) const override
+	{
+		return m_keyStateMap.at(keyCode);
+	}
 
-            break;
-        case EMenuAction::Quit :
-            break;
-        }
-    }
+	void onMenuActionPressed(const EMenuAction actionId) override
+	{
+		switch (actionId)
+		{
+		case EMenuAction::Open:
+
+			break;
+		case EMenuAction::Quit:
+			break;
+		}
+	}
 };

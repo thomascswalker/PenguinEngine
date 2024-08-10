@@ -6,111 +6,111 @@
 
 namespace IO
 {
-    static bool Exists(const std::string& FileName)
-    {
-        return std::filesystem::exists(FileName);
-    }
+	static bool exists(const std::string& fileName)
+	{
+		return std::filesystem::exists(fileName);
+	}
 
-    static bool IsType(const std::string& FileName, const std::string& Type)
-    {
-        return FileName.ends_with(Type);
-    }
+	static bool isType(const std::string& fileName, const std::string& type)
+	{
+		return fileName.ends_with(type);
+	}
 
-    static bool ReadFile(const std::string& FileName, std::string& Buffer)
-    {
-        if (!Exists(FileName))
-        {
-            LOG_ERROR("File %s not found.", FileName.c_str());
-            return false;
-        }
-        std::ifstream Stream(FileName, std::ios::in | std::ios::binary);
-        if (Stream.bad())
-        {
-            LOG_ERROR("Unable to read file %s.", FileName.c_str());
-            return false;
-        }
-        const uint64 Size = std::filesystem::file_size(FileName);
-        Buffer.resize(Size, '\0');
-        Stream.read(Buffer.data(), Size);
-        return true;
-    }
+	static bool readFile(const std::string& fileName, std::string& buffer)
+	{
+		if (!exists(fileName))
+		{
+			LOG_ERROR("File %s not found.", fileName.c_str());
+			return false;
+		}
+		std::ifstream stream(fileName, std::ios::in | std::ios::binary);
+		if (stream.bad())
+		{
+			LOG_ERROR("Unable to read file %s.", fileName.c_str());
+			return false;
+		}
+		const uint64 size = std::filesystem::file_size(fileName);
+		buffer.resize(size, '\0');
+		stream.read(buffer.data(), size);
+		return true;
+	}
 
-    static bool ReadFile(const std::string& FileName, std::vector<std::string>& Lines)
-    {
-        if (!Exists(FileName))
-        {
-            LOG_ERROR("File %s not found.", FileName.c_str());
-            return false;
-        }
-        std::ifstream Stream(FileName, std::ios::in | std::ios::binary);
-        if (Stream.bad())
-        {
-            LOG_ERROR("Unable to read file %s.", FileName.c_str());
-            return false;
-        }
-        const uint64 Size = std::filesystem::file_size(FileName);
-        std::string Buffer;
-        Buffer.resize(Size, '\0');
-        Stream.read(Buffer.data(), Size);
+	static bool readFile(const std::string& fileName, std::vector<std::string>& lines)
+	{
+		if (!exists(fileName))
+		{
+			LOG_ERROR("File %s not found.", fileName.c_str());
+			return false;
+		}
+		std::ifstream stream(fileName, std::ios::in | std::ios::binary);
+		if (stream.bad())
+		{
+			LOG_ERROR("Unable to read file %s.", fileName.c_str());
+			return false;
+		}
+		const uint64 size = std::filesystem::file_size(fileName);
+		std::string buffer;
+		buffer.resize(size, '\0');
+		stream.read(buffer.data(), size);
 
-        Strings::Split(Buffer, Lines, "\n");
+		Strings::split(buffer, lines, "\n");
 
-        return true;
-    }
+		return true;
+	}
 
-    static std::istream& ReadLine(std::istream& Stream, std::string& Line)
-    {
-        // Clear the content of the Line
-        Line.clear();
+	static std::istream& readLine(std::istream& stream, std::string& line)
+	{
+		// Clear the content of the Line
+		line.clear();
 
-        // Prepare Stream for input
-        const std::istream::sentry Sentry(Stream, true);
-        if (!Sentry)
-        {
-            return Stream;
-        }
+		// Prepare Stream for input
+		const std::istream::sentry sentry(stream, true);
+		if (!sentry)
+		{
+			return stream;
+		}
 
-        // Create a new buffer from our Stream
-        std::streambuf* StreamBuffer = Stream.rdbuf();
+		// Create a new buffer from our Stream
+		std::streambuf* streamBuffer = stream.rdbuf();
 
 
-        // Switch on current char
-        while (true)
-        {
-            // Read the current character
-            const int Char = StreamBuffer->sbumpc();
-            switch (Char)
-            {
-            // For \n
-            case '\n' :
-                {
-                    return Stream;
-                }
-            // For \r\n
-            case '\r' :
-                {
-                    // If the next character is a new Line, we'll bump to that next Line
-                    if (StreamBuffer->sgetc() == '\n')
-                    {
-                        StreamBuffer->sbumpc();
-                    }
-                    return Stream;
-                }
-            // For \r
-            case EOF : // -1
-                {
-                    if (Line.empty())
-                    {
-                        Stream.setstate(std::ios::eofbit);
-                    }
-                    return Stream;
-                }
-            // All other cases, the rest of the Line
-            default :
-                {
-                    Line += static_cast<char>(Char);
-                }
-            }
-        }
-    }
+		// Switch on current char
+		while (true)
+		{
+			// Read the current character
+			const int c = streamBuffer->sbumpc();
+			switch (c)
+			{
+			// For \n
+			case '\n':
+				{
+					return stream;
+				}
+			// For \r\n
+			case '\r':
+				{
+					// If the next character is a new Line, we'll bump to that next Line
+					if (streamBuffer->sgetc() == '\n')
+					{
+						streamBuffer->sbumpc();
+					}
+					return stream;
+				}
+			// For \r
+			case EOF: // -1
+				{
+					if (line.empty())
+					{
+						stream.setstate(std::ios::eofbit);
+					}
+					return stream;
+				}
+			// All other cases, the rest of the Line
+			default:
+				{
+					line += static_cast<char>(c);
+				}
+			}
+		}
+	}
 }

@@ -3,18 +3,18 @@
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Core/Logging.h"
 
-PApplication* PApplication::m_instance = getInstance();
+Application* Application::m_instance = getInstance();
 
-PApplication* PApplication::getInstance()
+Application* Application::getInstance()
 {
 	if (m_instance == nullptr)
 	{
-		m_instance = new PApplication();
+		m_instance = new Application();
 	}
 	return m_instance;
 }
 
-int32 PApplication::run() const
+int32 Application::run() const
 {
 	// Initialize the platform
 	if (m_platform->create() != Success)

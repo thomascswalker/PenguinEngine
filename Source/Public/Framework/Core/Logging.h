@@ -11,103 +11,103 @@
 #include <windows.h>
 #endif
 
-#define LOG_DEBUG(X, ...) Logging::Debug(X, __VA_ARGS__);
-#define LOG_INFO(X, ...) Logging::Info(X, __VA_ARGS__);
-#define LOG_WARNING(X, ...) Logging::Warning(X, __VA_ARGS__);
-#define LOG_ERROR(X, ...) Logging ::Error(X, __VA_ARGS__);
+#define LOG_DEBUG(X, ...) Logging::debug(X, __VA_ARGS__);
+#define LOG_INFO(X, ...) Logging::info(X, __VA_ARGS__);
+#define LOG_WARNING(X, ...) Logging::warning(X, __VA_ARGS__);
+#define LOG_ERROR(X, ...) Logging ::error(X, __VA_ARGS__);
 
 namespace Logging
 {
-    enum class ELogLevel
-    {
-        Debug,
-        Info,
-        Warning,
-        Error,
-    };
+	enum class ELogLevel
+	{
+		Debug,
+		Info,
+		Warning,
+		Error,
+	};
 
-    class Logger
-    {
-        std::vector<std::pair<std::string, ELogLevel>> Messages;
+	class Logger
+	{
+		std::vector<std::pair<std::string, ELogLevel>> m_messages;
 
-        Logger() = default;
+		Logger() = default;
 
-    public:
-        static Logger* Instance;
-        static int Line;
-        static int Column;
-        static std::string Source;
+	public:
+		static Logger* m_instance;
+		static int m_line;
+		static int m_column;
+		static std::string m_source;
 
-        Logger(Logger& Other) = delete;
-        ~Logger() = default;
-        void operator=(const Logger& Other) = delete;
+		Logger(Logger& other) = delete;
+		~Logger() = default;
+		void operator=(const Logger& other) = delete;
 
-        static Logger* GetInstance();
+		static Logger* getInstance();
 
-        template <typename... Types>
-        void Log(std::format_string<Types...> Fmt, ELogLevel InLevel, Types&&... Args)
-        {
-            std::string Msg = std::format(Fmt, std::forward<Types>(Args)...);
-            Messages.push_back({Msg, InLevel});
+		template <typename... Types>
+		void log(std::format_string<Types...> fmt, ELogLevel inLevel, Types&&... args)
+		{
+			std::string msg = std::format(fmt, std::forward<Types>(args)...);
+			m_messages.push_back({msg, inLevel});
 
-            std::string OutMsg;
-            auto Now = std::chrono::system_clock::now();
-            const auto FmtTime = std::format("{0:%F %T}", Now);
-            OutMsg += "[" + FmtTime + "] ";
-            switch (InLevel)
-            {
-            case ELogLevel::Debug :
-                OutMsg += "[DEBUG] " + Msg + '\n';
-                break;
-            case ELogLevel::Info :
-                OutMsg += "[INFO] " + Msg + '\n';
-                break;
-            case ELogLevel::Warning :
-                OutMsg += "[WARNING] " + Msg + '\n';
-                break;
-            case ELogLevel::Error :
-                OutMsg += "[ERROR] " + Msg + '\n';
-                break;
-            }
+			std::string outMsg;
+			auto now = std::chrono::system_clock::now();
+			const auto fmtTime = std::format("{0:%F %T}", now);
+			outMsg += "[" + fmtTime + "] ";
+			switch (inLevel)
+			{
+			case ELogLevel::Debug:
+				outMsg += "[DEBUG] " + msg + '\n';
+				break;
+			case ELogLevel::Info:
+				outMsg += "[INFO] " + msg + '\n';
+				break;
+			case ELogLevel::Warning:
+				outMsg += "[WARNING] " + msg + '\n';
+				break;
+			case ELogLevel::Error:
+				outMsg += "[ERROR] " + msg + '\n';
+				break;
+			}
 #if _WIN32
-            // Windows apps which launch through the wWinMain do not output to
-            // the console. This handles that.
-            const auto WStrMsg = std::wstring(OutMsg.begin(), OutMsg.end());
-            OutputDebugStringW(WStrMsg.c_str());
+			// Windows apps which launch through the wWinMain do not output to
+			// the console. This handles that.
+			const auto wStrMsg = std::wstring(outMsg.begin(), outMsg.end());
+			OutputDebugStringW(wStrMsg.c_str());
 #else
             // Otherwise just use standard out.
             std::cout << OutMsg << '\n';
 #endif
-        }
+		}
 
-        int GetCount(ELogLevel InLevel);
-        std::vector<std::string> GetMessages(ELogLevel InLevel);
+		int getCount(ELogLevel inLevel);
+		std::vector<std::string> getMessages(ELogLevel inLevel);
 
-        void Clear() { Messages.clear(); }
-    };
+		void clear() { m_messages.clear(); }
+	};
 
-    template <typename... Types>
-    static constexpr void Debug(std::format_string<Types...> Fmt, Types&&... Args)
-    {
-        std::cout << std::format(Fmt, std::forward<Types>(Args)...) << std::endl;
-        Logger::GetInstance()->Log(Fmt, ELogLevel::Debug, std::forward<Types>(Args)...);
-    }
+	template <typename... Types>
+	static constexpr void debug(std::format_string<Types...> fmt, Types&&... args)
+	{
+		std::cout << std::format(fmt, std::forward<Types>(args)...) << std::endl;
+		Logger::getInstance()->log(fmt, ELogLevel::Debug, std::forward<Types>(args)...);
+	}
 
-    template <typename... Types>
-    static constexpr void Info(std::format_string<Types...> Fmt, Types&&... Args)
-    {
-        Logger::GetInstance()->Log(Fmt, ELogLevel::Info, std::forward<Types>(Args)...);
-    }
+	template <typename... Types>
+	static constexpr void info(std::format_string<Types...> fmt, Types&&... args)
+	{
+		Logger::getInstance()->log(fmt, ELogLevel::Info, std::forward<Types>(args)...);
+	}
 
-    template <typename... Types>
-    static constexpr void Warning(std::format_string<Types...> Fmt, Types&&... Args)
-    {
-        Logger::GetInstance()->Log(Fmt, ELogLevel::Warning, std::forward<Types>(Args)...);
-    }
+	template <typename... Types>
+	static constexpr void warning(std::format_string<Types...> fmt, Types&&... args)
+	{
+		Logger::getInstance()->log(fmt, ELogLevel::Warning, std::forward<Types>(args)...);
+	}
 
-    template <typename... Types>
-    static constexpr void Error(std::format_string<Types...> Fmt, Types&&... Args)
-    {
-        Logger::GetInstance()->Log(Fmt, ELogLevel::Error, std::forward<Types>(Args)...);
-    }
+	template <typename... Types>
+	static constexpr void error(std::format_string<Types...> fmt, Types&&... args)
+	{
+		Logger::getInstance()->log(fmt, ELogLevel::Error, std::forward<Types>(args)...);
+	}
 } // namespace Logging

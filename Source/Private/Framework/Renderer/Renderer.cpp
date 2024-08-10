@@ -8,31 +8,31 @@
 
 /* Renderer */
 
-PRenderer::PRenderer(uint32 inWidth, uint32 inHeight)
+Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 {
-	m_viewport = std::make_shared<PViewport>(inWidth, inHeight);
+	m_viewport = std::make_shared<Viewport>(inWidth, inHeight);
 	m_grid = std::make_unique<FGrid>(8, 4.0f);
 
 	addChannel(EChannelType::Data, "Depth");
 	addChannel(EChannelType::Color, "Color");
 
 	// Set default render flags
-	m_settings = Renderer::PRenderSettings();
+	m_settings = RenderSettings();
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
 }
 
-void PRenderer::resize(const uint32 inWidth, const uint32 inHeight) const
+void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 {
-	m_viewport->Resize(inWidth, inHeight);
+	m_viewport->resize(inWidth, inHeight);
 	for (const auto& channel : m_channels | std::views::values)
 	{
 		channel->resize(inWidth, inHeight);
 	}
 }
 
-bool PRenderer::clipLine(FVector2* a, FVector2* b) const
+bool Renderer::clipLine(vec2f* a, vec2f* b) const
 {
 	const int32 minX = 0;
 	const int32 minY = 0;
@@ -106,15 +106,15 @@ bool PRenderer::clipLine(FVector2* a, FVector2* b) const
 	return true;
 }
 
-bool PRenderer::clipLine(FLine* line) const
+bool Renderer::clipLine(linef* line) const
 {
-	return clipLine(&line->A, &line->B);
+	return clipLine(&line->m_a, &line->m_b);
 }
 
-void PRenderer::drawLine(const FVector3& inA, const FVector3& inB, const FColor& color) const
+void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) const
 {
-	FVector2 a(inA.X, inA.Y);
-	FVector2 b(inB.X, inB.Y);
+	vec2f a(inA.X, inA.Y);
+	vec2f b(inB.X, inB.Y);
 
 	// Clip the screen points within the viewport. If the line points are outside the viewport entirely
 	// then just return.
@@ -131,8 +131,8 @@ void PRenderer::drawLine(const FVector3& inA, const FVector3& inB, const FColor&
 	bool bIsSteep = false;
 	if (Math::Abs(a.X - b.X) < Math::Abs(a.Y - b.Y))
 	{
-		a = FVector2(a.Y, a.X);
-		b = FVector2(b.Y, b.X);
+		a = vec2f(a.Y, a.X);
+		b = vec2f(b.Y, b.X);
 		bIsSteep = true;
 	}
 
@@ -177,31 +177,31 @@ void PRenderer::drawLine(const FVector3& inA, const FVector3& inB, const FColor&
 	}
 }
 
-void PRenderer::drawLine(const FLine3d& line, const FColor& color) const
+void Renderer::drawLine(const line3d& line, const Color& color) const
 {
-	drawLine(line.A, line.B, color);
+	drawLine(line.m_a, line.m_b, color);
 }
 
-void PRenderer::drawTriangle(const PVertex& v0, const PVertex& v1, const PVertex& v2)
+void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2)
 {
-	const PCamera* camera = m_viewport->GetCamera();
-	m_currentShader->Init(camera->getViewData());
+	const Camera* camera = m_viewport->getCamera();
+	m_currentShader->init(camera->getViewData());
 
-	if (!m_currentShader->ComputeVertexShader(v0, v1, v2))
+	if (!m_currentShader->computeVertexShader(v0, v1, v2))
 	{
 		return;
 	}
 
-	if (m_settings.GetRenderFlag(ERenderFlag::Shaded))
+	if (m_settings.getRenderFlag(ERenderFlag::Shaded))
 	{
-		m_currentShader->ViewMatrix = camera->m_viewMatrix;
+		m_currentShader->m_viewMatrix = camera->m_viewMatrix;
 		scanline();
 	}
 
-	FVector3 s0 = m_currentShader->S0;
-	FVector3 s1 = m_currentShader->S1;
-	FVector3 s2 = m_currentShader->S2;
-	if (m_settings.GetRenderFlag(ERenderFlag::Wireframe))
+	vec3f s0 = m_currentShader->m_s0;
+	vec3f s1 = m_currentShader->m_s1;
+	vec3f s2 = m_currentShader->m_s2;
+	if (m_settings.getRenderFlag(ERenderFlag::Wireframe))
 	{
 		drawLine({s0.X, s0.Y}, {s1.X, s1.Y}, m_wireColor);
 		drawLine({s1.X, s1.Y}, {s2.X, s2.Y}, m_wireColor);
@@ -209,53 +209,55 @@ void PRenderer::drawTriangle(const PVertex& v0, const PVertex& v1, const PVertex
 	}
 
 	// Draw normal direction
-	if (m_settings.GetRenderFlag(ERenderFlag::Normals))
+	if (m_settings.getRenderFlag(ERenderFlag::Normals))
 	{
 		// Get the center of the triangle
-		FVector3 triangleCenter = (m_currentShader->V0.Position + m_currentShader->V1.Position + m_currentShader->V2.
-				Position)
+		vec3f triangleCenter = (m_currentShader->m_v0.m_position + m_currentShader->m_v1.m_position + m_currentShader
+				->m_v2
+				.
+				m_position)
 			/ 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
-		FVector3 triangleNormal = m_currentShader->TriangleWorldNormal;
+		vec3f triangleNormal = m_currentShader->m_triangleWorldNormal;
 
-		FVector3 normalStartScreen;
-		FVector3 normalEndScreen;
+		vec3f normalStartScreen;
+		vec3f normalEndScreen;
 
 		// Compute two screen-space points:
 		// 1. The center of the triangle
 		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
-		Math::projectWorldToScreen(triangleCenter, normalStartScreen, m_viewport->GetCamera()->getViewData());
+		Math::projectWorldToScreen(triangleCenter, normalStartScreen, m_viewport->getCamera()->getViewData());
 		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen,
-		                           m_viewport->GetCamera()->getViewData());
+		                           m_viewport->getCamera()->getViewData());
 
 		// Draw the line between the two points
 		drawLine(
 			normalStartScreen, // Start
 			normalEndScreen, // End
-			FColor::Yellow()
+			Color::yellow()
 		);
 	}
 }
 
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
-void PRenderer::drawMesh(const PMesh* mesh)
+void Renderer::drawMesh(const Mesh* mesh)
 {
-	for (const auto& triangle : mesh->Triangles)
+	for (const auto& triangle : mesh->m_triangles)
 	{
-		drawTriangle(triangle.V0, triangle.V1, triangle.V2);
+		drawTriangle(triangle.m_v0, triangle.m_v1, triangle.m_v2);
 	}
 }
 
-void PRenderer::drawGrid() const
+void Renderer::drawGrid() const
 {
-	for (const FLine3d& line : m_grid->Lines)
+	for (const line3d& line : m_grid->m_lines)
 	{
 		// Project the world-space points to screen-space
-		FVector3 s0, s1;
+		vec3f s0, s1;
 		bool lineOnScreen = false;
-		lineOnScreen |= m_viewport->ProjectWorldToScreen(line.A, s0);
-		lineOnScreen |= m_viewport->ProjectWorldToScreen(line.B, s1);
+		lineOnScreen |= m_viewport->projectWorldToScreen(line.m_a, s0);
+		lineOnScreen |= m_viewport->projectWorldToScreen(line.m_b, s1);
 
 		// If neither of the points are on the screen, return
 		if (!lineOnScreen)
@@ -267,10 +269,10 @@ void PRenderer::drawGrid() const
 	}
 }
 
-void PRenderer::draw()
+void Renderer::draw()
 {
 	// Recalculate the view-projection matrix of the camera
-	m_viewport->GetCamera()->computeViewProjectionMatrix();
+	m_viewport->getCamera()->computeViewProjectionMatrix();
 
 	// Reset all buffers to their default values (namely Z to Inf)
 	clearChannels();
@@ -279,123 +281,119 @@ void PRenderer::draw()
 	drawGrid();
 
 	// Draw each mesh
-	const PEngine* engine = PEngine::getInstance();
+	const Engine* engine = Engine::getInstance();
 	for (const auto& mesh : engine->getMeshes())
 	{
 		drawMesh(mesh.get());
 	}
 
 	// Draw mouse cursor line from click origin
-	const IInputHandler* inputHandler = IInputHandler::GetInstance();
-	if (inputHandler->IsMouseDown(EMouseButtonType::Left) && inputHandler->IsAltDown())
+	const IInputHandler* inputHandler = IInputHandler::getInstance();
+	if (inputHandler->isMouseDown(EMouseButtonType::Left) && inputHandler->isAltDown())
 	{
-		const FVector3 a = inputHandler->GetClickPosition();
+		const vec3f a = inputHandler->getClickPosition();
 		if (a.X != 0.0f && a.Y != 0.0f)
 		{
-			const FVector3 b = inputHandler->GetCurrentCursorPosition();
-			drawLine(a, b, FColor::Red());
+			const vec3f b = inputHandler->getCurrentCursorPosition();
+			drawLine(a, b, Color::red());
 		}
 	}
 }
 
-void PRenderer::scanline()
+void Renderer::scanline() const
 {
-	FVector3 S0 = m_currentShader->S0;
-	FVector3 S1 = m_currentShader->S1;
-	FVector3 S2 = m_currentShader->S2;
+	const vec3f s0 = m_currentShader->m_s0;
+	const vec3f s1 = m_currentShader->m_s1;
+	const vec3f s2 = m_currentShader->m_s2;
 
 	// Compute the bounds of just this triangle on the screen
-	int32 Width = getWidth();
-	int32 Height = getHeight();
-	const FRect Bounds = m_currentShader->ScreenBounds;
-	const int32 MinX = Math::Max(static_cast<int32>(Bounds.Min().X), 0);
-	const int32 MaxX = Math::Min(static_cast<int32>(Bounds.Max().X), Width - 1);
-	const int32 MinY = Math::Max(static_cast<int32>(Bounds.Min().Y), 0);
-	const int32 MaxY = Math::Min(static_cast<int32>(Bounds.Max().Y), Height - 1);
+	const int32 width = getWidth();
+	const int32 height = getHeight();
+	const rectf bounds = m_currentShader->m_screenBounds;
+	const int32 minX = Math::Max(static_cast<int32>(bounds.Min().X), 0);
+	const int32 maxX = Math::Min(static_cast<int32>(bounds.Max().X), width - 1);
+	const int32 minY = Math::Max(static_cast<int32>(bounds.Min().Y), 0);
+	const int32 maxY = Math::Min(static_cast<int32>(bounds.Max().Y), height - 1);
 
 	// Precompute the area of the screen triangle so we're not computing it every pixel
-	const float Area = Math::Area2D(S0, S1, S2) * 2.0f;
-	const float OneOverArea = 1.0f / Area;
+	const float area = Math::Area2D(s0, s1, s2) * 2.0f;
+	const float oneOverArea = 1.0f / area;
 
-	int32 InitialOffset = MinY * Width;
+	const int32 initialOffset = minY * width;
 
-	std::shared_ptr<PChannel> DepthChannel = getDepthChannel();
-	float* DepthMemory = static_cast<float*>(DepthChannel->m_memory) + InitialOffset; // float, 32-bytes
+	std::shared_ptr<PChannel> depthChannel = getDepthChannel();
+	float* depthMemory = static_cast<float*>(depthChannel->m_memory) + initialOffset; // float, 32-bytes
 
-	std::shared_ptr<PChannel> ColorChannel = getColorChannel();
-	int32* ColorMemory = static_cast<int32*>(ColorChannel->m_memory) + InitialOffset; // int32, 32-bytes
+	std::shared_ptr<PChannel> colorChannel = getColorChannel();
+	int32* colorMemory = static_cast<int32*>(colorChannel->m_memory) + initialOffset; // int32, 32-bytes
 
 	// Prior to the loop computing each pixel in the triangle, get the render settings
-	const bool bRenderDepth = m_settings.GetRenderFlag(ERenderFlag::Depth);
+	const bool bRenderDepth = m_settings.getRenderFlag(ERenderFlag::Depth);
 
-	const float Depth0 = Math::GetDepth(S0, S0, S1, S2, Area);
-	const float Depth1 = Math::GetDepth(S1, S0, S1, S2, Area);
-	const float Depth2 = Math::GetDepth(S2, S0, S1, S2, Area);
+	const float depth0 = Math::GetDepth(s0, s0, s1, s2, area);
+	const float depth1 = Math::GetDepth(s1, s0, s1, s2, area);
+	const float depth2 = Math::GetDepth(s2, s0, s1, s2, area);
 
 	// Loop through all pixels in the screen bounding box.
-	for (int32 Y = MinY; Y <= MaxY; Y++)
+	for (int32 y = minY; y <= maxY; y++)
 	{
-		for (int32 X = MinX; X <= MaxX; X++)
+		for (int32 x = minX; x <= maxX; x++)
 		{
-			FVector3 Point(X, Y, 0);
+			vec3f point(x, y, 0);
 
 			// Use Pineda's edge function to determine if the current pixel is within the triangle.
-			float W0 = Math::EdgeFunction(S1.X, S1.Y, S2.X, S2.Y, Point.X, Point.Y);
-			float W1 = Math::EdgeFunction(S2.X, S2.Y, S0.X, S0.Y, Point.X, Point.Y);
-			float W2 = Math::EdgeFunction(S0.X, S0.Y, S1.X, S1.Y, Point.X, Point.Y);
+			float w0 = Math::EdgeFunction(s1.X, s1.Y, s2.X, s2.Y, point.X, point.Y);
+			float w1 = Math::EdgeFunction(s2.X, s2.Y, s0.X, s0.Y, point.X, point.Y);
+			float w2 = Math::EdgeFunction(s0.X, s0.Y, s1.X, s1.Y, point.X, point.Y);
 
-			if (W0 <= 0.0f || W1 <= 0.0f || W2 <= 0.0f)
+			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
 			{
 				continue;
 			}
 
-			FVector3 UVW;
-			float* DepthPixel = DepthMemory + X;
-			int32* ColorPixel = ColorMemory + X;
+			vec3f uvw;
+			float* depthPixel = depthMemory + x;
+			int32* colorPixel = colorMemory + x;
 
 			// From the edge vectors, extrapolate the barycentric coordinates for this pixel.
-			W0 *= OneOverArea;
-			W1 *= OneOverArea;
-			W2 *= OneOverArea;
+			w0 *= oneOverArea;
+			w1 *= oneOverArea;
+			w2 *= oneOverArea;
 
-			UVW.X = W0;
-			UVW.Y = W1;
-			UVW.Z = W2;
-			m_currentShader->UVW = UVW;
+			uvw.X = w0;
+			uvw.Y = w1;
+			uvw.Z = w2;
+			m_currentShader->m_uvw = uvw;
 
 			if (bRenderDepth)
 			{
 				// Interpolate depth given UVW
-				float NewDepth = UVW.X * Depth0 + UVW.Y * Depth1 + UVW.Z * Depth2;
+				float newDepth = uvw.X * depth0 + uvw.Y * depth1 + uvw.Z * depth2;
 
 				// Compare the new depth to the current depth at this pixel. If the new depth is further than
 				// the current depth, continue.
-				float CurrentDepth = *DepthPixel;
-				if (NewDepth > CurrentDepth)
+				float currentDepth = *depthPixel;
+				if (newDepth > currentDepth)
 				{
 					continue;
 				}
 				// If the new depth is closer than the current depth, set the current depth
 				// at this pixel to the new depth we just got.
-				*DepthPixel = NewDepth;
+				*depthPixel = newDepth;
 			}
 
-			// Compute world position
-			FVector3 UVWX(UVW.X);
-			FVector3 UVWY(UVW.Y);
-			FVector3 UVWZ(UVW.Z);
-
-			m_currentShader->PixelWorldPosition = m_currentShader->V0.Position * UVW.X + m_currentShader->V1.Position *
-				UVW.Y
-				+ m_currentShader->V2.Position * UVW.Z;
+			m_currentShader->m_pixelWorldPosition = m_currentShader->m_v0.m_position * uvw.X + m_currentShader->m_v1.
+				m_position *
+				uvw.Y
+				+ m_currentShader->m_v2.m_position * uvw.Z;
 
 			// Compute the final color for this pixel
-			m_currentShader->ComputePixelShader(Point.X, Point.Y);
+			m_currentShader->computePixelShader(point.X, point.Y);
 
 			// Set the current pixel in memory to the computed color
-			*ColorPixel = m_currentShader->OutColor;
+			*colorPixel = m_currentShader->m_outColor;
 		}
-		DepthMemory += Width;
-		ColorMemory += Width;
+		depthMemory += width;
+		colorMemory += width;
 	}
 }

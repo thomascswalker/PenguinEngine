@@ -65,7 +65,7 @@ struct PChannel
 		*ptr = value;
 	}
 
-	void setPixel(const int32 x, const int32 y, const FColor& color) const
+	void setPixel(const int32 x, const int32 y, const Color& color) const
 	{
 		assert(Type == EChannelType::Color);
 		if (x < 0 || x >= m_width || y < 0 || y >= m_height)
@@ -78,7 +78,7 @@ struct PChannel
 		// Placing pixels in memory order within a uint32:
 		// BB GG RR AA
 		// 00 00 00 00
-		*ptr = ((color.R << 16) | color.G << 8) | color.B; // TODO: Disregard alpha channel for now
+		*ptr = ((color.r << 16) | color.g << 8) | color.b; // TODO: Disregard alpha channel for now
 	}
 
 	template <typename T>
@@ -131,32 +131,32 @@ struct PBufferObject
 	}
 };
 
-class PRenderer
+class Renderer
 {
 	// Draw channels
 	std::map<std::string, std::shared_ptr<PChannel>> m_channels;
-	std::shared_ptr<PViewport> m_viewport;
+	std::shared_ptr<Viewport> m_viewport;
 	std::unique_ptr<FGrid> m_grid;
 
 	std::unique_ptr<PBufferObject<float>> m_vertexBuffer;
 	std::unique_ptr<PBufferObject<uint32>> m_indexBuffer;
 
 	// Constants
-	const FColor m_wireColor = FColor::FromRgba(255, 175, 50);
-	const FColor m_gridColor = FColor::FromRgba(128, 128, 128);
+	const Color m_wireColor = Color::fromRgba(255, 175, 50);
+	const Color m_gridColor = Color::fromRgba(128, 128, 128);
 
 	// Shaders
 	std::shared_ptr<IShader> m_currentShader = nullptr;
 
 public:
 	// Settings
-	Renderer::PRenderSettings m_settings;
+	RenderSettings m_settings;
 
-	PRenderer(uint32 inWidth, uint32 inHeight);
+	Renderer(uint32 inWidth, uint32 inHeight);
 	void resize(uint32 inWidth, uint32 inHeight) const;
-	int32 getWidth() const { return m_viewport->GetCamera()->m_width; }
-	int32 getHeight() const { return m_viewport->GetCamera()->m_height; }
-	PViewport* getViewport() const { return m_viewport.get(); }
+	int32 getWidth() const { return m_viewport->getCamera()->m_width; }
+	int32 getHeight() const { return m_viewport->getCamera()->m_height; }
+	Viewport* getViewport() const { return m_viewport.get(); }
 
 	/* Channels */
 
@@ -192,16 +192,16 @@ public:
 
 	/* Drawing */
 
-	bool clipLine(FVector2* a, FVector2* b) const;
-	bool clipLine(FLine* line) const;
-	void drawLine(const FVector3& inA, const FVector3& inB, const FColor& color) const;
-	void drawLine(const FLine3d& line, const FColor& color) const;
-	void drawTriangle(const PVertex& v0, const PVertex& v1, const PVertex& v2);
-	void drawMesh(const PMesh* mesh);
+	bool clipLine(vec2f* a, vec2f* b) const;
+	bool clipLine(linef* line) const;
+	void drawLine(const vec3f& inA, const vec3f& inB, const Color& color) const;
+	void drawLine(const line3d& line, const Color& color) const;
+	void drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
+	void drawMesh(const Mesh* mesh);
 	void drawGrid() const;
 	void draw();
 
 
 	// Rasterizing triangles
-	void scanline();
+	void scanline() const;
 };

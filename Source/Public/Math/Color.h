@@ -2,83 +2,85 @@
 
 #include "MathFwd.h"
 
-struct FColor;
-struct FLinearColor;
+struct Color;
+struct LinearColor;
 
-struct FColor
+struct Color
 {
-    union
-    {
-        struct // NOLINT
-        {
-            uint8 R;
-            uint8 G;
-            uint8 B;
-            uint8 A;
-        };
-        uint8 RGBA[4];
-    };
+	union
+	{
+		struct // NOLINT
+		{
+			uint8 r;
+			uint8 g;
+			uint8 b;
+			uint8 a;
+		};
+
+		uint8 rgba[4];
+	};
 
 protected:
-    FColor(uint8 InR, uint8 InG, uint8 InB, uint8 InA = 255)
-    {
-        R = InR;
-        G = InG;
-        B = InB;
-        A = InA;
-    }
+	Color(const uint8 inR, const uint8 inG, const uint8 inB, const uint8 inA = 255)
+	{
+		r = inR;
+		g = inG;
+		b = inB;
+		a = inA;
+	}
 
 public:
-    static FColor Red() { return FromRgba(255, 0, 0); }
-    static FColor Green() { return FromRgba(0, 255, 0); }
-    static FColor Blue() { return FromRgba(0, 0, 255); }
+	static Color red() { return fromRgba(255, 0, 0); }
+	static Color green() { return fromRgba(0, 255, 0); }
+	static Color blue() { return fromRgba(0, 0, 255); }
 
-    static FColor Yellow() { return FromRgba(255, 255, 0); }
-    static FColor Magenta() { return FromRgba(255, 0, 255); }
-    static FColor Cyan() { return FromRgba(0, 255, 255); }
+	static Color yellow() { return fromRgba(255, 255, 0); }
+	static Color magenta() { return fromRgba(255, 0, 255); }
+	static Color cyan() { return fromRgba(0, 255, 255); }
 
-    static FColor White() { return FromRgba(255, 255, 255); }
-    static FColor Gray() { return FromRgba(128, 128, 128); }
-    static FColor Black() { return FromRgba(0, 0, 0); }
+	static Color white() { return fromRgba(255, 255, 255); }
+	static Color gray() { return fromRgba(128, 128, 128); }
+	static Color black() { return fromRgba(0, 0, 0); }
 
-    static FColor FromRgba(uint8 R, uint8 G, uint8 B, uint8 A = 255) { return {R, G, B, A}; }
+	static Color fromRgba(uint8 r, uint8 g, uint8 b, uint8 a = 255) { return {r, g, b, a}; }
 
 
-    int32 ToInt32() const
-    {
-        return (R << 16) | (G << 8) | B | 0;
-    }
+	int32 toInt32() const
+	{
+		return (r << 16) | (g << 8) | b | 0;
+	}
 };
 
-struct FLinearColor
+struct LinearColor
 {
-    union
-    {
-        struct // NOLINT
-        {
-            float R;
-            float G;
-            float B;
-            float A;
-        };
-        float RGBA[4];
-    };
+	union
+	{
+		struct
+		{
+			float r;
+			float g;
+			float b;
+			float a;
+		};
 
-    static FLinearColor FromRgba(float R, float G, float B, float A = 1.0f)
-    {
-        FLinearColor Color;
-        Color.R = R;
-        Color.G = G;
-        Color.B = B;
-        Color.A = A;
-        return Color;
-    }
+		float rgba[4];
+	};
 
-    void Clamp()
-    {
-        for (float& V : RGBA)
-        {
-            V = V > 1.0f ? 1.0f : V;
-        }
-    }
+	static LinearColor fromRgba(const float r, const float g, const float b, const float a = 1.0f)
+	{
+		LinearColor color;
+		color.r = r;
+		color.g = g;
+		color.b = b;
+		color.a = a;
+		return color;
+	}
+
+	void clamp()
+	{
+		for (float& v : rgba)
+		{
+			v = v > 1.0f ? 1.0f : v;
+		}
+	}
 };

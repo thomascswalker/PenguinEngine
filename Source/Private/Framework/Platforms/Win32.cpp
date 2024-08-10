@@ -60,9 +60,9 @@ std::map<int32, EKey> g_win32KeyMap
 LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
 	LRESULT result = 0;
-	PEngine* engine = PEngine::getInstance();
-	PRenderer* renderer = engine->getRenderer();
-	IInputHandler* inputHandler = IInputHandler::GetInstance();
+	Engine* engine = Engine::getInstance();
+	Renderer* renderer = engine->getRenderer();
+	IInputHandler* inputHandler = IInputHandler::getInstance();
 
 	switch (msg)
 	{
@@ -116,14 +116,14 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 				return 1;
 			}
 
-			const FVector2 cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
+			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
 			if (mouseUp)
 			{
-				inputHandler->OnMouseUp(buttonType, cursorPosition);
+				inputHandler->onMouseUp(buttonType, cursorPosition);
 			}
 			else
 			{
-				inputHandler->OnMouseDown(buttonType, cursorPosition);
+				inputHandler->onMouseDown(buttonType, cursorPosition);
 			}
 			return 0;
 		}
@@ -132,14 +132,14 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 	case WM_MOUSEMOVE:
 	case WM_INPUT:
 		{
-			const FVector2 cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
-			inputHandler->OnMouseMove(cursorPosition);
+			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
+			inputHandler->onMouseMove(cursorPosition);
 			return 0;
 		}
 	case WM_MOUSEWHEEL:
 		{
 			const float deltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
-			inputHandler->OnMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
+			inputHandler->onMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
 			return 0;
 		}
 	// Keyboard input
@@ -147,14 +147,14 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 	case WM_KEYDOWN:
 		{
 			const int32 key = static_cast<int32>(wParam);
-			inputHandler->OnKeyDown(g_win32KeyMap.at(key), 0, false);
+			inputHandler->onKeyDown(g_win32KeyMap.at(key), 0, false);
 			return 0;
 		}
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
 		{
 			const int32 key = static_cast<int32>(wParam);
-			inputHandler->OnKeyUp(g_win32KeyMap.at(key), 0, false);
+			inputHandler->onKeyUp(g_win32KeyMap.at(key), 0, false);
 			return 0;
 		}
 	case WM_PAINT:
@@ -184,7 +184,7 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 			}
 
 			// Display debug text
-			if (renderer->getViewport()->GetShowDebugText())
+			if (renderer->getViewport()->getShowDebugText())
 			{
 				// Draw text indicating the current FPS
 				RECT clientRect;
@@ -192,7 +192,7 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 				clientRect.top += 10;
 				clientRect.left += 10;
 
-				std::string outputString = renderer->getViewport()->GetDebugText();
+				std::string outputString = renderer->getViewport()->getDebugText();
 				SetTextColor(deviceContext, RGB(255, 255, 0));
 				SetBkColor(deviceContext, TRANSPARENT);
 				DrawText(
@@ -252,7 +252,7 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 	case WM_COMMAND:
 		{
 			const auto actionId = static_cast<EMenuAction>(LOWORD(wParam));
-			inputHandler->MenuActionPressed.Broadcast(actionId);
+			inputHandler->m_menuActionPressed.Broadcast(actionId);
 		}
 	default:
 		{
@@ -263,7 +263,7 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 
 	// If the mouse has not moved, and we move past all other messages, reset the delta cursor
 	// position to [0,0]
-	inputHandler->ResetDeltaCursorPosition();
+	inputHandler->resetDeltaCursorPosition();
 
 	return result;
 }
@@ -348,7 +348,7 @@ int32 PWin32Platform::start()
 	}
 
 	// Construct the engine
-	PEngine* engine = PEngine::getInstance();
+	Engine* engine = Engine::getInstance();
 
 	// Initialize the engine
 	RECT clientRect;
@@ -395,12 +395,12 @@ int32 PWin32Platform::start()
 int32 PWin32Platform::loop()
 {
 	// Tick the engine forward
-	if (PEngine* engine = PEngine::getInstance())
+	if (Engine* engine = Engine::getInstance())
 	{
 		engine->tick();
 
 		// Draw the frame
-		if (PRenderer* renderer = engine->getRenderer())
+		if (Renderer* renderer = engine->getRenderer())
 		{
 			// Draw the actual frame
 			renderer->draw();
@@ -428,8 +428,8 @@ int32 PWin32Platform::end()
 
 int32 PWin32Platform::swap()
 {
-	const PEngine* engine = PEngine::getInstance();
-	const PRenderer* renderer = engine->getRenderer();
+	const Engine* engine = Engine::getInstance();
+	const Renderer* renderer = engine->getRenderer();
 
 	// Copy from the color channel into the display buffer
 	const void* src = renderer->getColorChannel()->m_memory;
@@ -439,7 +439,7 @@ int32 PWin32Platform::swap()
 	return 0;
 }
 
-FRect PWin32Platform::getSize()
+rectf PWin32Platform::getSize()
 {
 	RECT outRect;
 

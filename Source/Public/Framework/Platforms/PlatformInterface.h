@@ -29,7 +29,7 @@ public:
 	virtual bool isInitialized() const = 0;
 
 	// Properties
-	virtual FRect getSize() = 0;
+	virtual rectf getSize() = 0;
 	virtual EPlatformType getPlatformType() = 0;
 
 	// UI

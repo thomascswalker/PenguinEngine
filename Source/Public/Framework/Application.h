@@ -7,38 +7,38 @@
 #include "Engine/Engine.h"
 #include "Input/InputHandler.h"
 
-class PEngine;
+class Engine;
 
-class PApplication
+class Application
 {
 public:
-	static PApplication* m_instance;
-	static PApplication* getInstance();
+	static Application* m_instance;
+	static Application* getInstance();
 
-	PApplication(const PApplication& other) = delete;
-	PApplication(PApplication&& other) noexcept = delete;
-	PApplication& operator=(const PApplication& other) = delete;
-	PApplication& operator=(PApplication&& other) noexcept = delete;
+	Application(const Application& other) = delete;
+	Application(Application&& other) noexcept = delete;
+	Application& operator=(const Application& other) = delete;
+	Application& operator=(Application&& other) noexcept = delete;
 
 	template <class PlatformType, typename... Types>
 	void Init(Types&&... Args) // NOLINT
 	{
 		m_platform = std::make_shared<PlatformType>(std::forward<Types>(Args)...);
-		m_engine = std::make_shared<PEngine>();
+		m_engine = std::make_shared<Engine>();
 
-		m_inputHandler = PWin32InputHandler::GetInstance();
+		m_inputHandler = Win32InputHandler::getInstance();
 		LOG_INFO("Initialized application.")
 	}
 
 	int32 run() const;
 	IPlatform* getPlatform() const { return m_platform.get(); }
-	PEngine* getEngine() const { return m_engine.get(); }
+	Engine* getEngine() const { return m_engine.get(); }
 
 protected:
-	PApplication() = default;
+	Application() = default;
 	IInputHandler* m_inputHandler;
 
 private:
 	std::shared_ptr<IPlatform> m_platform;
-	std::shared_ptr<PEngine> m_engine;
+	std::shared_ptr<Engine> m_engine;
 };

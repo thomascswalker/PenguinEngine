@@ -5,85 +5,95 @@
 
 enum class ECoordinateSpace
 {
-    Local,
-    World
+	Local,
+	World
 };
 
-class PObject
+class Object
 {
 protected:
-    FTransform Transform;
+	transf m_transform;
 
-    // Basis vectors
-    FVector3 ForwardVector;
-    FVector3 RightVector;
-    FVector3 UpVector;
+	// Basis vectors
+	vec3f m_forwardVector;
+	vec3f m_rightVector;
+	vec3f m_upVector;
 
 public:
-    virtual ~PObject() = default;
-    virtual void Update(float DeltaTime)
-    {
-    }
+	virtual ~Object() = default;
 
-    void ComputeBasisVectors()
-    {
-        FSphericalCoords Tmp = FSphericalCoords::FromRotation(Transform.Rotation);
-        ForwardVector = -Tmp.ToCartesian().Normalized(); // Negative because for some reason it defaults to the inverse
-        RightVector = Math::Cross(FVector3::UpVector(), ForwardVector).Normalized();
-        UpVector = Math::Cross(ForwardVector, RightVector).Normalized();
-    }
+	virtual void update(float deltaTime)
+	{
+	}
 
-    // Getters
-    FTransform GetTransform() const { return Transform; }
-    FVector3 GetTranslation() const { return Transform.Translation; }
-    FRotator GetRotation() const { return Transform.Rotation; }
-    FVector3 GetScale() const { return Transform.Scale; }
+	void computeBasisVectors()
+	{
+		const FSphericalCoords tmp = FSphericalCoords::FromRotation(m_transform.Rotation);
+		m_forwardVector = -tmp.ToCartesian().Normalized();
+		// Negative because for some reason it defaults to the inverse
+		m_rightVector = Math::Cross(vec3f::UpVector(), m_forwardVector).Normalized();
+		m_upVector = Math::Cross(m_forwardVector, m_rightVector).Normalized();
+	}
 
-    // Setters
-    void SetTranslation(const FVector3& NewTranslation) { Transform.Translation = NewTranslation; }
-    void SetRotation(const FRotator& NewRotation)
-    {
-        Transform.Rotation = NewRotation;
-        ComputeBasisVectors();
-    }
-    void SetScale(const FVector3& NewScale) { Transform.Scale = NewScale; }
+	// Getters
+	transf getTransform() const { return m_transform; }
+	vec3f getTranslation() const { return m_transform.Translation; }
+	rotf getRotation() const { return m_transform.Rotation; }
+	vec3f getScale() const { return m_transform.Scale; }
 
-    // Manipulators
-    void Translate(const FVector3& Delta, ECoordinateSpace Space = ECoordinateSpace::World)
-    {
-        Transform.Translation += Delta;
-    }
-    void Rotate(float Pitch, float Yaw, float Roll)
-    {
-        Transform.Rotation += FRotator(Pitch, Yaw, Roll);
-        Transform.Rotation.Normalize();
-        ComputeBasisVectors();
-    }
+	// Setters
+	void setTranslation(const vec3f& newTranslation) { m_transform.Translation = newTranslation; }
 
-    // Axes
+	void setRotation(const rotf& newRotation)
+	{
+		m_transform.Rotation = newRotation;
+		computeBasisVectors();
+	}
 
-    FVector3 GetForwardVector() const
-    {
-        return ForwardVector;
-    }
-    FVector3 GetBackwardVector() const
-    {
-        return -ForwardVector;
-    }
-    FVector3 GetRightVector() const
-    {
-        return RightVector;
-    }
-    FVector3 GetLeftVector() const
-    {
-        return -RightVector;
-    }
-    FVector3 GetUpVector() const
-    {
-        return UpVector;
-    }
-    FVector3 GetDownVector() const
-    {
-        return -UpVector;
-    }
+	void setScale(const vec3f& newScale) { m_transform.Scale = newScale; }
+
+	// Manipulators
+	void translate(const vec3f& delta)
+	{
+		m_transform.Translation += delta;
+	}
+
+	void rotate(const float pitch, const float yaw, const float roll)
+	{
+		m_transform.Rotation += rotf(pitch, yaw, roll);
+		m_transform.Rotation.Normalize();
+		computeBasisVectors();
+	}
+
+	// Axes
+
+	vec3f getForwardVector() const
+	{
+		return m_forwardVector;
+	}
+
+	vec3f getBackwardVector() const
+	{
+		return -m_forwardVector;
+	}
+
+	vec3f getRightVector() const
+	{
+		return m_rightVector;
+	}
+
+	vec3f getLeftVector() const
+	{
+		return -m_rightVector;
+	}
+
+	vec3f getUpVector() const
+	{
+		return m_upVector;
+	}
+
+	vec3f getDownVector() const
+	{
+		return -m_upVector;
+	}
 };

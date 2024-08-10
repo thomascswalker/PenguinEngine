@@ -3,57 +3,44 @@
 
 enum ERenderFlag : uint8
 {
-    None      = 0,
-    Wireframe = 1 << 0,
-    Shaded    = 1 << 2,
-    Depth     = 1 << 3,
-    Textures  = 1 << 4,
-    Lights    = 1 << 5,
-    Normals   = 1 << 6
+	None = 0,
+	Wireframe = 1 << 0,
+	Shaded = 1 << 2,
+	Depth = 1 << 3,
+	Textures = 1 << 4,
+	Lights = 1 << 5,
+	Normals = 1 << 6
 };
+
 DEFINE_BITMASK_OPERATORS(ERenderFlag);
 
-namespace Renderer
+struct RenderSettings
 {
-    struct PRenderSettings
-    {
-    private:
-        ERenderFlag RenderFlags = ERenderFlag::Wireframe;
-        bool bUseGlm = true;
+private:
+	ERenderFlag m_renderFlags = ERenderFlag::Wireframe;
 
-    public:
-        PRenderSettings()
-        {
-            RenderFlags = ERenderFlag::Shaded | ERenderFlag::Depth;
-        }
+public:
+	RenderSettings()
+	{
+		m_renderFlags = ERenderFlag::Shaded | ERenderFlag::Depth;
+	}
 
-        constexpr bool GetRenderFlag(const ERenderFlag Flag)
-        {
-            return (RenderFlags & Flag) == Flag;
-        }
+	constexpr bool getRenderFlag(const ERenderFlag flag) const
+	{
+		return (m_renderFlags & flag) == flag;
+	}
 
-        void SetRenderFlag(const ERenderFlag Flag, const bool bState)
-        {
-            uint8 CurrentFlag = RenderFlags;
-            bState ? CurrentFlag |= Flag : CurrentFlag &= ~Flag;
-            RenderFlags = static_cast<ERenderFlag>(CurrentFlag);
-        }
+	void setRenderFlag(const ERenderFlag flag, const bool state)
+	{
+		uint8 currentFlag = m_renderFlags;
+		state ? currentFlag |= flag : currentFlag &= ~flag;
+		m_renderFlags = static_cast<ERenderFlag>(currentFlag);
+	}
 
-        bool ToggleRenderFlag(const ERenderFlag Flag)
-        {
-            const bool bState = GetRenderFlag(Flag); // Flip the state
-            SetRenderFlag(Flag, !bState);
-            return !bState;
-        }
-
-        bool GetUseGlm()
-        {
-            return bUseGlm;
-        }
-
-        void SetUseGlm(const bool bNewState)
-        {
-            bUseGlm = bNewState;
-        }
-    };
-}
+	bool toggleRenderFlag(const ERenderFlag flag)
+	{
+		const bool state = getRenderFlag(flag); // Flip the state
+		setRenderFlag(flag, !state);
+		return !state;
+	}
+};

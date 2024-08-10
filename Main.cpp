@@ -10,14 +10,14 @@
 
 int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int32 nShowCmd)
 {
-	PApplication* app = PApplication::getInstance();
+	Application* app = Application::getInstance();
 	app->Init<PWin32Platform>(hInstance);
 	const int32 exitCode = app->run();
 	delete app;
 
 	if (exitCode != Success)
 	{
-		const auto errorMsgs = Logging::Logger::GetInstance()->GetMessages(Logging::ELogLevel::Error);
+		const auto errorMsgs = Logging::Logger::getInstance()->getMessages(Logging::ELogLevel::Error);
 		std::string msg = "Application failed with error(s):\n\n";
 		for (const auto& errorMsg : errorMsgs)
 		{
