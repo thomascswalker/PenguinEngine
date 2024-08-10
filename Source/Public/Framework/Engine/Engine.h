@@ -7,46 +7,46 @@
 
 class PEngine
 {
-    std::shared_ptr<PRenderer> Renderer;
-    bool bRunning = false;
+	std::shared_ptr<PRenderer> m_renderer;
+	bool m_isRunning = false;
 
-    TimePoint StartTime;
-    float DeltaTime = 0.0f;
+	TimePoint m_startTime;
+	float m_deltaTime = 0.0f;
 
-    float CameraSpeed = .01f;
-    float CameraSpeedMultiplier = 1.0f;
+	float m_cameraSpeed = .01f;
+	float m_cameraSpeedMultiplier = 1.0f;
 
-    std::vector<float*> Vertexes;
-    std::vector<uint32*> Indexes;
+	std::vector<float*> m_vertexes;
+	std::vector<uint32*> m_indexes;
 
 public:
-    static PEngine* Instance;
-    static PEngine* GetInstance();
+	static PEngine* m_instance;
+	static PEngine* getInstance();
 
-    bool Startup(uint32 InWidth, uint32 InHeight);
-    bool Shutdown();
+	bool startup(uint32 inWidth, uint32 inHeight);
+	bool shutdown();
 
-    void Tick();
+	void tick();
 
-    PRenderer* GetRenderer() const { return Renderer.get(); }
-    PViewport* GetViewport() const { return GetRenderer()->GetViewport(); }
-    PCamera* GetViewportCamera() const { return GetViewport()->GetCamera(); }
-    bool IsRunning() const { return bRunning; }
-    void SetRunning(bool bNewRunning) { bRunning = bNewRunning; }
+	PRenderer* getRenderer() const { return m_renderer.get(); }
+	PViewport* getViewport() const { return getRenderer()->getViewport(); }
+	PCamera* getViewportCamera() const { return getViewport()->GetCamera(); }
+	bool isRunning() const { return m_isRunning; }
+	void setRunning(const bool newState) { m_isRunning = newState; }
 
-    void OpenFile(const std::string& FileName);
+	void openFile(const std::string& fileName);
 
-    std::vector<std::shared_ptr<PMesh>> Meshes;
-    std::vector<std::shared_ptr<PMesh>> GetMeshes() const { return Meshes; }
+	std::vector<std::shared_ptr<PMesh>> m_meshes;
+	std::vector<std::shared_ptr<PMesh>> getMeshes() const { return m_meshes; }
 
-    constexpr float GetFps() const { return 1000.0f / DeltaTime; }
+	constexpr float getFps() const { return 1000.0f / m_deltaTime; }
 
-    void OnMouseMiddleScrolled(float Delta) const;
-    void OnKeyPressed(EKey KeyCode);
+	void onMouseMiddleScrolled(float delta) const;
+	void onKeyPressed(EKey keyCode) const;
 
-    void OnLeftMouseUp(const FVector2& CursorPosition) const;
-    void OnMiddleMouseUp(const FVector2& CursorPosition) const;
+	void onLeftMouseUp(const FVector2& cursorPosition) const;
+	void onMiddleMouseUp(const FVector2& cursorPosition) const;
 
-    void OnMenuActionPressed(EMenuAction ActionId);
-    void OnOpenPressed();
+	void onMenuActionPressed(EMenuAction actionId);
+	void onOpenPressed();
 };

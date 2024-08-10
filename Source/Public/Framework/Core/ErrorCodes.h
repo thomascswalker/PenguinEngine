@@ -2,14 +2,14 @@
 
 enum EErrorCodes
 {
-    // Generic
-    Success = 0,
+	// Generic
+	Success = 0,
 
-    // Platform
-    PlatformInitError = 10,
-    PlatformCreateError,
-    PlatformShowError,
-    PlatformStartError,
-    PlatformEndError,
-    PlatformLoopError,
+	// Platform
+	PlatformInitError = 10,
+	PlatformCreateError,
+	PlatformShowError,
+	PlatformStartError,
+	PlatformEndError,
+	PlatformLoopError,
 };

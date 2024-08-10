@@ -8,26 +8,26 @@
 // Windows entry point
 #include "Framework/Platforms/Win32Platform.h"
 
-int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int32 nShowCmd)
 {
-    PApplication* App = PApplication::GetInstance();
-    App->Init<PWin32Platform>(hInstance);
-    const int32 ExitCode = App->Run();
-    delete App;
+	PApplication* app = PApplication::getInstance();
+	app->Init<PWin32Platform>(hInstance);
+	const int32 exitCode = app->run();
+	delete app;
 
-    if (ExitCode != Success)
-    {
-        const auto ErrorMsgs = Logging::Logger::GetInstance()->GetMessages(Logging::ELogLevel::Error);
-        std::string Msg = "Application failed with error(s):\n\n";
-        for (const auto& EMsg : ErrorMsgs)
-        {
-            Msg += EMsg + '\n';
-        }
-        std::wstring WMsg(Msg.begin(), Msg.end());
-        MessageBox(nullptr, WMsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
-    }
+	if (exitCode != Success)
+	{
+		const auto errorMsgs = Logging::Logger::GetInstance()->GetMessages(Logging::ELogLevel::Error);
+		std::string msg = "Application failed with error(s):\n\n";
+		for (const auto& errorMsg : errorMsgs)
+		{
+			msg += errorMsg + '\n';
+		}
+		const std::wstring wMsg(msg.begin(), msg.end());
+		MessageBox(nullptr, wMsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
+	}
 
-    return ExitCode;
+	return exitCode;
 }
 
 #elif __APPLE__

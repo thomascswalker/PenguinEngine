@@ -8,36 +8,36 @@
 
 struct PPlatformMemory
 {
-    static void Free(void* Memory)
-    {
+	static void free(void* memory)
+	{
 #if _WIN32
-        VirtualFree(Memory, 0, MEM_RELEASE);
+		VirtualFree(memory, 0, MEM_RELEASE);
 #endif
-    }
+	}
 
-    static void* Alloc(const size_t Size)
-    {
+	static void* alloc(const size_t size)
+	{
 #if _WIN32
-        return VirtualAlloc(nullptr, Size, MEM_COMMIT, PAGE_READWRITE);
+		return VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE);
 #endif
-    }
+	}
 
-    static void* Realloc(void* Memory, const size_t Size)
-    {
-        if (Memory != nullptr)
-        {
-            Free(Memory);
-        }
-        return Alloc(Size);
-    }
+	static void* realloc(void* memory, const size_t size)
+	{
+		if (memory != nullptr)
+		{
+			free(memory);
+		}
+		return alloc(size);
+	}
 
-    template <typename T>
-    static void Fill(void* Memory, const size_t Size, T Value)
-    {
-        T* Ptr = static_cast<T*>(Memory);
-        for (size_t Index = 0; Index < Size; Index++)
-        {
-            *(Ptr++) = Value;
-        }
-    }
+	template <typename T>
+	static void fill(void* memory, const size_t size, T value)
+	{
+		T* ptr = static_cast<T*>(memory);
+		for (size_t index = 0; index < size; index++)
+		{
+			*(ptr++) = value;
+		}
+	}
 };

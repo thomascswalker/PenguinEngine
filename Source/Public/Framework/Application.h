@@ -8,36 +8,37 @@
 #include "Input/InputHandler.h"
 
 class PEngine;
+
 class PApplication
 {
 public:
-    static PApplication* Instance;
-    static PApplication* GetInstance();
+	static PApplication* m_instance;
+	static PApplication* getInstance();
 
-    PApplication(const PApplication& Other) = delete;
-    PApplication(PApplication&& Other) noexcept = delete;
-    PApplication& operator=(const PApplication& Other) = delete;
-    PApplication& operator=(PApplication&& Other) noexcept = delete;
+	PApplication(const PApplication& other) = delete;
+	PApplication(PApplication&& other) noexcept = delete;
+	PApplication& operator=(const PApplication& other) = delete;
+	PApplication& operator=(PApplication&& other) noexcept = delete;
 
-    template <class PlatformType, typename... Types>
-    void Init(Types&&... Args) // NOLINT
-    {
-        Platform = std::make_shared<PlatformType>(std::forward<Types>(Args)...);
-        Engine = std::make_shared<PEngine>();
+	template <class PlatformType, typename... Types>
+	void Init(Types&&... Args) // NOLINT
+	{
+		m_platform = std::make_shared<PlatformType>(std::forward<Types>(Args)...);
+		m_engine = std::make_shared<PEngine>();
 
-        InputHandler = PWin32InputHandler::GetInstance();
-        LOG_INFO("Initialized application.")
-    }
+		m_inputHandler = PWin32InputHandler::GetInstance();
+		LOG_INFO("Initialized application.")
+	}
 
-    int32 Run() const;
-    IPlatform* GetPlatform() const { return Platform.get(); }
-    PEngine* GetEngine() const { return Engine.get(); }
+	int32 run() const;
+	IPlatform* getPlatform() const { return m_platform.get(); }
+	PEngine* getEngine() const { return m_engine.get(); }
 
 protected:
-    PApplication() = default;
-    IInputHandler* InputHandler;
+	PApplication() = default;
+	IInputHandler* m_inputHandler;
 
 private:
-    std::shared_ptr<IPlatform> Platform;
-    std::shared_ptr<PEngine> Engine;
+	std::shared_ptr<IPlatform> m_platform;
+	std::shared_ptr<PEngine> m_engine;
 };

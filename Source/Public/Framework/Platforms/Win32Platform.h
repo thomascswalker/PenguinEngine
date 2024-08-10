@@ -7,52 +7,53 @@
 
 class PWin32Platform : public IPlatform
 {
-    // Windows specific variables
-    LPCWSTR ClassName = L"PenguinWindow";
-    LPCWSTR WindowName = L"Penguin Renderer";
-    HWND Hwnd = nullptr;
-    DWORD DefaultStyle = WS_OVERLAPPEDWINDOW;
-    int32 DefaultX = CW_USEDEFAULT;
-    int32 DefaultY = CW_USEDEFAULT;
-    int32 DefaultWidth = DEFAULT_VIEWPORT_WIDTH;
-    int32 DefaultHeight = DEFAULT_VIEWPORT_HEIGHT;
+	// Windows specific variables
+	LPCWSTR m_className = L"PenguinWindow";
+	LPCWSTR m_windowName = L"Penguin Renderer";
+	HWND m_hwnd = nullptr;
+	DWORD m_defaultStyle = WS_OVERLAPPEDWINDOW;
+	int32 m_defaultX = CW_USEDEFAULT;
+	int32 m_defaultY = CW_USEDEFAULT;
+	int32 m_defaultWidth = g_defaultViewportWidth;
+	int32 m_defaultHeight = g_defaultViewportHeight;
 
-    inline static BITMAPINFO BitmapInfo;
-    inline static HBITMAP DisplayBitmap;
-    inline static int8* DisplayBuffer;
+	inline static BITMAPINFO m_bitmapInfo;
+	inline static HBITMAP m_displayBitmap;
+	inline static int8* m_displayBuffer;
 
-    bool bInitialized = false;
+	bool m_initialized = false;
 
-    HINSTANCE HInstance;
-    bool Register();
+	HINSTANCE m_hInstance;
+	auto Register() -> bool;
 
-    HMENU MainMenu;
-    HMENU FileMenu;
-    HMENU DisplayMenu;
+	HMENU m_mainMenu;
+	HMENU m_fileMenu;
+	HMENU m_displayMenu;
 
 public:
-    // Platform interface
-    int32 Create() override;
-    int32 Show() override;
-    int32 Start() override;
-    int32 Loop() override;
-    int32 Paint() override;
-    int32 End() override;
-    int32 Swap() override;
-    bool IsInitialized() const override { return bInitialized; }
+	// Platform interface
+	int32 create() override;
+	int32 show() override;
+	int32 start() override;
+	int32 loop() override;
+	int32 paint() override;
+	int32 end() override;
+	int32 swap() override;
+	bool isInitialized() const override { return m_initialized; }
 
-    // Windows
-    PWin32Platform(HINSTANCE NewInstance) : HInstance(NewInstance)
-    {
-    }
-    static LRESULT CALLBACK WindowProc(HWND Hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-    HWND GetHWnd() const { return Hwnd; }
-    void SetHInstance(HINSTANCE NewInstance) { HInstance = NewInstance; }
-    FRect GetSize() override;
-    EPlatformType GetPlatformType() override { return EPlatformType::Windows; }
+	// Windows
+	PWin32Platform(const HINSTANCE newInstance) : m_hInstance(newInstance)
+	{
+	}
 
-    // Menu bar
-    bool GetFileDialog(std::string& OutFileName) override;
-    void ConstructMenuBar() override;
-    void SetMenuItemChecked(EMenuAction ActionId, bool bChecked) override;
+	static LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	HWND getHWnd() const { return m_hwnd; }
+	void setHInstance(const HINSTANCE newInstance) { m_hInstance = newInstance; }
+	FRect getSize() override;
+	EPlatformType getPlatformType() override { return EPlatformType::Windows; }
+
+	// Menu bar
+	bool getFileDialog(std::string& outFileName) override;
+	void constructMenuBar() override;
+	void setMenuItemChecked(EMenuAction actionId, bool checkState) override;
 };

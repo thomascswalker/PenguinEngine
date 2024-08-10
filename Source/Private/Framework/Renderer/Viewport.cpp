@@ -6,28 +6,28 @@
 
 PViewport::PViewport(const uint32 InWidth, const uint32 InHeight)
 {
-    Camera = std::make_shared<PCamera>();
-    Resize(InWidth, InHeight);
+	Camera = std::make_shared<PCamera>();
+	Resize(InWidth, InHeight);
 }
 
 void PViewport::Resize(uint32 InWidth, uint32 InHeight) const
 {
-    Camera->Width = InWidth;
-    Camera->Height = InHeight;
+	Camera->m_width = InWidth;
+	Camera->m_height = InHeight;
 }
 
 FVector2 PViewport::GetSize() const
 {
-    return {static_cast<float>(Camera->Width), static_cast<float>(Camera->Height)};
+	return {static_cast<float>(Camera->m_width), static_cast<float>(Camera->m_height)};
 }
 
 void PViewport::ResetView()
 {
-    Camera->SetTranslation(DEFAULT_CAMERA_TRANSLATION);
-    Camera->SetRotation(FRotator());
+	Camera->SetTranslation(g_defaultCameraTranslation);
+	Camera->SetRotation(FRotator());
 
-    Camera->Target = FVector3::ZeroVector();
-    Camera->ComputeViewProjectionMatrix();
+	Camera->m_target = FVector3::ZeroVector();
+	Camera->computeViewProjectionMatrix();
 }
 
 /**
@@ -38,77 +38,65 @@ void PViewport::ResetView()
  */
 bool PViewport::ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition) const
 {
-    // Clip space
-    FMatrix Model;
-    FMatrix MVP = Camera->ViewProjectionMatrix * Model;
-    FVector4 Result = MVP * FVector4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
-    if (Result.W > 0.0f)
-    {
-        // Apply perspective correction
-        const FVector3 ClipPosition{
-            Result.X / Result.W,
-            Result.Y / Result.W,
-            Result.Z / Result.W
-        };
+	// Clip space
+	FMatrix Model;
+	FMatrix MVP = Camera->m_viewProjectionMatrix * Model;
+	FVector4 Result = MVP * FVector4(WorldPosition.X, WorldPosition.Y, WorldPosition.Z, 1.0f);
+	if (Result.W > 0.0f)
+	{
+		// Apply perspective correction
+		const FVector3 ClipPosition{
+			Result.X / Result.W,
+			Result.Y / Result.W,
+			Result.Z / Result.W
+		};
 
-        // Normalized device coordinates
-        const FVector2 NormalizedPosition{
-            (ClipPosition.X / 2.0f) + 0.5f,
-            (ClipPosition.Y / 2.0f) + 0.5f,
-        };
+		// Normalized device coordinates
+		const FVector2 NormalizedPosition{
+			(ClipPosition.X / 2.0f) + 0.5f,
+			(ClipPosition.Y / 2.0f) + 0.5f,
+		};
 
-        // Apply the current render width and height
-        ScreenPosition = FVector3{
-            NormalizedPosition.X * static_cast<float>(Camera->Width),
-            NormalizedPosition.Y * static_cast<float>(Camera->Height),
-            (Result.Z + 1.0f) * 0.5f
-        };
-        return true;
-    }
+		// Apply the current render width and height
+		ScreenPosition = FVector3{
+			NormalizedPosition.X * static_cast<float>(Camera->m_width),
+			NormalizedPosition.Y * static_cast<float>(Camera->m_height),
+			(Result.Z + 1.0f) * 0.5f
+		};
+		return true;
+	}
 
-    return false;
+	return false;
 }
 
 bool PViewport::ProjectScreenToWorld(const FVector2& ScreenPosition, float Depth, FVector3& WorldPosition) const
 {
-    // FMatrix InvMatrix = Camera->ViewProjectionMatrix;
-    // int32 PixelX = Math::Truncate(ScreenPosition.X);
-    // int32 PixelY = Math::Truncate(ScreenPosition.Y);
-    //
-    // const float NormalizedX = (float)PixelX / (float)GetWidth();
-    // const float NormalizedY = (float)PixelY / (float)GetHeight();
-    //
-    // const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
-    // const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
-    //
-    // const FVector4 RayStartProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
-    // const FVector4 RayEndProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
+	// FMatrix InvMatrix = Camera->ViewProjectionMatrix;
+	// int32 PixelX = Math::Truncate(ScreenPosition.X);
+	// int32 PixelY = Math::Truncate(ScreenPosition.Y);
+	//
+	// const float NormalizedX = (float)PixelX / (float)GetWidth();
+	// const float NormalizedY = (float)PixelY / (float)GetHeight();
+	//
+	// const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
+	// const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
+	//
+	// const FVector4 RayStartProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
+	// const FVector4 RayEndProjectionSpace = FVector4(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
 
-    return true;
+	return true;
 }
 
-void PViewport::FormatDebugText()
+void PViewport::formatDebugText()
 {
-    const PEngine* Engine = PEngine::GetInstance();
-    const IInputHandler* InputHandler = IInputHandler::GetInstance();
-    FVector2 MouseDelta = InputHandler->GetDeltaCursorPosition();
+	const PEngine* engine = PEngine::getInstance();
+	const IInputHandler* inputHandler = IInputHandler::GetInstance();
 
-    auto Renderer = Engine->GetRenderer();
-
-    DebugText = std::format(
-        "Stats\n"
-        "FPS: {}\n"
-        "Size: {}\n"
-        "Camera Direction: {}\n"
-        "Controls\n"
-        "Wireframe (F1): {}\n"
-        "Shaded (F2): {}\n"
-        "Depth (F3): {}\n",
-        Engine->GetFps(),
-        GetSize().ToString(),
-        GetCamera()->GetForwardVector().ToString(),
-        Renderer->Settings.GetRenderFlag(ERenderFlag::Wireframe),
-        Renderer->Settings.GetRenderFlag(ERenderFlag::Shaded),
-        Renderer->Settings.GetRenderFlag(ERenderFlag::Depth)
-    );
+	DebugText = std::format(
+		"Stats\n"
+		"FPS: {}\n"
+		"Size: {}\n",
+		engine->getFps(),
+		GetSize().ToString()
+	);
 }
