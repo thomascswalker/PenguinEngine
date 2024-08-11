@@ -120,15 +120,15 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			// Get the current window size from the buffer
 			const std::shared_ptr<Channel> channel = renderer->getColorChannel();
-			const int32 width = channel->m_width;
-			const int32 height = channel->m_height;
+			const int32 width = channel->width;
+			const int32 height = channel->height;
 
 			// Create a bitmap with the current renderer buffer memory the size of the window
 			InvalidateRect(hwnd, nullptr, TRUE);
 			PAINTSTRUCT paint;
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
-			SetDIBits(renderContext, m_displayBitmap, 0, height, channel->m_memory, &m_bitmapInfo, 0);
+			SetDIBits(renderContext, m_displayBitmap, 0, height, channel->memory, &m_bitmapInfo, 0);
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
 			{
@@ -387,7 +387,7 @@ int32 Win32Platform::swap()
 	const Renderer* renderer = engine->getRenderer();
 
 	// Copy from the color channel into the display buffer
-	const void* src = renderer->getColorChannel()->m_memory;
+	const void* src = renderer->getColorChannel()->memory;
 	void* dst = m_displayBuffer;
 	const size_t size = renderer->getColorChannel()->getMemorySize();
 	memcpy(dst, src, size);

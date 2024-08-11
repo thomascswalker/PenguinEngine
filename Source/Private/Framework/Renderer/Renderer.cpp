@@ -6,8 +6,6 @@
 #include "Framework/Engine/Engine.h"
 #include "Framework/Renderer/Shader.h"
 
-/* Renderer */
-
 Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 {
 	m_viewport = std::make_shared<Viewport>(inWidth, inHeight);
@@ -31,7 +29,6 @@ void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 		channel->resize(inWidth, inHeight);
 	}
 }
-
 
 void Renderer::draw() const
 {
@@ -72,7 +69,6 @@ void Renderer::drawMesh(const Mesh* mesh) const
 		drawTriangle(triangle.m_v0, triangle.m_v1, triangle.m_v2);
 	}
 }
-
 
 void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) const
 {
@@ -129,7 +125,6 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	}
 }
 
-
 void Renderer::scanline() const
 {
 	const vec3f s0 = m_currentShader->m_s0;
@@ -155,10 +150,10 @@ void Renderer::scanline() const
 	const int32 initialOffset = minY * width;
 
 	std::shared_ptr<Channel> depthChannel = getDepthChannel();
-	float* depthMemory = static_cast<float*>(depthChannel->m_memory) + initialOffset; // float, 32-bytes
+	float* depthMemory = static_cast<float*>(depthChannel->memory) + initialOffset; // float, 32-bytes
 
 	std::shared_ptr<Channel> colorChannel = getColorChannel();
-	int32* colorMemory = static_cast<int32*>(colorChannel->m_memory) + initialOffset; // int32, 32-bytes
+	int32* colorMemory = static_cast<int32*>(colorChannel->memory) + initialOffset; // int32, 32-bytes
 
 	// Prior to the loop computing each pixel in the triangle, get the render settings
 	const bool renderDepth = m_settings.getRenderFlag(ERenderFlag::Depth);
@@ -230,7 +225,6 @@ void Renderer::scanline() const
 		colorMemory += width;
 	}
 }
-
 
 bool Renderer::clipLine(vec2f* a, vec2f* b) const
 {
@@ -308,7 +302,7 @@ bool Renderer::clipLine(vec2f* a, vec2f* b) const
 
 bool Renderer::clipLine(linef* line) const
 {
-	return clipLine(&line->m_a, &line->m_b);
+	return clipLine(&line->a, &line->b);
 }
 
 void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) const
@@ -379,18 +373,18 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 
 void Renderer::drawLine(const line3d& line, const Color& color) const
 {
-	drawLine(line.m_a, line.m_b, color);
+	drawLine(line.a, line.b, color);
 }
 
 void Renderer::drawGrid() const
 {
-	for (const line3d& line : m_grid->m_lines)
+	for (const line3d& line : m_grid->lines)
 	{
 		// Project the world-space points to screen-space
 		vec3f s0, s1;
 		bool lineOnScreen = false;
-		lineOnScreen |= m_viewport->projectWorldToScreen(line.m_a, s0);
-		lineOnScreen |= m_viewport->projectWorldToScreen(line.m_b, s1);
+		lineOnScreen |= m_viewport->projectWorldToScreen(line.a, s0);
+		lineOnScreen |= m_viewport->projectWorldToScreen(line.b, s1);
 
 		// If neither of the points are on the screen, return
 		if (!lineOnScreen)
