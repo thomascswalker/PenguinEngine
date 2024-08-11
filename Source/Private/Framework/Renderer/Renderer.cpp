@@ -100,8 +100,9 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	if (m_settings.getRenderFlag(Normals))
 	{
 		// Get the center of the triangle
-		vec3f triangleCenter = (m_currentShader->m_v0.m_position + m_currentShader->m_v1.m_position + m_currentShader->
-			m_v2.m_position) / 3.0f;
+		vec3f triangleCenter = (m_currentShader->m_v0.m_position
+			+ m_currentShader->m_v1.m_position
+			+ m_currentShader->m_v2.m_position) / 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
 		vec3f triangleNormal = m_currentShader->m_triangleWorldNormal;
@@ -211,9 +212,7 @@ void Renderer::scanline() const
 			}
 
 			m_currentShader->m_pixelWorldPosition = m_currentShader->m_v0.m_position * uvw.x + m_currentShader->m_v1.
-				m_position *
-				uvw.y
-				+ m_currentShader->m_v2.m_position * uvw.z;
+				m_position * uvw.y + m_currentShader->m_v2.m_position * uvw.z;
 
 			// Compute the final color for this pixel
 			m_currentShader->computePixelShader(point.x, point.y);

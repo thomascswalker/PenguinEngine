@@ -85,10 +85,10 @@ enum class EKey : uint8
 
 enum class EModifierKey : uint8
 {
-	None = 0x00,
+	None  = 0x00,
 	Shift = 0x01,
-	Ctrl = 0x02,
-	Alt = 0x04
+	Ctrl  = 0x02,
+	Alt   = 0x04
 };
 
 DEFINE_BITMASK_OPERATORS(EModifierKey)
@@ -170,17 +170,55 @@ public:
 	OnMenuActionPressed m_menuActionPressed;
 
 	// Mouse
-	virtual bool onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition) { return false; }
-	virtual bool onMouseUp(EMouseButtonType buttonType, const vec2f& cursorPosition) { return false; }
-	virtual bool onMouseWheel(float delta) { return false; }
-	virtual bool onMouseMove(const vec2f& cursorPosition) { return false; }
-	virtual bool isMouseDown(EMouseButtonType buttonType) const { return false; }
-	virtual bool isAnyMouseDown() const { return false; }
+	virtual bool onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition)
+	{
+		return false;
+	}
 
-	virtual vec2f getClickPosition() const { return m_clickPosition; }
-	virtual vec2f getCurrentCursorPosition() const { return m_currentCursorPosition; }
-	virtual vec2f getPreviousCursorPosition() const { return m_previousCursorPosition; }
-	virtual vec2f getDeltaCursorPosition() const { return m_deltaCursorPosition; }
+	virtual bool onMouseUp(EMouseButtonType buttonType, const vec2f& cursorPosition)
+	{
+		return false;
+	}
+
+	virtual bool onMouseWheel(float delta)
+	{
+		return false;
+	}
+
+	virtual bool onMouseMove(const vec2f& cursorPosition)
+	{
+		return false;
+	}
+
+	virtual bool isMouseDown(EMouseButtonType buttonType) const
+	{
+		return false;
+	}
+
+	virtual bool isAnyMouseDown() const
+	{
+		return false;
+	}
+
+	virtual vec2f getClickPosition() const
+	{
+		return m_clickPosition;
+	}
+
+	virtual vec2f getCurrentCursorPosition() const
+	{
+		return m_currentCursorPosition;
+	}
+
+	virtual vec2f getPreviousCursorPosition() const
+	{
+		return m_previousCursorPosition;
+	}
+
+	virtual vec2f getDeltaCursorPosition() const
+	{
+		return m_deltaCursorPosition;
+	}
 
 	virtual void resetDeltaCursorPosition()
 	{
@@ -202,9 +240,20 @@ public:
 		return keys;
 	}
 
-	virtual bool onKeyDown(EKey keyCode, int32 keyFlags, bool isRepeat) { return false; }
-	virtual bool onKeyUp(EKey keyCode, int32 keyFlags, bool isRepeat) { return false; }
-	virtual bool isKeyDown(EKey keyCode) const { return false; }
+	virtual bool onKeyDown(EKey keyCode, int32 keyFlags, bool isRepeat)
+	{
+		return false;
+	}
+
+	virtual bool onKeyUp(EKey keyCode, int32 keyFlags, bool isRepeat)
+	{
+		return false;
+	}
+
+	virtual bool isKeyDown(EKey keyCode) const
+	{
+		return false;
+	}
 
 	virtual void consumeKey(const EKey keyCode)
 	{
@@ -243,21 +292,17 @@ public:
 	{
 		switch (buttonType)
 		{
-		case EMouseButtonType::Left:
-			m_mouseLeftDown = true;
+		case EMouseButtonType::Left: m_mouseLeftDown = true;
 			m_onMouseLeftDown.broadcast(cursorPosition);
 			break;
-		case EMouseButtonType::Right:
-			m_mouseRightDown = true;
+		case EMouseButtonType::Right: m_mouseRightDown = true;
 			m_onMouseRightDown.broadcast(cursorPosition);
 			break;
-		case EMouseButtonType::Middle:
-			m_mouseMiddleDown = true;
+		case EMouseButtonType::Middle: m_mouseMiddleDown = true;
 			m_onMouseMiddleDown.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Invalid:
-		default:
-			return false;
+		default: return false;
 		}
 
 		m_clickPosition = cursorPosition;
@@ -269,21 +314,17 @@ public:
 	{
 		switch (buttonType)
 		{
-		case EMouseButtonType::Left:
-			m_mouseLeftDown = false;
+		case EMouseButtonType::Left: m_mouseLeftDown = false;
 			m_onMouseLeftUp.broadcast(cursorPosition);
 			break;
-		case EMouseButtonType::Right:
-			m_mouseRightDown = false;
+		case EMouseButtonType::Right: m_mouseRightDown = false;
 			m_onMouseRightUp.broadcast(cursorPosition);
 			break;
-		case EMouseButtonType::Middle:
-			m_mouseMiddleDown = false;
+		case EMouseButtonType::Middle: m_mouseMiddleDown = false;
 			m_onMouseMiddleUp.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Invalid:
-		default:
-			return false;
+		default: return false;
 		}
 		m_clickPosition = 0;
 
@@ -316,15 +357,11 @@ public:
 	{
 		switch (buttonType)
 		{
-		case EMouseButtonType::Left:
-			return m_mouseLeftDown;
-		case EMouseButtonType::Right:
-			return m_mouseRightDown;
-		case EMouseButtonType::Middle:
-			return m_mouseMiddleDown;
+		case EMouseButtonType::Left: return m_mouseLeftDown;
+		case EMouseButtonType::Right: return m_mouseRightDown;
+		case EMouseButtonType::Middle: return m_mouseMiddleDown;
 		case EMouseButtonType::Invalid:
-		default:
-			return false;
+		default: return false;
 		}
 	}
 
@@ -355,11 +392,8 @@ public:
 	{
 		switch (actionId)
 		{
-		case EMenuAction::Open:
-
-			break;
-		case EMenuAction::Quit:
-			break;
+		case EMenuAction::Open: break;
+		case EMenuAction::Quit: break;
 		}
 	}
 };
