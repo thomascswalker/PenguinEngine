@@ -2,35 +2,35 @@
 
 #include "Math/Vector.h"
 
-struct PMouseTracker
+struct MouseTracker
 {
-    bool bIsTracking = false;
-    FVector2 Start;
-    FVector2 End;
-    FVector2 RawDelta;
+	bool isTracking = false;
+	vec2f start;
+	vec2f end;
+	vec2f rawDelta;
 
-    bool IsTracking() const { return bIsTracking; }
+	bool getIsTracking() const { return isTracking; }
 
-    void StartTracking(const FVector2& ScreenPosition)
-    {
-        bIsTracking = true;
-        Start = ScreenPosition;
-    }
+	void startTracking(const vec2f& screenPosition)
+	{
+		isTracking = true;
+		start = screenPosition;
+	}
 
-    void EndTracking(const FVector2& ScreenPosition)
-    {
-        bIsTracking = false;
-        End = ScreenPosition;
-    }
+	void endTracking(const vec2f& screenPosition)
+	{
+		isTracking = false;
+		end = screenPosition;
+	}
 
-    void AddDelta(const int32 InDelta)
-    {
-        RawDelta += InDelta;
-    }
+	void addDelta(const int32 inDelta)
+	{
+		rawDelta += inDelta;
+	}
 
-    FVector2 GetDelta() const
-    {
-        const FVector2 Delta(End - Start);
-        return Delta;
-    }
+	vec2f getDelta() const
+	{
+		const vec2f delta(end - start);
+		return delta;
+	}
 };

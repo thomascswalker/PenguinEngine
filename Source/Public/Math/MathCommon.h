@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <algorithm>
+
 #include "MathFwd.h"
 #include "Color.h"
 #include "Matrix.h"
@@ -13,84 +15,84 @@
 
 namespace Math
 {
-    // Rotate a vector with the specified quaternion.
-    // https://github.com/g-truc/glm/blob/master/glm/ext/matrix_transform.inl#L18
-    // https://github.com/mrdoob/three.js/blob/dev/src/math/Vector3.js#L252
-    template <typename T>
-    TVector3<T> Rotate(const TVector3<T>& V, const TQuat<T> Q)
-    {
-        T TX = T(2) * (Q.Y * V.Z - Q.Z * V.Y);
-        T TY = T(2) * (Q.Z * V.X - Q.X * V.Z);
-        T TZ = T(2) * (Q.X * V.Y - Q.Y * V.X);
-        TVector3<T> Out;
+	// Rotate a vector with the specified quaternion.
+	// https://github.com/g-truc/glm/blob/master/glm/ext/matrix_transform.inl#L18
+	// https://github.com/mrdoob/three.js/blob/dev/src/math/Vector3.js#L252
+	template <typename T>
+	vec3_t<T> rotate(const vec3_t<T>& v, const quat_t<T> q)
+	{
+		T tx = T(2) * (q.y * v.z - q.z * v.y);
+		T ty = T(2) * (q.z * v.x - q.x * v.z);
+		T tz = T(2) * (q.x * v.y - q.y * v.x);
+		vec3_t<T> out;
 
-        Out.X = V.X + Q.W * TX + Q.Y * TZ - Q.Z * TY;
-        Out.Y = V.Y + Q.W * TY + Q.Z * TX - Q.X * TZ;
-        Out.Z = V.Z + Q.W * TZ + Q.X * TY - Q.Y * TX;
+		out.x = v.x + q.w * tx + q.y * tz - q.z * ty;
+		out.y = v.y + q.w * ty + q.z * tx - q.x * tz;
+		out.z = v.z + q.w * tz + q.x * ty - q.y * tx;
 
-        return Out;
-    }
+		return out;
+	}
 
-    // Rotate a vector with the specified Pitch, Yaw, and Roll (in degrees)
-    template <typename T>
-    TVector3<T> Rotate(const TVector3<T>& V, T Pitch, T Yaw, T Roll)
-    {
-        // Convert degrees to radians
-        T PitchRad = Math::DegreesToRadians(Pitch);
-        T YawRad = Math::DegreesToRadians(Yaw);
-        T RollRad = Math::DegreesToRadians(Roll);
+	// Rotate a vector with the specified pitch, yaw, and roll (in degrees)
+	template <typename T>
+	vec3_t<T> rotate(const vec3_t<T>& v, T pitch, T yaw, T roll)
+	{
+		// Convert degrees to radians
+		T pitchRad = Math::degreesToRadians(pitch);
+		T yawRad = Math::degreesToRadians(yaw);
+		T rollRad = Math::degreesToRadians(roll);
 
-        // Construct a quaternion from euler angles
-        TQuat<T> Q(PitchRad, YawRad, RollRad);
+		// Construct a quaternion from euler angles
+		quat_t<T> q(pitchRad, yawRad, rollRad);
 
-        // Rotate the vector with the quaternion and return the result
-        return Rotate(V, Q);
-    }
+		// Rotate the vector with the quaternion and return the result
+		return rotate(v, q);
+	}
 
-    // Rotator to Quaternion
-    template <typename T>
-    TQuat<T> ToQuat(TRotator<T> R)
-    {
-        return TQuat<T>(T(R.Pitch), T(R.Yaw), T(R.Roll));
-    }
+	// Rotator to Quaternion
+	template <typename T>
+	quat_t<T> toQuat(rot_t<T> r)
+	{
+		return quat_t<T>(T(r.pitch), T(r.yaw), T(r.roll));
+	}
 
-    // Quaternion to Rotator
-    template <typename T>
-    TRotator<T> ToRot(TQuat<T> Q)
-    {
-        T Roll = Math::ATan2(2.0f * Q.Y * Q.W - 2.0f * Q.X * Q.Z, 1.0f - 2.0f * Q.Y * Q.Y - 2.0f * Q.Z * Q.Z);
-        T Pitch = Math::ATan2(2.0f * Q.X * Q.W - 2.0f * Q.Y * Q.Z, 1.0f - 2.0f * Q.X * Q.X - 2.0f * Q.Z * Q.Z);
-        T Yaw = Math::ASin(2.0f * Q.X * Q.Y + 2.0f * Q.Z * Q.W);
+	// Quaternion to Rotator
+	template <typename T>
+	rot_t<T> toRot(quat_t<T> q)
+	{
+		T roll = std::atan2f(2.0f * q.y * q.w - 2.0f * q.x * q.z, 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z);
+		T pitch = std::atan2f(2.0f * q.x * q.w - 2.0f * q.y * q.z, 1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z);
+		T yaw = std::asinf(2.0f * q.x * q.y + 2.0f * q.z * q.w);
 
-        TRotator Result(Pitch, Yaw, Roll);
-        return Result;
-    }
+		rot_t result(pitch, yaw, roll);
+		return result;
+	}
 
-    /*
-     * Transform the specified TVector4 by the specified TMatrix.
-     */
-    template <typename T>
-    TVector4<T> VectorTransformMatrix(const TVector4<T>& V, const TMatrix<T>& M)
-    {
-        return FVector4{
-            (V.X * M.M[0][0]) + (V.Y * M.M[1][0]) + (V.Z * M.M[2][0]) + (V.W * M.M[3][0]),
-            (V.X * M.M[0][1]) + (V.Y * M.M[1][1]) + (V.Z * M.M[2][1]) + (V.W * M.M[3][1]),
-            (V.X * M.M[0][2]) + (V.Y * M.M[1][2]) + (V.Z * M.M[2][2]) + (V.W * M.M[3][2]),
-            (V.X * M.M[0][3]) + (V.Y * M.M[1][3]) + (V.Z * M.M[2][3]) + (V.W * M.M[3][3])
-        };
-    }
+	/*
+	 * Transform the specified vec4_t by the specified mat4_t.
+	 */
+	template <typename T>
+	vec4_t<T> vectorTransformMatrix(const vec4_t<T>& v, const mat4_t<T>& m)
+	{
+		return vec4f{
+			(v.x * m.m[0][0]) + (v.y * m.m[1][0]) + (v.z * m.m[2][0]) + (v.w * m.m[3][0]),
+			(v.x * m.m[0][1]) + (v.y * m.m[1][1]) + (v.z * m.m[2][1]) + (v.w * m.m[3][1]),
+			(v.x * m.m[0][2]) + (v.y * m.m[1][2]) + (v.z * m.m[2][2]) + (v.w * m.m[3][2]),
+			(v.x * m.m[0][3]) + (v.y * m.m[1][3]) + (v.z * m.m[2][3]) + (v.w * m.m[3][3])
+		};
+	}
 
-    template <typename T>
-    TVector3<T> ToVector(const TRotator<T>& Rot)
-    {
-        // Remove winding and clamp to [-360, 360]
-        const T PitchNoWinding = Math::Clamp(std::fmodf(Rot.Pitch, static_cast<T>(360.0)), T(-360), T(360));
-        const T YawNoWinding = Math::Clamp(std::fmodf(Rot.Yaw, static_cast<T>(360.0)), T(-360), T(360));
+	template <typename T>
+	vec3_t<T> toVector(const rot_t<T>& rot)
+	{
+		// remove winding and clamp to [-360, 360]
+		const T pitchNoWinding = std::clamp(std::fmodf(rot.pitch, static_cast<T>(360.0)), T(-360), T(360));
+		const T yawNoWinding = std::clamp(std::fmodf(rot.yaw, static_cast<T>(360.0)), T(-360), T(360));
 
-        T CP, SP, CY, SY;
-        Math::SinCos(&SP, &CP, Math::DegreesToRadians(PitchNoWinding));
-        Math::SinCos(&SY, &CY, Math::DegreesToRadians(YawNoWinding));
+		T cp, sp, cy, sy;
+		Math::sinCos(&sp, &cp, Math::degreesToRadians(pitchNoWinding));
+		Math::sinCos(&sy, &cy, Math::degreesToRadians(yawNoWinding));
 
-        return {CP * CY, CP * SY, SP};
-    }
+		return {cp * cy, cp * sy, sp};
+	}
 }

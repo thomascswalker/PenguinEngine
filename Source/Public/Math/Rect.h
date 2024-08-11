@@ -3,90 +3,92 @@
 #include "Vector.h"
 
 template <typename T>
-struct TRect
+struct rect_t
 {
-    struct
-    {
-        T X;
-        T Y;
-        T Width;
-        T Height;
-    };
+	struct
+	{
+		T X;
+		T Y;
+		T Width;
+		T Height;
+	};
 
-    TRect()
-    {
-    }
-    TRect(const TVector2<T>& InMin, const TVector2<T>& InMax)
-    {
-        X = InMin.X;
-        Y = InMin.Y;
-        Width = InMax.X - InMin.X;
-        Height = InMax.Y - InMin.Y;
-    }
-    TRect(T InX, T InY, T InWidth, T InHeight)
-    {
-        X = InX;
-        Y = InY;
-        Width = InWidth;
-        Height = InHeight;
-    }
+	rect_t()
+	{
+	}
 
-    TVector2<T> Min() const { return TVector2(X, Y); }
-    TVector2<T> Max() const { return TVector2(X + Width, Y + Height); }
+	rect_t(const vec2_t<T>& inMin, const vec2_t<T>& inMax)
+	{
+		X = inMin.x;
+		Y = inMin.y;
+		Width = inMax.x - inMin.x;
+		Height = inMax.y - inMin.y;
+	}
 
-    static TRect MakeBoundingBox(const TVector2<T>& V0, const TVector2<T>& V1)
-    {
-        T XValues[2] = {V0.X, V1.X};
-        T YValues[2] = {V0.Y, V1.Y};
+	rect_t(T inX, T inY, T inWidth, T inHeight)
+	{
+		X = inX;
+		Y = inY;
+		Width = inWidth;
+		Height = inHeight;
+	}
 
-        const T MinX = *std::ranges::min_element(XValues);
-        const T MinY = *std::ranges::min_element(YValues);
-        const T MaxX = *std::ranges::max_element(XValues);
-        const T MaxY = *std::ranges::max_element(YValues);
+	vec2_t<T> min() const { return vec2_t(X, Y); }
+	vec2_t<T> max() const { return vec2_t(X + Width, Y + Height); }
 
-        TVector2<T> BBMin(MinX, MinY);
-        TVector2<T> BBMax(MaxX, MaxY);
+	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1)
+	{
+		T xValues[2] = {v0.x, v1.x};
+		T yValues[2] = {v0.y, v1.y};
 
-        return TRect(BBMin, BBMax);
-    }
+		const T minX = *std::ranges::min_element(xValues);
+		const T minY = *std::ranges::min_element(yValues);
+		const T maxX = *std::ranges::max_element(xValues);
+		const T maxY = *std::ranges::max_element(yValues);
 
-    static TRect MakeBoundingBox(const TVector2<T>& V0, const TVector2<T>& V1, const TVector2<T>& V2)
-    {
-        T XValues[3] = {V0.X, V1.X, V2.X};
-        T YValues[3] = {V0.Y, V1.Y, V2.Y};
+		vec2_t<T> bbMin(minX, minY);
+		vec2_t<T> bbMax(maxX, maxY);
 
-        const T MinX = *std::ranges::min_element(XValues);
-        const T MinY = *std::ranges::min_element(YValues);
-        const T MaxX = *std::ranges::max_element(XValues);
-        const T MaxY = *std::ranges::max_element(YValues);
+		return rect_t(bbMin, bbMax);
+	}
 
-        TVector2<T> BBMin(MinX, MinY);
-        TVector2<T> BBMax(MaxX, MaxY);
+	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1, const vec2_t<T>& v2)
+	{
+		T xValues[3] = {v0.x, v1.x, v2.x};
+		T yValues[3] = {v0.y, v1.y, v2.y};
 
-        return TRect(BBMin, BBMax);
-    }
+		const T minX = *std::ranges::min_element(xValues);
+		const T minY = *std::ranges::min_element(yValues);
+		const T maxX = *std::ranges::max_element(xValues);
+		const T maxY = *std::ranges::max_element(yValues);
 
-    void Clamp(const TRect& Other)
-    {
-        X = Math::Max(X, Other.X);
-        Y = Math::Max(Y, Other.Y);
-        Width = Math::Min(Width, Other.Width);
-        Height = Math::Min(Height, Other.Height);
-    }
+		vec2_t<T> bbMin(minX, minY);
+		vec2_t<T> bbMax(maxX, maxY);
 
-    void Grow(T Value)
-    {
-        X -= Value;
-        Y -= Value;
-        Width += Value;
-        Height += Value;
-    }
+		return rect_t(bbMin, bbMax);
+	}
 
-    void Shrink(T Value)
-    {
-        X += Value;
-        Y += Value;
-        Width -= Value;
-        Height += Value;
-    }
+	void clamp(const rect_t& other)
+	{
+		X = std::max(X, other.X);
+		Y = std::max(Y, other.Y);
+		Width = std::min(Width, other.Width);
+		Height = std::min(Height, other.Height);
+	}
+
+	void grow(T value)
+	{
+		X -= value;
+		Y -= value;
+		Width += value;
+		Height += value;
+	}
+
+	void shrink(T value)
+	{
+		X += value;
+		Y += value;
+		Width -= value;
+		Height += value;
+	}
 };

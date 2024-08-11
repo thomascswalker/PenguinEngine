@@ -2,137 +2,138 @@
 #include "Framework/Engine/Engine.h"
 
 // View Camera
-void PCamera::ComputeViewProjectionMatrix()
+void Camera::computeViewProjectionMatrix()
 {
-    FVector3 Translation = Spherical.ToCartesian();
-    FVector3 Eye = Translation;
-    FVector3 Center = Target;
-    FVector3 Up = FVector3::UpVector();
+	const vec3f translation = m_spherical.toCartesian();
+	const vec3f eye = translation;
+	const vec3f center = m_target;
+	const vec3f up = vec3f::upVector();
 
-    ViewMatrix = FLookAtMatrix(Eye, Center, Up);
-    ProjectionMatrix = FPerspectiveMatrix(Math::DegreesToRadians(Fov), GetAspect(), MinZ, MaxZ);
-    ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-    InvViewProjectionMatrix = ViewProjectionMatrix.GetInverse();
+	m_viewMatrix = mat4f_lookat(eye, center, up);
+	m_projectionMatrix = mat4f_persp(Math::degreesToRadians(m_fov), getAspect(), m_minZ, m_maxZ);
+	m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
+	m_invViewProjectionMatrix = m_viewProjectionMatrix.getInverse();
 }
 
-void PCamera::Orbit(float DX, float DY)
+void Camera::orbit(const float dx, const float dy)
 {
-    SphericalDelta.Theta = Math::DegreesToRadians(-DX); // Horizontal
-    SphericalDelta.Phi = Math::DegreesToRadians(DY);    // Vertical
+	m_sphericalDelta.theta = Math::degreesToRadians(-dx); // Horizontal
+	m_sphericalDelta.phi = Math::degreesToRadians(dy); // Vertical
 }
 
-void PCamera::Pan(float DX, float DY)
+void Camera::pan(const float dx, const float dy)
 {
-    // Compute target distance
-    FVector3 Position = GetTranslation();
-    FVector3 Offset = Position - Target;
+	// Compute target distance
+	const vec3f position = getTranslation();
+	const vec3f offset = position - m_target;
 
-    // The length of the Offset vector gives us the distance from the camera to the target.
-    float TargetDistance = Offset.Length();
+	// The length of the Offset vector gives us the distance from the camera to the target.
+	float targetDistance = offset.length();
 
-    // Next, we need to scale this distance by the tangent of half the field of view.
-    // This is because the field of view is measured in degrees, but the tangent function expects an angle in radians.
-    // We also divide by the height of the viewport to account for the aspect ratio.
-    TargetDistance *= Math::Tan((Fov / 2.0f) * P_PI / 180.0f);
+	// Next, we need to scale this distance by the tangent of half the field of view.
+	// This is because the field of view is measured in degrees, but the tangent function expects an angle in radians.
+	// We also divide by the height of the viewport to account for the aspect ratio.
+	targetDistance *= std::tanf((m_fov / 2.0f) * PI / 180.0f);
 
-    // Pan left/right
-    FVector3 XOffset = {ViewMatrix.M[0][0], ViewMatrix.M[1][0], ViewMatrix.M[2][0]}; // X Rotation, column 0
-    XOffset.Normalize();
-    XOffset *= DX * TargetDistance / static_cast<float>(Height);
-    PanOffset = XOffset;
+	// Pan left/right
+	vec3f xOffset = {m_viewMatrix.m[0][0], m_viewMatrix.m[1][0], m_viewMatrix.m[2][0]}; // x rotation, column 0
+	xOffset.normalize();
+	xOffset *= dx * targetDistance / static_cast<float>(m_height);
+	m_panOffset = xOffset;
 
-    // Pan up/down
-    FVector3 YOffset = {ViewMatrix.M[0][1], ViewMatrix.M[1][1], ViewMatrix.M[2][1]}; // Y Rotation, column 1
-    YOffset.Normalize();
-    YOffset *= DY * TargetDistance / static_cast<float>(Height);
-    PanOffset += YOffset;
+	// Pan up/down
+	vec3f yOffset = {m_viewMatrix.m[0][1], m_viewMatrix.m[1][1], m_viewMatrix.m[2][1]}; // y rotation, column 1
+	yOffset.normalize();
+	yOffset *= dy * targetDistance / static_cast<float>(m_height);
+	m_panOffset += yOffset;
 }
 
-void PCamera::Zoom(float Value)
+void Camera::zoom(const float value)
 {
-    FVector3 Translation = GetTranslation();
-    Spherical = FSphericalCoords::FromCartesian(Translation.X, Translation.Y, Translation.Z);
-    Spherical.Radius = Math::Max(MinZoom, Math::Min(Spherical.Radius - (Value * 0.1f), MaxZoom));
-    Translation = Spherical.ToCartesian();
-    SetTranslation(Translation);
+	vec3f translation = getTranslation();
+	m_spherical = sphericalf::fromCartesian(translation.x, translation.y, translation.z);
+	m_spherical.radius = std::max(m_minZoom, std::min(m_spherical.radius - (value * 0.1f), m_maxZoom));
+	translation = m_spherical.toCartesian();
+	setTranslation(translation);
 }
 
-void PCamera::SetFov(float NewFov)
+void Camera::setFov(const float newFov)
 {
-    Fov = Math::Clamp(NewFov, MinFov, MaxFov);
+	m_fov = std::clamp(newFov, m_minFov, m_maxFov);
 }
 
-void PCamera::Update(float DeltaTime)
+void Camera::update(float deltaTime)
 {
-    // Get the offset from the current camera position to the target position
-    FVector3 Position = GetTranslation();
-    FVector3 Offset = Position - Target;
+	// Get the offset from the current camera position to the target position
+	const vec3f position = getTranslation();
+	vec3f offset = position - m_target;
 
-    // Convert offset to spherical coordinates
-    Spherical = FSphericalCoords::FromCartesian(Offset.X, Offset.Y, Offset.Z);
+	// Convert offset to spherical coordinates
+	m_spherical = sphericalf::fromCartesian(offset.x, offset.y, offset.z);
 
-    // Offset spherical coordinates by the current spherical delta
-    Spherical.Theta += SphericalDelta.Theta;
-    Spherical.Phi += SphericalDelta.Phi;
+	// Offset spherical coordinates by the current spherical delta
+	m_spherical.theta += m_sphericalDelta.theta;
+	m_spherical.phi += m_sphericalDelta.phi;
 
-    // Restrict Phi to min/max polar angle to prevent locking
-    Spherical.Phi = Math::Max(MinPolarAngle, Math::Min(MaxPolarAngle, Spherical.Phi));
-    Spherical.MakeSafe(0.1f);
+	// Restrict phi to min/max polar angle to prevent locking
+	m_spherical.phi = std::max(m_minPolarAngle, std::min(m_maxPolarAngle, m_spherical.phi));
+	m_spherical.makeSafe(0.1f);
 
-    // Set camera rotation pitch/yaw
-    FRotator NewRotation(
-        Math::RadiansToDegrees(Spherical.Theta), // Yaw
-        Math::RadiansToDegrees(Spherical.Phi),   // Pitch
-        0.0f                                     // Roll
-    );
-    SetRotation(NewRotation);
+	// Set camera rotation pitch/yaw
+	const rotf newRotation(
+		Math::radiansToDegrees(m_spherical.theta), // yaw
+		Math::radiansToDegrees(m_spherical.phi), // pitch
+		0.0f // roll
+	);
+	setRotation(newRotation);
 
-    // Convert spherical coordinates back to position
-    Offset = Spherical.ToCartesian();
+	// Convert spherical coordinates back to position
+	offset = m_spherical.toCartesian();
 
-    // Offset the target position based on the computed PanOffset (PCamera::Pan)
-    Target += PanOffset;
+	// Offset the target position based on the computed PanOffset (Camera::Pan)
+	m_target += m_panOffset;
 
-    // Set the camera position to the target position + offset
-    SetTranslation(Target + Offset);
+	// Set the camera position to the target position + offset
+	setTranslation(m_target + offset);
 }
 
-void PCamera::DeprojectScreenToWorld(const FVector2& ScreenPoint, FVector3& OutWorldPosition, FVector3& OutWorldDirection) const
+void Camera::deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPosition,
+                                    vec3f& outWorldDirection) const
 {
-    int32 PixelX = static_cast<int32>(ScreenPoint.X);
-    int32 PixelY = static_cast<int32>(ScreenPoint.Y);
+	const int32 pixelX = static_cast<int32>(screenPoint.x);
+	const int32 pixelY = static_cast<int32>(screenPoint.y);
 
-    // Convert to 0..1
-    const float NormalizedX = (PixelX - 0.5f) / static_cast<float>(Width);
-    const float NormalizedY = (PixelY - 0.5f) / static_cast<float>(Height);
+	// Convert to 0..1
+	const float normalizedX = (pixelX - 0.5f) / static_cast<float>(m_width);
+	const float normalizedY = (pixelY - 0.5f) / static_cast<float>(m_height);
 
-    // Convert to -1..1
-    const float ScreenSpaceX = (NormalizedX - 0.5f) * 2.0f;
-    const float ScreenSpaceY = ((1.0f - NormalizedY) - 0.5f) * 2.0f;
+	// Convert to -1..1
+	const float screenSpaceX = (normalizedX - 0.5f) * 2.0f;
+	const float screenSpaceY = ((1.0f - normalizedY) - 0.5f) * 2.0f;
 
-    // Starting ray, Z=1, near
-    FVector4 RayStartProjectionSpace(ScreenSpaceX, ScreenSpaceY, 1.0f, 1.0f);
-    // Ending ray Z=0.1, far, any distance in order to calculate the direction
-    FVector4 RayEndProjectionSpace(ScreenSpaceX, ScreenSpaceY, 0.01f, 1.0f);
+	// Starting ray, z=1, near
+	const vec4f rayStartProjectionSpace(screenSpaceX, screenSpaceY, 1.0f, 1.0f);
+	// Ending ray z=0.1, far, any distance in order to calculate the direction
+	const vec4f rayEndProjectionSpace(screenSpaceX, screenSpaceY, 0.01f, 1.0f);
 
-    //
-    FVector4 HomoRayStartWorldSpace = InvViewProjectionMatrix * RayStartProjectionSpace;
-    FVector4 HomoRayEndWorldSpace = InvViewProjectionMatrix * RayEndProjectionSpace;
-    FVector3 RayStartWorldSpace(HomoRayStartWorldSpace.X, HomoRayStartWorldSpace.Y, HomoRayStartWorldSpace.Z);
-    FVector3 RayEndWorldSpace(HomoRayEndWorldSpace.X, HomoRayEndWorldSpace.Y, HomoRayEndWorldSpace.Z);
+	//
+	const vec4f homoRayStartWorldSpace = m_invViewProjectionMatrix * rayStartProjectionSpace;
+	const vec4f homoRayEndWorldSpace = m_invViewProjectionMatrix * rayEndProjectionSpace;
+	vec3f rayStartWorldSpace(homoRayStartWorldSpace.x, homoRayStartWorldSpace.y, homoRayStartWorldSpace.z);
+	vec3f rayEndWorldSpace(homoRayEndWorldSpace.x, homoRayEndWorldSpace.y, homoRayEndWorldSpace.z);
 
-    if (HomoRayStartWorldSpace.W != 0.0f)
-    {
-        RayStartWorldSpace /= HomoRayStartWorldSpace.W;
-    }
-    if (HomoRayEndWorldSpace.W != 0.0f)
-    {
-        RayEndWorldSpace /= HomoRayEndWorldSpace.W;
-    }
+	if (homoRayStartWorldSpace.w != 0.0f)
+	{
+		rayStartWorldSpace /= homoRayStartWorldSpace.w;
+	}
+	if (homoRayEndWorldSpace.w != 0.0f)
+	{
+		rayEndWorldSpace /= homoRayEndWorldSpace.w;
+	}
 
-    FVector3 RayDirWorldSpace = RayEndWorldSpace - RayStartWorldSpace;
-    RayDirWorldSpace = RayDirWorldSpace.Normalized();
+	vec3f rayDirWorldSpace = rayEndWorldSpace - rayStartWorldSpace;
+	rayDirWorldSpace = rayDirWorldSpace.normalized();
 
-    OutWorldPosition = FVector3{RayStartWorldSpace.X, RayStartWorldSpace.Y, RayStartWorldSpace.Z};
-    OutWorldDirection = FVector3{RayDirWorldSpace.X, RayDirWorldSpace.Y, RayDirWorldSpace.Z};
+	outWorldPosition = vec3f{rayStartWorldSpace.x, rayStartWorldSpace.y, rayStartWorldSpace.z};
+	outWorldDirection = vec3f{rayDirWorldSpace.x, rayDirWorldSpace.y, rayDirWorldSpace.z};
 }

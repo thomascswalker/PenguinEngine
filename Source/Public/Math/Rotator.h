@@ -5,53 +5,57 @@
 
 // Rotator composed of euler angles, in degrees
 template <typename T>
-struct TRotator
+struct rot_t
 {
-    // Rotation around Right axis (Z)
-    T Pitch = 0;
-    // Rotation around Up axis (Y)
-    T Yaw = 0;
-    // Rotation around Forward axis (X)
-    T Roll = 0;
+	// rotation around Right axis (z)
+	T pitch = 0;
+	// rotation around Up axis (y)
+	T yaw = 0;
+	// rotation around Forward axis (x)
+	T roll = 0;
 
-    TRotator() = default;
-    TRotator(TQuat<T>& Q);
-    TRotator(T InPitch, T InYaw, T InRoll) : Pitch(InPitch), Yaw(InYaw), Roll(InRoll)
-    {
-    }
-    TRotator(const TVector3<T>& Euler);
+	rot_t() = default;
 
-    static TRotator Identity() { return TRotator(); }
-    T NormalizeAxis(T Angle) const
-    {
-        T Remainder = Math::Mod(Angle, T(360));
-        return Math::Mod(Remainder + T(360), T(360));
-    }
-    void Normalize()
-    {
-        Pitch = NormalizeAxis(Pitch);
-        Yaw = NormalizeAxis(Yaw);
-        Roll = NormalizeAxis(Roll);
-    }
-    std::string ToString() const { return std::format("[Pitch={}, Yaw={}, Roll={}]", Pitch, Yaw, Roll); }
+	rot_t(T inPitch, T inYaw, T inRoll) : pitch(inPitch), yaw(inYaw), roll(inRoll)
+	{
+	}
 
-    TRotator operator+(const TRotator& Other)
-    {
-        TRotator Out;
-        Out.Pitch = Pitch + Other.Pitch;
-        Out.Yaw = Yaw + Other.Yaw;
-        Out.Roll = Roll + Other.Roll;
-        return Out;
-    }
-    TRotator& operator+=(const TRotator& Other)
-    {
-        *this = *this + Other;
-        return *this;
-    }
-    TRotator operator*(T Scale) const
-    {
-        return {Pitch * Scale, Yaw * Scale, Roll * Scale};
-    }
+	rot_t(const vec3_t<T>& euler);
+
+	static rot_t identity() { return rot_t(); }
+
+	T normalizeAxis(T angle) const
+	{
+		T remainder = std::fmodf(angle, T(360));
+		return std::fmodf(remainder + T(360), T(360));
+	}
+
+	void normalize()
+	{
+		pitch = normalizeAxis(pitch);
+		yaw = normalizeAxis(yaw);
+		roll = normalizeAxis(roll);
+	}
+
+	std::string toString() const { return std::format("[pitch={}, yaw={}, roll={}]", pitch, yaw, roll); }
+
+	rot_t operator+(const rot_t& other)
+	{
+		rot_t out;
+		out.pitch = pitch + other.pitch;
+		out.yaw = yaw + other.yaw;
+		out.roll = roll + other.roll;
+		return out;
+	}
+
+	rot_t& operator+=(const rot_t& other)
+	{
+		*this = *this + other;
+		return *this;
+	}
+
+	rot_t operator*(T scale) const
+	{
+		return {pitch * scale, yaw * scale, roll * scale};
+	}
 };
-//
-// TQuat<float> TRotator<float>::Quaternion() const;

@@ -5,88 +5,69 @@
 
 enum EPrimitiveType
 {
-    Plane,
-    Cube,
-    Sphere,
-    Torus
+	Plane,
+	Cube,
+	Sphere,
+	Torus
 };
 
-struct PVertex
+struct Vertex
 {
-    FVector3 Position;
-    FVector3 Normal;
-    FVector3 TexCoord;
+	vec3f m_position;
+	vec3f m_normal;
+	vec3f m_texCoord;
 
-    PVertex()
-    {
-    }
-    PVertex(const FVector3& InPosition, const FVector3& InNormal, const FVector3& InTexCoord)
-        : Position(InPosition),
-          Normal(InNormal),
-          TexCoord(InTexCoord)
-    {
-    }
+	Vertex() = default;
+
+	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec3f& inTexCoord)
+		: m_position(inPosition),
+		  m_normal(inNormal),
+		  m_texCoord(inTexCoord)
+	{
+	}
 };
 
-struct PTriangle
+struct Triangle
 {
-    std::vector<int32> PositionIndexes;
-    std::vector<int32> NormalIndexes;
-    std::vector<int32> TexCoordIndexes;
+	std::vector<int32> m_positionIndexes;
+	std::vector<int32> m_normalIndexes;
+	std::vector<int32> m_texCoordIndexes;
 
-    PVertex V0;
-    PVertex V1;
-    PVertex V2;
+	Vertex m_v0;
+	Vertex m_v1;
+	Vertex m_v2;
 
-    PTriangle()
-    {
-    }
+	Triangle() = default;
 
-    PTriangle(const std::vector<int32>& InPositionIndexes, const std::vector<int32>& InNormalIndexes, const std::vector<int32>& InTexCoordIndexes)
-        : PositionIndexes(InPositionIndexes),
-          NormalIndexes(InNormalIndexes),
-          TexCoordIndexes(InTexCoordIndexes)
-    {
-    }
+	Triangle(const std::vector<int32>& inPositionIndexes, const std::vector<int32>& inNormalIndexes,
+	         const std::vector<int32>& inTexCoordIndexes)
+		: m_positionIndexes(inPositionIndexes),
+		  m_normalIndexes(inNormalIndexes),
+		  m_texCoordIndexes(inTexCoordIndexes)
+	{
+	}
 };
 
-struct PMesh : PObject
+struct Mesh : Object
 {
-    // Properties
-    std::vector<PTriangle> Triangles;
-    std::vector<FVector3> Positions;
-    std::vector<FVector3> Normals;
-    std::vector<FVector2> TexCoords;
+	// Properties
+	std::vector<Triangle> m_triangles;
+	std::vector<vec3f> m_positions;
+	std::vector<vec3f> m_normals;
+	std::vector<vec2f> m_texCoords;
 
-    PMesh()
-    {
-    }
-    PMesh(const std::vector<PTriangle>& InTriangles, const std::vector<FVector3>& InPositions, const std::vector<FVector3>& InNormals = {}, const std::vector<FVector2>& InTexCoords = {})
-        : Triangles(InTriangles), Positions(InPositions), Normals(InNormals), TexCoords(InTexCoords)
-    {
-        ProcessTriangles();
-    }
+	Mesh() = default;
 
-    void ProcessTriangles();
+	Mesh(const std::vector<Triangle>& inTriangles, const std::vector<vec3f>& inPositions,
+	     const std::vector<vec3f>& inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
+		: m_triangles(inTriangles), m_positions(inPositions), m_normals(inNormals), m_texCoords(inTexCoords)
+	{
+		processTriangles();
+	}
 
-    // Primitives
-    static std::shared_ptr<PMesh> CreatePlane(float Size);
-    static std::shared_ptr<PMesh> CreatePlane(float Width, float Height);
+	void processTriangles();
+
+	// Primitives
+	static std::shared_ptr<Mesh> createPlane(float size);
+	static std::shared_ptr<Mesh> createPlane(float width, float height);
 };
-
-namespace Math
-{
-    static EWindingOrder GetWindingOrder(const FVector3& V0, const FVector3& V1, const FVector3& V2)
-    {
-        const float Result = (V1.X - V0.X) * (V2.Y - V0.Y) - (V2.X - V0.X) * (V1.Y - V0.Y);
-        if (Result > 0)
-        {
-            return EWindingOrder::CCW;
-        }
-        if (Result < 0)
-        {
-            return EWindingOrder::CW;
-        }
-        return EWindingOrder::CL;
-    }
-}

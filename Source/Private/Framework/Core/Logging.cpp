@@ -1,38 +1,38 @@
 ﻿#include "Framework/Core/Logging.h"
 
-Logging::Logger* Logging::Logger::Instance = GetInstance();
+Logging::Logger* Logging::Logger::m_instance = getInstance();
 
-Logging::Logger* Logging::Logger::GetInstance()
+Logging::Logger* Logging::Logger::getInstance()
 {
-    if (Instance == nullptr)
-    {
-        Instance = new Logger();
-    }
-    return Instance;
+	if (m_instance == nullptr)
+	{
+		m_instance = new Logger();
+	}
+	return m_instance;
 }
 
-int Logging::Logger::GetCount(ELogLevel InLevel)
+int Logging::Logger::getCount(const ELogLevel inLevel)
 {
-    int Count = 0;
-    for (const auto& MsgLevel : Messages | std::views::values)
-    {
-        if (MsgLevel == InLevel)
-        {
-            Count++;
-        }
-    }
-    return Count;
+	int count = 0;
+	for (const auto& msgLevel : m_messages | std::views::values)
+	{
+		if (msgLevel == inLevel)
+		{
+			count++;
+		}
+	}
+	return count;
 }
 
-std::vector<std::string> Logging::Logger::GetMessages(ELogLevel InLevel)
+std::vector<std::string> Logging::Logger::getMessages(const ELogLevel inLevel)
 {
-    std::vector<std::string> Result;
-    for (const auto& [Msg, MsgLevel] : Messages)
-    {
-        if (MsgLevel == InLevel)
-        {
-            Result.push_back(Msg);
-        }
-    }
-    return Result;
+	std::vector<std::string> result;
+	for (const auto& [Msg, MsgLevel] : m_messages)
+	{
+		if (MsgLevel == inLevel)
+		{
+			result.push_back(Msg);
+		}
+	}
+	return result;
 }

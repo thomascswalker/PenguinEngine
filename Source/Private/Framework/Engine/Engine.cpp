@@ -7,192 +7,194 @@
 
 #include "Framework/Platforms/PlatformInterface.h"
 
-PEngine* PEngine::Instance = GetInstance();
+Engine* Engine::m_instance = getInstance();
 
-PEngine* PEngine::GetInstance()
+Engine* Engine::getInstance()
 {
-    if (Instance == nullptr)
-    {
-        Instance = new PEngine();
-    }
-    return Instance;
+	if (m_instance == nullptr)
+	{
+		m_instance = new Engine();
+	}
+	return m_instance;
 }
 
 
-bool PEngine::Startup(uint32 InWidth, uint32 InHeight)
+bool Engine::startup(uint32 inWidth, uint32 inHeight)
 {
-    LOG_INFO("Starting up engine.")
+	LOG_INFO("Starting up engine.")
 
-    Renderer = std::make_shared<PRenderer>(InWidth, InHeight);
-    bRunning = true;
+	m_renderer = std::make_shared<Renderer>(inWidth, inHeight);
+	m_isRunning = true;
 
-    // Track starting time
-    StartTime = PTimer::Now();
+	// Track starting time
+	m_startTime = PTimer::now();
 
-    // Bind input events
-    if (IInputHandler* Input = PWin32InputHandler::GetInstance())
-    {
-        // Keyboard
-        Input->KeyPressed.AddRaw(this, &PEngine::OnKeyPressed);
+	// Bind input events
+	if (IInputHandler* input = Win32InputHandler::getInstance())
+	{
+		// Keyboard
+		input->m_keyPressed.addRaw(this, &Engine::onKeyPressed);
 
-        // Mouse
-        Input->MouseMiddleScrolled.AddRaw(this, &PEngine::OnMouseMiddleScrolled);
-        Input->MouseLeftUp.AddRaw(this, &PEngine::OnLeftMouseUp);
-        Input->MouseMiddleUp.AddRaw(this, &PEngine::OnMiddleMouseUp);
+		// Mouse
+		input->m_onMouseMiddleScrolled.addRaw(this, &Engine::onMouseMiddleScrolled);
+		input->m_onMouseLeftUp.addRaw(this, &Engine::onLeftMouseUp);
+		input->m_onMouseMiddleUp.addRaw(this, &Engine::onMiddleMouseUp);
 
-        // Menu
-        Input->MenuActionPressed.AddRaw(this, &PEngine::OnMenuActionPressed);
-    }
+		// Menu
+		input->m_menuActionPressed.addRaw(this, &Engine::onMenuActionPressed);
+	}
 
-    LOG_INFO("Renderer constructed.")
-    return true;
+	LOG_INFO("Renderer constructed.")
+	return true;
 }
 
-bool PEngine::Shutdown()
+bool Engine::shutdown()
 {
-    LOG_INFO("Shutting down engine.")
-    bRunning = false;
-    return true;
+	LOG_INFO("Shutting down engine.")
+	m_isRunning = false;
+	return true;
 }
 
-void PEngine::Tick()
+void Engine::tick()
 {
-    const TimePoint EndTime = PTimer::Now();
-    DeltaTime = std::chrono::duration_cast<DurationMs>(EndTime - StartTime).count();
-    StartTime = PTimer::Now();
+	const timePoint endTime = PTimer::now();
+	m_deltaTime = std::chrono::duration_cast<durationMs>(endTime - m_startTime).count();
+	m_startTime = PTimer::now();
 
-    // Update camera movement
-    if (IInputHandler* Input = PWin32InputHandler::GetInstance())
-    {
-        // Update camera position
-        PCamera* Camera = GetViewportCamera();
-        FVector2 DeltaMouseCursor = Input->GetDeltaCursorPosition();
+	// Update camera movement
+	if (const IInputHandler* input = Win32InputHandler::getInstance())
+	{
+		// Update camera position
+		Camera* camera = getViewportCamera();
+		const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
 
-        // Orbit
-        if (Input->IsMouseDown(EMouseButtonType::Left) && Input->IsAltDown())
-        {
-            Camera->Orbit(DeltaMouseCursor.X, DeltaMouseCursor.Y);
-        }
+		// Orbit
+		if (input->isMouseDown(EMouseButtonType::Left) && input->isAltDown())
+		{
+			camera->orbit(deltaMouseCursor.x, deltaMouseCursor.y);
+		}
 
-        // Pan
-        if (Input->IsMouseDown(EMouseButtonType::Middle) && Input->IsAltDown())
-        {
-            Camera->Pan(DeltaMouseCursor.X, DeltaMouseCursor.Y);
-        }
+		// Pan
+		if (input->isMouseDown(EMouseButtonType::Middle) && input->isAltDown())
+		{
+			camera->pan(deltaMouseCursor.x, deltaMouseCursor.y);
+		}
 
-        // Zoom
-        if (Input->IsMouseDown(EMouseButtonType::Right) && Input->IsAltDown())
-        {
-            Camera->Zoom(DeltaMouseCursor.Y);
-        }
-    }
+		// Zoom
+		if (input->isMouseDown(EMouseButtonType::Right) && input->isAltDown())
+		{
+			camera->zoom(deltaMouseCursor.y);
+		}
+	}
 
-    // Tick every object
-    GetViewportCamera()->Update(DeltaTime);
+	// Tick every object
+	getViewportCamera()->update(m_deltaTime);
 
-    // Format debug text
-    GetViewport()->FormatDebugText();
+	// Format debug text
+	getViewport()->formatDebugText();
 }
 
-void PEngine::OpenFile(const std::string& FileName)
+void Engine::openFile(const std::string& fileName)
 {
-    Meshes.clear();
-    auto ObjMesh = std::make_shared<PMesh>();
-    ObjImporter::Import(FileName, ObjMesh.get());
-    ObjMesh->ProcessTriangles();
-    Meshes.push_back(ObjMesh);
+	m_meshes.clear();
+	const auto objMesh = std::make_shared<Mesh>();
+	ObjImporter::import(fileName, objMesh.get());
+	objMesh->processTriangles();
+	m_meshes.push_back(objMesh);
 }
 
-void PEngine::OnKeyPressed(EKey KeyCode)
+void Engine::onKeyPressed(const EKey keyCode) const
 {
-    switch (KeyCode)
-    {
-    case EKey::T :
-        {
-            GetViewport()->ToggleShowDebugText();
-            break;
-        }
-    case EKey::F :
-        {
-            GetViewport()->ResetView();
-            break;
-        }
-    case EKey::F1 :
-        {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Wireframe);
-            break;
-        }
-    case EKey::F2 :
-        {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Shaded);
-            break;
-        }
-    case EKey::F3 :
-        {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Depth);
-            break;
-        }
-    case EKey::F4 :
-        {
-            Renderer->Settings.ToggleRenderFlag(ERenderFlag::Normals);
-            break;
-        }
-    default :
-        break;
-    }
+	switch (keyCode)
+	{
+	case EKey::T:
+		{
+			getViewport()->toggleShowDebugText();
+			break;
+		}
+	case EKey::F:
+		{
+			getViewport()->resetView();
+			break;
+		}
+	case EKey::F1:
+		{
+			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Wireframe);
+			break;
+		}
+	case EKey::F2:
+		{
+			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Shaded);
+			break;
+		}
+	case EKey::F3:
+		{
+			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Depth);
+			break;
+		}
+	case EKey::F4:
+		{
+			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Normals);
+			break;
+		}
+	default: break;
+	}
 }
 
-void PEngine::OnLeftMouseUp(const FVector2& CursorPosition) const
+void Engine::onLeftMouseUp(const vec2f& cursorPosition) const
 {
-    PCamera* Camera = GetViewportCamera();
-    Camera->SphericalDelta.Phi = 0.0f;
-    Camera->SphericalDelta.Theta = 0.0f;
-}
-void PEngine::OnMiddleMouseUp(const FVector2& CursorPosition) const
-{
-    PCamera* Camera = GetViewportCamera();
-    Camera->PanOffset = 0;
+	Camera* camera = getViewportCamera();
+	camera->m_sphericalDelta.phi = 0.0f;
+	camera->m_sphericalDelta.theta = 0.0f;
 }
 
-void PEngine::OnMenuActionPressed(EMenuAction ActionId)
+void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const
 {
-    PApplication* App = PApplication::GetInstance();
-    IPlatform* Platform = App->GetPlatform();
-    switch (ActionId)
-    {
-    case EMenuAction::Open :
-        OnOpenPressed();
-        break;
-    case EMenuAction::Quit :
-        bRunning = false;
-        break;
-    case EMenuAction::Wireframe:
-        Platform->SetMenuItemChecked(EMenuAction::Wireframe, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Wireframe));
-        break;
-    case EMenuAction::Shaded:
-        Platform->SetMenuItemChecked(EMenuAction::Shaded, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Shaded));
-        break;
-    case EMenuAction::Depth:
-        Platform->SetMenuItemChecked(EMenuAction::Depth, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Depth));
-        break;
-    case EMenuAction::Normals:
-        Platform->SetMenuItemChecked(EMenuAction::Normals, Renderer->Settings.ToggleRenderFlag(ERenderFlag::Normals));
-    }
-}
-void PEngine::OnOpenPressed()
-{
-    PApplication* App = PApplication::GetInstance();
-    IPlatform* Platform = App->GetPlatform();
-    std::string FileName;
-    if (Platform->GetFileDialog(FileName))
-    {
-        // Load model
-        OpenFile(FileName);
-    }
+	Camera* camera = getViewportCamera();
+	camera->m_panOffset = 0;
 }
 
-void PEngine::OnMouseMiddleScrolled(float Delta) const
+void Engine::onMenuActionPressed(const EMenuAction actionId)
 {
-    PCamera* Camera = GetViewportCamera();
-    Camera->SetFov(Camera->Fov + (Delta));
+	const Application* app = Application::getInstance();
+	IPlatform* platform = app->getPlatform();
+	switch (actionId)
+	{
+	case EMenuAction::Open: onOpenPressed();
+		break;
+	case EMenuAction::Quit: m_isRunning = false;
+		break;
+	case EMenuAction::Wireframe: platform->setMenuItemChecked(EMenuAction::Wireframe,
+	                                                          m_renderer->m_settings.toggleRenderFlag(
+		                                                          ERenderFlag::Wireframe));
+		break;
+	case EMenuAction::Shaded: platform->setMenuItemChecked(EMenuAction::Shaded,
+	                                                       m_renderer->m_settings.toggleRenderFlag(
+		                                                       ERenderFlag::Shaded));
+		break;
+	case EMenuAction::Depth: platform->setMenuItemChecked(EMenuAction::Depth,
+	                                                      m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Depth));
+		break;
+	case EMenuAction::Normals: platform->setMenuItemChecked(EMenuAction::Normals,
+	                                                        m_renderer->m_settings.toggleRenderFlag(
+		                                                        ERenderFlag::Normals));
+	}
+}
+
+void Engine::onOpenPressed()
+{
+	Application* app = Application::getInstance();
+	IPlatform* platform = app->getPlatform();
+	std::string fileName;
+	if (platform->getFileDialog(fileName))
+	{
+		// Load model
+		openFile(fileName);
+	}
+}
+
+void Engine::onMouseMiddleScrolled(const float delta) const
+{
+	Camera* camera = getViewportCamera();
+	camera->setFov(camera->m_fov + (delta));
 }

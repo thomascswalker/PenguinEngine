@@ -1,33 +1,47 @@
 #include <iostream>
 
+#define NOMINMAX
+
 #include "Framework/Application.h"
 #include "Framework/Core/ErrorCodes.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
 // Windows entry point
-#include "Framework/Platforms/Win32Platform.h"
+#include "Framework/Platforms/Win32.h"
 
-int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int32 WINAPI wWinMain(_In_ HINSTANCE hInstance,
+                      _In_opt_ HINSTANCE hPrevInstance,
+                      _In_ LPWSTR lpCmdLine,
+                      _In_ int nShowCmd)
 {
-    PApplication* App = PApplication::GetInstance();
-    App->Init<PWin32Platform>(hInstance);
-    const int32 ExitCode = App->Run();
-    delete App;
+	// Create a new application
+	Application* app = Application::getInstance();
 
-    if (ExitCode != Success)
-    {
-        const auto ErrorMsgs = Logging::Logger::GetInstance()->GetMessages(Logging::ELogLevel::Error);
-        std::string Msg = "Application failed with error(s):\n\n";
-        for (const auto& EMsg : ErrorMsgs)
-        {
-            Msg += EMsg + '\n';
-        }
-        std::wstring WMsg(Msg.begin(), Msg.end());
-        MessageBox(nullptr, WMsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
-    }
+	// Initialize the application with Win32
+	app->Init<Win32Platform>(hInstance);
 
-    return ExitCode;
+	// Run the application. This encapsulates the entire lifetime of the platform, engine, renderer, etc.
+	const int32 exitCode = app->run();
+
+	// Delete the application after it's been run.
+	delete app;
+
+	// If there are any errors, display them in a message box.
+	if (exitCode != Success)
+	{
+		const auto errorMsgs = Logging::Logger::getInstance()->getMessages(Logging::ELogLevel::Error);
+		std::string msg = "Application failed with error(s):\n\n";
+		for (const auto& errorMsg : errorMsgs)
+		{
+			msg += errorMsg + '\n';
+		}
+		const std::wstring wMsg(msg.begin(), msg.end());
+		MessageBox(nullptr, wMsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
+	}
+
+	// Return the result of running the application.
+	return exitCode;
 }
 
 #elif __APPLE__
@@ -35,7 +49,7 @@ int32 WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLi
 // MacOS entry point
 int main(int argc, char* argv[])
 {
-    return 0;
+	return 0;
 }
 
 #elif __linux__
@@ -43,7 +57,7 @@ int main(int argc, char* argv[])
 // Linux entry point
 int main(int argc, char* argv[])
 {
-    return 0;
+	return 0;
 }
 
 #else

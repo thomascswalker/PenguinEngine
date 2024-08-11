@@ -4,159 +4,162 @@
 #include "Framework/Engine/Object.h"
 #include "Math/Spherical.h"
 
-constexpr int32 WINDOW_WIDTH_CLIP = 16;
-constexpr int32 WINDOW_HEIGHT_CLIP = 59;
-constexpr int32 DEFAULT_VIEWPORT_WIDTH = 640 + WINDOW_WIDTH_CLIP;
-constexpr int32 DEFAULT_VIEWPORT_HEIGHT = 480 + WINDOW_HEIGHT_CLIP;
+constexpr int32 g_windowWidthClip = 16;
+constexpr int32 g_windowHeightClip = 59;
+constexpr int32 g_defaultViewportWidth = 640 + g_windowWidthClip;
+constexpr int32 g_defaultViewportHeight = 480 + g_windowHeightClip;
 
-constexpr float DEFAULT_FOV = 54.3f;
-constexpr float DEFAULT_MINZ = 0.1f;
-constexpr float DEFAULT_MAXZ = 100.0f;
+constexpr float g_defaultFov = 54.3f;
+constexpr float g_defaultMinz = 0.1f;
+constexpr float g_defaultMaxz = 100.0f;
 
-constexpr float DEFAULT_MIN_ZOOM = 10.0f;
-const FVector3 DEFAULT_CAMERA_TRANSLATION = FVector3(-36, 30, 34);
+constexpr float g_defaultMinZoom = 10.0f;
+const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
 
 enum EViewportType
 {
-    Perspective,
-    Othographic
+	Perspective,
+	Othographic
 };
 
 struct PViewData
 {
-    int32 Width = DEFAULT_VIEWPORT_WIDTH;
-    int32 Height = DEFAULT_VIEWPORT_HEIGHT;
-    float Fov = DEFAULT_FOV;
-    float MinZ = 1.0f;
-    float MaxZ = 10.0f;
-    float MinFov = 20.0f;
-    float MaxFov = 120.0f;
-    float MinZoom = 2.0f;
-    float MaxZoom = 100.0f;
+	int32 m_width = g_defaultViewportWidth;
+	int32 m_height = g_defaultViewportHeight;
+	float m_fov = g_defaultFov;
+	float m_minZ = 1.0f;
+	float m_maxZ = 10.0f;
+	float m_minFov = 20.0f;
+	float m_maxFov = 120.0f;
+	float m_minZoom = 2.0f;
+	float m_maxZoom = 100.0f;
 
-    FVector3 Target = FVector3::ZeroVector(); // Origin
-    FSphericalCoords Spherical;
-    FSphericalCoords SphericalDelta;
-    float MinPolarAngle = 0.0f;
-    float MaxPolarAngle = P_PI;
-    FVector3 PanOffset;
+	vec3f m_target = vec3f::zeroVector(); // Origin
+	sphericalf m_spherical;
+	sphericalf m_sphericalDelta;
+	float m_minPolarAngle = 0.0f;
+	float m_maxPolarAngle = PI;
+	vec3f m_panOffset;
 
-    FMatrix ProjectionMatrix;
-    FMatrix ViewMatrix;
-    FMatrix ViewProjectionMatrix;
-    FMatrix InvViewProjectionMatrix;
+	mat4f m_projectionMatrix;
+	mat4f m_viewMatrix;
+	mat4f m_viewProjectionMatrix;
+	mat4f m_invViewProjectionMatrix;
 
-    FVector3 Direction;
-    FVector3 Translation;
+	vec3f m_direction;
+	vec3f m_translation;
 };
 
-class PCamera : public PObject
+class Camera : public Object
 {
 public:
-    int32 Width = DEFAULT_VIEWPORT_WIDTH;
-    int32 Height = DEFAULT_VIEWPORT_HEIGHT;
-    float Fov = DEFAULT_FOV;
-    float MinZ = 1.0f;
-    float MaxZ = 10.0f;
-    float MinFov = 20.0f;
-    float MaxFov = 120.0f;
-    float MinZoom = 2.0f;
-    float MaxZoom = 100.0f;
+	int32 m_width = g_defaultViewportWidth;
+	int32 m_height = g_defaultViewportHeight;
+	float m_fov = g_defaultFov;
+	float m_minZ = 1.0f;
+	float m_maxZ = 10.0f;
+	float m_minFov = 20.0f;
+	float m_maxFov = 120.0f;
+	float m_minZoom = 2.0f;
+	float m_maxZoom = 100.0f;
 
-    FVector3 Target = FVector3::ZeroVector(); // Origin
-    FSphericalCoords Spherical;
-    FSphericalCoords SphericalDelta;
-    float MinPolarAngle = 0.0f;
-    float MaxPolarAngle = P_PI;
-    FVector3 PanOffset;
+	vec3f m_target = vec3f::zeroVector(); // Origin
+	sphericalf m_spherical;
+	sphericalf m_sphericalDelta;
+	float m_minPolarAngle = 0.0f;
+	float m_maxPolarAngle = PI;
+	vec3f m_panOffset;
 
-    FMatrix ProjectionMatrix;
-    FMatrix ViewMatrix;
-    FMatrix ViewProjectionMatrix;
-    FMatrix InvViewProjectionMatrix;
+	mat4f m_projectionMatrix;
+	mat4f m_viewMatrix;
+	mat4f m_viewProjectionMatrix;
+	mat4f m_invViewProjectionMatrix;
 
-    /**
-     * Constructor for the PCamera class.
-     * Initializes the camera by calling the Init() function.
-     */
-    PCamera()
-    {
-        Init();
-    }
-    void Init()
-    {
-        SetTranslation(DEFAULT_CAMERA_TRANSLATION);
-    }
-    constexpr float GetAspect() const { return static_cast<float>(Width) / static_cast<float>(Height); }
-    void ComputeViewProjectionMatrix();
-    void Orbit(float DX, float DY);
-    void Pan(float DX, float DY);
-    void Zoom(float Value);
-    void SetFov(float NewFov);
-    void SetLookAt(const FVector3& NewLookAt) { Target = NewLookAt; }
+	/**
+	 * Constructor for the Camera class.
+	 * Initializes the camera by calling the Init() function.
+	 */
+	Camera()
+	{
+		init();
+	}
 
-    void Update(float DeltaTime) override;
+	void init()
+	{
+		setTranslation(g_defaultCameraTranslation);
+	}
 
-    /* General Math */
-    // https://github.com/EpicGames/UnrealEngine/blob/c830445187784f1269f43b56f095493a27d5a636/Engine/Source/Runtime/Engine/Private/SceneView.cpp#L1431
-    void DeprojectScreenToWorld(const FVector2& ScreenPoint, FVector3& OutWorldPosition, FVector3& OutWorldDirection) const;
+	constexpr float getAspect() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
+	void computeViewProjectionMatrix();
+	void orbit(float dx, float dy);
+	void pan(float dx, float dy);
+	void zoom(float value);
+	void setFov(float newFov);
+	void setLookAt(const vec3f& newLookAt) { m_target = newLookAt; }
 
-    PViewData GetViewData() const
-    {
-        PViewData Data;
+	void update(float deltaTime) override;
 
-        Data.Width = Width;
-        Data.Height = Height;
-        Data.Fov = Fov;
-        Data.MinZ = MinZ;
-        Data.MaxZ = MaxZ;
-        Data.Target = Target;
-        Data.Spherical = Spherical;
-        Data.ProjectionMatrix = ProjectionMatrix;
-        Data.ViewMatrix = ViewMatrix;
-        Data.ViewProjectionMatrix = ViewProjectionMatrix;
-        Data.InvViewProjectionMatrix = InvViewProjectionMatrix;
-        Data.Direction = GetForwardVector();
-        Data.Translation = GetTranslation();
+	/* General Math */
+	// https://github.com/EpicGames/UnrealEngine/blob/c830445187784f1269f43b56f095493a27d5a636/Engine/Source/Runtime/Engine/Private/SceneView.cpp#L1431
+	void deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPosition,
+	                            vec3f& outWorldDirection) const;
 
-        return Data;
-    }
+	PViewData getViewData() const
+	{
+		PViewData data;
+
+		data.m_width = m_width;
+		data.m_height = m_height;
+		data.m_fov = m_fov;
+		data.m_minZ = m_minZ;
+		data.m_maxZ = m_maxZ;
+		data.m_target = m_target;
+		data.m_spherical = m_spherical;
+		data.m_projectionMatrix = m_projectionMatrix;
+		data.m_viewMatrix = m_viewMatrix;
+		data.m_viewProjectionMatrix = m_viewProjectionMatrix;
+		data.m_invViewProjectionMatrix = m_invViewProjectionMatrix;
+		data.m_direction = getForwardVector();
+		data.m_translation = getTranslation();
+
+		return data;
+	}
 };
 
 namespace Math
 {
-    static bool ProjectWorldToScreen(const FVector3& WorldPosition, FVector3& ScreenPosition, const PViewData& ViewData)
-    {
-        // Clip 
-        FVector4 Result = ViewData.ViewProjectionMatrix * FVector4(WorldPosition, 1.0f);
-        if (Result.W > 0.0f)
-        {
-            // Apply perspective correction
-            const FVector3 ClipPosition{
-                Result.X / Result.W,
-                Result.Y / Result.W,
-                Result.Z / Result.W
-            };
+	static bool projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPosition, const PViewData& viewData)
+	{
+		// Clip 
+		const vec4f result = viewData.m_viewProjectionMatrix * vec4f(worldPosition, 1.0f);
+		if (result.w > 0.0f)
+		{
+			// Apply perspective correction
+			const vec3f clipPosition{
+				result.x / result.w,
+				result.y / result.w,
+				result.z / result.w
+			};
 
-            // Normalized device coordinates
-            const FVector2 NormalizedPosition{
-                (ClipPosition.X / 2.0f) + 0.5f,
-                (ClipPosition.Y / 2.0f) + 0.5f,
-            };
+			// Normalized device coordinates
+			const vec2f normalizedPosition{
+				(clipPosition.x / 2.0f) + 0.5f,
+				(clipPosition.y / 2.0f) + 0.5f,
+			};
 
-            // Apply the current render width and height
-            ScreenPosition = FVector3{
-                NormalizedPosition.X * static_cast<float>(ViewData.Width),
-                NormalizedPosition.Y * static_cast<float>(ViewData.Height),
-                (ClipPosition.Z + 0.5f) * 0.5f
-            };
-            return true;
-        }
-        return false;
-    }
+			// Apply the current render width and height
+			screenPosition = vec3f{
+				normalizedPosition.x * static_cast<float>(viewData.m_width),
+				normalizedPosition.y * static_cast<float>(viewData.m_height),
+				(clipPosition.z + 0.5f) * 0.5f
+			};
+			return true;
+		}
+		return false;
+	}
 
-    static bool DeprojectScreenToWorld(const FVector2& S, const PViewData& ViewData)
-    {
-        return true;
-    }
+	static bool deprojectScreenToWorld(const vec2f& screenPosition, const PViewData& viewData)
+	{
+		return true;
+	}
 }

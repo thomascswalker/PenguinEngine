@@ -1,59 +1,60 @@
 ﻿#include "Framework/Engine/Mesh.h"
 
 
-void PMesh::ProcessTriangles()
+void Mesh::processTriangles()
 {
-    for (PTriangle& Triangle : Triangles)
-    {
-        Triangle.V0.Position = Positions[Triangle.PositionIndexes[0]];
-        Triangle.V1.Position = Positions[Triangle.PositionIndexes[1]];
-        Triangle.V2.Position = Positions[Triangle.PositionIndexes[2]];
+	for (Triangle& triangle : m_triangles)
+	{
+		triangle.m_v0.m_position = m_positions[triangle.m_positionIndexes[0]];
+		triangle.m_v1.m_position = m_positions[triangle.m_positionIndexes[1]];
+		triangle.m_v2.m_position = m_positions[triangle.m_positionIndexes[2]];
 
-        Triangle.V0.Normal = Normals[Triangle.NormalIndexes[0]];
-        Triangle.V1.Normal = Normals[Triangle.NormalIndexes[1]];
-        Triangle.V2.Normal = Normals[Triangle.NormalIndexes[2]];
+		triangle.m_v0.m_normal = m_normals[triangle.m_normalIndexes[0]];
+		triangle.m_v1.m_normal = m_normals[triangle.m_normalIndexes[1]];
+		triangle.m_v2.m_normal = m_normals[triangle.m_normalIndexes[2]];
 
-        Triangle.V0.TexCoord = TexCoords[Triangle.TexCoordIndexes[0]];
-        Triangle.V1.TexCoord = TexCoords[Triangle.TexCoordIndexes[1]];
-        Triangle.V2.TexCoord = TexCoords[Triangle.TexCoordIndexes[2]];
-    }
-}
-std::shared_ptr<PMesh> PMesh::CreatePlane(float Size)
-{
-    return CreatePlane(Size, Size);
+		triangle.m_v0.m_texCoord = m_texCoords[triangle.m_texCoordIndexes[0]];
+		triangle.m_v1.m_texCoord = m_texCoords[triangle.m_texCoordIndexes[1]];
+		triangle.m_v2.m_texCoord = m_texCoords[triangle.m_texCoordIndexes[2]];
+	}
 }
 
-std::shared_ptr<PMesh> PMesh::CreatePlane(float Width, float Height)
+std::shared_ptr<Mesh> Mesh::createPlane(const float size)
 {
-    std::vector<FVector3> Positions;
-    Positions.emplace_back(-Width, 0.0f, Height);
-    Positions.emplace_back(Width, 0.0f, Height);
-    Positions.emplace_back(-Width, 0.0f, -Height);
-    Positions.emplace_back(Width, 0.0f, -Height);
+	return createPlane(size, size);
+}
 
-    std::vector<FVector3> Normals;
-    Normals.emplace_back(0.0f, 1.0f, 0.0f); // Only one normal because our plane is flat
+std::shared_ptr<Mesh> Mesh::createPlane(float width, float height)
+{
+	std::vector<vec3f> positions;
+	positions.emplace_back(-width, 0.0f, height);
+	positions.emplace_back(width, 0.0f, height);
+	positions.emplace_back(-width, 0.0f, -height);
+	positions.emplace_back(width, 0.0f, -height);
 
-    std::vector<FVector2> TexCoords;
-    TexCoords.emplace_back(0.0f, 0.0f);
-    TexCoords.emplace_back(1.0f, 0.0f);
-    TexCoords.emplace_back(0.0f, 0.0f);
-    TexCoords.emplace_back(1.0f, 0.0f);
-    TexCoords.emplace_back(0.0f, 0.0f);
-    TexCoords.emplace_back(1.0f, 0.0f);
-    TexCoords.emplace_back(0.0f, 1.0f);
-    TexCoords.emplace_back(1.0f, 1.0f);
+	std::vector<vec3f> normals;
+	normals.emplace_back(0.0f, 1.0f, 0.0f); // Only one normal because our plane is flat
 
-    std::vector<PTriangle> Triangles;
-    Triangles.emplace_back(
-        std::vector{2, 0, 3}, // Position indexes
-        std::vector{0, 0, 0}, // Normal indexes
-        std::vector{6, 4, 7}  // TexCoord indexes
-    );
-    Triangles.emplace_back(
-        std::vector{1, 3, 0}, // Position indexes
-        std::vector{0, 0, 0}, // Normal indexes
-        std::vector{5, 7, 4}  // TexCoord indexes
-    );
-    return std::make_shared<PMesh>(Triangles, Positions, Normals, TexCoords);
+	std::vector<vec2f> texCoords;
+	texCoords.emplace_back(0.0f, 0.0f);
+	texCoords.emplace_back(1.0f, 0.0f);
+	texCoords.emplace_back(0.0f, 0.0f);
+	texCoords.emplace_back(1.0f, 0.0f);
+	texCoords.emplace_back(0.0f, 0.0f);
+	texCoords.emplace_back(1.0f, 0.0f);
+	texCoords.emplace_back(0.0f, 1.0f);
+	texCoords.emplace_back(1.0f, 1.0f);
+
+	std::vector<Triangle> triangles;
+	triangles.emplace_back(
+		std::vector{2, 0, 3}, // Position indexes
+		std::vector{0, 0, 0}, // Normal indexes
+		std::vector{6, 4, 7} // TexCoord indexes
+	);
+	triangles.emplace_back(
+		std::vector{1, 3, 0}, // Position indexes
+		std::vector{0, 0, 0}, // Normal indexes
+		std::vector{5, 7, 4} // TexCoord indexes
+	);
+	return std::make_shared<Mesh>(triangles, positions, normals, texCoords);
 }
