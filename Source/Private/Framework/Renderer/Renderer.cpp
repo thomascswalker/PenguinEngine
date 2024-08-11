@@ -80,7 +80,7 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 		return;
 	}
 
-	if (m_settings.getRenderFlag(ERenderFlag::Shaded))
+	if (m_settings.getRenderFlag(Shaded))
 	{
 		m_currentShader->m_viewMatrix = camera->m_viewMatrix;
 		scanline();
@@ -89,7 +89,7 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	vec3f s0 = m_currentShader->m_s0;
 	vec3f s1 = m_currentShader->m_s1;
 	vec3f s2 = m_currentShader->m_s2;
-	if (m_settings.getRenderFlag(ERenderFlag::Wireframe))
+	if (m_settings.getRenderFlag(Wireframe))
 	{
 		drawLine({s0.x, s0.y}, {s1.x, s1.y}, m_wireColor);
 		drawLine({s1.x, s1.y}, {s2.x, s2.y}, m_wireColor);
@@ -97,7 +97,7 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	}
 
 	// Draw normal direction
-	if (m_settings.getRenderFlag(ERenderFlag::Normals))
+	if (m_settings.getRenderFlag(Normals))
 	{
 		// Get the center of the triangle
 		vec3f triangleCenter = (m_currentShader->m_v0.m_position + m_currentShader->m_v1.m_position + m_currentShader->
@@ -156,7 +156,7 @@ void Renderer::scanline() const
 	int32* colorMemory = static_cast<int32*>(colorChannel->memory) + initialOffset; // int32, 32-bytes
 
 	// Prior to the loop computing each pixel in the triangle, get the render settings
-	const bool renderDepth = m_settings.getRenderFlag(ERenderFlag::Depth);
+	const bool renderDepth = m_settings.getRenderFlag(Depth);
 
 	const float depth0 = Math::getDepth(s0, s0, s1, s2, area);
 	const float depth1 = Math::getDepth(s1, s0, s1, s2, area);

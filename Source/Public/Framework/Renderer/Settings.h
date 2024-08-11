@@ -3,13 +3,13 @@
 
 enum ERenderFlag : uint8
 {
-	None = 0,
+	None      = 0,
 	Wireframe = 1 << 0,
-	Shaded = 1 << 2,
-	Depth = 1 << 3,
-	Textures = 1 << 4,
-	Lights = 1 << 5,
-	Normals = 1 << 6
+	Shaded    = 1 << 2,
+	Depth     = 1 << 3,
+	Textures  = 1 << 4,
+	Lights    = 1 << 5,
+	Normals   = 1 << 6
 };
 
 DEFINE_BITMASK_OPERATORS(ERenderFlag);
@@ -17,12 +17,12 @@ DEFINE_BITMASK_OPERATORS(ERenderFlag);
 struct RenderSettings
 {
 private:
-	ERenderFlag m_renderFlags = ERenderFlag::Wireframe;
+	ERenderFlag m_renderFlags = Wireframe;
 
 public:
 	RenderSettings()
 	{
-		m_renderFlags = ERenderFlag::Shaded | ERenderFlag::Depth;
+		m_renderFlags = Shaded | Depth;
 	}
 
 	constexpr bool getRenderFlag(const ERenderFlag flag) const

@@ -18,7 +18,6 @@ Engine* Engine::getInstance()
 	return m_instance;
 }
 
-
 bool Engine::startup(uint32 inWidth, uint32 inHeight)
 {
 	LOG_INFO("Starting up engine.")
@@ -119,22 +118,22 @@ void Engine::onKeyPressed(const EKey keyCode) const
 		}
 	case EKey::F1:
 		{
-			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Wireframe);
+			m_renderer->m_settings.toggleRenderFlag(Wireframe);
 			break;
 		}
 	case EKey::F2:
 		{
-			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Shaded);
+			m_renderer->m_settings.toggleRenderFlag(Shaded);
 			break;
 		}
 	case EKey::F3:
 		{
-			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Depth);
+			m_renderer->m_settings.toggleRenderFlag(Depth);
 			break;
 		}
 	case EKey::F4:
 		{
-			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Normals);
+			m_renderer->m_settings.toggleRenderFlag(Normals);
 			break;
 		}
 	default: break;
@@ -166,18 +165,18 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		break;
 	case EMenuAction::Wireframe: platform->setMenuItemChecked(EMenuAction::Wireframe,
 	                                                          m_renderer->m_settings.toggleRenderFlag(
-		                                                          ERenderFlag::Wireframe));
+		                                                          Wireframe));
 		break;
 	case EMenuAction::Shaded: platform->setMenuItemChecked(EMenuAction::Shaded,
 	                                                       m_renderer->m_settings.toggleRenderFlag(
-		                                                       ERenderFlag::Shaded));
+		                                                       Shaded));
 		break;
 	case EMenuAction::Depth: platform->setMenuItemChecked(EMenuAction::Depth,
-	                                                      m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Depth));
+	                                                      m_renderer->m_settings.toggleRenderFlag(Depth));
 		break;
 	case EMenuAction::Normals: platform->setMenuItemChecked(EMenuAction::Normals,
 	                                                        m_renderer->m_settings.toggleRenderFlag(
-		                                                        ERenderFlag::Normals));
+		                                                        Normals));
 	}
 }
 
