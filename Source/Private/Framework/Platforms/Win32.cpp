@@ -2,62 +2,13 @@
 #include <codecvt>
 
 #include "Framework/Application.h"
-#include "Framework/Platforms/Win32Platform.h"
+#include "Framework/Platforms/Win32.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
 #include "Framework/Input/InputHandler.h"
 
-constexpr int32 g_windowsTimerId = 1001;
 
-std::map<int32, EKey> g_win32KeyMap
-{
-	{'A', EKey::A},
-	{'B', EKey::B},
-	{'C', EKey::C},
-	{'D', EKey::D},
-	{'E', EKey::E},
-	{'F', EKey::F},
-	{'G', EKey::G},
-	{'H', EKey::H},
-	{'I', EKey::I},
-	{'J', EKey::J},
-	{'K', EKey::K},
-	{'L', EKey::L},
-	{'M', EKey::M},
-	{'N', EKey::N},
-	{'O', EKey::O},
-	{'P', EKey::P},
-	{'Q', EKey::Q},
-	{'R', EKey::R},
-	{'S', EKey::S},
-	{'T', EKey::T},
-	{'U', EKey::U},
-	{'V', EKey::V},
-	{'W', EKey::W},
-	{'X', EKey::X},
-	{'Y', EKey::Y},
-	{'Z', EKey::Z},
-	{VK_ESCAPE, EKey::Escape},
-	{VK_SPACE, EKey::Spacebar},
-	{VK_SHIFT, EKey::Shift},
-	{VK_DELETE, EKey::Backspace},
-	{VK_CONTROL, EKey::Ctrl},
-	{VK_MENU, EKey::Alt},
-	{VK_F1, EKey::F1},
-	{VK_F2, EKey::F2},
-	{VK_F3, EKey::F3},
-	{VK_F4, EKey::F4},
-	{VK_F5, EKey::F5},
-	{VK_F6, EKey::F6},
-	{VK_F7, EKey::F7},
-	{VK_F8, EKey::F8},
-	{VK_F9, EKey::F9},
-	{VK_F10, EKey::F10},
-	{VK_F11, EKey::F11},
-	{VK_F12, EKey::F12},
-};
-
-LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
+LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
 	LRESULT result = 0;
 	Engine* engine = Engine::getInstance();
@@ -91,29 +42,22 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 
 			switch (msg)
 			{
-			case WM_LBUTTONDOWN:
-				buttonType = EMouseButtonType::Left;
+			case WM_LBUTTONDOWN: buttonType = EMouseButtonType::Left;
 				break;
-			case WM_LBUTTONUP:
-				buttonType = EMouseButtonType::Left;
+			case WM_LBUTTONUP: buttonType = EMouseButtonType::Left;
 				mouseUp = true;
 				break;
-			case WM_RBUTTONDOWN:
-				buttonType = EMouseButtonType::Right;
+			case WM_RBUTTONDOWN: buttonType = EMouseButtonType::Right;
 				break;
-			case WM_RBUTTONUP:
-				buttonType = EMouseButtonType::Right;
+			case WM_RBUTTONUP: buttonType = EMouseButtonType::Right;
 				mouseUp = true;
 				break;
-			case WM_MBUTTONUP:
-				buttonType = EMouseButtonType::Middle;
+			case WM_MBUTTONUP: buttonType = EMouseButtonType::Middle;
 				mouseUp = true;
 				break;
-			case WM_MBUTTONDOWN:
-				buttonType = EMouseButtonType::Middle;
+			case WM_MBUTTONDOWN: buttonType = EMouseButtonType::Middle;
 				break;
-			default:
-				return 1;
+			default: return 1;
 			}
 
 			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
@@ -147,6 +91,10 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 	case WM_KEYDOWN:
 		{
 			const int32 key = static_cast<int32>(wParam);
+			if (!g_win32KeyMap.contains(key))
+			{
+				return 0;
+			}
 			inputHandler->onKeyDown(g_win32KeyMap.at(key), 0, false);
 			return 0;
 		}
@@ -154,6 +102,10 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 	case WM_KEYUP:
 		{
 			const int32 key = static_cast<int32>(wParam);
+			if (!g_win32KeyMap.contains(key))
+			{
+				return 0;
+			}
 			inputHandler->onKeyUp(g_win32KeyMap.at(key), 0, false);
 			return 0;
 		}
@@ -197,10 +149,10 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 				SetTextColor(deviceContext, RGB(255, 255, 0));
 				SetBkColor(deviceContext, TRANSPARENT);
 				DrawText(
-					deviceContext, // DC
+					deviceContext,                                                  // DC
 					std::wstring(outputString.begin(), outputString.end()).c_str(), // Message
 					-1,
-					&clientRect, // Client rectangle (the window)
+					&clientRect,     // Client rectangle (the window)
 					DT_TOP | DT_LEFT // Drawing options
 				);
 			}
@@ -253,7 +205,8 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 	case WM_COMMAND:
 		{
 			const auto actionId = static_cast<EMenuAction>(LOWORD(wParam));
-			inputHandler->m_menuActionPressed.Broadcast(actionId);
+			inputHandler->m_menuActionPressed.broadcast(actionId);
+			break;
 		}
 	default:
 		{
@@ -271,7 +224,7 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 
 
 // ReSharper disable CppParameterMayBeConst
-bool PWin32Platform::Register()
+bool Win32Platform::Register()
 {
 	// Register the window class.
 	WNDCLASS windowClass = {};
@@ -283,7 +236,7 @@ bool PWin32Platform::Register()
 	//Registering the window class
 	if (!RegisterClass(&windowClass))
 	{
-		LOG_ERROR("Failed to register class (PWin32Platform::Register).")
+		LOG_ERROR("Failed to register class (Win32Platform::Register).")
 		return false;
 	}
 
@@ -305,7 +258,7 @@ bool PWin32Platform::Register()
 
 	if (!m_initialized)
 	{
-		LOG_ERROR("Failed to create window (PWin32Platform::Register).")
+		LOG_ERROR("Failed to create window (Win32Platform::Register).")
 		return false;
 	}
 
@@ -313,12 +266,12 @@ bool PWin32Platform::Register()
 	return true;
 }
 
-int32 PWin32Platform::create()
+int32 Win32Platform::create()
 {
 	m_initialized = Register();
 	if (!m_initialized)
 	{
-		LOG_ERROR("Window failed to initialize (PWin32Platform::Create).")
+		LOG_ERROR("Window failed to initialize (Win32Platform::Create).")
 		return PlatformInitError;
 	}
 
@@ -327,11 +280,11 @@ int32 PWin32Platform::create()
 	return Success;
 }
 
-int32 PWin32Platform::show()
+int32 Win32Platform::show()
 {
 	if (!m_initialized)
 	{
-		LOG_ERROR("Window failed to initialize (PWin32Platform::Show).")
+		LOG_ERROR("Window failed to initialize (Win32Platform::Show).")
 		return PlatformShowError; // Show window failure
 	}
 
@@ -340,11 +293,11 @@ int32 PWin32Platform::show()
 	return Success;
 }
 
-int32 PWin32Platform::start()
+int32 Win32Platform::start()
 {
 	if (!m_initialized)
 	{
-		LOG_ERROR("Window failed to initialize (PWin32Platform::Start).")
+		LOG_ERROR("Window failed to initialize (Win32Platform::Start).")
 		return PlatformStartError; // Start failure
 	}
 
@@ -384,7 +337,7 @@ int32 PWin32Platform::start()
 		// Loop, converting DeltaTime from milliseconds to seconds
 		if (const int32 loopResult = loop())
 		{
-			LOG_ERROR("Loop failed (PWin32Platform::Start).")
+			LOG_ERROR("Loop failed (Win32Platform::Start).")
 			return loopResult; // Start failure
 		}
 	}
@@ -393,7 +346,8 @@ int32 PWin32Platform::start()
 	return end();
 }
 
-int32 PWin32Platform::loop()
+
+int32 Win32Platform::loop()
 {
 	// Tick the engine forward
 	if (Engine* engine = Engine::getInstance())
@@ -417,17 +371,17 @@ int32 PWin32Platform::loop()
 	return PlatformLoopError;
 }
 
-int32 PWin32Platform::paint()
+int32 Win32Platform::paint()
 {
 	return 0;
 }
 
-int32 PWin32Platform::end()
+int32 Win32Platform::end()
 {
 	return Success;
 }
 
-int32 PWin32Platform::swap()
+int32 Win32Platform::swap()
 {
 	const Engine* engine = Engine::getInstance();
 	const Renderer* renderer = engine->getRenderer();
@@ -440,35 +394,36 @@ int32 PWin32Platform::swap()
 	return 0;
 }
 
-rectf PWin32Platform::getSize()
+rectf Win32Platform::getSize()
 {
 	RECT outRect;
 
-	if (GetWindowRect(getHWnd(), &outRect))
+	if (GetWindowRect(m_hwnd, &outRect))
 	{
 		float width = static_cast<float>(outRect.right - outRect.left);
 		float height = static_cast<float>(outRect.bottom - outRect.top);
 		return {0, 0, width, height};
 	}
 
-	LOG_ERROR("Unable to get window size (PWin32Platform::GetSize).")
+	LOG_ERROR("Unable to get window size (Win32Platform::GetSize).")
 	return {};
 }
 
-bool PWin32Platform::getFileDialog(std::string& outFileName)
+bool Win32Platform::getFileDialog(std::string& outFileName)
 {
 	OPENFILENAME ofn;
-	TCHAR szFile[260];
+	TCHAR szFile[MAX_PATH];
+	szFile[0] = '\0';
 
-	ZeroMemory(&ofn, sizeof(ofn));
+	SecureZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = m_hwnd;
 	ofn.lpstrFile = szFile;
 	ofn.nMaxFile = sizeof(szFile);
-	ofn.lpstrFilter = static_cast<LPCWSTR>(L".obj\0*.obj\0");
+	ofn.lpstrFilter = TEXT("OBJ (.obj*.obj)\0\0");
 	ofn.nFilterIndex = 1;
 	ofn.lpstrFileTitle = nullptr;
-	ofn.nMaxFileTitle = 0;
+	ofn.lpstrTitle = TEXT("Load a .obj file.");
 	ofn.lpstrInitialDir = nullptr;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
@@ -483,7 +438,7 @@ bool PWin32Platform::getFileDialog(std::string& outFileName)
 	return true;
 }
 
-void PWin32Platform::constructMenuBar()
+void Win32Platform::constructMenuBar()
 {
 	m_mainMenu = CreateMenu();
 	m_fileMenu = CreateMenu();
@@ -506,7 +461,7 @@ void PWin32Platform::constructMenuBar()
 	SetMenu(m_hwnd, m_mainMenu);
 }
 
-void PWin32Platform::setMenuItemChecked(EMenuAction actionId, const bool checkState)
+void Win32Platform::setMenuItemChecked(EMenuAction actionId, const bool checkState)
 {
 	CheckMenuItem(m_displayMenu, UINT_PTR(actionId), checkState ? MF_CHECKED : MF_UNCHECKED);
 }

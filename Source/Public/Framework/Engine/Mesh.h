@@ -71,20 +71,3 @@ struct Mesh : Object
 	static std::shared_ptr<Mesh> createPlane(float size);
 	static std::shared_ptr<Mesh> createPlane(float width, float height);
 };
-
-namespace Math
-{
-	static EWindingOrder getWindingOrder(const vec3f& v0, const vec3f& v1, const vec3f& v2)
-	{
-		const float result = (v1.x - v0.x) * (v2.y - v0.y) - (v2.x - v0.x) * (v1.y - v0.y);
-		if (result > 0)
-		{
-			return EWindingOrder::CCW;
-		}
-		if (result < 0)
-		{
-			return EWindingOrder::CW;
-		}
-		return EWindingOrder::CL;
-	}
-}

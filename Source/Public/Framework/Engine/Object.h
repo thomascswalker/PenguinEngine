@@ -28,7 +28,7 @@ public:
 
 	void computeBasisVectors()
 	{
-		const sphericalf tmp = sphericalf::fromRotation(m_transform.Rotation);
+		const sphericalf tmp = sphericalf::fromRotation(m_transform.rotation);
 		m_forwardVector = -tmp.toCartesian().normalized();
 		// Negative because for some reason it defaults to the inverse
 		m_rightVector = Math::cross(vec3f::upVector(), m_forwardVector).normalized();
@@ -37,31 +37,31 @@ public:
 
 	// Getters
 	transf getTransform() const { return m_transform; }
-	vec3f getTranslation() const { return m_transform.Translation; }
-	rotf getRotation() const { return m_transform.Rotation; }
-	vec3f getScale() const { return m_transform.Scale; }
+	vec3f getTranslation() const { return m_transform.translation; }
+	rotf getRotation() const { return m_transform.rotation; }
+	vec3f getScale() const { return m_transform.scale; }
 
 	// Setters
-	void setTranslation(const vec3f& newTranslation) { m_transform.Translation = newTranslation; }
+	void setTranslation(const vec3f& newTranslation) { m_transform.translation = newTranslation; }
 
 	void setRotation(const rotf& newRotation)
 	{
-		m_transform.Rotation = newRotation;
+		m_transform.rotation = newRotation;
 		computeBasisVectors();
 	}
 
-	void setScale(const vec3f& newScale) { m_transform.Scale = newScale; }
+	void setScale(const vec3f& newScale) { m_transform.scale = newScale; }
 
 	// Manipulators
 	void translate(const vec3f& delta)
 	{
-		m_transform.Translation += delta;
+		m_transform.translation += delta;
 	}
 
 	void rotate(const float pitch, const float yaw, const float roll)
 	{
-		m_transform.Rotation += rotf(pitch, yaw, roll);
-		m_transform.Rotation.Normalize();
+		m_transform.rotation += rotf(pitch, yaw, roll);
+		m_transform.rotation.normalize();
 		computeBasisVectors();
 	}
 

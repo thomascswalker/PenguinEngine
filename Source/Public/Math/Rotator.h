@@ -7,58 +7,55 @@
 template <typename T>
 struct rot_t
 {
-	// Rotation around Right axis (z)
-	T Pitch = 0;
-	// Rotation around Up axis (y)
-	T Yaw = 0;
-	// Rotation around Forward axis (x)
-	T Roll = 0;
+	// rotation around Right axis (z)
+	T pitch = 0;
+	// rotation around Up axis (y)
+	T yaw = 0;
+	// rotation around Forward axis (x)
+	T roll = 0;
 
 	rot_t() = default;
 
-	rot_t(T InPitch, T InYaw, T InRoll) : Pitch(InPitch), Yaw(InYaw), Roll(InRoll)
+	rot_t(T inPitch, T inYaw, T inRoll) : pitch(inPitch), yaw(inYaw), roll(inRoll)
 	{
 	}
 
 	rot_t(const vec3_t<T>& euler);
 
-	static rot_t Identity() { return rot_t(); }
+	static rot_t identity() { return rot_t(); }
 
-	T NormalizeAxis(T Angle) const
+	T normalizeAxis(T angle) const
 	{
-		T Remainder = std::fmodf(Angle, T(360));
-		return std::fmodf(Remainder + T(360), T(360));
+		T remainder = std::fmodf(angle, T(360));
+		return std::fmodf(remainder + T(360), T(360));
 	}
 
-	void Normalize()
+	void normalize()
 	{
-		Pitch = NormalizeAxis(Pitch);
-		Yaw = NormalizeAxis(Yaw);
-		Roll = NormalizeAxis(Roll);
+		pitch = normalizeAxis(pitch);
+		yaw = normalizeAxis(yaw);
+		roll = normalizeAxis(roll);
 	}
 
-	std::string ToString() const { return std::format("[Pitch={}, Yaw={}, Roll={}]", Pitch, Yaw, Roll); }
+	std::string toString() const { return std::format("[pitch={}, yaw={}, roll={}]", pitch, yaw, roll); }
 
-	rot_t operator+(const rot_t& Other)
+	rot_t operator+(const rot_t& other)
 	{
-		rot_t Out;
-		Out.Pitch = Pitch + Other.Pitch;
-		Out.Yaw = Yaw + Other.Yaw;
-		Out.Roll = Roll + Other.Roll;
-		return Out;
+		rot_t out;
+		out.pitch = pitch + other.pitch;
+		out.yaw = yaw + other.yaw;
+		out.roll = roll + other.roll;
+		return out;
 	}
 
-	rot_t& operator+=(const rot_t& Other)
+	rot_t& operator+=(const rot_t& other)
 	{
-		*this = *this + Other;
+		*this = *this + other;
 		return *this;
 	}
 
-	rot_t operator*(T Scale) const
+	rot_t operator*(T scale) const
 	{
-		return {Pitch * Scale, Yaw * Scale, Roll * Scale};
+		return {pitch * scale, yaw * scale, roll * scale};
 	}
 };
-
-//
-// quat_t<float> rot_t<float>::Quaternion() const;

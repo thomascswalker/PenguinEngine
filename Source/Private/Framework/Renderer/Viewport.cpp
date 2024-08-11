@@ -31,10 +31,10 @@ void Viewport::resetView() const
 }
 
 /**
- * \brief Projects the specified `WorldPosition` into the in/out `ScreenPosition` using the specified `ViewProjectionMatrix`.
- * \param worldPosition The world position of the point to be projected.
- * \param screenPosition The out screen position.
- * \return True if the position could be projected, false otherwise.
+ * @brief Projects the specified `WorldPosition` into the in/out `ScreenPosition` using the specified `ViewProjectionMatrix`.
+ * @param worldPosition The world position of the point to be projected.
+ * @param screenPosition The out screen position.
+ * @return True if the position could be projected, false otherwise.
  */
 bool Viewport::projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPosition) const
 {

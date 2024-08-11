@@ -79,7 +79,7 @@ class ObjImporter
 
 		// Split the face line by spaces
 		Strings::split(line, indexComponents, " "); // [f, v/vt/vn, v/vt/vn, v/vt/vn]
-		indexComponents.erase(indexComponents.begin()); // Remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
+		indexComponents.erase(indexComponents.begin()); // remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
 
 		// For each index group...
 		for (const std::string& indexGroup : indexComponents) // [v/vt/vn]

@@ -12,31 +12,24 @@
 #include "Math/MathCommon.h"
 
 
-constexpr int32 g_bytesPerChannel = 8;
-constexpr int32 g_bytesPerPixel = 32;
-
-
-enum class EOrientation
-{
-	Horizontal,
-	Vertical
-};
+constexpr uint32 g_bytesPerChannel = 8;
+constexpr uint32 g_bytesPerPixel = 32;
 
 struct Channel
 {
-	void* m_memory; // Memory Order BB GG RR XX
+	void* m_memory;                                              // Memory Order BB GG RR XX
 	uint32 m_channelCount = g_bytesPerPixel / g_bytesPerChannel; // 4
-	int32 m_width; // Width of the frame in pixels
-	int32 m_height; // Height of the frame in pixels
-	uint32 m_pitch; // Count of bytes in a single row (equivalent to Width)
-	EChannelType m_type; // Color (RGB, 8-bit) or Data (float, 32-bit) channel
+	uint32 m_width;                                              // Width of the frame in pixels
+	uint32 m_height;                                             // Height of the frame in pixels
+	uint32 m_pitch;                                              // Count of bytes in a single row (equivalent to Width)
+	EChannelType m_type;                                         // Color (RGB, 8-bit) or Data (float, 32-bit) channel
 
-	Channel(const EChannelType inType, const int32 inWidth, const int32 inHeight) : m_type(inType)
+	Channel(const EChannelType inType, const uint32 inWidth, const uint32 inHeight) : m_type(inType)
 	{
 		resize(inWidth, inHeight);
 	}
 
-	void resize(const int32 inWidth, const int32 inHeight)
+	void resize(const uint32 inWidth, const uint32 inHeight)
 	{
 		m_width = inWidth;
 		m_height = inHeight;
@@ -49,11 +42,22 @@ struct Channel
 		m_memory = PlatformMemory::realloc(m_memory, getMemorySize());
 	}
 
-	constexpr int32 getOffset(const int32 x, const int32 y) const { return (y * (m_pitch / m_channelCount)) + x; }
-	constexpr int32 getPixelCount() const { return m_width * m_height; }
-	constexpr int32 getMemorySize() const { return m_width * m_height * g_bytesPerPixel * m_channelCount; }
+	[[nodiscard]] constexpr uint32 getOffset(const uint32 x, const uint32 y) const
+	{
+		return (y * (m_pitch / m_channelCount)) + x;
+	}
 
-	void setPixel(const int32 x, const int32 y, const float value) const
+	[[nodiscard]] constexpr uint32 getPixelCount() const
+	{
+		return m_width * m_height;
+	}
+
+	[[nodiscard]] constexpr uint32 getMemorySize() const
+	{
+		return m_width * m_height * g_bytesPerPixel * m_channelCount;
+	}
+
+	void setPixel(const uint32 x, const uint32 y, const float value) const
 	{
 		assert(m_type == EChannelType::Data);
 		if (x < 0 || x >= m_width || y < 0 || y >= m_height)
@@ -65,7 +69,7 @@ struct Channel
 		*ptr = value;
 	}
 
-	void setPixel(const int32 x, const int32 y, const Color& color) const
+	void setPixel(const uint32 x, const uint32 y, const Color& color) const
 	{
 		assert(m_type == EChannelType::Color);
 		if (x < 0 || x >= m_width || y < 0 || y >= m_height)
@@ -82,20 +86,20 @@ struct Channel
 	}
 
 	template <typename T>
-	T getPixel(const int32 x, const int32 y) const
+	T getPixel(const uint32 x, const uint32 y) const
 	{
 		return *(static_cast<T*>(m_memory) + getOffset(x, y));
 	}
 
 	void clear() const
 	{
-		PlatformMemory::fill(m_memory, static_cast<size_t>(m_width * m_height * 4), 0);
+		PlatformMemory::fill(m_memory, m_width * m_height * 4, 0);
 	}
 
 	template <typename T>
 	void fill(T value)
 	{
-		PlatformMemory::fill(m_memory, static_cast<size_t>(m_width * m_height * 4), value);
+		PlatformMemory::fill(m_memory, m_width * m_height * 4, value);
 	}
 };
 
@@ -154,9 +158,21 @@ public:
 
 	Renderer(uint32 inWidth, uint32 inHeight);
 	void resize(uint32 inWidth, uint32 inHeight) const;
-	int32 getWidth() const { return m_viewport->getCamera()->m_width; }
-	int32 getHeight() const { return m_viewport->getCamera()->m_height; }
-	Viewport* getViewport() const { return m_viewport.get(); }
+
+	int32 getWidth() const
+	{
+		return m_viewport->getCamera()->m_width;
+	}
+
+	int32 getHeight() const
+	{
+		return m_viewport->getCamera()->m_height;
+	}
+
+	Viewport* getViewport() const
+	{
+		return m_viewport.get();
+	}
 
 	/* Channels */
 
@@ -187,8 +203,15 @@ public:
 		getDepthChannel()->fill(g_defaultMaxz);
 	}
 
-	std::shared_ptr<Channel> getColorChannel() const { return m_channels.at("Color"); }
-	std::shared_ptr<Channel> getDepthChannel() const { return m_channels.at("Depth"); }
+	std::shared_ptr<Channel> getColorChannel() const
+	{
+		return m_channels.at("Color");
+	}
+
+	std::shared_ptr<Channel> getDepthChannel() const
+	{
+		return m_channels.at("Depth");
+	}
 
 	/* Drawing */
 
@@ -196,10 +219,10 @@ public:
 	bool clipLine(linef* line) const;
 	void drawLine(const vec3f& inA, const vec3f& inB, const Color& color) const;
 	void drawLine(const line3d& line, const Color& color) const;
-	void drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2);
-	void drawMesh(const Mesh* mesh);
+	void drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
+	void drawMesh(const Mesh* mesh) const;
 	void drawGrid() const;
-	void draw();
+	void draw() const;
 
 
 	// Rasterizing triangles

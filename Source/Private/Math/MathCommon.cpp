@@ -69,9 +69,9 @@ vec4_t<T> mat4_t<T>::getRow(int32 row) const
 template <typename T>
 rot_t<T>::rot_t(const vec3_t<T>& euler)
 {
-	Pitch = euler.y;
-	Yaw = euler.z;
-	Roll = euler.x;
+	pitch = euler.y;
+	yaw = euler.z;
+	roll = euler.x;
 }
 
 // Instantiate for the linker

@@ -6,8 +6,8 @@
 // https://github.com/mrdoob/three.js/blob/cb24e42a65172ec475ff23a4abe520b724076a24/examples/jsm/controls/OrbitControls.js
 struct sphericalf
 {
-	float phi = 0.0f; // Yaw, horizontal angle in radians
-	float theta = 0.0f; // Pitch, vertical angle in radians
+	float phi = 0.0f; // yaw, horizontal angle in radians
+	float theta = 0.0f; // pitch, vertical angle in radians
 	float radius = 5.0f;
 
 	void makeSafe(const float threshold = EPSILON)
@@ -45,8 +45,8 @@ struct sphericalf
 	static sphericalf fromRotation(const rotf& rot)
 	{
 		sphericalf s;
-		s.theta = Math::degreesToRadians(rot.Pitch);
-		s.phi = Math::degreesToRadians(rot.Yaw);
+		s.theta = Math::degreesToRadians(rot.pitch);
+		s.phi = Math::degreesToRadians(rot.yaw);
 		s.makeSafe();
 		return s;
 	}

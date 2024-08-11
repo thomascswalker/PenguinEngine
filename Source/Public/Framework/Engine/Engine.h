@@ -28,18 +28,44 @@ public:
 
 	void tick();
 
-	Renderer* getRenderer() const { return m_renderer.get(); }
-	Viewport* getViewport() const { return getRenderer()->getViewport(); }
-	Camera* getViewportCamera() const { return getViewport()->getCamera(); }
-	bool isRunning() const { return m_isRunning; }
-	void setRunning(const bool newState) { m_isRunning = newState; }
+	Renderer* getRenderer() const
+	{
+		return m_renderer.get();
+	}
+
+	Viewport* getViewport() const
+	{
+		return getRenderer()->getViewport();
+	}
+
+	Camera* getViewportCamera() const
+	{
+		return getViewport()->getCamera();
+	}
+
+	bool isRunning() const
+	{
+		return m_isRunning;
+	}
+
+	void setRunning(const bool newState)
+	{
+		m_isRunning = newState;
+	}
 
 	void openFile(const std::string& fileName);
 
 	std::vector<std::shared_ptr<Mesh>> m_meshes;
-	std::vector<std::shared_ptr<Mesh>> getMeshes() const { return m_meshes; }
 
-	constexpr float getFps() const { return 1000.0f / m_deltaTime; }
+	std::vector<std::shared_ptr<Mesh>> getMeshes() const
+	{
+		return m_meshes;
+	}
+
+	constexpr float getFps() const
+	{
+		return 1000.0f / m_deltaTime;
+	}
 
 	void onMouseMiddleScrolled(float delta) const;
 	void onKeyPressed(EKey keyCode) const;

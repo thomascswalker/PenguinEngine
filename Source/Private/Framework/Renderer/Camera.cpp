@@ -36,13 +36,13 @@ void Camera::pan(const float dx, const float dy)
 	targetDistance *= std::tanf((m_fov / 2.0f) * PI / 180.0f);
 
 	// Pan left/right
-	vec3f xOffset = {m_viewMatrix.m[0][0], m_viewMatrix.m[1][0], m_viewMatrix.m[2][0]}; // x Rotation, column 0
+	vec3f xOffset = {m_viewMatrix.m[0][0], m_viewMatrix.m[1][0], m_viewMatrix.m[2][0]}; // x rotation, column 0
 	xOffset.normalize();
 	xOffset *= dx * targetDistance / static_cast<float>(m_height);
 	m_panOffset = xOffset;
 
 	// Pan up/down
-	vec3f yOffset = {m_viewMatrix.m[0][1], m_viewMatrix.m[1][1], m_viewMatrix.m[2][1]}; // y Rotation, column 1
+	vec3f yOffset = {m_viewMatrix.m[0][1], m_viewMatrix.m[1][1], m_viewMatrix.m[2][1]}; // y rotation, column 1
 	yOffset.normalize();
 	yOffset *= dy * targetDistance / static_cast<float>(m_height);
 	m_panOffset += yOffset;
@@ -81,9 +81,9 @@ void Camera::update(float deltaTime)
 
 	// Set camera rotation pitch/yaw
 	const rotf newRotation(
-		Math::radiansToDegrees(m_spherical.theta), // Yaw
-		Math::radiansToDegrees(m_spherical.phi), // Pitch
-		0.0f // Roll
+		Math::radiansToDegrees(m_spherical.theta), // yaw
+		Math::radiansToDegrees(m_spherical.phi), // pitch
+		0.0f // roll
 	);
 	setRotation(newRotation);
 

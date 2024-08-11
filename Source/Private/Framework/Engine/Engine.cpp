@@ -33,15 +33,15 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	if (IInputHandler* input = Win32InputHandler::getInstance())
 	{
 		// Keyboard
-		input->m_keyPressed.AddRaw(this, &Engine::onKeyPressed);
+		input->m_keyPressed.addRaw(this, &Engine::onKeyPressed);
 
 		// Mouse
-		input->m_onMouseMiddleScrolled.AddRaw(this, &Engine::onMouseMiddleScrolled);
-		input->m_onMouseLeftUp.AddRaw(this, &Engine::onLeftMouseUp);
-		input->m_onMouseMiddleUp.AddRaw(this, &Engine::onMiddleMouseUp);
+		input->m_onMouseMiddleScrolled.addRaw(this, &Engine::onMouseMiddleScrolled);
+		input->m_onMouseLeftUp.addRaw(this, &Engine::onLeftMouseUp);
+		input->m_onMouseMiddleUp.addRaw(this, &Engine::onMiddleMouseUp);
 
 		// Menu
-		input->m_menuActionPressed.AddRaw(this, &Engine::onMenuActionPressed);
+		input->m_menuActionPressed.addRaw(this, &Engine::onMenuActionPressed);
 	}
 
 	LOG_INFO("Renderer constructed.")
@@ -137,8 +137,7 @@ void Engine::onKeyPressed(const EKey keyCode) const
 			m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Normals);
 			break;
 		}
-	default:
-		break;
+	default: break;
 	}
 }
 
@@ -161,25 +160,24 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 	IPlatform* platform = app->getPlatform();
 	switch (actionId)
 	{
-	case EMenuAction::Open:
-		onOpenPressed();
+	case EMenuAction::Open: onOpenPressed();
 		break;
-	case EMenuAction::Quit:
-		m_isRunning = false;
+	case EMenuAction::Quit: m_isRunning = false;
 		break;
-	case EMenuAction::Wireframe:
-		platform->setMenuItemChecked(EMenuAction::Wireframe,
-		                             m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Wireframe));
+	case EMenuAction::Wireframe: platform->setMenuItemChecked(EMenuAction::Wireframe,
+	                                                          m_renderer->m_settings.toggleRenderFlag(
+		                                                          ERenderFlag::Wireframe));
 		break;
-	case EMenuAction::Shaded:
-		platform->setMenuItemChecked(EMenuAction::Shaded, m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Shaded));
+	case EMenuAction::Shaded: platform->setMenuItemChecked(EMenuAction::Shaded,
+	                                                       m_renderer->m_settings.toggleRenderFlag(
+		                                                       ERenderFlag::Shaded));
 		break;
-	case EMenuAction::Depth:
-		platform->setMenuItemChecked(EMenuAction::Depth, m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Depth));
+	case EMenuAction::Depth: platform->setMenuItemChecked(EMenuAction::Depth,
+	                                                      m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Depth));
 		break;
-	case EMenuAction::Normals:
-		platform->setMenuItemChecked(EMenuAction::Normals,
-		                             m_renderer->m_settings.toggleRenderFlag(ERenderFlag::Normals));
+	case EMenuAction::Normals: platform->setMenuItemChecked(EMenuAction::Normals,
+	                                                        m_renderer->m_settings.toggleRenderFlag(
+		                                                        ERenderFlag::Normals));
 	}
 }
 

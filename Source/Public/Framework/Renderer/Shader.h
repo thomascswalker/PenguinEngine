@@ -44,20 +44,27 @@ struct IShader
 		m_height = inViewData.m_height;
 	}
 
-	virtual bool computeVertexShader(const Vertex& inV0, const Vertex& inV1, const Vertex& inV2)
+	// No default implementation
+	virtual bool computeVertexShader(const Vertex& inV0, const Vertex& inV1, const Vertex& inV2) = 0;
+	virtual void computePixelShader(float x, float y) = 0;
+};
+
+struct DefaultShader : IShader
+{
+	bool computeVertexShader(const Vertex& inV0, const Vertex& inV1, const Vertex& inV2) override
 	{
 		m_v0 = inV0;
 		m_v1 = inV1;
 		m_v2 = inV2;
 
 		// Project the world-space points to screen-space
-		bool bTriangleOnScreen = false;
-		bTriangleOnScreen |= Math::projectWorldToScreen(m_v0.m_position, m_s0, m_viewData);
-		bTriangleOnScreen |= Math::projectWorldToScreen(m_v1.m_position, m_s1, m_viewData);
-		bTriangleOnScreen |= Math::projectWorldToScreen(m_v2.m_position, m_s2, m_viewData);
+		bool triangleOnScreen = false;
+		triangleOnScreen |= Math::projectWorldToScreen(m_v0.m_position, m_s0, m_viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(m_v1.m_position, m_s1, m_viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(m_v2.m_position, m_s2, m_viewData);
 
 		// If the triangle is completely off screen, exit
-		if (!bTriangleOnScreen)
+		if (!triangleOnScreen)
 		{
 			return false;
 		}
@@ -73,14 +80,14 @@ struct IShader
 		}
 
 		// Get the bounding box of the 2d triangle clipped to the viewport
-		m_screenBounds = rectf::MakeBoundingBox(m_s0, m_s1, m_s2);
+		m_screenBounds = rectf::makeBoundingBox(m_s0, m_s1, m_s2);
 
 		// Grow the bounds by 1 pixel to account for gaps between pixels.
-		m_screenBounds.Grow(1.0f);
+		m_screenBounds.grow(1.0f);
 
 		// Clamp the bounds to the viewport
 		const rectf viewportRect = {0, 0, static_cast<float>(m_width), static_cast<float>(m_height)};
-		m_screenBounds.Clamp(viewportRect);
+		m_screenBounds.clamp(viewportRect);
 
 		// Average each of the vertices' normals to get the triangle normal
 		vec4f v01Normal;
@@ -107,12 +114,7 @@ struct IShader
 		return true;
 	}
 
-	// No default implementation
-	virtual void computePixelShader(float x, float y) = 0;
-};
 
-struct DefaultShader : IShader
-{
 	void computePixelShader(float u, float v) override
 	{
 		// Calculate the weighted normal of the current point on this triangle. This uses the UVW

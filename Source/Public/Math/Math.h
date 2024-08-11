@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <float.h>

@@ -7,118 +7,118 @@
 template <typename T>
 struct trans_t
 {
-	vec3_t<T> Translation;
-	rot_t<T> Rotation;
-	vec3_t<T> Scale;
+	vec3_t<T> translation;
+	rot_t<T> rotation;
+	vec3_t<T> scale;
 
 	trans_t()
 	{
-		Rotation = rot_t<T>(0, 0, 0);
-		Translation = vec3_t<T>(0);
-		Scale = vec3_t<T>(1);
+		rotation = rot_t<T>(0, 0, 0);
+		translation = vec3_t<T>(0);
+		scale = vec3_t<T>(1);
 	}
 
-	explicit trans_t(const vec3_t<T>& InTranslation)
+	explicit trans_t(const vec3_t<T>& inTranslation)
 	{
-		Rotation = rot_t<T>();
-		Translation = InTranslation;
-		Scale = vec3_t<T>();
+		rotation = rot_t<T>();
+		translation = inTranslation;
+		scale = vec3_t<T>();
 	}
 
-	explicit trans_t(rot_t<T>& InRotation)
+	explicit trans_t(rot_t<T>& inRotation)
 	{
-		Rotation = InRotation;
-		Translation = vec3_t<T>();
-		Scale = vec3_t<T>();
+		rotation = inRotation;
+		translation = vec3_t<T>();
+		scale = vec3_t<T>();
 	}
 
-	trans_t(quat_t<T>& InRotation, const vec3_t<T>& InTranslation, const vec3_t<T>& InScale = {1.0f, 1.0f, 1.0f})
+	trans_t(quat_t<T>& inRotation, const vec3_t<T>& inTranslation, const vec3_t<T>& inScale = {1.0f, 1.0f, 1.0f})
 	{
-		Rotation = InRotation.Rotator();
-		Translation = InTranslation;
-		Scale = InScale;
+		rotation = inRotation.rotator();
+		translation = inTranslation;
+		scale = inScale;
 	}
 
-	trans_t(rot_t<T>& InRotation, const vec3_t<T>& InTranslation, const vec3_t<T>& InScale = {1.0f, 1.0f, 1.0f})
+	trans_t(rot_t<T>& inRotation, const vec3_t<T>& inTranslation, const vec3_t<T>& inScale = {1.0f, 1.0f, 1.0f})
 	{
-		Rotation = InRotation;
-		Translation = InTranslation;
-		Scale = InScale;
+		rotation = inRotation;
+		translation = inTranslation;
+		scale = inScale;
 	}
 
-	void FromMatrix(mat4_t<T>& InMatrix)
+	void fromMatrix(mat4_t<T>& inMatrix)
 	{
 		// Extract scale
-		Scale = InMatrix.GetScale();
+		scale = inMatrix.getScale();
 
-		// Handle negative scaling
+		// m_handle negative scaling
 		LOG_WARNING("Implement negative scale handling in trans_t::FromMatrix")
 
 		// Extract rotation
-		quat_t<T> InRotation = quat_t(InMatrix);
-		Rotation = InRotation.Rotator();
+		quat_t<T> inRotation = quat_t(inMatrix);
+		rotation = inRotation.rotator();
 
 		// Extract translation
-		Translation = InMatrix.GetTranslation();
+		translation = inMatrix.getTranslation();
 
-		Rotation.Normalize();
+		rotation.normalize();
 	}
 
 	//  | rx0   | rx1   | rx2   | 0 |
 	//  | ry0   | ry1   | ry2   | 0 |
 	//  | rz0   | rz1   | rz2   | 0 |
 	//  | tx*sx | ty*sy | tz*sz | 1 | 
-	mat4_t<T> ToMatrix() const
+	mat4_t<T> toMatrix() const
 	{
 		// Apply translation
-		mat4_t<T> Out = mat4_trans_t<T>(Translation);
+		mat4_t<T> out = mat4_trans_t<T>(translation);
 
 		// Apply rotation
-		mat4_t RotationMatrix = mat4_rot_t<T>(Rotation);
-		for (int32 X = 0; X < 3; ++X)
+		mat4_t rotationMatrix = mat4_rot_t<T>(rotation);
+		for (int32 x = 0; x < 3; ++x)
 		{
-			for (int32 Y = 0; Y < 3; ++Y)
+			for (int32 y = 0; y < 3; ++y)
 			{
-				Out.m[Y][X] = RotationMatrix.m[Y][X];
+				out.m[y][x] = rotationMatrix.m[y][x];
 			}
 		}
 
 		// Apply scale
-		Out.m[3][0] *= Scale.x;
-		Out.m[3][1] *= Scale.y;
-		Out.m[3][2] *= Scale.z;
+		out.m[3][0] *= scale.x;
+		out.m[3][1] *= scale.y;
+		out.m[3][2] *= scale.z;
 
-		return Out;
+		return out;
 	}
 
-	vec3_t<T> GetAxisNormalized(EAxis InAxis) const
+	vec3_t<T> getAxisNormalized(EAxis inAxis) const
 	{
-		mat4_t<T> M = ToMatrix().GetInverse();
-		vec3_t<T> AxisVector = M.GetAxis(InAxis);
-		AxisVector.Normalize();
-		return AxisVector;
+		mat4_t<T> m = toMatrix().getInverse();
+		vec3_t<T> axisVector = m.getAxis(inAxis);
+		axisVector.normalize();
+		return axisVector;
 	}
 
-	std::string ToString() const
+	std::string toString() const
 	{
-		return std::format("Translation={}, Rotation={}, Scale={}", Translation.ToString(), Rotation.ToString(),
-		                   Scale.ToString());
+		return std::format("translation={}, rotation={}, scale={}", translation.toString(), rotation.toString(),
+		                   scale.toString());
 	}
 
-	trans_t operator*(const trans_t& Other)
+	trans_t operator*(const trans_t& other)
 	{
-		trans_t Out;
+		trans_t out;
 
-		Out.Translation = Translation * Other.Translation;
-		Out.Rotation = Other.Rotation;
-		Out.Scale = Scale * Other.Scale;
+		out.translation = translation * other.translation;
+		out.rotation = other.rotation;
+		out.scale = scale * other.scale;
 
-		return Out;
+		return out;
 	}
 
-	trans_t& operator*=(const trans_t& Other)
+	trans_t& operator*=(const trans_t& other)
 	{
-		*this = *this * Other;
+		*this = *this * other;
 		return *this;
 	}
 };

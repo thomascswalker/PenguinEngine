@@ -644,9 +644,9 @@ namespace Math
 	}
 
 	template <typename T>
-	static T dot(const vec3_t<T>& A, const vec3_t<T>& B)
+	static T dot(const vec3_t<T>& a, const vec3_t<T>& b)
 	{
-		vec3_t<T> tmp = A * B;
+		vec3_t<T> tmp = a * b;
 		return tmp.x + tmp.y + tmp.z;
 	}
 

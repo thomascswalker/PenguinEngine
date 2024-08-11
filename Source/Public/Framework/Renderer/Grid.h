@@ -8,13 +8,9 @@ struct line_t
 	vec2_t<T> m_a;
 	vec2_t<T> m_b;
 
-	line_t()
-	{
-	}
+	line_t() {}
 
-	line_t(const vec2_t<T>& inA, const vec2_t<T>& inB) : m_a(inA), m_b(inB)
-	{
-	}
+	line_t(const vec2_t<T>& inA, const vec2_t<T>& inB) : m_a(inA), m_b(inB) {}
 
 	void reverse()
 	{
@@ -23,7 +19,7 @@ struct line_t
 		m_b = tmp;
 	}
 
-	linef getReverse() const
+	[[nodiscard]] linef getReverse() const
 	{
 		return {m_b, m_a};
 	}
@@ -33,7 +29,6 @@ struct line_t
 		// Line AB represented as a1x + b1y = c1
 		T a1 = m_b.x - m_a.x;
 		T b1 = m_a.x - m_b.y;
-
 		T c1 = a1 * m_a.x + b1 * m_a.y;
 
 		// Line CD represented as a2x + b2y = c2
@@ -49,14 +44,12 @@ struct line_t
 			// by returning a pair of FLT_MAX
 			return false;
 		}
-		else
-		{
-			T x = (b2 * c1 - b1 * c2) / det;
-			T y = (a1 * c2 - a2 * c1) / det;
-			out.x = x;
-			out.y = y;
-			return true;
-		}
+
+		T x = (b2 * c1 - b1 * c2) / det;
+		T y = (a1 * c2 - a2 * c1) / det;
+		out.x = x;
+		out.y = y;
+		return true;
 	}
 };
 
@@ -66,9 +59,7 @@ struct line3d_t
 	vec3_t<T> m_a;
 	vec3_t<T> m_b;
 
-	line3d_t(const vec3_t<T>& inA, const vec3_t<T>& inB) : m_a(inA), m_b(inB)
-	{
-	}
+	line3d_t(const vec3_t<T>& inA, const vec3_t<T>& inB) : m_a(inA), m_b(inB) {}
 };
 
 struct FGrid

@@ -245,15 +245,15 @@ public:
 		{
 		case EMouseButtonType::Left:
 			m_mouseLeftDown = true;
-			m_onMouseLeftDown.Broadcast(cursorPosition);
+			m_onMouseLeftDown.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Right:
 			m_mouseRightDown = true;
-			m_onMouseRightDown.Broadcast(cursorPosition);
+			m_onMouseRightDown.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Middle:
 			m_mouseMiddleDown = true;
-			m_onMouseMiddleDown.Broadcast(cursorPosition);
+			m_onMouseMiddleDown.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Invalid:
 		default:
@@ -271,15 +271,15 @@ public:
 		{
 		case EMouseButtonType::Left:
 			m_mouseLeftDown = false;
-			m_onMouseLeftUp.Broadcast(cursorPosition);
+			m_onMouseLeftUp.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Right:
 			m_mouseRightDown = false;
-			m_onMouseRightUp.Broadcast(cursorPosition);
+			m_onMouseRightUp.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Middle:
 			m_mouseMiddleDown = false;
-			m_onMouseMiddleUp.Broadcast(cursorPosition);
+			m_onMouseMiddleUp.broadcast(cursorPosition);
 			break;
 		case EMouseButtonType::Invalid:
 		default:
@@ -293,7 +293,7 @@ public:
 	bool onMouseWheel(const float delta) override
 	{
 		// Invert delta
-		m_onMouseMiddleScrolled.Broadcast(delta);
+		m_onMouseMiddleScrolled.broadcast(delta);
 		return true;
 	}
 
@@ -307,7 +307,7 @@ public:
 		}
 		m_previousCursorPosition = m_currentCursorPosition;
 		m_currentCursorPosition = cursorPosition;
-		m_onMouseMoved.Broadcast(m_currentCursorPosition);
+		m_onMouseMoved.broadcast(m_currentCursorPosition);
 		m_deltaCursorPosition = m_currentCursorPosition - m_previousCursorPosition;
 		return true;
 	}
@@ -342,7 +342,7 @@ public:
 	bool onKeyUp(const EKey keyCode, int32 keyFlags, bool isRepeat) override
 	{
 		m_keyStateMap[keyCode] = false;
-		m_keyPressed.Broadcast(keyCode);
+		m_keyPressed.broadcast(keyCode);
 		return true;
 	}
 

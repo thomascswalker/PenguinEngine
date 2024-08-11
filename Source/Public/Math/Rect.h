@@ -17,78 +17,78 @@ struct rect_t
 	{
 	}
 
-	rect_t(const vec2_t<T>& InMin, const vec2_t<T>& InMax)
+	rect_t(const vec2_t<T>& inMin, const vec2_t<T>& inMax)
 	{
-		X = InMin.x;
-		Y = InMin.y;
-		Width = InMax.x - InMin.x;
-		Height = InMax.y - InMin.y;
+		X = inMin.x;
+		Y = inMin.y;
+		Width = inMax.x - inMin.x;
+		Height = inMax.y - inMin.y;
 	}
 
-	rect_t(T InX, T InY, T InWidth, T InHeight)
+	rect_t(T inX, T inY, T inWidth, T inHeight)
 	{
-		X = InX;
-		Y = InY;
-		Width = InWidth;
-		Height = InHeight;
+		X = inX;
+		Y = inY;
+		Width = inWidth;
+		Height = inHeight;
 	}
 
-	vec2_t<T> Min() const { return vec2_t(X, Y); }
-	vec2_t<T> Max() const { return vec2_t(X + Width, Y + Height); }
+	vec2_t<T> min() const { return vec2_t(X, Y); }
+	vec2_t<T> max() const { return vec2_t(X + Width, Y + Height); }
 
-	static rect_t MakeBoundingBox(const vec2_t<T>& V0, const vec2_t<T>& V1)
+	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1)
 	{
-		T XValues[2] = {V0.x, V1.x};
-		T YValues[2] = {V0.y, V1.y};
+		T xValues[2] = {v0.x, v1.x};
+		T yValues[2] = {v0.y, v1.y};
 
-		const T MinX = *std::ranges::min_element(XValues);
-		const T MinY = *std::ranges::min_element(YValues);
-		const T MaxX = *std::ranges::max_element(XValues);
-		const T MaxY = *std::ranges::max_element(YValues);
+		const T minX = *std::ranges::min_element(xValues);
+		const T minY = *std::ranges::min_element(yValues);
+		const T maxX = *std::ranges::max_element(xValues);
+		const T maxY = *std::ranges::max_element(yValues);
 
-		vec2_t<T> BBMin(MinX, MinY);
-		vec2_t<T> BBMax(MaxX, MaxY);
+		vec2_t<T> bbMin(minX, minY);
+		vec2_t<T> bbMax(maxX, maxY);
 
-		return rect_t(BBMin, BBMax);
+		return rect_t(bbMin, bbMax);
 	}
 
-	static rect_t MakeBoundingBox(const vec2_t<T>& V0, const vec2_t<T>& V1, const vec2_t<T>& V2)
+	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1, const vec2_t<T>& v2)
 	{
-		T XValues[3] = {V0.x, V1.x, V2.x};
-		T YValues[3] = {V0.y, V1.y, V2.y};
+		T xValues[3] = {v0.x, v1.x, v2.x};
+		T yValues[3] = {v0.y, v1.y, v2.y};
 
-		const T MinX = *std::ranges::min_element(XValues);
-		const T MinY = *std::ranges::min_element(YValues);
-		const T MaxX = *std::ranges::max_element(XValues);
-		const T MaxY = *std::ranges::max_element(YValues);
+		const T minX = *std::ranges::min_element(xValues);
+		const T minY = *std::ranges::min_element(yValues);
+		const T maxX = *std::ranges::max_element(xValues);
+		const T maxY = *std::ranges::max_element(yValues);
 
-		vec2_t<T> BBMin(MinX, MinY);
-		vec2_t<T> BBMax(MaxX, MaxY);
+		vec2_t<T> bbMin(minX, minY);
+		vec2_t<T> bbMax(maxX, maxY);
 
-		return rect_t(BBMin, BBMax);
+		return rect_t(bbMin, bbMax);
 	}
 
-	void Clamp(const rect_t& Other)
+	void clamp(const rect_t& other)
 	{
-		X = std::max(X, Other.X);
-		Y = std::max(Y, Other.Y);
-		Width = std::min(Width, Other.Width);
-		Height = std::min(Height, Other.Height);
+		X = std::max(X, other.X);
+		Y = std::max(Y, other.Y);
+		Width = std::min(Width, other.Width);
+		Height = std::min(Height, other.Height);
 	}
 
-	void Grow(T Value)
+	void grow(T value)
 	{
-		X -= Value;
-		Y -= Value;
-		Width += Value;
-		Height += Value;
+		X -= value;
+		Y -= value;
+		Width += value;
+		Height += value;
 	}
 
-	void Shrink(T Value)
+	void shrink(T value)
 	{
-		X += Value;
-		Y += Value;
-		Width -= Value;
-		Height += Value;
+		X += value;
+		Y += value;
+		Width -= value;
+		Height += value;
 	}
 };

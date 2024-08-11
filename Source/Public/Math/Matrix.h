@@ -383,19 +383,19 @@ struct mat4_t
 
 	rot_t<T> getRotator() const
 	{
-		const vec3_t XAxis = getAxis(EAxis::X);
-		const vec3_t YAxis = getAxis(EAxis::Y);
-		const vec3_t ZAxis = getAxis(EAxis::Z);
-		const T RadToDeg = 180.0f / (PI * 2.0f);
+		const vec3_t xAxis = getAxis(EAxis::X);
+		const vec3_t yAxis = getAxis(EAxis::Y);
+		const vec3_t zAxis = getAxis(EAxis::Z);
+		const T radToDeg = 180.0f / (PI * 2.0f);
 
-		T Pitch = std::atan2f(XAxis.z, std::sqrtf(Math::square(XAxis.x) + Math::square(XAxis.y))) * RadToDeg;
-		T Yaw = std::atan2f(XAxis.y, XAxis.x) * RadToDeg;
-		rot_t Rotator = rot_t(Pitch, Yaw, T(0));
+		T pitch = std::atan2f(xAxis.z, std::sqrtf(Math::square(xAxis.x) + Math::square(xAxis.y))) * radToDeg;
+		T yaw = std::atan2f(xAxis.y, xAxis.x) * radToDeg;
+		rot_t rotator = rot_t(pitch, yaw, T(0));
 
-		const vec3_t SYAxis = mat4_rot_t<T>(Rotator).getAxis(EAxis::Y);
-		Rotator.Roll = std::atan2f(Math::dot(ZAxis, SYAxis), Math::dot(YAxis, SYAxis)) * RadToDeg;
+		const vec3_t syAxis = mat4_rot_t<T>(rotator).getAxis(EAxis::Y);
+		rotator.roll = std::atan2f(Math::dot(zAxis, syAxis), Math::dot(yAxis, syAxis)) * radToDeg;
 
-		return Rotator;
+		return rotator;
 	}
 
 	vec3_t<T> getScale(T tolerance = 0.00000001f);
@@ -405,104 +405,104 @@ struct mat4_t
 		return vec3_t(m[3][0], m[3][1], m[3][2]);
 	}
 
-	static mat4_t makeFromX(T Angle)
+	static mat4_t makeFromX(T angle)
 	{
-		T C = std::cosf(Angle);
-		T S = std::sinf(Angle);
+		T c = std::cosf(angle);
+		T s = std::sinf(angle);
 		return mat4_t(
 			plane_t<T>(1, 0, 0, 0),
-			plane_t<T>(0, C, -S, 0),
-			plane_t<T>(0, S, C, 0),
+			plane_t<T>(0, c, -s, 0),
+			plane_t<T>(0, s, c, 0),
 			plane_t<T>(0, 0, 0, 1)
 		);
 	}
 
-	static mat4_t makeFromY(T Angle)
+	static mat4_t makeFromY(T angle)
 	{
-		T C = std::cosf(Angle);
-		T S = std::sinf(Angle);
+		T c = std::cosf(angle);
+		T s = std::sinf(angle);
 		return mat4_t(
-			plane_t<T>(C, 0, S, 0),
+			plane_t<T>(c, 0, s, 0),
 			plane_t<T>(0, 1, 0, 0),
-			plane_t<T>(-S, 0, C, 0),
+			plane_t<T>(-s, 0, c, 0),
 			plane_t<T>(0, 0, 0, 1)
 		);
 	}
 
-	static mat4_t makeFromZ(T Angle)
+	static mat4_t makeFromZ(T angle)
 	{
-		T C = std::cosf(Angle);
-		T S = std::sinf(Angle);
+		T c = std::cosf(angle);
+		T s = std::sinf(angle);
 		return mat4_t(
-			plane_t<T>(C, -S, 0, 0),
-			plane_t<T>(S, C, 0, 0),
+			plane_t<T>(c, -s, 0, 0),
+			plane_t<T>(s, c, 0, 0),
 			plane_t<T>(0, 0, 1, 0),
 			plane_t<T>(0, 0, 0, 1)
 		);
 	}
 
-	T get(int32 X, int32 Y) const
+	T get(int32 x, int32 y) const
 	{
-		return m[X][Y];
+		return m[x][y];
 	}
 
 	vec4_t<T> getRow(int32 row) const;
 
-	vec4_t<T> getColumn(int32 Column) const
+	vec4_t<T> getColumn(int32 column) const
 	{
-		return {m[0][Column], m[1][Column], m[2][Column], m[3][Column]};
+		return {m[0][column], m[1][column], m[2][column], m[3][column]};
 	}
 
-	void set(int32 X, int32 Y, T Value)
+	void set(int32 x, int32 y, T value)
 	{
-		m[X][Y] = Value;
+		m[x][y] = value;
 	}
 
 	std::string toString() const
 	{
-		std::string Output;
+		std::string output;
 
-		Output += std::format("[{} {} {} {}]\n", m[0][0], m[0][1], m[0][2], m[0][3]);
-		Output += std::format("[{} {} {} {}]\n", m[1][0], m[1][1], m[1][2], m[1][3]);
-		Output += std::format("[{} {} {} {}]\n", m[2][0], m[2][1], m[2][2], m[2][3]);
-		Output += std::format("[{} {} {} {}]\n", m[3][0], m[3][1], m[3][2], m[3][3]);
+		output += std::format("[{} {} {} {}]\n", m[0][0], m[0][1], m[0][2], m[0][3]);
+		output += std::format("[{} {} {} {}]\n", m[1][0], m[1][1], m[1][2], m[1][3]);
+		output += std::format("[{} {} {} {}]\n", m[2][0], m[2][1], m[2][2], m[2][3]);
+		output += std::format("[{} {} {} {}]\n", m[3][0], m[3][1], m[3][2], m[3][3]);
 
-		return Output;
+		return output;
 	}
 
-	mat4_t operator+(const mat4_t& Other) const
+	mat4_t operator+(const mat4_t& other) const
 	{
-		mat4_t Result;
-		for (int32 X = 0; X < 4; X++)
+		mat4_t result;
+		for (int32 x = 0; x < 4; x++)
 		{
-			for (int32 Y = 0; Y < 4; Y++)
+			for (int32 y = 0; y < 4; y++)
 			{
-				Result.m[X][Y] = m[X][Y] + Other.m[X][Y];
+				result.m[x][y] = m[x][y] + other.m[x][y];
 			}
 		}
-		return Result;
+		return result;
 	}
 
-	mat4_t& operator+=(const mat4_t& Other)
+	mat4_t& operator+=(const mat4_t& other)
 	{
-		*this = *this + Other;
+		*this = *this + other;
 #if _DEBUG
 		checkNaN();
 #endif
 		return *this;
 	}
 
-	mat4_t operator-(const mat4_t& Other) const
+	mat4_t operator-(const mat4_t& other) const
 	{
-		mat4_t Result;
-		for (int32 X = 0; X < 4; X++)
+		mat4_t result;
+		for (int32 x = 0; x < 4; x++)
 		{
-			for (int32 Y = 0; Y < 4; Y++)
+			for (int32 y = 0; y < 4; y++)
 			{
-				Result.m[X][Y] = m[X][Y] - Other.m[X][Y];
+				result.m[x][y] = m[x][y] - other.m[x][y];
 			}
 		}
-		return Result;
+		return result;
 	}
 
 	mat4_t& operator-=(const mat4_t& other)
@@ -592,50 +592,50 @@ struct mat4_t
 };
 
 template <typename T>
-constexpr mat4_t<T> operator*(const mat4_t<T>& M0, const mat4_t<T>& M1)
+constexpr mat4_t<T> operator*(const mat4_t<T>& m0, const mat4_t<T>& m1)
 {
-	using Float4x4 = float[4][4];
-	const Float4x4& A = *((const Float4x4*)M0.m);
-	const Float4x4& B = *((const Float4x4*)M1.m);
-	Float4x4 Temp;
-	Temp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
-	Temp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
-	Temp[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2] + A[0][3] * B[3][2];
-	Temp[0][3] = A[0][0] * B[0][3] + A[0][1] * B[1][3] + A[0][2] * B[2][3] + A[0][3] * B[3][3];
+	using float4X4 = float[4][4];
+	const float4X4& A = *((const float4X4*)m0.m);
+	const float4X4& B = *((const float4X4*)m1.m);
+	float4X4 temp;
+	temp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
+	temp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
+	temp[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2] + A[0][3] * B[3][2];
+	temp[0][3] = A[0][0] * B[0][3] + A[0][1] * B[1][3] + A[0][2] * B[2][3] + A[0][3] * B[3][3];
 
-	Temp[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0] + A[1][3] * B[3][0];
-	Temp[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1] + A[1][3] * B[3][1];
-	Temp[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2] + A[1][3] * B[3][2];
-	Temp[1][3] = A[1][0] * B[0][3] + A[1][1] * B[1][3] + A[1][2] * B[2][3] + A[1][3] * B[3][3];
+	temp[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0] + A[1][3] * B[3][0];
+	temp[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1] + A[1][3] * B[3][1];
+	temp[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2] + A[1][3] * B[3][2];
+	temp[1][3] = A[1][0] * B[0][3] + A[1][1] * B[1][3] + A[1][2] * B[2][3] + A[1][3] * B[3][3];
 
-	Temp[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0] + A[2][3] * B[3][0];
-	Temp[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1] + A[2][3] * B[3][1];
-	Temp[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2] + A[2][3] * B[3][2];
-	Temp[2][3] = A[2][0] * B[0][3] + A[2][1] * B[1][3] + A[2][2] * B[2][3] + A[2][3] * B[3][3];
+	temp[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0] + A[2][3] * B[3][0];
+	temp[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1] + A[2][3] * B[3][1];
+	temp[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2] + A[2][3] * B[3][2];
+	temp[2][3] = A[2][0] * B[0][3] + A[2][1] * B[1][3] + A[2][2] * B[2][3] + A[2][3] * B[3][3];
 
-	Temp[3][0] = A[3][0] * B[0][0] + A[3][1] * B[1][0] + A[3][2] * B[2][0] + A[3][3] * B[3][0];
-	Temp[3][1] = A[3][0] * B[0][1] + A[3][1] * B[1][1] + A[3][2] * B[2][1] + A[3][3] * B[3][1];
-	Temp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
-	Temp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
+	temp[3][0] = A[3][0] * B[0][0] + A[3][1] * B[1][0] + A[3][2] * B[2][0] + A[3][3] * B[3][0];
+	temp[3][1] = A[3][0] * B[0][1] + A[3][1] * B[1][1] + A[3][2] * B[2][1] + A[3][3] * B[3][1];
+	temp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
+	temp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
 
-	mat4_t<T> Result;
-	memcpy(&Result.m, &Temp, 16 * sizeof(float));
-	return Result;
+	mat4_t<T> result;
+	memcpy(&result.m, &temp, 16 * sizeof(float));
+	return result;
 }
 
 template <typename T>
 struct mat4_persp_t : mat4_t<T>
 {
-	mat4_persp_t(T Fov, T Aspect, T MinZ, T MaxZ = MAX_Z) : mat4_t<T>()
+	mat4_persp_t(T fov, T aspect, T minZ, T maxZ = MAX_Z) : mat4_t<T>()
 	{
 		this->setZero();
-		const T TanHalfFov = std::tanf(Fov / 2.0f);
-		this->m[0][0] = T(1) / (Aspect * TanHalfFov);
-		this->m[1][1] = T(1) / TanHalfFov;
+		const T tanHalfFov = std::tanf(fov / 2.0f);
+		this->m[0][0] = T(1) / (aspect * tanHalfFov);
+		this->m[1][1] = T(1) / tanHalfFov;
 
-		this->m[2][2] = -(MaxZ + MinZ) / (MaxZ - MinZ);
+		this->m[2][2] = -(maxZ + minZ) / (maxZ - minZ);
 		this->m[3][2] = -T(1);
-		this->m[2][3] = -(T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
+		this->m[2][3] = -(T(2) * maxZ * minZ) / (maxZ - minZ);
 #if _DEBUG
 		this->checkNaN();
 #endif
@@ -645,34 +645,34 @@ struct mat4_persp_t : mat4_t<T>
 template <typename T>
 struct mat4_lookat_t : mat4_t<T>
 {
-	mat4_lookat_t(const vec3_t<T>& Eye, const vec3_t<T>& Center, const vec3_t<T>& UpVector) : mat4_t<T>()
+	mat4_lookat_t(const vec3_t<T>& eye, const vec3_t<T>& center, const vec3_t<T>& upVector) : mat4_t<T>()
 	{
 		// Forward vector
-		const vec3_t<T> Forward = (Center - Eye).normalized();
+		const vec3_t<T> forward = (center - eye).normalized();
 
 		// Right vector
-		const vec3_t<T> Right = (Math::cross(Forward, UpVector)).normalized();
+		const vec3_t<T> right = (Math::cross(forward, upVector)).normalized();
 
 		// Up vector
-		const vec3_t<T> Up = Math::cross(Right, Forward);
+		const vec3_t<T> up = Math::cross(right, forward);
 
 		//  Rx |  Ux | -Fx | -Tx
 		//  Ry |  Uy | -Fy | -Ty
 		//  Rz |  Uz | -Fz | -Tz 
 		//  0  |  0  |  0  |  1
 		this->setIdentity();
-		this->m[0][0] = Right.x;
-		this->m[0][1] = Right.y;
-		this->m[0][2] = Right.z;
-		this->m[1][0] = Up.x;
-		this->m[1][1] = Up.y;
-		this->m[1][2] = Up.z;
-		this->m[2][0] = -Forward.x;
-		this->m[2][1] = -Forward.y;
-		this->m[2][2] = -Forward.z;
-		this->m[0][3] = -Math::dot(Right, Eye);
-		this->m[1][3] = -Math::dot(Up, Eye);
-		this->m[2][3] = Math::dot(Forward, Eye);
+		this->m[0][0] = right.x;
+		this->m[0][1] = right.y;
+		this->m[0][2] = right.z;
+		this->m[1][0] = up.x;
+		this->m[1][1] = up.y;
+		this->m[1][2] = up.z;
+		this->m[2][0] = -forward.x;
+		this->m[2][1] = -forward.y;
+		this->m[2][2] = -forward.z;
+		this->m[0][3] = -Math::dot(right, eye);
+		this->m[1][3] = -Math::dot(up, eye);
+		this->m[2][3] = Math::dot(forward, eye);
 
 #if _DEBUG
 		this->checkNaN();
@@ -683,11 +683,11 @@ struct mat4_lookat_t : mat4_t<T>
 template <typename T>
 struct mat4_trans_t : mat4_t<T>
 {
-	mat4_trans_t(const vec3_t<T>& Delta) : mat4_t<T>()
+	mat4_trans_t(const vec3_t<T>& delta) : mat4_t<T>()
 	{
-		this->m[3][0] = Delta.x;
-		this->m[3][1] = Delta.y;
-		this->m[3][2] = Delta.z;
+		this->m[3][0] = delta.x;
+		this->m[3][1] = delta.y;
+		this->m[3][2] = delta.z;
 
 #if _DEBUG
 		this->checkNaN();
@@ -698,41 +698,41 @@ struct mat4_trans_t : mat4_t<T>
 template <typename T>
 struct mat4_rot_t : mat4_t<T>
 {
-	mat4_rot_t(T Pitch, T Yaw, T Roll) : mat4_t<T>()
+	mat4_rot_t(T pitch, T yaw, T roll) : mat4_t<T>()
 	{
 		// Convert from degrees to radians
-		Pitch = Math::degreesToRadians(Pitch);
-		Yaw = Math::degreesToRadians(Yaw);
-		Roll = Math::degreesToRadians(Roll);
+		pitch = Math::degreesToRadians(pitch);
+		yaw = Math::degreesToRadians(yaw);
+		roll = Math::degreesToRadians(roll);
 
-		T CP = std::cosf(Pitch);
-		T SP = std::sinf(Pitch);
-		T CY = std::cosf(Yaw);
-		T SY = std::sinf(Yaw);
-		T CR = std::cosf(Roll);
-		T SR = std::sinf(Roll);
+		T cp = std::cosf(pitch);
+		T sp = std::sinf(pitch);
+		T cy = std::cosf(yaw);
+		T sy = std::sinf(yaw);
+		T cr = std::cosf(roll);
+		T sr = std::sinf(roll);
 
-		T CPSY = CP * SY;
-		T SPSY = SP * SY;
+		T cpsy = cp * sy;
+		T spsy = sp * sy;
 
-		this->m[0][0] = CY * CR;
-		this->m[0][1] = -CY * SR;
-		this->m[0][2] = SY;
-		this->m[1][0] = SPSY * CR + CP * SR;
-		this->m[1][1] = -SPSY * SR + CP * CR;
-		this->m[1][2] = -SP * CY;
-		this->m[2][0] = -CPSY * CR + SP * SR;
-		this->m[2][1] = CPSY * SR + SP * CR;
-		this->m[2][2] = CP * CY;
+		this->m[0][0] = cy * cr;
+		this->m[0][1] = -cy * sr;
+		this->m[0][2] = sy;
+		this->m[1][0] = spsy * cr + cp * sr;
+		this->m[1][1] = -spsy * sr + cp * cr;
+		this->m[1][2] = -sp * cy;
+		this->m[2][0] = -cpsy * cr + sp * sr;
+		this->m[2][1] = cpsy * sr + sp * cr;
+		this->m[2][2] = cp * cy;
 
 #if _DEBUG
 		this->checkNaN();
 #endif
 	}
 
-	mat4_rot_t(const rot_t<T>& Rotation) : mat4_t<T>()
+	mat4_rot_t(const rot_t<T>& rotation) : mat4_t<T>()
 	{
-		*this = mat4_rot_t(Rotation.Pitch, Rotation.Yaw, Rotation.Roll);
+		*this = mat4_rot_t(rotation.pitch, rotation.yaw, rotation.roll);
 
 #if _DEBUG
 		this->checkNaN();
@@ -743,11 +743,11 @@ struct mat4_rot_t : mat4_t<T>
 template <typename T>
 struct mat4_rottrans_t : mat4_t<T>
 {
-	mat4_rottrans_t(const rot_t<T>& Rotation, const vec3_t<T>& Translation) : mat4_t<T>()
+	mat4_rottrans_t(const rot_t<T>& rotation, const vec3_t<T>& translation) : mat4_t<T>()
 	{
-		mat4_t<T> RotationMatrix = mat4_rot_t<T>(Rotation);
-		mat4_t<T> TranslationMatrix = mat4_trans_t<T>(Translation);
-		*this = RotationMatrix * TranslationMatrix;
+		mat4_t<T> rotationMatrix = mat4_rot_t<T>(rotation);
+		mat4_t<T> translationMatrix = mat4_trans_t<T>(translation);
+		*this = rotationMatrix * translationMatrix;
 
 #if _DEBUG
 		this->checkNaN();
