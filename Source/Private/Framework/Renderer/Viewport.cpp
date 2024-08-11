@@ -26,7 +26,7 @@ void Viewport::resetView() const
 	m_camera->setTranslation(g_defaultCameraTranslation);
 	m_camera->setRotation(rotf());
 
-	m_camera->m_target = vec3f::ZeroVector();
+	m_camera->m_target = vec3f::zeroVector();
 	m_camera->computeViewProjectionMatrix();
 }
 
@@ -41,27 +41,27 @@ bool Viewport::projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPos
 	// Clip space
 	mat4f model;
 	mat4f mvp = m_camera->m_viewProjectionMatrix * model;
-	vec4f result = mvp * vec4f(worldPosition.X, worldPosition.Y, worldPosition.Z, 1.0f);
-	if (result.W > 0.0f)
+	vec4f result = mvp * vec4f(worldPosition.x, worldPosition.y, worldPosition.z, 1.0f);
+	if (result.w > 0.0f)
 	{
 		// Apply perspective correction
 		const vec3f clipPosition{
-			result.X / result.W,
-			result.Y / result.W,
-			result.Z / result.W
+			result.x / result.w,
+			result.y / result.w,
+			result.z / result.w
 		};
 
 		// Normalized device coordinates
 		const vec2f normalizedPosition{
-			(clipPosition.X / 2.0f) + 0.5f,
-			(clipPosition.Y / 2.0f) + 0.5f,
+			(clipPosition.x / 2.0f) + 0.5f,
+			(clipPosition.y / 2.0f) + 0.5f,
 		};
 
 		// Apply the current render width and height
 		screenPosition = vec3f{
-			normalizedPosition.X * static_cast<float>(m_camera->m_width),
-			normalizedPosition.Y * static_cast<float>(m_camera->m_height),
-			(result.Z + 1.0f) * 0.5f
+			normalizedPosition.x * static_cast<float>(m_camera->m_width),
+			normalizedPosition.y * static_cast<float>(m_camera->m_height),
+			(result.z + 1.0f) * 0.5f
 		};
 		return true;
 	}
@@ -84,6 +84,6 @@ void Viewport::formatDebugText()
 		"FPS: {}\n"
 		"Size: {}\n",
 		engine->getFps(),
-		getSize().ToString()
+		getSize().toString()
 	);
 }

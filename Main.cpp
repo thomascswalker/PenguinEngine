@@ -1,5 +1,7 @@
 #include <iostream>
 
+#define NOMINMAX
+
 #include "Framework/Application.h"
 #include "Framework/Core/ErrorCodes.h"
 

@@ -63,7 +63,7 @@ struct IShader
 		}
 
 		// Reverse the order to CCW if the order is CW
-		switch (Math::GetVertexOrder(m_s0, m_s1, m_s2))
+		switch (Math::getVertexOrder(m_s0, m_s1, m_s2))
 		{
 		case EWindingOrder::CW: // Triangle is back-facing, exit
 		case EWindingOrder::CL: // Triangle has zero area, exit
@@ -100,9 +100,9 @@ struct IShader
 		// Calculate the triangle normal relative to the camera
 		vec4f tmp;
 		vecCrossVec(m_triangleWorldNormal, m_cameraWorldDirection, tmp);
-		m_triangleCameraNormal.X = tmp.X;
-		m_triangleCameraNormal.Y = tmp.Y;
-		m_triangleCameraNormal.Z = tmp.Z;
+		m_triangleCameraNormal.x = tmp.x;
+		m_triangleCameraNormal.y = tmp.y;
+		m_triangleCameraNormal.z = tmp.z;
 
 		return true;
 	}
@@ -117,13 +117,13 @@ struct DefaultShader : IShader
 	{
 		// Calculate the weighted normal of the current point on this triangle. This uses the UVW
 		// barycentric coordinates to weight each vertex normal of the triangle.
-		const vec3f weightedWorldNormal = m_v0.m_normal * m_uvw.X + m_v1.m_normal * m_uvw.Y + m_v2.m_normal * m_uvw.
-			Z;
+		const vec3f weightedWorldNormal = m_v0.m_normal * m_uvw.x + m_v1.m_normal * m_uvw.y + m_v2.m_normal * m_uvw.
+			z;
 
 		// Calculate the dot product of the triangle normal and camera direction
 		vecDotVec(-m_cameraWorldDirection, weightedWorldNormal, &m_facingRatio);
-		m_facingRatio = Math::Max(0.0f, m_facingRatio); // Floor to a min of 0
-		const float clampedFacingRatio = Math::Min(m_facingRatio * 255.0f, 255.0f); // Clamp to a max of 255
+		m_facingRatio = std::max(0.0f, m_facingRatio); // Floor to a min of 0
+		const float clampedFacingRatio = std::min(m_facingRatio * 255.0f, 255.0f); // Clamp to a max of 255
 
 		uint8 r = static_cast<uint8>(clampedFacingRatio);
 		uint8 g = r;

@@ -71,19 +71,19 @@ void Engine::tick()
 		// Orbit
 		if (input->isMouseDown(EMouseButtonType::Left) && input->isAltDown())
 		{
-			camera->orbit(deltaMouseCursor.X, deltaMouseCursor.Y);
+			camera->orbit(deltaMouseCursor.x, deltaMouseCursor.y);
 		}
 
 		// Pan
 		if (input->isMouseDown(EMouseButtonType::Middle) && input->isAltDown())
 		{
-			camera->pan(deltaMouseCursor.X, deltaMouseCursor.Y);
+			camera->pan(deltaMouseCursor.x, deltaMouseCursor.y);
 		}
 
 		// Zoom
 		if (input->isMouseDown(EMouseButtonType::Right) && input->isAltDown())
 		{
-			camera->zoom(deltaMouseCursor.Y);
+			camera->zoom(deltaMouseCursor.y);
 		}
 	}
 
@@ -145,8 +145,8 @@ void Engine::onKeyPressed(const EKey keyCode) const
 void Engine::onLeftMouseUp(const vec2f& cursorPosition) const
 {
 	Camera* camera = getViewportCamera();
-	camera->m_sphericalDelta.Phi = 0.0f;
-	camera->m_sphericalDelta.Theta = 0.0f;
+	camera->m_sphericalDelta.phi = 0.0f;
+	camera->m_sphericalDelta.theta = 0.0f;
 }
 
 void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const

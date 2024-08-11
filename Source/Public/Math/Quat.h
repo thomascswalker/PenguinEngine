@@ -1,212 +1,201 @@
 ﻿#pragma once
 
 template <typename T>
-struct TQuat
+struct quat_t
 {
 	union
 	{
 		struct // NOLINT
 		{
-			T X;
-			T Y;
-			T Z;
-			T W;
+			T x;
+			T y;
+			T z;
+			T w;
 		};
 
-		T XYZW[4];
+		T xyzw[4];
 	};
 
-	TQuat() : X(0), Y(0), Z(0), W(0)
+	quat_t() : x(0), y(0), z(0), w(0)
 	{
 	}
 
-	TQuat(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
+	quat_t(T inX, T inY, T inZ, T inW) : x(inX), y(inY), z(inZ), w(inW)
 	{
 	}
 
-	// Quaternion constructed from euler angles specified (in radians)
-	TQuat(const TVector3<T>& EulerAngles)
+	quat_t(vec3_t<T> axis, T angle)
 	{
-		TVector3<T> C = Math::Cos(EulerAngles * T(0.5f));
-		TVector3<T> S = Math::Sin(EulerAngles * T(0.5f));
+		const T halfAngle = 0.5f * angle;
+		T s, c;
+		Math::sinCos(&s, &c, halfAngle);
 
-		W = C.X * C.Y * C.Z + S.X * S.Y * S.Z;
-		X = S.X * C.Y * C.Z - C.X * S.Y * S.Z;
-		Y = C.X * S.Y * C.Z + S.X * C.Y * S.Z;
-		Z = C.X * C.Y * S.Z - S.X * S.Y * C.Z;
+		x = s * axis.x;
+		y = s * axis.y;
+		z = s * axis.z;
+		w = c;
 	}
 
-	TQuat(TVector3<T> Axis, T Angle)
+	quat_t(vec3_t<T> from, vec3_t<T> to)
 	{
-		const T HalfAngle = 0.5f * Angle;
-		T S, C;
-		Math::SinCos(&S, &C, HalfAngle);
-
-		X = S * Axis.X;
-		Y = S * Axis.Y;
-		Z = S * Axis.Z;
-		W = C;
-	}
-
-	TQuat(TVector3<T> From, TVector3<T> To)
-	{
-		T R = From.Dot(To) + T(1);
-		if (R < EPSILON)
+		T r = from.dot(to) + T(1);
+		if (r < EPSILON)
 		{
-			R = 0;
-			if (Math::Abs(From.X) > Math::Abs(From.Z))
+			r = 0;
+			if (std::abs(from.x) > std::abs(from.z))
 			{
-				X = -From.Y;
-				Y = From.X;
-				Z = 0;
-				W = R;
+				x = -from.y;
+				y = from.x;
+				z = 0;
+				w = r;
 			}
 			else
 			{
-				X = 0;
-				Y = -From.Z;
-				Z = From.Y;
-				W = R;
+				x = 0;
+				y = -from.z;
+				z = from.y;
+				w = r;
 			}
 		}
 		else
 		{
-			X = From.Y * To.Z - From.Z * To.Y;
-			Y = From.Z * To.X - From.X * To.Z;
-			Z = From.X * To.Y - From.Y * To.X;
-			W = R;
+			x = from.y * to.z - from.z * to.y;
+			y = from.z * to.x - from.x * to.z;
+			z = from.x * to.y - from.y * to.x;
+			w = r;
 		}
-		Normalize();
+		normalize();
 	}
 
-	TQuat(const TMatrix<T>& M)
+	quat_t(const mat4_t<T>& m)
 	{
 		//const MeReal *const t = (MeReal *) tm;
 		T s;
 
 		// Check diagonal (trace)
-		const T tr = M.M[0][0] + M.M[1][1] + M.M[2][2];
+		const T tr = m.m[0][0] + m.m[1][1] + m.m[2][2];
 
 		if (tr > 0.0f)
 		{
-			T InvS = Math::InvSqrt(tr + 1.f);
-			this->W = 0.5f * (1.f / InvS);
-			s = 0.5f * InvS;
+			T invS = Math::invSqrt(tr + 1.f);
+			this->w = 0.5f * (1.f / invS);
+			s = 0.5f * invS;
 
-			this->X = ((M.M[1][2] - M.M[2][1]) * s);
-			this->Y = ((M.M[2][0] - M.M[0][2]) * s);
-			this->Z = ((M.M[0][1] - M.M[1][0]) * s);
+			this->x = ((m.m[1][2] - m.m[2][1]) * s);
+			this->y = ((m.m[2][0] - m.m[0][2]) * s);
+			this->z = ((m.m[0][1] - m.m[1][0]) * s);
 		}
 		else
 		{
 			// diagonal is negative
 			int32 i = 0;
 
-			if (M.M[1][1] > M.M[0][0])
+			if (m.m[1][1] > m.m[0][0])
 				i = 1;
 
-			if (M.M[2][2] > M.M[i][i])
+			if (m.m[2][2] > m.m[i][i])
 				i = 2;
 
-			static constexpr int32 nxt[3] = {1, 2, 0};
+			constexpr int32 nxt[3] = {1, 2, 0};
 			const int32 j = nxt[i];
 			const int32 k = nxt[j];
 
-			s = M.M[i][i] - M.M[j][j] - M.M[k][k] + 1.0f;
+			s = m.m[i][i] - m.m[j][j] - m.m[k][k] + 1.0f;
 
-			T InvS = Math::InvSqrt(s);
+			T invS = Math::invSqrt(s);
 
 			T qt[4];
-			qt[i] = 0.5f * (1.f / InvS);
+			qt[i] = 0.5f * (1.f / invS);
 
-			s = 0.5f * InvS;
+			s = 0.5f * invS;
 
-			qt[3] = (M.M[j][k] - M.M[k][j]) * s;
-			qt[j] = (M.M[i][j] + M.M[j][i]) * s;
-			qt[k] = (M.M[i][k] + M.M[k][i]) * s;
+			qt[3] = (m.m[j][k] - m.m[k][j]) * s;
+			qt[j] = (m.m[i][j] + m.m[j][i]) * s;
+			qt[k] = (m.m[i][k] + m.m[k][i]) * s;
 
-			this->X = qt[0];
-			this->Y = qt[1];
-			this->Z = qt[2];
-			this->W = qt[3];
+			this->x = qt[0];
+			this->y = qt[1];
+			this->z = qt[2];
+			this->w = qt[3];
 		}
 	}
 
 	// From Euler angles
-	TQuat(const float Pitch, const float Yaw, const float Roll)
+	quat_t(const float pitch, const float yaw, const float roll)
 	{
-		T CY = cosf(Yaw * 0.5f);
-		T SY = sinf(Yaw * 0.5f);
-		T CP = cosf(Pitch * 0.5f);
-		T SP = sinf(Pitch * 0.5f);
-		T CR = cosf(Roll * 0.5f);
-		T SR = sinf(Roll * 0.5f);
+		T cy = cosf(yaw * 0.5f);
+		T sy = sinf(yaw * 0.5f);
+		T cp = cosf(pitch * 0.5f);
+		T sp = sinf(pitch * 0.5f);
+		T cr = cosf(roll * 0.5f);
+		T sr = sinf(roll * 0.5f);
 
-		W = CR * CP * CY + SR * SP * SY;
-		X = SR * CP * CY - CR * SP * SY;
-		Y = CR * SP * CY + SR * CP * SY;
-		Z = CR * CP * SY - SR * SP * CY;
+		w = cr * cp * cy + sr * sp * sy;
+		x = sr * cp * cy - cr * sp * sy;
+		y = cr * sp * cy + sr * cp * sy;
+		z = cr * cp * sy - sr * sp * cy;
 	}
 
-	TQuat operator*(const TQuat& Other) const
+	quat_t operator*(const quat_t& other) const
 	{
-		T TempW = W * Other.W - X * Other.X - Y * Other.Y - Z * Other.Z;
-		T TempX = W * Other.X + X * Other.W + Y * Other.Z - Z * Other.Y;
-		T TempY = W * Other.Y - X * Other.Y + Y * Other.W + Z * Other.X;
-		T TempZ = W * Other.Z + X * Other.Z - Y * Other.X + Z * Other.W;
+		T tempW = w * other.w - x * other.x - y * other.y - z * other.z;
+		T tempX = w * other.x + x * other.w + y * other.z - z * other.y;
+		T tempY = w * other.y - x * other.y + y * other.w + z * other.x;
+		T tempZ = w * other.z + x * other.z - y * other.x + z * other.w;
 
-		return {TempX, TempY, TempZ, TempW};
+		return {tempX, tempY, tempZ, tempW};
 	}
 
-	TVector4<T> operator*(const TVector4<T>& Other)
+	vec4_t<T> operator*(const vec4_t<T>& other)
 	{
-		TQuat QuatVector{Other.X, Other.Y, Other.Z, Other.W};
-		TQuat Inverse = GetConjugate();
-		TQuat Temp = *this;
-		TQuat Out = Temp * QuatVector * Inverse;
-		return {Out.X, Out.Y, Out.Z, Out.W};
+		quat_t quatVector{other.x, other.y, other.z, other.w};
+		quat_t inverse = getConjugate();
+		quat_t temp = *this;
+		quat_t out = temp * quatVector * inverse;
+		return {out.x, out.y, out.z, out.w};
 	}
 
-	TQuat GetConjugate() const
+	quat_t getConjugate() const
 	{
-		return {-X, -Y, -Z, W};
+		return {-x, -y, -z, w};
 	}
 
-	TQuat GetInverse() const
+	// Alias of GetConjugate
+	quat_t getInverse() const
 	{
-		return GetConjugate();
+		return {-x, -y, -z, w};
 	}
 
-	TVector3<T> RotateVector(TVector3<T> V)
+	vec3_t<T> rotateVector(vec3_t<T> v)
 	{
-		const TVector3<T> Q(X, Y, Z);
-		const TVector3<T> TT = Math::Cross(Q, V) * 2.0f;
-		const TVector3<T> Result = V + (TT * W) + Math::Cross(Q, TT);
-		return Result;
+		const vec3_t<T> q(x, y, z);
+		const vec3_t<T> tt = Math::cross(q, v) * 2.0f;
+		const vec3_t<T> result = v + (tt * w) + Math::cross(q, tt);
+		return result;
 	}
 
-	T Length()
+	T length()
 	{
-		return Math::Sqrt(X * X + Y * Y + Z * Z + W * W);
+		return std::sqrtf(x * x + y * y + z * z + w * w);
 	}
 
-	void Normalize()
+	void normalize()
 	{
-		T L = Length();
-		if (L == 0)
+		T l = length();
+		if (l == 0)
 		{
-			X = T(0);
-			Y = T(0);
-			Z = T(0);
-			W = T(1);
+			x = T(0);
+			y = T(0);
+			z = T(0);
+			w = T(1);
 		}
 		else
 		{
-			L = T(1) / L;
-			X *= L;
-			Y *= L;
-			Z *= L;
-			W *= L;
+			l = T(1) / l;
+			x *= l;
+			y *= l;
+			z *= l;
+			w *= l;
 		}
 	}
 };

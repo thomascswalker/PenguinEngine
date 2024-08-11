@@ -22,7 +22,7 @@ enum class EOrientation
 	Vertical
 };
 
-struct PChannel
+struct Channel
 {
 	void* m_memory; // Memory Order BB GG RR XX
 	uint32 m_channelCount = g_bytesPerPixel / g_bytesPerChannel; // 4
@@ -31,7 +31,7 @@ struct PChannel
 	uint32 m_pitch; // Count of bytes in a single row (equivalent to Width)
 	EChannelType m_type; // Color (RGB, 8-bit) or Data (float, 32-bit) channel
 
-	PChannel(const EChannelType inType, const int32 inWidth, const int32 inHeight) : m_type(inType)
+	Channel(const EChannelType inType, const int32 inWidth, const int32 inHeight) : m_type(inType)
 	{
 		resize(inWidth, inHeight);
 	}
@@ -46,7 +46,7 @@ struct PChannel
 
 	void realloc()
 	{
-		m_memory = PPlatformMemory::realloc(m_memory, getMemorySize());
+		m_memory = PlatformMemory::realloc(m_memory, getMemorySize());
 	}
 
 	constexpr int32 getOffset(const int32 x, const int32 y) const { return (y * (m_pitch / m_channelCount)) + x; }
@@ -55,7 +55,7 @@ struct PChannel
 
 	void setPixel(const int32 x, const int32 y, const float value) const
 	{
-		assert(Type == EChannelType::Data);
+		assert(m_type == EChannelType::Data);
 		if (x < 0 || x >= m_width || y < 0 || y >= m_height)
 		{
 			return;
@@ -67,7 +67,7 @@ struct PChannel
 
 	void setPixel(const int32 x, const int32 y, const Color& color) const
 	{
-		assert(Type == EChannelType::Color);
+		assert(m_type == EChannelType::Color);
 		if (x < 0 || x >= m_width || y < 0 || y >= m_height)
 		{
 			return;
@@ -89,13 +89,13 @@ struct PChannel
 
 	void clear() const
 	{
-		PPlatformMemory::fill(m_memory, static_cast<size_t>(m_width * m_height * 4), 0);
+		PlatformMemory::fill(m_memory, static_cast<size_t>(m_width * m_height * 4), 0);
 	}
 
 	template <typename T>
 	void fill(T value)
 	{
-		PPlatformMemory::fill(m_memory, static_cast<size_t>(m_width * m_height * 4), value);
+		PlatformMemory::fill(m_memory, static_cast<size_t>(m_width * m_height * 4), value);
 	}
 };
 
@@ -134,7 +134,7 @@ struct PBufferObject
 class Renderer
 {
 	// Draw channels
-	std::map<std::string, std::shared_ptr<PChannel>> m_channels;
+	std::map<std::string, std::shared_ptr<Channel>> m_channels;
 	std::shared_ptr<Viewport> m_viewport;
 	std::unique_ptr<FGrid> m_grid;
 
@@ -162,10 +162,10 @@ public:
 
 	void addChannel(EChannelType type, const char* name)
 	{
-		m_channels.emplace(name, std::make_shared<PChannel>(type, getWidth(), getHeight()));
+		m_channels.emplace(name, std::make_shared<Channel>(type, getWidth(), getHeight()));
 	}
 
-	std::shared_ptr<PChannel> getChannel(const char* name) const
+	std::shared_ptr<Channel> getChannel(const char* name) const
 	{
 		return m_channels.at(name);
 	}
@@ -183,12 +183,12 @@ public:
 			channel->clear();
 		}
 
-		// Fill the depth buffer with the Max Z-depth
+		// Fill the depth buffer with the Max z-depth
 		getDepthChannel()->fill(g_defaultMaxz);
 	}
 
-	std::shared_ptr<PChannel> getColorChannel() const { return m_channels.at("Color"); }
-	std::shared_ptr<PChannel> getDepthChannel() const { return m_channels.at("Depth"); }
+	std::shared_ptr<Channel> getColorChannel() const { return m_channels.at("Color"); }
+	std::shared_ptr<Channel> getDepthChannel() const { return m_channels.at("Depth"); }
 
 	/* Drawing */
 

@@ -34,9 +34,9 @@ struct PViewData
 	float m_minZoom = 2.0f;
 	float m_maxZoom = 100.0f;
 
-	vec3f m_target = vec3f::ZeroVector(); // Origin
-	FSphericalCoords m_spherical;
-	FSphericalCoords m_sphericalDelta;
+	vec3f m_target = vec3f::zeroVector(); // Origin
+	sphericalf m_spherical;
+	sphericalf m_sphericalDelta;
 	float m_minPolarAngle = 0.0f;
 	float m_maxPolarAngle = PI;
 	vec3f m_panOffset;
@@ -63,9 +63,9 @@ public:
 	float m_minZoom = 2.0f;
 	float m_maxZoom = 100.0f;
 
-	vec3f m_target = vec3f::ZeroVector(); // Origin
-	FSphericalCoords m_spherical;
-	FSphericalCoords m_sphericalDelta;
+	vec3f m_target = vec3f::zeroVector(); // Origin
+	sphericalf m_spherical;
+	sphericalf m_sphericalDelta;
 	float m_minPolarAngle = 0.0f;
 	float m_maxPolarAngle = PI;
 	vec3f m_panOffset;
@@ -132,26 +132,26 @@ namespace Math
 	{
 		// Clip 
 		const vec4f result = viewData.m_viewProjectionMatrix * vec4f(worldPosition, 1.0f);
-		if (result.W > 0.0f)
+		if (result.w > 0.0f)
 		{
 			// Apply perspective correction
 			const vec3f clipPosition{
-				result.X / result.W,
-				result.Y / result.W,
-				result.Z / result.W
+				result.x / result.w,
+				result.y / result.w,
+				result.z / result.w
 			};
 
 			// Normalized device coordinates
 			const vec2f normalizedPosition{
-				(clipPosition.X / 2.0f) + 0.5f,
-				(clipPosition.Y / 2.0f) + 0.5f,
+				(clipPosition.x / 2.0f) + 0.5f,
+				(clipPosition.y / 2.0f) + 0.5f,
 			};
 
 			// Apply the current render width and height
 			screenPosition = vec3f{
-				normalizedPosition.X * static_cast<float>(viewData.m_width),
-				normalizedPosition.Y * static_cast<float>(viewData.m_height),
-				(clipPosition.Z + 0.5f) * 0.5f
+				normalizedPosition.x * static_cast<float>(viewData.m_width),
+				normalizedPosition.y * static_cast<float>(viewData.m_height),
+				(clipPosition.z + 0.5f) * 0.5f
 			};
 			return true;
 		}

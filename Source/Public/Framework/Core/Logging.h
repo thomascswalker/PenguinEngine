@@ -8,13 +8,11 @@
 #include <chrono>
 
 #if _WIN32
+#define NOMINMAX
 #include <windows.h>
+#undef min
+#undef max
 #endif
-
-#define LOG_DEBUG(X, ...) Logging::debug(X, __VA_ARGS__);
-#define LOG_INFO(X, ...) Logging::info(X, __VA_ARGS__);
-#define LOG_WARNING(X, ...) Logging::warning(X, __VA_ARGS__);
-#define LOG_ERROR(X, ...) Logging ::error(X, __VA_ARGS__);
 
 namespace Logging
 {
@@ -111,3 +109,9 @@ namespace Logging
 		Logger::getInstance()->log(fmt, ELogLevel::Error, std::forward<Types>(args)...);
 	}
 } // namespace Logging
+
+
+#define LOG_DEBUG(X, ...) Logging::debug(X, __VA_ARGS__);
+#define LOG_INFO(X, ...) Logging::info(X, __VA_ARGS__);
+#define LOG_WARNING(X, ...) Logging::warning(X, __VA_ARGS__);
+#define LOG_ERROR(X, ...) Logging ::error(X, __VA_ARGS__);

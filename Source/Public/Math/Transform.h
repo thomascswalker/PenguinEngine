@@ -5,112 +5,120 @@
 #include "Vector.h"
 
 template <typename T>
-struct TTransform
+struct trans_t
 {
-    TVector3<T> Translation;
-    TRotator<T> Rotation;
-    TVector3<T> Scale;
+	vec3_t<T> Translation;
+	rot_t<T> Rotation;
+	vec3_t<T> Scale;
 
-    TTransform()
-    {
-        Rotation = TRotator<T>(0, 0, 0);
-        Translation = TVector3<T>(0);
-        Scale = TVector3<T>(1);
-    }
-    explicit TTransform(const TVector3<T>& InTranslation)
-    {
-        Rotation = TRotator<T>();
-        Translation = InTranslation;
-        Scale = TVector3<T>();
-    }
-    explicit TTransform(TRotator<T>& InRotation)
-    {
-        Rotation = InRotation;
-        Translation = TVector3<T>();
-        Scale = TVector3<T>();
-    }
-    TTransform(TQuat<T>& InRotation, const TVector3<T>& InTranslation, const TVector3<T>& InScale = {1.0f, 1.0f, 1.0f})
-    {
-        Rotation = InRotation.Rotator();
-        Translation = InTranslation;
-        Scale = InScale;
-    }
+	trans_t()
+	{
+		Rotation = rot_t<T>(0, 0, 0);
+		Translation = vec3_t<T>(0);
+		Scale = vec3_t<T>(1);
+	}
 
-    TTransform(TRotator<T>& InRotation, const TVector3<T>& InTranslation, const TVector3<T>& InScale = {1.0f, 1.0f, 1.0f})
-    {
-        Rotation = InRotation;
-        Translation = InTranslation;
-        Scale = InScale;
-    }
+	explicit trans_t(const vec3_t<T>& InTranslation)
+	{
+		Rotation = rot_t<T>();
+		Translation = InTranslation;
+		Scale = vec3_t<T>();
+	}
 
-    void FromMatrix(TMatrix<T>& InMatrix)
-    {
-        // Extract scale
-        Scale = InMatrix.GetScale();
+	explicit trans_t(rot_t<T>& InRotation)
+	{
+		Rotation = InRotation;
+		Translation = vec3_t<T>();
+		Scale = vec3_t<T>();
+	}
 
-        // Handle negative scaling
-        LOG_WARNING("Implement negative scale handling in TTransform::FromMatrix")
+	trans_t(quat_t<T>& InRotation, const vec3_t<T>& InTranslation, const vec3_t<T>& InScale = {1.0f, 1.0f, 1.0f})
+	{
+		Rotation = InRotation.Rotator();
+		Translation = InTranslation;
+		Scale = InScale;
+	}
 
-        // Extract rotation
-        TQuat<T> InRotation = TQuat(InMatrix);
-        Rotation = InRotation.Rotator();
+	trans_t(rot_t<T>& InRotation, const vec3_t<T>& InTranslation, const vec3_t<T>& InScale = {1.0f, 1.0f, 1.0f})
+	{
+		Rotation = InRotation;
+		Translation = InTranslation;
+		Scale = InScale;
+	}
 
-        // Extract translation
-        Translation = InMatrix.GetTranslation();
+	void FromMatrix(mat4_t<T>& InMatrix)
+	{
+		// Extract scale
+		Scale = InMatrix.GetScale();
 
-        Rotation.Normalize();
-    }
+		// Handle negative scaling
+		LOG_WARNING("Implement negative scale handling in trans_t::FromMatrix")
 
-    //  | rx0   | rx1   | rx2   | 0 |
-    //  | ry0   | ry1   | ry2   | 0 |
-    //  | rz0   | rz1   | rz2   | 0 |
-    //  | tx*sx | ty*sy | tz*sz | 1 | 
-    TMatrix<T> ToMatrix() const
-    {
-        // Apply translation
-        TMatrix<T> Out = TTranslationMatrix<T>(Translation);
+		// Extract rotation
+		quat_t<T> InRotation = quat_t(InMatrix);
+		Rotation = InRotation.Rotator();
 
-        // Apply rotation
-        TMatrix RotationMatrix = TRotationMatrix<T>(Rotation);
-        for (int32 X = 0; X < 3; ++X)
-        {
-            for (int32 Y = 0; Y < 3; ++Y)
-            {
-                Out.M[Y][X] = RotationMatrix.M[Y][X];
-            }
-        }
+		// Extract translation
+		Translation = InMatrix.GetTranslation();
 
-        // Apply scale
-        Out.M[3][0] *= Scale.X;
-        Out.M[3][1] *= Scale.Y;
-        Out.M[3][2] *= Scale.Z;
+		Rotation.Normalize();
+	}
 
-        return Out;
-    }
+	//  | rx0   | rx1   | rx2   | 0 |
+	//  | ry0   | ry1   | ry2   | 0 |
+	//  | rz0   | rz1   | rz2   | 0 |
+	//  | tx*sx | ty*sy | tz*sz | 1 | 
+	mat4_t<T> ToMatrix() const
+	{
+		// Apply translation
+		mat4_t<T> Out = mat4_trans_t<T>(Translation);
 
-    TVector3<T> GetAxisNormalized(EAxis InAxis) const
-    {
-        TMatrix<T> M = ToMatrix().GetInverse();
-        TVector3<T> AxisVector = M.GetAxis(InAxis);
-        AxisVector.Normalize();
-        return AxisVector;
-    }
+		// Apply rotation
+		mat4_t RotationMatrix = mat4_rot_t<T>(Rotation);
+		for (int32 X = 0; X < 3; ++X)
+		{
+			for (int32 Y = 0; Y < 3; ++Y)
+			{
+				Out.m[Y][X] = RotationMatrix.m[Y][X];
+			}
+		}
 
-    std::string ToString() const { return std::format("Translation={}, Rotation={}, Scale={}", Translation.ToString(), Rotation.ToString(), Scale.ToString()); }
+		// Apply scale
+		Out.m[3][0] *= Scale.x;
+		Out.m[3][1] *= Scale.y;
+		Out.m[3][2] *= Scale.z;
 
-    TTransform operator*(const TTransform& Other)
-    {
-        TTransform Out;
+		return Out;
+	}
 
-        Out.Translation = Translation * Other.Translation;
-        Out.Rotation = Other.Rotation;
-        Out.Scale = Scale * Other.Scale;
+	vec3_t<T> GetAxisNormalized(EAxis InAxis) const
+	{
+		mat4_t<T> M = ToMatrix().GetInverse();
+		vec3_t<T> AxisVector = M.GetAxis(InAxis);
+		AxisVector.Normalize();
+		return AxisVector;
+	}
 
-        return Out;
-    }
-    TTransform& operator*=(const TTransform& Other)
-    {
-        *this = *this * Other;
-        return *this;
-    }
+	std::string ToString() const
+	{
+		return std::format("Translation={}, Rotation={}, Scale={}", Translation.ToString(), Rotation.ToString(),
+		                   Scale.ToString());
+	}
+
+	trans_t operator*(const trans_t& Other)
+	{
+		trans_t Out;
+
+		Out.Translation = Translation * Other.Translation;
+		Out.Rotation = Other.Rotation;
+		Out.Scale = Scale * Other.Scale;
+
+		return Out;
+	}
+
+	trans_t& operator*=(const trans_t& Other)
+	{
+		*this = *this * Other;
+		return *this;
+	}
 };

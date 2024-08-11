@@ -41,8 +41,8 @@ bool Renderer::clipLine(vec2f* a, vec2f* b) const
 
 	// Cohen-Sutherland line clipping algorithm
 	// Compute region codes for both endpoints
-	int32 code1 = (a->X < minX) << 3 | (a->X > maxX) << 2 | (a->Y < minY) << 1 | (a->Y > maxY);
-	int32 code2 = (b->X < minX) << 3 | (b->X > maxX) << 2 | (b->Y < minY) << 1 | (b->Y > maxY);
+	int32 code1 = (a->x < minX) << 3 | (a->x > maxX) << 2 | (a->y < minY) << 1 | (a->y > maxY);
+	int32 code2 = (b->x < minX) << 3 | (b->x > maxX) << 2 | (b->y < minY) << 1 | (b->y > maxY);
 
 	while (code1 || code2)
 	{
@@ -66,40 +66,40 @@ bool Renderer::clipLine(vec2f* a, vec2f* b) const
 		if (code & 1)
 		{
 			// Top edge
-			x = a->X + (b->X - a->X) * (maxY - a->Y) / (b->Y - a->Y);
+			x = a->x + (b->x - a->x) * (maxY - a->y) / (b->y - a->y);
 			y = maxY;
 		}
 		else if (code & 2)
 		{
 			// Bottom edge
-			x = a->X + (b->X - a->X) * (minY - a->Y) / (b->Y - a->Y);
+			x = a->x + (b->x - a->x) * (minY - a->y) / (b->y - a->y);
 			y = minY;
 		}
 		else if (code & 4)
 		{
 			// Right edge
-			y = a->Y + (b->Y - a->Y) * (maxX - a->X) / (b->X - a->X);
+			y = a->y + (b->y - a->y) * (maxX - a->x) / (b->x - a->x);
 			x = maxX;
 		}
 		else
 		{
 			// Left edge
-			y = a->Y + (b->Y - a->Y) * (minX - a->X) / (b->X - a->X);
+			y = a->y + (b->y - a->y) * (minX - a->x) / (b->x - a->x);
 			x = minX;
 		}
 
 		// Update the endpoint
 		if (code == code1)
 		{
-			a->X = x;
-			a->Y = y;
-			code1 = (a->X < minX) << 3 | (a->X > maxX) << 2 | (a->Y < minY) << 1 | (a->Y > maxY);
+			a->x = x;
+			a->y = y;
+			code1 = (a->x < minX) << 3 | (a->x > maxX) << 2 | (a->y < minY) << 1 | (a->y > maxY);
 		}
 		else
 		{
-			b->X = x;
-			b->Y = y;
-			code2 = (b->X < minX) << 3 | (b->X > maxX) << 2 | (b->Y < minY) << 1 | (b->Y > maxY);
+			b->x = x;
+			b->y = y;
+			code2 = (b->x < minX) << 3 | (b->x > maxX) << 2 | (b->y < minY) << 1 | (b->y > maxY);
 		}
 	}
 
@@ -113,8 +113,8 @@ bool Renderer::clipLine(linef* line) const
 
 void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) const
 {
-	vec2f a(inA.X, inA.Y);
-	vec2f b(inB.X, inB.Y);
+	vec2f a(inA.x, inA.y);
+	vec2f b(inB.x, inB.y);
 
 	// Clip the screen points within the viewport. If the line points are outside the viewport entirely
 	// then just return.
@@ -129,48 +129,48 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	}
 
 	bool bIsSteep = false;
-	if (Math::Abs(a.X - b.X) < Math::Abs(a.Y - b.Y))
+	if (std::abs(a.x - b.x) < std::abs(a.y - b.y))
 	{
-		a = vec2f(a.Y, a.X);
-		b = vec2f(b.Y, b.X);
+		a = vec2f(a.y, a.x);
+		b = vec2f(b.y, b.x);
 		bIsSteep = true;
 	}
 
-	if (a.X > b.X)
+	if (a.x > b.x)
 	{
 		std::swap(a, b);
 	}
 
-	const int32 deltaX = b.X - a.X;
-	const int32 deltaY = b.Y - a.Y;
-	const int32 deltaError = Math::Abs(deltaY) * 2;
+	const int32 deltaX = b.x - a.x;
+	const int32 deltaY = b.y - a.y;
+	const int32 deltaError = std::abs(deltaY) * 2;
 	int32 errorCount = 0;
 
 	// https://github.com/ssloy/tinyrenderer/issues/28
-	int32 y = a.Y;
+	int32 y = a.y;
 
 	if (bIsSteep)
 	{
-		for (int32 x = a.X; x < b.X; ++x)
+		for (int32 x = a.x; x < b.x; ++x)
 		{
 			getColorChannel()->setPixel(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
-				y += (b.Y > a.Y ? 1 : -1);
+				y += (b.y > a.y ? 1 : -1);
 				errorCount -= deltaX * 2;
 			}
 		}
 	}
 	else
 	{
-		for (int32 x = a.X; x < b.X; ++x)
+		for (int32 x = a.x; x < b.x; ++x)
 		{
 			getColorChannel()->setPixel(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
-				y += (b.Y > a.Y ? 1 : -1);
+				y += (b.y > a.y ? 1 : -1);
 				errorCount -= deltaX * 2;
 			}
 		}
@@ -203,9 +203,9 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	vec3f s2 = m_currentShader->m_s2;
 	if (m_settings.getRenderFlag(ERenderFlag::Wireframe))
 	{
-		drawLine({s0.X, s0.Y}, {s1.X, s1.Y}, m_wireColor);
-		drawLine({s1.X, s1.Y}, {s2.X, s2.Y}, m_wireColor);
-		drawLine({s2.X, s2.Y}, {s0.X, s0.Y}, m_wireColor);
+		drawLine({s0.x, s0.y}, {s1.x, s1.y}, m_wireColor);
+		drawLine({s1.x, s1.y}, {s2.x, s2.y}, m_wireColor);
+		drawLine({s2.x, s2.y}, {s0.x, s0.y}, m_wireColor);
 	}
 
 	// Draw normal direction
@@ -274,7 +274,7 @@ void Renderer::draw()
 	// Recalculate the view-projection matrix of the camera
 	m_viewport->getCamera()->computeViewProjectionMatrix();
 
-	// Reset all buffers to their default values (namely Z to Inf)
+	// Reset all buffers to their default values (namely z to Inf)
 	clearChannels();
 
 	// Draw the world grid prior to drawing any geometry
@@ -292,7 +292,7 @@ void Renderer::draw()
 	if (inputHandler->isMouseDown(EMouseButtonType::Left) && inputHandler->isAltDown())
 	{
 		const vec3f a = inputHandler->getClickPosition();
-		if (a.X != 0.0f && a.Y != 0.0f)
+		if (a.x != 0.0f && a.y != 0.0f)
 		{
 			const vec3f b = inputHandler->getCurrentCursorPosition();
 			drawLine(a, b, Color::red());
@@ -310,29 +310,29 @@ void Renderer::scanline() const
 	const int32 width = getWidth();
 	const int32 height = getHeight();
 	const rectf bounds = m_currentShader->m_screenBounds;
-	const int32 minX = Math::Max(static_cast<int32>(bounds.Min().X), 0);
-	const int32 maxX = Math::Min(static_cast<int32>(bounds.Max().X), width - 1);
-	const int32 minY = Math::Max(static_cast<int32>(bounds.Min().Y), 0);
-	const int32 maxY = Math::Min(static_cast<int32>(bounds.Max().Y), height - 1);
+	const int32 minX = std::max(static_cast<int32>(bounds.Min().x), 0);
+	const int32 maxX = std::min(static_cast<int32>(bounds.Max().x), width - 1);
+	const int32 minY = std::max(static_cast<int32>(bounds.Min().y), 0);
+	const int32 maxY = std::min(static_cast<int32>(bounds.Max().y), height - 1);
 
 	// Precompute the area of the screen triangle so we're not computing it every pixel
-	const float area = Math::Area2D(s0, s1, s2) * 2.0f;
+	const float area = Math::area2D(s0, s1, s2) * 2.0f;
 	const float oneOverArea = 1.0f / area;
 
 	const int32 initialOffset = minY * width;
 
-	std::shared_ptr<PChannel> depthChannel = getDepthChannel();
+	std::shared_ptr<Channel> depthChannel = getDepthChannel();
 	float* depthMemory = static_cast<float*>(depthChannel->m_memory) + initialOffset; // float, 32-bytes
 
-	std::shared_ptr<PChannel> colorChannel = getColorChannel();
+	std::shared_ptr<Channel> colorChannel = getColorChannel();
 	int32* colorMemory = static_cast<int32*>(colorChannel->m_memory) + initialOffset; // int32, 32-bytes
 
 	// Prior to the loop computing each pixel in the triangle, get the render settings
 	const bool bRenderDepth = m_settings.getRenderFlag(ERenderFlag::Depth);
 
-	const float depth0 = Math::GetDepth(s0, s0, s1, s2, area);
-	const float depth1 = Math::GetDepth(s1, s0, s1, s2, area);
-	const float depth2 = Math::GetDepth(s2, s0, s1, s2, area);
+	const float depth0 = Math::getDepth(s0, s0, s1, s2, area);
+	const float depth1 = Math::getDepth(s1, s0, s1, s2, area);
+	const float depth2 = Math::getDepth(s2, s0, s1, s2, area);
 
 	// Loop through all pixels in the screen bounding box.
 	for (int32 y = minY; y <= maxY; y++)
@@ -342,9 +342,9 @@ void Renderer::scanline() const
 			vec3f point(x, y, 0);
 
 			// Use Pineda's edge function to determine if the current pixel is within the triangle.
-			float w0 = Math::EdgeFunction(s1.X, s1.Y, s2.X, s2.Y, point.X, point.Y);
-			float w1 = Math::EdgeFunction(s2.X, s2.Y, s0.X, s0.Y, point.X, point.Y);
-			float w2 = Math::EdgeFunction(s0.X, s0.Y, s1.X, s1.Y, point.X, point.Y);
+			float w0 = Math::edgeFunction(s1.x, s1.y, s2.x, s2.y, point.x, point.y);
+			float w1 = Math::edgeFunction(s2.x, s2.y, s0.x, s0.y, point.x, point.y);
+			float w2 = Math::edgeFunction(s0.x, s0.y, s1.x, s1.y, point.x, point.y);
 
 			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
 			{
@@ -360,15 +360,15 @@ void Renderer::scanline() const
 			w1 *= oneOverArea;
 			w2 *= oneOverArea;
 
-			uvw.X = w0;
-			uvw.Y = w1;
-			uvw.Z = w2;
+			uvw.x = w0;
+			uvw.y = w1;
+			uvw.z = w2;
 			m_currentShader->m_uvw = uvw;
 
 			if (bRenderDepth)
 			{
 				// Interpolate depth given UVW
-				float newDepth = uvw.X * depth0 + uvw.Y * depth1 + uvw.Z * depth2;
+				float newDepth = uvw.x * depth0 + uvw.y * depth1 + uvw.z * depth2;
 
 				// Compare the new depth to the current depth at this pixel. If the new depth is further than
 				// the current depth, continue.
@@ -382,13 +382,13 @@ void Renderer::scanline() const
 				*depthPixel = newDepth;
 			}
 
-			m_currentShader->m_pixelWorldPosition = m_currentShader->m_v0.m_position * uvw.X + m_currentShader->m_v1.
+			m_currentShader->m_pixelWorldPosition = m_currentShader->m_v0.m_position * uvw.x + m_currentShader->m_v1.
 				m_position *
-				uvw.Y
-				+ m_currentShader->m_v2.m_position * uvw.Z;
+				uvw.y
+				+ m_currentShader->m_v2.m_position * uvw.z;
 
 			// Compute the final color for this pixel
-			m_currentShader->computePixelShader(point.X, point.Y);
+			m_currentShader->computePixelShader(point.x, point.y);
 
 			// Set the current pixel in memory to the computed color
 			*colorPixel = m_currentShader->m_outColor;

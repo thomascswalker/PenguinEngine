@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#define NOMINMAX
+
 #define PI 3.14159265358979323846f
 #define EPSILON FLT_EPSILON
 #define SINGULARITY_THRESHOLD 0.4999995f
@@ -32,92 +34,92 @@ using DataChannel = TChannel<1>;
 
 // Rect
 template <typename T>
-struct TRect;
-using rectf = TRect<float>;
-using rectd = TRect<double>;
-using recti = TRect<int32>;
+struct rect_t;
+using rectf = rect_t<float>;
+using rectd = rect_t<double>;
+using recti = rect_t<int32>;
 
 // Lines
 template <typename T>
-struct TLine;
-using linef = TLine<float>;
-using linei = TLine<int32>;
+struct line_t;
+using linef = line_t<float>;
+using linei = line_t<int32>;
 
 template <typename T>
-struct TLine3d;
-using line3d = TLine3d<float>;
+struct line3d_t;
+using line3d = line3d_t<float>;
 
 // Vector
 template <typename T>
-struct TVector2;
-using vec2i = TVector2<int32>;
-using vec2f = TVector2<float>;
-using vec2d = TVector2<double>;
+struct vec2_t;
+using vec2i = vec2_t<int32>;
+using vec2f = vec2_t<float>;
+using vec2d = vec2_t<double>;
 
 template <typename T>
-struct TVector3;
-using vec3i = TVector3<int32>;
-using vec3f = TVector3<float>;
-using vec3d = TVector3<double>;
+struct vec3_t;
+using vec3i = vec3_t<int32>;
+using vec3f = vec3_t<float>;
+using vec3d = vec3_t<double>;
 
 template <typename T>
-struct TVector4;
-using vec4i = TVector4<int32>;
-using vec4f = TVector4<float>;
-using vec4d = TVector4<double>;
+struct vec4_t;
+using vec4i = vec4_t<int32>;
+using vec4f = vec4_t<float>;
+using vec4d = vec4_t<double>;
 
 template <typename T>
-struct TTriangle;
-using trianglef = TTriangle<float>;
-using triangled = TTriangle<double>;
+struct triangle_t;
+using trianglef = triangle_t<float>;
+using triangled = triangle_t<double>;
 
 // Matrix
 template <typename T>
-struct TMatrix;
-using mat4f = TMatrix<float>;
+struct mat4_t;
+using mat4f = mat4_t<float>;
 
 template <typename T>
-struct TPerspectiveMatrix;
-using mat4f_persp = TPerspectiveMatrix<float>;
+struct mat4_persp_t;
+using mat4f_persp = mat4_persp_t<float>;
 
 template <typename T>
-struct TLookAtMatrix;
-using mat4f_lookat = TLookAtMatrix<float>;
+struct mat4_lookat_t;
+using mat4f_lookat = mat4_lookat_t<float>;
 
 template <typename T>
-struct TRotationMatrix;
-using mat4f_rot = TRotationMatrix<float>;
+struct mat4_rot_t;
+using mat4f_rot = mat4_rot_t<float>;
 
 template <typename T>
-struct TTranslationMatrix;
-using mat4f_trans = TTranslationMatrix<float>;
+struct mat4_trans_t;
+using mat4f_trans = mat4_trans_t<float>;
 
 template <typename T>
-struct TRotationTranslationMatrix;
-using mat4f_rottrans = TRotationTranslationMatrix<float>;
+struct mat4_rottrans_t;
+using mat4f_rottrans = mat4_rottrans_t<float>;
 
 // Rotator
 template <typename T>
-struct TRotator;
-using rotf = TRotator<float>;
-using rotd = TRotator<double>;
+struct rot_t;
+using rotf = rot_t<float>;
+using rotd = rot_t<double>;
 
 // Quaternion
 template <typename T>
-struct TQuat;
-using quatf = TQuat<float>;
-using quatd = TQuat<double>;
+struct quat_t;
+using quatf = quat_t<float>;
+using quatd = quat_t<double>;
 
 // Transform
 template <typename T>
-struct TTransform;
-using transf = TTransform<float>;
-using transd = TTransform<double>;
+struct trans_t;
+using transf = trans_t<float>;
+using transd = trans_t<double>;
 
 // Plane
 template <typename T>
-struct TPlane;
-using planef = TPlane<float>;
+struct plane_t;
+using planef = plane_t<float>;
 
 // Enums
 enum class EWindingOrder : uint8

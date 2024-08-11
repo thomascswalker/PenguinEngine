@@ -8,177 +8,177 @@
 #include "Vector.h"
 #include "Framework/Core/Logging.h"
 
-// M[RowIndex][ColumnIndex]
+// m[RowIndex][ColumnIndex]
 template <typename T>
-struct TMatrix
+struct mat4_t
 {
 	static_assert(std::is_floating_point_v<T>, "Type is not floating point.");
 
-	alignas(16) T M[4][4];
+	alignas(16) T m[4][4];
 
-	TMatrix()
+	mat4_t()
 	{
-		SetIdentity();
+		setIdentity();
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TMatrix(const TPlane<T>& InX, const TPlane<T>& InY, const TPlane<T>& InZ, const TPlane<T>& InW)
+	mat4_t(const plane_t<T>& inX, const plane_t<T>& inY, const plane_t<T>& inZ, const plane_t<T>& inW)
 	{
-		M[0][0] = InX.X;
-		M[0][1] = InX.Y;
-		M[0][2] = InX.Z;
-		M[0][3] = InX.W;
-		M[1][0] = InY.X;
-		M[1][1] = InY.Y;
-		M[1][2] = InY.Z;
-		M[1][3] = InY.W;
-		M[2][0] = InZ.X;
-		M[2][1] = InZ.Y;
-		M[2][2] = InZ.Z;
-		M[2][3] = InZ.W;
-		M[3][0] = InW.X;
-		M[3][1] = InW.Y;
-		M[3][2] = InW.Z;
-		M[3][3] = InW.W;
+		m[0][0] = inX.x;
+		m[0][1] = inX.y;
+		m[0][2] = inX.z;
+		m[0][3] = inX.w;
+		m[1][0] = inY.x;
+		m[1][1] = inY.y;
+		m[1][2] = inY.z;
+		m[1][3] = inY.w;
+		m[2][0] = inZ.x;
+		m[2][1] = inZ.y;
+		m[2][2] = inZ.z;
+		m[2][3] = inZ.w;
+		m[3][0] = inW.x;
+		m[3][1] = inW.y;
+		m[3][2] = inW.z;
+		m[3][3] = inW.w;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TMatrix(const TVector3<T>& InX, const TVector3<T>& InY, const TVector3<T>& InZ, const TVector3<T>& InW)
+	mat4_t(const vec3_t<T>& inX, const vec3_t<T>& inY, const vec3_t<T>& inZ, const vec3_t<T>& inW)
 	{
-		M[0][0] = InX.X;
-		M[0][1] = InX.Y;
-		M[0][2] = InX.Z;
-		M[0][3] = 0.0f;
-		M[1][0] = InY.X;
-		M[1][1] = InY.Y;
-		M[1][2] = InY.Z;
-		M[1][3] = 0.0f;
-		M[2][0] = InZ.X;
-		M[2][1] = InZ.Y;
-		M[2][2] = InZ.Z;
-		M[2][3] = 0.0f;
-		M[3][0] = InW.X;
-		M[3][1] = InW.Y;
-		M[3][2] = InW.Z;
-		M[3][3] = 1.0f;
+		m[0][0] = inX.x;
+		m[0][1] = inX.y;
+		m[0][2] = inX.z;
+		m[0][3] = 0.0f;
+		m[1][0] = inY.x;
+		m[1][1] = inY.y;
+		m[1][2] = inY.z;
+		m[1][3] = 0.0f;
+		m[2][0] = inZ.x;
+		m[2][1] = inZ.y;
+		m[2][2] = inZ.z;
+		m[2][3] = 0.0f;
+		m[3][0] = inW.x;
+		m[3][1] = inW.y;
+		m[3][2] = inW.z;
+		m[3][3] = 1.0f;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TMatrix(const TVector4<T>& InX, const TVector4<T>& InY, const TVector4<T>& InZ, const TVector4<T>& InW)
+	mat4_t(const vec4_t<T>& inX, const vec4_t<T>& inY, const vec4_t<T>& inZ, const vec4_t<T>& inW)
 	{
-		M[0][0] = InX.X;
-		M[0][1] = InX.Y;
-		M[0][2] = InX.Z;
-		M[0][3] = InX.W;
-		M[1][0] = InY.X;
-		M[1][1] = InY.Y;
-		M[1][2] = InY.Z;
-		M[1][3] = InY.W;
-		M[2][0] = InZ.X;
-		M[2][1] = InZ.Y;
-		M[2][2] = InZ.Z;
-		M[2][3] = InZ.W;
-		M[3][0] = InW.X;
-		M[3][1] = InW.Y;
-		M[3][2] = InW.Z;
-		M[3][3] = InW.W;
+		m[0][0] = inX.x;
+		m[0][1] = inX.y;
+		m[0][2] = inX.z;
+		m[0][3] = inX.w;
+		m[1][0] = inY.x;
+		m[1][1] = inY.y;
+		m[1][2] = inY.z;
+		m[1][3] = inY.w;
+		m[2][0] = inZ.x;
+		m[2][1] = inZ.y;
+		m[2][2] = inZ.z;
+		m[2][3] = inZ.w;
+		m[3][0] = inW.x;
+		m[3][1] = inW.y;
+		m[3][2] = inW.z;
+		m[3][3] = inW.w;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TMatrix(T M0, T M1, T M2, T M3, T M4, T M5, T M6, T M7, T M8, T M9, T M10, T M11, T M12, T M13, T M14, T M15)
+	mat4_t(T m0, T m1, T m2, T m3, T m4, T m5, T m6, T m7, T m8, T m9, T m10, T m11, T m12, T m13, T m14, T m15)
 	{
-		M[0][0] = M0;
-		M[0][1] = M1;
-		M[0][2] = M2;
-		M[0][3] = M3;
-		M[1][0] = M4;
-		M[1][1] = M5;
-		M[1][2] = M6;
-		M[1][3] = M7;
-		M[2][0] = M8;
-		M[2][1] = M9;
-		M[2][2] = M10;
-		M[2][3] = M11;
-		M[3][0] = M12;
-		M[3][1] = M13;
-		M[3][2] = M14;
-		M[3][3] = M15;
+		m[0][0] = m0;
+		m[0][1] = m1;
+		m[0][2] = m2;
+		m[0][3] = m3;
+		m[1][0] = m4;
+		m[1][1] = m5;
+		m[1][2] = m6;
+		m[1][3] = m7;
+		m[2][0] = m8;
+		m[2][1] = m9;
+		m[2][2] = m10;
+		m[2][3] = m11;
+		m[3][0] = m12;
+		m[3][1] = m13;
+		m[3][2] = m14;
+		m[3][3] = m15;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TMatrix(const TMatrix& Other)
+	mat4_t(const mat4_t& other)
 	{
-		std::memcpy(M, &Other.M, 16 * sizeof(T));
+		std::memcpy(m, &other.m, 16 * sizeof(T));
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TMatrix(TMatrix&& Other) noexcept
+	mat4_t(mat4_t&& other) noexcept
 	{
-		std::memcpy(M, &Other.M, 16 * sizeof(T));
+		std::memcpy(m, &other.m, 16 * sizeof(T));
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	void CheckNaN() const
+	void checkNaN() const
 	{
-		for (int32 X = 0; X < 4; X++)
+		for (int32 x = 0; x < 4; x++)
 		{
-			for (int32 Y = 0; Y < 4; Y++)
+			for (int32 y = 0; y < 4; y++)
 			{
-				if (!Math::IsFinite(M[X][Y]))
+				if (!Math::isFinite(m[x][y]))
 				{
-					LOG_ERROR("Matrix cell [{},{}] contains NaN", X, Y)
+					LOG_ERROR("Matrix cell [{},{}] contains NaN", x, y)
 				}
 			}
 		}
 	}
 
-	TMatrix Flip() const
+	mat4_t flip() const
 	{
-		TMatrix Out;
+		mat4_t out;
 
-		Out.M[0][0] = M[0][0];
-		Out.M[0][1] = M[1][0];
-		Out.M[0][2] = M[2][0];
-		Out.M[0][3] = M[3][0];
-		Out.M[1][0] = M[0][1];
-		Out.M[1][1] = M[1][1];
-		Out.M[1][2] = M[2][1];
-		Out.M[1][3] = M[3][1];
-		Out.M[2][0] = M[0][2];
-		Out.M[2][1] = M[1][2];
-		Out.M[2][2] = M[2][2];
-		Out.M[2][3] = M[3][2];
-		Out.M[3][0] = M[0][3];
-		Out.M[3][1] = M[1][3];
-		Out.M[3][2] = M[2][3];
-		Out.M[3][3] = M[3][3];
+		out.m[0][0] = m[0][0];
+		out.m[0][1] = m[1][0];
+		out.m[0][2] = m[2][0];
+		out.m[0][3] = m[3][0];
+		out.m[1][0] = m[0][1];
+		out.m[1][1] = m[1][1];
+		out.m[1][2] = m[2][1];
+		out.m[1][3] = m[3][1];
+		out.m[2][0] = m[0][2];
+		out.m[2][1] = m[1][2];
+		out.m[2][2] = m[2][2];
+		out.m[2][3] = m[3][2];
+		out.m[3][0] = m[0][3];
+		out.m[3][1] = m[1][3];
+		out.m[3][2] = m[2][3];
+		out.m[3][3] = m[3][3];
 
-		return Out;
+		return out;
 	}
 
 	// Functions
 
-	bool Equals(const TMatrix& Other, T Threshold = 0.00001f) const
+	bool equals(const mat4_t& other, T threshold = 0.00001f) const
 	{
-		for (int32 X = 0; X < 4; X++)
+		for (int32 x = 0; x < 4; x++)
 		{
-			for (int32 Y = 0; Y < 4; Y++)
+			for (int32 y = 0; y < 4; y++)
 			{
-				if (M[X][Y] - Other.M[X][Y] > Threshold)
+				if (m[x][y] - other.m[x][y] > threshold)
 				{
 					return false;
 				}
@@ -187,404 +187,401 @@ struct TMatrix
 		return true;
 	}
 
-	static TMatrix GetIdentity()
+	static mat4_t getIdentity()
 	{
-		return TMatrix{
-			TPlane<T>(1, 0, 0, 0),
-			TPlane<T>(0, 1, 0, 0),
-			TPlane<T>(0, 0, 1, 0),
-			TPlane<T>(0, 0, 0, 1)
+		return mat4_t{
+			plane_t<T>(1, 0, 0, 0),
+			plane_t<T>(0, 1, 0, 0),
+			plane_t<T>(0, 0, 1, 0),
+			plane_t<T>(0, 0, 0, 1)
 		};
 	}
 
-	void SetIdentity()
+	void setIdentity()
 	{
-		M[0][0] = 1;
-		M[0][1] = 0;
-		M[0][2] = 0;
-		M[0][3] = 0;
-		M[1][0] = 0;
-		M[1][1] = 1;
-		M[1][2] = 0;
-		M[1][3] = 0;
-		M[2][0] = 0;
-		M[2][1] = 0;
-		M[2][2] = 1;
-		M[2][3] = 0;
-		M[3][0] = 0;
-		M[3][1] = 0;
-		M[3][2] = 0;
-		M[3][3] = 1;
+		m[0][0] = 1;
+		m[0][1] = 0;
+		m[0][2] = 0;
+		m[0][3] = 0;
+		m[1][0] = 0;
+		m[1][1] = 1;
+		m[1][2] = 0;
+		m[1][3] = 0;
+		m[2][0] = 0;
+		m[2][1] = 0;
+		m[2][2] = 1;
+		m[2][3] = 0;
+		m[3][0] = 0;
+		m[3][1] = 0;
+		m[3][2] = 0;
+		m[3][3] = 1;
 	}
 
-	void SetZero()
+	void setZero()
 	{
-		M[0][0] = 0;
-		M[0][1] = 0;
-		M[0][2] = 0;
-		M[0][3] = 0;
-		M[1][0] = 0;
-		M[1][1] = 0;
-		M[1][2] = 0;
-		M[1][3] = 0;
-		M[2][0] = 0;
-		M[2][1] = 0;
-		M[2][2] = 0;
-		M[2][3] = 0;
-		M[3][0] = 0;
-		M[3][1] = 0;
-		M[3][2] = 0;
-		M[3][3] = 0;
+		m[0][0] = 0;
+		m[0][1] = 0;
+		m[0][2] = 0;
+		m[0][3] = 0;
+		m[1][0] = 0;
+		m[1][1] = 0;
+		m[1][2] = 0;
+		m[1][3] = 0;
+		m[2][0] = 0;
+		m[2][1] = 0;
+		m[2][2] = 0;
+		m[2][3] = 0;
+		m[3][0] = 0;
+		m[3][1] = 0;
+		m[3][2] = 0;
+		m[3][3] = 0;
 	}
 
-	constexpr T GetDeterminant() const
+	[[nodiscard]] constexpr T getDeterminant() const
 	{
-		T A11 = M[0][0];
-		T A12 = M[0][1];
-		T A13 = M[0][2];
-		T A14 = M[0][3];
-		T A21 = M[1][0];
-		T A22 = M[1][1];
-		T A23 = M[1][2];
-		T A24 = M[1][3];
-		T A31 = M[2][0];
-		T A32 = M[2][1];
-		T A33 = M[2][2];
-		T A34 = M[2][3];
-		T A41 = M[3][0];
-		T A42 = M[3][1];
-		T A43 = M[3][2];
-		T A44 = M[3][3];
+		T a11 = m[0][0];
+		T a12 = m[0][1];
+		T a13 = m[0][2];
+		T a14 = m[0][3];
+		T a21 = m[1][0];
+		T a22 = m[1][1];
+		T a23 = m[1][2];
+		T a24 = m[1][3];
+		T a31 = m[2][0];
+		T a32 = m[2][1];
+		T a33 = m[2][2];
+		T a34 = m[2][3];
+		T a41 = m[3][0];
+		T a42 = m[3][1];
+		T a43 = m[3][2];
+		T a44 = m[3][3];
 
-		T Det1 = A11 * A22 * A33 * A44;
-		T Det2 = A11 * A23 * A34 * A42;
-		T Det3 = A11 * A24 * A32 * A43;
+		T det1 = a11 * a22 * a33 * a44;
+		T det2 = a11 * a23 * a34 * a42;
+		T det3 = a11 * a24 * a32 * a43;
 
-		T Det4 = A12 * A21 * A34 * A43;
-		T Det5 = A12 * A23 * A31 * A44;
-		T Det6 = A12 * A24 * A33 * A41;
+		T det4 = a12 * a21 * a34 * a43;
+		T det5 = a12 * a23 * a31 * a44;
+		T det6 = a12 * a24 * a33 * a41;
 
-		T Det7 = A13 * A21 * A32 * A44;
-		T Det8 = A13 * A22 * A34 * A41;
-		T Det9 = A13 * A24 * A31 * A42;
+		T det7 = a13 * a21 * a32 * a44;
+		T det8 = a13 * a22 * a34 * a41;
+		T det9 = a13 * a24 * a31 * a42;
 
-		T Det10 = A14 * A21 * A33 * A42;
-		T Det11 = A14 * A22 * A31 * A43;
-		T Det12 = A14 * A23 * A32 * A41;
+		T det10 = a14 * a21 * a33 * a42;
+		T det11 = a14 * a22 * a31 * a43;
+		T det12 = a14 * a23 * a32 * a41;
 
-		T Det13 = A11 * A22 * A34 * A43;
-		T Det14 = A11 * A23 * A32 * A44;
-		T Det15 = A11 * A24 * A33 * A42;
+		T det13 = a11 * a22 * a34 * a43;
+		T det14 = a11 * a23 * a32 * a44;
+		T det15 = a11 * a24 * a33 * a42;
 
-		T Det16 = A12 * A21 * A33 * A44;
-		T Det17 = A12 * A23 * A34 * A41;
-		T Det18 = A12 * A24 * A31 * A43;
+		T det16 = a12 * a21 * a33 * a44;
+		T det17 = a12 * a23 * a34 * a41;
+		T det18 = a12 * a24 * a31 * a43;
 
-		T Det19 = A13 * A21 * A34 * A42;
-		T Det20 = A13 * A22 * A31 * A44;
-		T Det21 = A13 * A24 * A32 * A41;
+		T det19 = a13 * a21 * a34 * a42;
+		T det20 = a13 * a22 * a31 * a44;
+		T det21 = a13 * a24 * a32 * a41;
 
-		T Det22 = A14 * A21 * A32 * A43;
-		T Det23 = A14 * A22 * A33 * A41;
-		T Det24 = A14 * A23 * A31 * A42;
+		T det22 = a14 * a21 * a32 * a43;
+		T det23 = a14 * a22 * a33 * a41;
+		T det24 = a14 * a23 * a31 * a42;
 
 		return (
-			Det1 + Det2 + Det3 +
-			Det4 + Det5 + Det6 +
-			Det7 + Det8 + Det9 +
-			Det10 + Det11 + Det12 -
-			Det13 - Det14 - Det15 -
-			Det16 - Det17 - Det18 -
-			Det19 - Det20 - Det21 -
-			Det22 - Det23 - Det24
+			det1 + det2 + det3 +
+			det4 + det5 + det6 +
+			det7 + det8 + det9 +
+			det10 + det11 + det12 -
+			det13 - det14 - det15 -
+			det16 - det17 - det18 -
+			det19 - det20 - det21 -
+			det22 - det23 - det24
 		);
 	}
 
 	// http://www.cg.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/teche0023.html
-	TMatrix GetInverse()
+	mat4_t getInverse()
 	{
-		T Determinant = GetDeterminant();
-		if (Determinant == 0.0 || !Math::IsFinite(Determinant))
+		T determinant = getDeterminant();
+		if (determinant == 0.0 || !Math::isFinite(determinant))
 		{
-			return GetIdentity();
+			return getIdentity();
 		}
-		Determinant = 1.0f / Determinant;
+		determinant = 1.0f / determinant;
 
-		T A2323 = M[2][2] * M[3][3] - M[2][3] * M[3][2];
-		T A1323 = M[2][1] * M[3][3] - M[2][3] * M[3][1];
-		T A1223 = M[2][1] * M[3][2] - M[2][2] * M[3][1];
-		T A0323 = M[2][0] * M[3][3] - M[2][3] * M[3][0];
-		T A0223 = M[2][0] * M[3][2] - M[2][2] * M[3][0];
-		T A0123 = M[2][0] * M[3][1] - M[2][1] * M[3][0];
-		T A2313 = M[1][2] * M[3][3] - M[1][3] * M[3][2];
-		T A1313 = M[1][1] * M[3][3] - M[1][3] * M[3][1];
-		T A1213 = M[1][1] * M[3][2] - M[1][2] * M[3][1];
-		T A2312 = M[1][2] * M[2][3] - M[1][3] * M[2][2];
-		T A1312 = M[1][1] * M[2][3] - M[1][3] * M[2][1];
-		T A1212 = M[1][1] * M[2][2] - M[1][2] * M[2][1];
-		T A0313 = M[1][0] * M[3][3] - M[1][3] * M[3][0];
-		T A0213 = M[1][0] * M[3][2] - M[1][2] * M[3][0];
-		T A0312 = M[1][0] * M[2][3] - M[1][3] * M[2][0];
-		T A0212 = M[1][0] * M[2][2] - M[1][2] * M[2][0];
-		T A0113 = M[1][0] * M[3][1] - M[1][1] * M[3][0];
-		T A0112 = M[1][0] * M[2][1] - M[1][1] * M[2][0];
+		T a2323 = m[2][2] * m[3][3] - m[2][3] * m[3][2];
+		T a1323 = m[2][1] * m[3][3] - m[2][3] * m[3][1];
+		T a1223 = m[2][1] * m[3][2] - m[2][2] * m[3][1];
+		T a0323 = m[2][0] * m[3][3] - m[2][3] * m[3][0];
+		T a0223 = m[2][0] * m[3][2] - m[2][2] * m[3][0];
+		T a0123 = m[2][0] * m[3][1] - m[2][1] * m[3][0];
+		T a2313 = m[1][2] * m[3][3] - m[1][3] * m[3][2];
+		T a1313 = m[1][1] * m[3][3] - m[1][3] * m[3][1];
+		T a1213 = m[1][1] * m[3][2] - m[1][2] * m[3][1];
+		T a2312 = m[1][2] * m[2][3] - m[1][3] * m[2][2];
+		T a1312 = m[1][1] * m[2][3] - m[1][3] * m[2][1];
+		T a1212 = m[1][1] * m[2][2] - m[1][2] * m[2][1];
+		T a0313 = m[1][0] * m[3][3] - m[1][3] * m[3][0];
+		T a0213 = m[1][0] * m[3][2] - m[1][2] * m[3][0];
+		T a0312 = m[1][0] * m[2][3] - m[1][3] * m[2][0];
+		T a0212 = m[1][0] * m[2][2] - m[1][2] * m[2][0];
+		T a0113 = m[1][0] * m[3][1] - m[1][1] * m[3][0];
+		T a0112 = m[1][0] * m[2][1] - m[1][1] * m[2][0];
 
-		T Result[4][4]{};
+		T result[4][4]{};
 
-		Result[0][0] = Determinant * (M[1][1] * A2323 - M[1][2] * A1323 + M[1][3] * A1223);
-		Result[0][1] = Determinant * -(M[0][1] * A2323 - M[0][2] * A1323 + M[0][3] * A1223);
-		Result[0][2] = Determinant * (M[0][1] * A2313 - M[0][2] * A1313 + M[0][3] * A1213);
-		Result[0][3] = Determinant * -(M[0][1] * A2312 - M[0][2] * A1312 + M[0][3] * A1212);
-		Result[1][0] = Determinant * -(M[1][0] * A2323 - M[1][2] * A0323 + M[1][3] * A0223);
-		Result[1][1] = Determinant * (M[0][0] * A2323 - M[0][2] * A0323 + M[0][3] * A0223);
-		Result[1][2] = Determinant * -(M[0][0] * A2313 - M[0][2] * A0313 + M[0][3] * A0213);
-		Result[1][3] = Determinant * (M[0][0] * A2312 - M[0][2] * A0312 + M[0][3] * A0212);
-		Result[2][0] = Determinant * (M[1][0] * A1323 - M[1][1] * A0323 + M[1][3] * A0123);
-		Result[2][1] = Determinant * -(M[0][0] * A1323 - M[0][1] * A0323 + M[0][3] * A0123);
-		Result[2][2] = Determinant * (M[0][0] * A1313 - M[0][1] * A0313 + M[0][3] * A0113);
-		Result[2][3] = Determinant * -(M[0][0] * A1312 - M[0][1] * A0312 + M[0][3] * A0112);
-		Result[3][0] = Determinant * -(M[1][0] * A1223 - M[1][1] * A0223 + M[1][2] * A0123);
-		Result[3][1] = Determinant * (M[0][0] * A1223 - M[0][1] * A0223 + M[0][2] * A0123);
-		Result[3][2] = Determinant * -(M[0][0] * A1213 - M[0][1] * A0213 + M[0][2] * A0113);
-		Result[3][3] = Determinant * (M[0][0] * A1212 - M[0][1] * A0212 + M[0][2] * A0112);
+		result[0][0] = determinant * (m[1][1] * a2323 - m[1][2] * a1323 + m[1][3] * a1223);
+		result[0][1] = determinant * -(m[0][1] * a2323 - m[0][2] * a1323 + m[0][3] * a1223);
+		result[0][2] = determinant * (m[0][1] * a2313 - m[0][2] * a1313 + m[0][3] * a1213);
+		result[0][3] = determinant * -(m[0][1] * a2312 - m[0][2] * a1312 + m[0][3] * a1212);
+		result[1][0] = determinant * -(m[1][0] * a2323 - m[1][2] * a0323 + m[1][3] * a0223);
+		result[1][1] = determinant * (m[0][0] * a2323 - m[0][2] * a0323 + m[0][3] * a0223);
+		result[1][2] = determinant * -(m[0][0] * a2313 - m[0][2] * a0313 + m[0][3] * a0213);
+		result[1][3] = determinant * (m[0][0] * a2312 - m[0][2] * a0312 + m[0][3] * a0212);
+		result[2][0] = determinant * (m[1][0] * a1323 - m[1][1] * a0323 + m[1][3] * a0123);
+		result[2][1] = determinant * -(m[0][0] * a1323 - m[0][1] * a0323 + m[0][3] * a0123);
+		result[2][2] = determinant * (m[0][0] * a1313 - m[0][1] * a0313 + m[0][3] * a0113);
+		result[2][3] = determinant * -(m[0][0] * a1312 - m[0][1] * a0312 + m[0][3] * a0112);
+		result[3][0] = determinant * -(m[1][0] * a1223 - m[1][1] * a0223 + m[1][2] * a0123);
+		result[3][1] = determinant * (m[0][0] * a1223 - m[0][1] * a0223 + m[0][2] * a0123);
+		result[3][2] = determinant * -(m[0][0] * a1213 - m[0][1] * a0213 + m[0][2] * a0113);
+		result[3][3] = determinant * (m[0][0] * a1212 - m[0][1] * a0212 + m[0][2] * a0112);
 
-		TMatrix Out;
-		std::memcpy(Out.M, &Result, 16 * sizeof(T));
+		mat4_t out;
+		std::memcpy(out.m, &result, 16 * sizeof(T));
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
-		return Out;
+		return out;
 	}
 
-	TVector3<T> GetAxis(const EAxis InAxis) const
+	vec3_t<T> getAxis(const EAxis inAxis) const
 	{
-		switch (InAxis)
+		switch (inAxis)
 		{
 		case EAxis::X:
 			{
-				return TVector3(M[0][0], M[1][0], M[2][0]);
+				return vec3_t(m[0][0], m[1][0], m[2][0]);
 			}
 		case EAxis::Y:
 			{
-				return TVector3(M[0][1], M[1][1], M[2][1]);
+				return vec3_t(m[0][1], m[1][1], m[2][1]);
 			}
 		case EAxis::Z:
 			{
-				return TVector3(M[0][2], M[1][2], M[2][2]);
+				return vec3_t(m[0][2], m[1][2], m[2][2]);
 			}
 		}
-		return TVector3<T>::ZeroVector();
+		return vec3_t<T>::zeroVector();
 	}
 
-	TVector3<T> GetAxisNormalized(const EAxis InAxis) const
+	vec3_t<T> getAxisNormalized(const EAxis inAxis) const
 	{
-		return GetAxis(InAxis).Normalized();
+		return getAxis(inAxis).normalized();
 	}
 
-	TRotator<T> GetRotator() const
+	rot_t<T> getRotator() const
 	{
-		const TVector3 XAxis = GetAxis(EAxis::X);
-		const TVector3 YAxis = GetAxis(EAxis::Y);
-		const TVector3 ZAxis = GetAxis(EAxis::Z);
+		const vec3_t XAxis = getAxis(EAxis::X);
+		const vec3_t YAxis = getAxis(EAxis::Y);
+		const vec3_t ZAxis = getAxis(EAxis::Z);
 		const T RadToDeg = 180.0f / (PI * 2.0f);
 
-		T Pitch = Math::ATan2(XAxis.Z, Math::Sqrt(Math::Square(XAxis.X) + Math::Square(XAxis.Y))) * RadToDeg;
-		T Yaw = Math::ATan2(XAxis.Y, XAxis.X) * RadToDeg;
-		TRotator Rotator = TRotator(Pitch, Yaw, T(0));
+		T Pitch = std::atan2f(XAxis.z, std::sqrtf(Math::square(XAxis.x) + Math::square(XAxis.y))) * RadToDeg;
+		T Yaw = std::atan2f(XAxis.y, XAxis.x) * RadToDeg;
+		rot_t Rotator = rot_t(Pitch, Yaw, T(0));
 
-		const TVector3 SYAxis = TRotationMatrix<T>(Rotator).GetAxis(EAxis::Y);
-		Rotator.Roll = Math::ATan2(Math::Dot(ZAxis, SYAxis), Math::Dot(YAxis, SYAxis)) * RadToDeg;
+		const vec3_t SYAxis = mat4_rot_t<T>(Rotator).getAxis(EAxis::Y);
+		Rotator.Roll = std::atan2f(Math::dot(ZAxis, SYAxis), Math::dot(YAxis, SYAxis)) * RadToDeg;
 
 		return Rotator;
 	}
 
-	TVector3<T> GetScale(T Tolerance = 0.00000001f);
+	vec3_t<T> getScale(T tolerance = 0.00000001f);
 
-	TVector3<T> GetTranslation()
+	vec3_t<T> getTranslation()
 	{
-		return TVector3(M[3][0], M[3][1], M[3][2]);
+		return vec3_t(m[3][0], m[3][1], m[3][2]);
 	}
 
-	static TMatrix MakeFromX(T Angle)
+	static mat4_t makeFromX(T Angle)
 	{
-		T C = Math::Cos(Angle);
-		T S = Math::Sin(Angle);
-		return TMatrix(
-			TPlane<T>(1, 0, 0, 0),
-			TPlane<T>(0, C, -S, 0),
-			TPlane<T>(0, S, C, 0),
-			TPlane<T>(0, 0, 0, 1)
+		T C = std::cosf(Angle);
+		T S = std::sinf(Angle);
+		return mat4_t(
+			plane_t<T>(1, 0, 0, 0),
+			plane_t<T>(0, C, -S, 0),
+			plane_t<T>(0, S, C, 0),
+			plane_t<T>(0, 0, 0, 1)
 		);
 	}
 
-	static TMatrix MakeFromY(T Angle)
+	static mat4_t makeFromY(T Angle)
 	{
-		T C = Math::Cos(Angle);
-		T S = Math::Sin(Angle);
-		return TMatrix(
-			TPlane<T>(C, 0, S, 0),
-			TPlane<T>(0, 1, 0, 0),
-			TPlane<T>(-S, 0, C, 0),
-			TPlane<T>(0, 0, 0, 1)
+		T C = std::cosf(Angle);
+		T S = std::sinf(Angle);
+		return mat4_t(
+			plane_t<T>(C, 0, S, 0),
+			plane_t<T>(0, 1, 0, 0),
+			plane_t<T>(-S, 0, C, 0),
+			plane_t<T>(0, 0, 0, 1)
 		);
 	}
 
-	static TMatrix MakeFromZ(T Angle)
+	static mat4_t makeFromZ(T Angle)
 	{
-		T C = Math::Cos(Angle);
-		T S = Math::Sin(Angle);
-		return TMatrix(
-			TPlane<T>(C, -S, 0, 0),
-			TPlane<T>(S, C, 0, 0),
-			TPlane<T>(0, 0, 1, 0),
-			TPlane<T>(0, 0, 0, 1)
+		T C = std::cosf(Angle);
+		T S = std::sinf(Angle);
+		return mat4_t(
+			plane_t<T>(C, -S, 0, 0),
+			plane_t<T>(S, C, 0, 0),
+			plane_t<T>(0, 0, 1, 0),
+			plane_t<T>(0, 0, 0, 1)
 		);
 	}
 
-	T Get(int32 X, int32 Y) const
+	T get(int32 X, int32 Y) const
 	{
-		return M[X][Y];
+		return m[X][Y];
 	}
 
-	TVector4<T> GetRow(int32 Row) const
+	vec4_t<T> getRow(int32 row) const;
+
+	vec4_t<T> getColumn(int32 Column) const
 	{
-		return {M[Row][0], M[Row][1], M[Row][2], M[Row][3]};
+		return {m[0][Column], m[1][Column], m[2][Column], m[3][Column]};
 	}
 
-	TVector4<T> GetColumn(int32 Column) const
+	void set(int32 X, int32 Y, T Value)
 	{
-		return {M[0][Column], M[1][Column], M[2][Column], M[3][Column]};
+		m[X][Y] = Value;
 	}
 
-	void Set(int32 X, int32 Y, T Value)
-	{
-		M[X][Y] = Value;
-	}
-
-	std::string ToString() const
+	std::string toString() const
 	{
 		std::string Output;
 
-		Output += std::format("[{} {} {} {}]\n", M[0][0], M[0][1], M[0][2], M[0][3]);
-		Output += std::format("[{} {} {} {}]\n", M[1][0], M[1][1], M[1][2], M[1][3]);
-		Output += std::format("[{} {} {} {}]\n", M[2][0], M[2][1], M[2][2], M[2][3]);
-		Output += std::format("[{} {} {} {}]\n", M[3][0], M[3][1], M[3][2], M[3][3]);
+		Output += std::format("[{} {} {} {}]\n", m[0][0], m[0][1], m[0][2], m[0][3]);
+		Output += std::format("[{} {} {} {}]\n", m[1][0], m[1][1], m[1][2], m[1][3]);
+		Output += std::format("[{} {} {} {}]\n", m[2][0], m[2][1], m[2][2], m[2][3]);
+		Output += std::format("[{} {} {} {}]\n", m[3][0], m[3][1], m[3][2], m[3][3]);
 
 		return Output;
 	}
 
-	TMatrix operator+(const TMatrix& Other) const
+	mat4_t operator+(const mat4_t& Other) const
 	{
-		TMatrix Result;
+		mat4_t Result;
 		for (int32 X = 0; X < 4; X++)
 		{
 			for (int32 Y = 0; Y < 4; Y++)
 			{
-				Result.M[X][Y] = M[X][Y] + Other.M[X][Y];
+				Result.m[X][Y] = m[X][Y] + Other.m[X][Y];
 			}
 		}
 		return Result;
 	}
 
-	TMatrix& operator+=(const TMatrix& Other)
+	mat4_t& operator+=(const mat4_t& Other)
 	{
 		*this = *this + Other;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TMatrix operator-(const TMatrix& Other) const
+	mat4_t operator-(const mat4_t& Other) const
 	{
-		TMatrix Result;
+		mat4_t Result;
 		for (int32 X = 0; X < 4; X++)
 		{
 			for (int32 Y = 0; Y < 4; Y++)
 			{
-				Result.M[X][Y] = M[X][Y] - Other.M[X][Y];
+				Result.m[X][Y] = m[X][Y] - Other.m[X][Y];
 			}
 		}
 		return Result;
 	}
 
-	TMatrix& operator-=(const TMatrix& Other)
+	mat4_t& operator-=(const mat4_t& other)
 	{
-		*this = *this - Other;
+		*this = *this - other;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TMatrix& operator*=(const TMatrix& Other)
+	mat4_t& operator*=(const mat4_t& other)
 	{
-		*this = *this * Other;
+		*this = *this * other;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TMatrix operator/(const TMatrix& Other) const
+	mat4_t operator/(const mat4_t& other) const
 	{
-		TMatrix Result;
-		for (int32 X = 0; X < 4; X++)
+		mat4_t result;
+		for (int32 x = 0; x < 4; x++)
 		{
-			for (int32 Y = 0; Y < 4; Y++)
+			for (int32 y = 0; y < 4; y++)
 			{
-				Result.M[X][Y] = M[X][Y] / Other.M[X][Y];
+				result.m[x][y] = m[x][y] / other.m[x][y];
 			}
 		}
-		return Result;
+		return result;
 	}
 
-	TMatrix& operator/=(const TMatrix& Other)
+	mat4_t& operator/=(const mat4_t& other)
 	{
-		*this = *this / Other;
+		*this = *this / other;
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TVector3<T> operator*(const TVector3<T>& V) const
+	vec3_t<T> operator*(const vec3_t<T>& v) const
 	{
-		TVector3<T> Result;
-		for (int32 Index = 0; Index < 3; Index++)
+		vec3_t<T> result;
+		for (int32 index = 0; index < 3; index++)
 		{
-			TVector4<T> RowVector({M[Index][0], M[Index][1], M[Index][2], M[Index][3]});
-			Result[Index] = Math::Dot(RowVector, TVector4<T>(V));
+			vec4_t<T> rowVector({m[index][0], m[index][1], m[index][2], m[index][3]});
+			result[index] = Math::dot(rowVector, vec4_t<T>(v));
 		}
-		return Result;
+		return result;
 	}
 
-	TVector4<T> operator*(const TVector4<T>& V) const
+	vec4_t<T> operator*(const vec4_t<T>& v) const
 	{
-		T TempX = V.X * M[0][0] + V.Y * M[0][1] + V.Z * M[0][2] + V.W * M[0][3];
-		T TempY = V.X * M[1][0] + V.Y * M[1][1] + V.Z * M[1][2] + V.W * M[1][3];
-		T TempZ = V.X * M[2][0] + V.Y * M[2][1] + V.Z * M[2][2] + V.W * M[2][3];
-		T TempW = V.X * M[3][0] + V.Y * M[3][1] + V.Z * M[3][2] + V.W * M[3][3];
+		T tempX = v.x * m[0][0] + v.y * m[0][1] + v.z * m[0][2] + v.w * m[0][3];
+		T tempY = v.x * m[1][0] + v.y * m[1][1] + v.z * m[1][2] + v.w * m[1][3];
+		T tempZ = v.x * m[2][0] + v.y * m[2][1] + v.z * m[2][2] + v.w * m[2][3];
+		T tempW = v.x * m[3][0] + v.y * m[3][1] + v.z * m[3][2] + v.w * m[3][3];
 
-		return {TempX, TempY, TempZ, TempW};
+		return {tempX, tempY, tempZ, tempW};
 	}
 
-	TMatrix& operator=(const TMatrix& Other) // NOLINT
+	mat4_t& operator=(const mat4_t& Other) // NOLINT
 	{
-		std::memcpy(M, &Other.M, 16 * sizeof(T));
+		std::memcpy(m, &Other.m, 16 * sizeof(T));
 #if _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	bool Equals(const TMatrix& Other)
+	bool equals(const mat4_t& other)
 	{
-		for (int32 X = 0; X < 4; X++)
+		for (int32 x = 0; x < 4; x++)
 		{
-			for (int32 Y = 0; Y < 4; Y++)
+			for (int32 y = 0; y < 4; y++)
 			{
-				if (M[X][Y] != Other.M[X][Y])
+				if (m[x][y] != other.m[x][y])
 				{
 					return false;
 				}
@@ -595,11 +592,11 @@ struct TMatrix
 };
 
 template <typename T>
-constexpr TMatrix<T> operator*(const TMatrix<T>& M0, const TMatrix<T>& M1)
+constexpr mat4_t<T> operator*(const mat4_t<T>& M0, const mat4_t<T>& M1)
 {
 	using Float4x4 = float[4][4];
-	const Float4x4& A = *((const Float4x4*)M0.M);
-	const Float4x4& B = *((const Float4x4*)M1.M);
+	const Float4x4& A = *((const Float4x4*)M0.m);
+	const Float4x4& B = *((const Float4x4*)M1.m);
 	Float4x4 Temp;
 	Temp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
 	Temp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
@@ -621,139 +618,139 @@ constexpr TMatrix<T> operator*(const TMatrix<T>& M0, const TMatrix<T>& M1)
 	Temp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
 	Temp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
 
-	TMatrix<T> Result;
-	memcpy(&Result.M, &Temp, 16 * sizeof(float));
+	mat4_t<T> Result;
+	memcpy(&Result.m, &Temp, 16 * sizeof(float));
 	return Result;
 }
 
 template <typename T>
-struct TPerspectiveMatrix : TMatrix<T>
+struct mat4_persp_t : mat4_t<T>
 {
-	TPerspectiveMatrix(T Fov, T Aspect, T MinZ, T MaxZ = MAX_Z) : TMatrix<T>()
+	mat4_persp_t(T Fov, T Aspect, T MinZ, T MaxZ = MAX_Z) : mat4_t<T>()
 	{
-		this->SetZero();
-		const T TanHalfFov = Math::Tan(Fov / 2.0f);
-		this->M[0][0] = T(1) / (Aspect * TanHalfFov);
-		this->M[1][1] = T(1) / TanHalfFov;
+		this->setZero();
+		const T TanHalfFov = std::tanf(Fov / 2.0f);
+		this->m[0][0] = T(1) / (Aspect * TanHalfFov);
+		this->m[1][1] = T(1) / TanHalfFov;
 
-		this->M[2][2] = -(MaxZ + MinZ) / (MaxZ - MinZ);
-		this->M[3][2] = -T(1);
-		this->M[2][3] = -(T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
+		this->m[2][2] = -(MaxZ + MinZ) / (MaxZ - MinZ);
+		this->m[3][2] = -T(1);
+		this->m[2][3] = -(T(2) * MaxZ * MinZ) / (MaxZ - MinZ);
 #if _DEBUG
-        this->CheckNaN();
+		this->checkNaN();
 #endif
 	}
 };
 
 template <typename T>
-struct TLookAtMatrix : TMatrix<T>
+struct mat4_lookat_t : mat4_t<T>
 {
-	TLookAtMatrix(const TVector3<T>& Eye, const TVector3<T>& Center, const TVector3<T>& UpVector) : TMatrix<T>()
+	mat4_lookat_t(const vec3_t<T>& Eye, const vec3_t<T>& Center, const vec3_t<T>& UpVector) : mat4_t<T>()
 	{
 		// Forward vector
-		const TVector3<T> Forward = (Center - Eye).Normalized();
+		const vec3_t<T> Forward = (Center - Eye).normalized();
 
 		// Right vector
-		const TVector3<T> Right = (Math::Cross(Forward, UpVector)).Normalized();
+		const vec3_t<T> Right = (Math::cross(Forward, UpVector)).normalized();
 
 		// Up vector
-		const TVector3<T> Up = Math::Cross(Right, Forward);
+		const vec3_t<T> Up = Math::cross(Right, Forward);
 
 		//  Rx |  Ux | -Fx | -Tx
 		//  Ry |  Uy | -Fy | -Ty
 		//  Rz |  Uz | -Fz | -Tz 
 		//  0  |  0  |  0  |  1
-		this->SetIdentity();
-		this->M[0][0] = Right.X;
-		this->M[0][1] = Right.Y;
-		this->M[0][2] = Right.Z;
-		this->M[1][0] = Up.X;
-		this->M[1][1] = Up.Y;
-		this->M[1][2] = Up.Z;
-		this->M[2][0] = -Forward.X;
-		this->M[2][1] = -Forward.Y;
-		this->M[2][2] = -Forward.Z;
-		this->M[0][3] = -Math::Dot(Right, Eye);
-		this->M[1][3] = -Math::Dot(Up, Eye);
-		this->M[2][3] = Math::Dot(Forward, Eye);
+		this->setIdentity();
+		this->m[0][0] = Right.x;
+		this->m[0][1] = Right.y;
+		this->m[0][2] = Right.z;
+		this->m[1][0] = Up.x;
+		this->m[1][1] = Up.y;
+		this->m[1][2] = Up.z;
+		this->m[2][0] = -Forward.x;
+		this->m[2][1] = -Forward.y;
+		this->m[2][2] = -Forward.z;
+		this->m[0][3] = -Math::dot(Right, Eye);
+		this->m[1][3] = -Math::dot(Up, Eye);
+		this->m[2][3] = Math::dot(Forward, Eye);
 
 #if _DEBUG
-        this->CheckNaN();
+		this->checkNaN();
 #endif
 	}
 };
 
 template <typename T>
-struct TTranslationMatrix : TMatrix<T>
+struct mat4_trans_t : mat4_t<T>
 {
-	TTranslationMatrix(const TVector3<T>& Delta) : TMatrix<T>()
+	mat4_trans_t(const vec3_t<T>& Delta) : mat4_t<T>()
 	{
-		this->M[3][0] = Delta.X;
-		this->M[3][1] = Delta.Y;
-		this->M[3][2] = Delta.Z;
+		this->m[3][0] = Delta.x;
+		this->m[3][1] = Delta.y;
+		this->m[3][2] = Delta.z;
 
 #if _DEBUG
-        this->CheckNaN();
+		this->checkNaN();
 #endif
 	}
 };
 
 template <typename T>
-struct TRotationMatrix : TMatrix<T>
+struct mat4_rot_t : mat4_t<T>
 {
-	TRotationMatrix(T Pitch, T Yaw, T Roll) : TMatrix<T>()
+	mat4_rot_t(T Pitch, T Yaw, T Roll) : mat4_t<T>()
 	{
 		// Convert from degrees to radians
-		Pitch = Math::DegreesToRadians(Pitch);
-		Yaw = Math::DegreesToRadians(Yaw);
-		Roll = Math::DegreesToRadians(Roll);
+		Pitch = Math::degreesToRadians(Pitch);
+		Yaw = Math::degreesToRadians(Yaw);
+		Roll = Math::degreesToRadians(Roll);
 
-		T CP = Math::Cos(Pitch);
-		T SP = Math::Sin(Pitch);
-		T CY = Math::Cos(Yaw);
-		T SY = Math::Sin(Yaw);
-		T CR = Math::Cos(Roll);
-		T SR = Math::Sin(Roll);
+		T CP = std::cosf(Pitch);
+		T SP = std::sinf(Pitch);
+		T CY = std::cosf(Yaw);
+		T SY = std::sinf(Yaw);
+		T CR = std::cosf(Roll);
+		T SR = std::sinf(Roll);
 
 		T CPSY = CP * SY;
 		T SPSY = SP * SY;
 
-		this->M[0][0] = CY * CR;
-		this->M[0][1] = -CY * SR;
-		this->M[0][2] = SY;
-		this->M[1][0] = SPSY * CR + CP * SR;
-		this->M[1][1] = -SPSY * SR + CP * CR;
-		this->M[1][2] = -SP * CY;
-		this->M[2][0] = -CPSY * CR + SP * SR;
-		this->M[2][1] = CPSY * SR + SP * CR;
-		this->M[2][2] = CP * CY;
+		this->m[0][0] = CY * CR;
+		this->m[0][1] = -CY * SR;
+		this->m[0][2] = SY;
+		this->m[1][0] = SPSY * CR + CP * SR;
+		this->m[1][1] = -SPSY * SR + CP * CR;
+		this->m[1][2] = -SP * CY;
+		this->m[2][0] = -CPSY * CR + SP * SR;
+		this->m[2][1] = CPSY * SR + SP * CR;
+		this->m[2][2] = CP * CY;
 
 #if _DEBUG
-        this->CheckNaN();
+		this->checkNaN();
 #endif
 	}
 
-	TRotationMatrix(const TRotator<T>& Rotation) : TMatrix<T>()
+	mat4_rot_t(const rot_t<T>& Rotation) : mat4_t<T>()
 	{
-		*this = TRotationMatrix(Rotation.Pitch, Rotation.Yaw, Rotation.Roll);
+		*this = mat4_rot_t(Rotation.Pitch, Rotation.Yaw, Rotation.Roll);
 
 #if _DEBUG
-        this->CheckNaN();
+		this->checkNaN();
 #endif
 	}
 };
 
 template <typename T>
-struct TRotationTranslationMatrix : TMatrix<T>
+struct mat4_rottrans_t : mat4_t<T>
 {
-	TRotationTranslationMatrix(const TRotator<T>& Rotation, const TVector3<T>& Translation) : TMatrix<T>()
+	mat4_rottrans_t(const rot_t<T>& Rotation, const vec3_t<T>& Translation) : mat4_t<T>()
 	{
-		TMatrix<T> RotationMatrix = TRotationMatrix<T>(Rotation);
-		TMatrix<T> TranslationMatrix = TTranslationMatrix<T>(Translation);
+		mat4_t<T> RotationMatrix = mat4_rot_t<T>(Rotation);
+		mat4_t<T> TranslationMatrix = mat4_trans_t<T>(Translation);
 		*this = RotationMatrix * TranslationMatrix;
 
 #if _DEBUG
-        this->CheckNaN();
+		this->checkNaN();
 #endif
 	}
 };

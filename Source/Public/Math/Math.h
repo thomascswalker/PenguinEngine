@@ -8,248 +8,142 @@
 
 #include "MathFwd.h"
 
-
 namespace Math
 {
 	template <typename T>
-	constexpr static T Pow(T Value, T Power)
+	static void sinCos(T* s, T* c, T value)
 	{
-		return std::pow(Value, Power);
-	}
-
-	static float Sin(float Value)
-	{
-		return std::sinf(Value);
-	}
-
-	static double Sin(double Value)
-	{
-		return std::sin(Value);
-	}
-
-	template <typename T>
-	constexpr static T Sin(T Value)
-	{
-		return Math::Sin(Value);
-	}
-
-	template <typename T>
-	constexpr static T ASin(T Value)
-	{
-		return std::asinf(Value);
-	}
-
-	static float Cos(float Value)
-	{
-		return std::cosf(Value);
-	}
-
-	static double Cos(double Value)
-	{
-		return std::cos(Value);
-	}
-
-
-	template <typename T>
-	constexpr static T Cos(T Value)
-	{
-		return Math::Cos(Value);
-	}
-
-	template <typename T>
-	constexpr static T ACos(T Value)
-	{
-		return std::acosf(Value);
-	}
-
-	template <typename T>
-	constexpr static T Tan(T Value)
-	{
-		return std::tanf(Value);
-	}
-
-	template <typename T>
-	constexpr static T ATan(T Value)
-	{
-		return std::atanf(Value);
-	}
-
-	template <typename T>
-	constexpr static T ATan2(T A, T B)
-	{
-		return std::atan2f(A, B);
-	}
-
-	template <typename T>
-	static void SinCos(T* S, T* C, T Value)
-	{
-		T Quotient = (PI * 0.5f) * Value;
-		if (Value >= 0.0f)
+		T quotient = (PI * 0.5f) * value;
+		if (value >= 0.0f)
 		{
-			Quotient = (T)((int64)(Quotient + 0.5f));
+			quotient = static_cast<T>(static_cast<int64>(quotient + 0.5f));
 		}
 		else
 		{
-			Quotient = (T)((int64)(Quotient - 0.5f));
+			quotient = static_cast<T>(static_cast<int64>(quotient - 0.5f));
 		}
-		T Y = Value - (PI * 2) * Quotient;
+		T y = value - (PI * 2) * quotient;
 
 		// Map y to [-pi/2,pi/2] with sin(y) = sin(Value).
-		T Sign;
-		if (Y > (PI / 0.5f))
+		T sign;
+		if (y > (PI / 0.5f))
 		{
-			Y = PI - Y;
-			Sign = -1.0f;
+			y = PI - y;
+			sign = -1.0f;
 		}
-		else if (Y < -(PI / 0.5f))
+		else if (y < -(PI / 0.5f))
 		{
-			Y = -PI - Y;
-			Sign = -1.0f;
+			y = -PI - y;
+			sign = -1.0f;
 		}
 		else
 		{
-			Sign = +1.0f;
+			sign = +1.0f;
 		}
 
-		T Y2 = Y * Y;
+		T y2 = y * y;
 
 		// 11-degree minimax approximation
-		*S = (((((-2.3889859e-08f * Y2 + 2.7525562e-06f) * Y2 - 0.00019840874f) * Y2 + 0.0083333310f) * Y2 -
-			0.16666667f) * Y2 + 1.0f) * Y;
+		*s = (((((-2.3889859e-08f * y2 + 2.7525562e-06f) * y2 - 0.00019840874f) * y2 + 0.0083333310f) * y2 -
+			0.16666667f) * y2 + 1.0f) * y;
 
 		// 10-degree minimax approximation
-		T P = ((((-2.6051615e-07f * Y2 + 2.4760495e-05f) * Y2 - 0.0013888378f) * Y2 + 0.041666638f) * Y2 - 0.5f) * Y2 +
+		T p = ((((-2.6051615e-07f * y2 + 2.4760495e-05f) * y2 - 0.0013888378f) * y2 + 0.041666638f) * y2 - 0.5f) * y2 +
 			1.0f;
-		*C = Sign * P;
+		*c = sign * p;
 	}
 
 	template <typename T>
-	constexpr static T Abs(T Value)
+	constexpr static T minElement(T* array)
 	{
-		return std::abs(Value);
-	}
-
-	template <typename T>
-	constexpr static T Min(T A, T B)
-	{
-		return A < B ? A : B;
-	}
-
-	template <typename T>
-	constexpr static T MinElement(T* Array)
-	{
-		T Lowest = Array[0];
-		int32 Size = sizeof(Array) / sizeof(Array[0]);
-		for (int32 Index = 0; Index < Size; Index++)
+		T lowest = array[0];
+		int32 size = sizeof(array) / sizeof(array[0]);
+		for (int32 index = 0; index < size; index++)
 		{
-			if (Array[Index] < Lowest)
+			if (array[index] < lowest)
 			{
-				Lowest = Array[Index];
+				lowest = array[index];
 			}
 		}
-		return Lowest;
+		return lowest;
 	}
 
 	template <typename T>
-	constexpr static T Max(T A, T B)
+	constexpr static T maxElement(T* array)
 	{
-		return A > B ? A : B;
-	}
-
-	template <typename T>
-	constexpr static T MaxElement(T* Array)
-	{
-		T Highest = Array[0];
-		int32 Size = sizeof(Array) / sizeof(Array[0]);
-		for (int32 Index = 0; Index < Size; Index++)
+		T highest = array[0];
+		int32 size = sizeof(array) / sizeof(array[0]);
+		for (int32 index = 0; index < size; index++)
 		{
-			if (Array[Index] > Highest)
+			if (array[index] > highest)
 			{
-				Highest = Array[Index];
+				highest = array[index];
 			}
 		}
-		return Highest;
+		return highest;
 	}
 
 	template <typename T>
-	constexpr static T Clamp(T Value, T InMin, T InMax)
+	constexpr static T square(T value)
 	{
-		return std::clamp(Value, InMin, InMax);
+		return value * value;
 	}
 
 	template <typename T>
-	constexpr static T Square(T Value)
-	{
-		return Value * Value;
-	}
-
-	template <typename T>
-	constexpr static T Sqrt(T Value)
-	{
-		return std::sqrtf(Value);
-	}
-
-	template <typename T>
-	constexpr static T InvSqrt(T Value)
+	constexpr static T invSqrt(T value)
 	{
 		// https://en.wikipedia.org/wiki/Fast_inverse_square_root
-		const float Magic = 0x5f3759df;
-		const float ThreeHalves = 1.5F;
-		float Y = Value;
+		constexpr float magic = 0x5f3759df;
+		constexpr float threeHalves = 1.5F;
+		float y = value;
 
-		long I = *reinterpret_cast<long*>(&Y);
+		long i = *reinterpret_cast<long*>(&y);
 
-		I = Magic - (I >> 1);
-		Y = *reinterpret_cast<float*>(&I);
+		i = magic - (i >> 1);
+		y = *reinterpret_cast<float*>(&i);
 
-		Y = Y * (ThreeHalves - ((Value * 0.5f) * Y * Y));
+		y = y * (threeHalves - ((value * 0.5f) * y * y));
 
-		return Y;
+		return y;
 	}
 
 	template <typename T>
-	constexpr static bool IsFinite(T Value)
+	constexpr static bool isFinite(T value)
 	{
-		return _finite(Value) != 0;
+		return _finite(value) != 0;
 	}
 
 	template <typename T>
-	constexpr static bool Sign(T Value)
+	constexpr static bool sign(T value)
 	{
-		return Value >= 0;
+		return value >= 0;
 	}
 
 	template <typename T>
-	constexpr static T DegreesToRadians(T Degrees)
+	constexpr static T degreesToRadians(T degrees)
 	{
-		return Degrees * DEG_TO_RAD;
+		return degrees * DEG_TO_RAD;
 	}
 
 	template <typename T>
-	constexpr static T RadiansToDegrees(T Radians)
+	constexpr static T radiansToDegrees(T radians)
 	{
-		return Radians * RAD_TO_DEG;
+		return radians * RAD_TO_DEG;
 	}
 
 	template <typename T>
-	constexpr static T Mod(T A, T B)
+	T remap(T value, T oldMin, T oldMax, T newMin, T newMax)
 	{
-		return fmodf(static_cast<float>(A), static_cast<float>(B));
+		return (((value - oldMin) * (newMax - newMin)) / (oldMax - oldMin)) + newMin;
 	}
 
-	template <typename T>
-	constexpr static T Remap(T Value, T OldMin, T OldMax, T NewMin, T NewMax)
+	inline int32 truncate(const float value)
 	{
-		return (((Value - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin;
+		return static_cast<int32>(value);
 	}
 
-	constexpr int32 Truncate(float Value)
+	inline bool closeEnough(const float a, const float b)
 	{
-		return static_cast<int32>(Value);
-	}
-
-	constexpr bool CloseEnough(const float A, const float B)
-	{
-		return Math::Abs(A - B) < EPSILON;
+		return std::abs(a - b) < EPSILON;
 	}
 };

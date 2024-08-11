@@ -184,8 +184,8 @@ public:
 
 	virtual void resetDeltaCursorPosition()
 	{
-		m_deltaCursorPosition.X = 0.0f;
-		m_deltaCursorPosition.Y = 0.0f;
+		m_deltaCursorPosition.x = 0.0f;
+		m_deltaCursorPosition.y = 0.0f;
 	}
 
 	// Keys

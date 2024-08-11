@@ -161,12 +161,13 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 		{
 			if (!renderer)
 			{
+				Logging::warning("Renderer.");
 				LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
 				break;
 			}
 
 			// Get the current window size from the buffer
-			const std::shared_ptr<PChannel> channel = renderer->getColorChannel();
+			const std::shared_ptr<Channel> channel = renderer->getColorChannel();
 			const int32 width = channel->m_width;
 			const int32 height = channel->m_height;
 
@@ -231,7 +232,7 @@ LRESULT PWin32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM
 			const HDC memoryContext = CreateCompatibleDC(deviceContext);
 
 			const int32 memorySize = width * height * g_bytesPerPixel * 4;
-			PPlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
+			PlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
 			m_displayBitmap = CreateDIBitmap(memoryContext, &m_bitmapInfo.bmiHeader, DIB_RGB_COLORS, m_displayBuffer,
 			                                 &m_bitmapInfo, 0);
 
@@ -370,7 +371,7 @@ int32 PWin32Platform::start()
 	                                   reinterpret_cast<void**>(m_displayBuffer), nullptr, 0);
 
 	const int32 memorySize = m_defaultWidth * m_defaultHeight * g_bytesPerPixel * 4;
-	PPlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
+	PlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
 
 	// Process all messages and update the window
 	LOG_DEBUG("Engine loop start")

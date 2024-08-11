@@ -3,22 +3,22 @@
 #include "Math/MathCommon.h"
 
 template <typename T>
-struct TLine
+struct line_t
 {
-	TVector2<T> m_a;
-	TVector2<T> m_b;
+	vec2_t<T> m_a;
+	vec2_t<T> m_b;
 
-	TLine()
+	line_t()
 	{
 	}
 
-	TLine(const TVector2<T>& inA, const TVector2<T>& inB) : m_a(inA), m_b(inB)
+	line_t(const vec2_t<T>& inA, const vec2_t<T>& inB) : m_a(inA), m_b(inB)
 	{
 	}
 
 	void reverse()
 	{
-		TVector2<T> tmp = m_a;
+		vec2_t<T> tmp = m_a;
 		m_a = m_b;
 		m_b = tmp;
 	}
@@ -28,22 +28,22 @@ struct TLine
 		return {m_b, m_a};
 	}
 
-	bool intersect(const TLine& other, TVector2<T>& out) const
+	bool intersect(const line_t& other, vec2_t<T>& out) const
 	{
 		// Line AB represented as a1x + b1y = c1
-		T a1 = m_b.X - m_a.X;
-		T b1 = m_a.X - m_b.Y;
+		T a1 = m_b.x - m_a.x;
+		T b1 = m_a.x - m_b.y;
 
-		T c1 = a1 * m_a.X + b1 * m_a.Y;
+		T c1 = a1 * m_a.x + b1 * m_a.y;
 
 		// Line CD represented as a2x + b2y = c2
-		T a2 = other.m_b.Y - other.m_a.Y;
-		T b2 = other.m_a.X - other.m_b.X;
-		T c2 = a2 * other.m_a.X + b2 * other.m_a.Y;
+		T a2 = other.m_b.y - other.m_a.y;
+		T b2 = other.m_a.x - other.m_b.x;
+		T c2 = a2 * other.m_a.x + b2 * other.m_a.y;
 
 		T det = a1 * b2 - a2 * b1;
 
-		if (Math::CloseEnough(det, 0.0f))
+		if (Math::closeEnough(det, 0.0f))
 		{
 			// The lines are parallel. This is simplified
 			// by returning a pair of FLT_MAX
@@ -53,20 +53,20 @@ struct TLine
 		{
 			T x = (b2 * c1 - b1 * c2) / det;
 			T y = (a1 * c2 - a2 * c1) / det;
-			out.X = x;
-			out.Y = y;
+			out.x = x;
+			out.y = y;
 			return true;
 		}
 	}
 };
 
 template <typename T>
-struct TLine3d
+struct line3d_t
 {
-	TVector3<T> m_a;
-	TVector3<T> m_b;
+	vec3_t<T> m_a;
+	vec3_t<T> m_b;
 
-	TLine3d(const TVector3<T>& inA, const TVector3<T>& inB) : m_a(inA), m_b(inB)
+	line3d_t(const vec3_t<T>& inA, const vec3_t<T>& inB) : m_a(inA), m_b(inB)
 	{
 	}
 };

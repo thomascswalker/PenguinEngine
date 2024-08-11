@@ -76,7 +76,7 @@ namespace Math
 {
 	static EWindingOrder getWindingOrder(const vec3f& v0, const vec3f& v1, const vec3f& v2)
 	{
-		const float result = (v1.X - v0.X) * (v2.Y - v0.Y) - (v2.X - v0.X) * (v1.Y - v0.Y);
+		const float result = (v1.x - v0.x) * (v2.y - v0.y) - (v2.x - v0.x) * (v1.y - v0.y);
 		if (result > 0)
 		{
 			return EWindingOrder::CCW;

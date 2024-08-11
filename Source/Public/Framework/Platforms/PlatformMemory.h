@@ -6,7 +6,7 @@
 
 #include "Math/MathFwd.h"
 
-struct PPlatformMemory
+namespace PlatformMemory
 {
 	static void free(void* memory)
 	{

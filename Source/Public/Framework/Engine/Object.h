@@ -28,11 +28,11 @@ public:
 
 	void computeBasisVectors()
 	{
-		const FSphericalCoords tmp = FSphericalCoords::FromRotation(m_transform.Rotation);
-		m_forwardVector = -tmp.ToCartesian().Normalized();
+		const sphericalf tmp = sphericalf::fromRotation(m_transform.Rotation);
+		m_forwardVector = -tmp.toCartesian().normalized();
 		// Negative because for some reason it defaults to the inverse
-		m_rightVector = Math::Cross(vec3f::UpVector(), m_forwardVector).Normalized();
-		m_upVector = Math::Cross(m_forwardVector, m_rightVector).Normalized();
+		m_rightVector = Math::cross(vec3f::upVector(), m_forwardVector).normalized();
+		m_upVector = Math::cross(m_forwardVector, m_rightVector).normalized();
 	}
 
 	// Getters

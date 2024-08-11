@@ -4,85 +4,84 @@
 // Matrices
 
 template <typename T>
-TVector3<T> TMatrix<T>::GetScale(T Tolerance)
+vec3_t<T> mat4_t<T>::getScale(T tolerance)
 {
-    TVector3<T> Scale(0, 0, 0);
+	vec3_t<T> scale(0, 0, 0);
 
-    // For each row, find magnitude, and if its non-zero re-scale so its unit length.
-    const T SquareSum0 = (M[0][0] * M[0][0]) + (M[0][1] * M[0][1]) + (M[0][2] * M[0][2]);
-    const T SquareSum1 = (M[1][0] * M[1][0]) + (M[1][1] * M[1][1]) + (M[1][2] * M[1][2]);
-    const T SquareSum2 = (M[2][0] * M[2][0]) + (M[2][1] * M[2][1]) + (M[2][2] * M[2][2]);
+	// For each row, find magnitude, and if its non-zero re-scale so its unit length.
+	const T squareSum0 = (m[0][0] * m[0][0]) + (m[0][1] * m[0][1]) + (m[0][2] * m[0][2]);
+	const T squareSum1 = (m[1][0] * m[1][0]) + (m[1][1] * m[1][1]) + (m[1][2] * m[1][2]);
+	const T squareSum2 = (m[2][0] * m[2][0]) + (m[2][1] * m[2][1]) + (m[2][2] * m[2][2]);
 
-    if (SquareSum0 > Tolerance)
-    {
-        T Scale0 = Math::Sqrt(SquareSum0);
-        Scale[0] = Scale0;
-        T InvScale0 = 1.f / Scale0;
-        M[0][0] *= InvScale0;
-        M[0][1] *= InvScale0;
-        M[0][2] *= InvScale0;
-    }
-    else
-    {
-        Scale[0] = 0;
-    }
+	if (squareSum0 > tolerance)
+	{
+		T scale0 = std::sqrtf(squareSum0);
+		scale[0] = scale0;
+		T invScale0 = 1.f / scale0;
+		m[0][0] *= invScale0;
+		m[0][1] *= invScale0;
+		m[0][2] *= invScale0;
+	}
+	else
+	{
+		scale[0] = 0;
+	}
 
-    if (SquareSum1 > Tolerance)
-    {
-        T Scale1 = Math::Sqrt(SquareSum1);
-        Scale[1] = Scale1;
-        T InvScale1 = 1.f / Scale1;
-        M[1][0] *= InvScale1;
-        M[1][1] *= InvScale1;
-        M[1][2] *= InvScale1;
-    }
-    else
-    {
-        Scale[1] = 0;
-    }
+	if (squareSum1 > tolerance)
+	{
+		T scale1 = std::sqrtf(squareSum1);
+		scale[1] = scale1;
+		T invScale1 = 1.f / scale1;
+		m[1][0] *= invScale1;
+		m[1][1] *= invScale1;
+		m[1][2] *= invScale1;
+	}
+	else
+	{
+		scale[1] = 0;
+	}
 
-    if (SquareSum2 > Tolerance)
-    {
-        T Scale2 = Math::Sqrt(SquareSum2);
-        Scale[2] = Scale2;
-        T InvScale2 = 1.f / Scale2;
-        M[2][0] *= InvScale2;
-        M[2][1] *= InvScale2;
-        M[2][2] *= InvScale2;
-    }
-    else
-    {
-        Scale[2] = 0;
-    }
+	if (squareSum2 > tolerance)
+	{
+		T scale2 = std::sqrtf(squareSum2);
+		scale[2] = scale2;
+		T invScale2 = 1.f / scale2;
+		m[2][0] *= invScale2;
+		m[2][1] *= invScale2;
+		m[2][2] *= invScale2;
+	}
+	else
+	{
+		scale[2] = 0;
+	}
 
-    return Scale;
+	return scale;
+}
+
+template <typename T>
+vec4_t<T> mat4_t<T>::getRow(int32 row) const
+{
+	return {m[row][0], m[row][1], m[row][2], m[row][3]};
 }
 
 // Rotator
 
 template <typename T>
-TRotator<T>::TRotator(TQuat<T>& Q)
+rot_t<T>::rot_t(const vec3_t<T>& euler)
 {
-    
+	Pitch = euler.y;
+	Yaw = euler.z;
+	Roll = euler.x;
 }
-
-template <typename T>
-TRotator<T>::TRotator(const TVector3<T>& Euler)
-{
-    Pitch = Euler.Y;
-    Yaw = Euler.Z;
-    Roll = Euler.X;
-}
-
 
 // Instantiate for the linker
-template struct TRotator<float>;
-template struct TRotator<double>;
-template struct TQuat<float>;
-template struct TQuat<double>;
-template struct TVector3<float>;
-template struct TVector3<double>;
-template struct TVector4<float>;
-template struct TVector4<double>;
-template struct TMatrix<float>;
-template struct TMatrix<double>;
+template struct rot_t<float>;
+template struct rot_t<double>;
+template struct quat_t<float>;
+template struct quat_t<double>;
+template struct vec3_t<float>;
+template struct vec3_t<double>;
+template struct vec4_t<float>;
+template struct vec4_t<double>;
+template struct mat4_t<float>;
+template struct mat4_t<double>;

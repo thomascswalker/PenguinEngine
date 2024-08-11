@@ -9,7 +9,7 @@
 #define EDGE_FUNCTION(X0, Y0, X1, Y1, X2, Y2) (((X1) - (X0)) * ((Y2) - (Y0)) - ((Y1) - (Y0)) * ((X2) - (X0)))
 
 template <typename T>
-struct TVector2
+struct vec2_t
 {
 	static_assert(std::is_arithmetic_v<T>, "Type is not a number.");
 
@@ -18,183 +18,183 @@ struct TVector2
 	{
 		struct // NOLINT(clang-diagnostic-nested-anon-types)
 		{
-			T X;
-			T Y;
+			T x;
+			T y;
 		};
 
-		T XY[2];
+		T xy[2];
 	};
 
 	// Constructors
-	TVector2() : X(0), Y(0)
+	vec2_t() : x(0), y(0)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector2(T InX) : X(InX), Y(InX)
+	vec2_t(T inX) : x(inX), y(inX)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector2(T InX, T InY) : X(InX), Y(InY)
+	vec2_t(T inX, T inY) : x(inX), y(inY)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector2(const std::initializer_list<T>& Values)
+	vec2_t(const std::initializer_list<T>& values)
 	{
-		X = *(Values.begin());
-		Y = *(Values.begin() + 1);
+		x = *(values.begin());
+		y = *(values.begin() + 1);
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 	}
 
 	// Functions
-	void CheckNaN() const
+	void checkNaN() const
 	{
-		if (!(Math::IsFinite(X) && Math::IsFinite(Y)))
+		if (!(Math::isFinite(x) && Math::isFinite(y)))
 		{
-			LOG_ERROR("Vector [{}, {}] contains NaN", X, Y)
+			LOG_ERROR("Vector [{}, {}] contains NaN", x, y)
 		}
 	}
 
-	static TVector2 ZeroVector() { return TVector2(); }
-	static TVector2 IdentityVector() { return TVector2(1); }
+	static vec2_t zeroVector() { return vec2_t(); }
+	static vec2_t identityVector() { return vec2_t(1); }
 
 
 	template <typename ToType>
-	TVector2<ToType> ToType() const
+	vec2_t<ToType> toType() const
 	{
-		return {static_cast<ToType>(X), static_cast<ToType>(Y)};
+		return {static_cast<ToType>(x), static_cast<ToType>(y)};
 	}
 
-	void Normalize()
+	void normalize()
 	{
-		X = 1.0f / X;
-		Y = 1.0f / Y;
+		x = 1.0f / x;
+		y = 1.0f / y;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 	}
 
-	TVector2 Normalized() const { return {1.0f / X, 1.0f / Y}; }
+	vec2_t normalized() const { return {1.0f / x, 1.0f / y}; }
 
-	std::string ToString() const { return std::format("[{}, {}]", X, Y); }
+	std::string toString() const { return std::format("[{}, {}]", x, y); }
 
 	// Operators
-	TVector2 operator+(const TVector2& V) const { return {X + V.X, Y + V.Y}; }
+	vec2_t operator+(const vec2_t& v) const { return {x + v.x, y + v.y}; }
 
-	TVector2& operator +=(const TVector2& V)
+	vec2_t& operator +=(const vec2_t& v)
 	{
-		X += V.X;
-		Y += V.Y;
+		x += v.x;
+		y += v.y;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector2 operator-(const TVector2& V) const { return {X - V.X, Y - V.Y}; }
+	vec2_t operator-(const vec2_t& v) const { return {x - v.x, y - v.y}; }
 
-	TVector2& operator -=(const TVector2& V)
+	vec2_t& operator -=(const vec2_t& v)
 	{
-		X -= V.X;
-		Y -= V.Y;
+		x -= v.x;
+		y -= v.y;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector2 operator*(const TVector2& V) const { return {X * V.X, Y * V.Y}; }
+	vec2_t operator*(const vec2_t& v) const { return {x * v.x, y * v.y}; }
 
-	TVector2& operator *=(const TVector2& V)
+	vec2_t& operator *=(const vec2_t& v)
 	{
-		X *= V.X;
-		Y *= V.Y;
+		x *= v.x;
+		y *= v.y;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector2 operator/(const TVector2& V) const { return {X / V.X, Y / V.Y}; }
+	vec2_t operator/(const vec2_t& v) const { return {x / v.x, y / v.y}; }
 
-	TVector2& operator /=(const TVector2& V)
+	vec2_t& operator /=(const vec2_t& v)
 	{
-		X /= V.X;
-		Y /= V.Y;
+		x /= v.x;
+		y /= v.y;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector2 operator-()
+	vec2_t operator-()
 	{
-		return TVector2(-X, -Y);
+		return vec2_t(-x, -y);
 	}
 
-	bool operator<(const TVector2& Other)
+	bool operator<(const vec2_t& other)
 	{
-		return X < Other.X && Y < Other.Y;
+		return x < other.x && y < other.y;
 	}
 
-	bool operator>(const TVector2& Other)
+	bool operator>(const vec2_t& other)
 	{
-		return X > Other.X && Y > Other.Y;
+		return x > other.x && y > other.y;
 	}
 
-	bool operator>(T Value)
+	bool operator>(T value)
 	{
-		return X > Value && Y > Value;
+		return x > value && y > value;
 	}
 
-	bool operator<(T Value)
+	bool operator<(T value)
 	{
-		return X < Value && Y < Value;
+		return x < value && y < value;
 	}
 
-	bool operator ==(T Value)
+	bool operator ==(T value)
 	{
-		return X == Value && Y == Value;
+		return x == value && y == value;
 	}
 
-	bool operator ==(const TVector2& Other)
+	bool operator ==(const vec2_t& other)
 	{
-		return X == Other.X && Y == Other.Y;
+		return x == other.x && y == other.y;
 	}
 
-	bool operator !=(const TVector2& Other)
+	bool operator !=(const vec2_t& other)
 	{
-		return X != Other.X || Y != Other.Y;
+		return x != other.x || y != other.y;
 	}
 
-	T operator[](int32 Index) const { return XY[Index]; }
-	T& operator[](int32 Index) { return XY[Index]; }
+	T operator[](int32 index) const { return xy[index]; }
+	T& operator[](int32 index) { return xy[index]; }
 };
 
 template <typename T>
-struct TVector3
+struct vec3_t
 {
 	static_assert(std::is_arithmetic_v<T>, "Type is not a number.");
 
@@ -203,242 +203,242 @@ struct TVector3
 	{
 		struct // NOLINT(clang-diagnostic-nested-anon-types)
 		{
-			T X;
-			T Y;
-			T Z;
+			T x;
+			T y;
+			T z;
 		};
 
-		T XYZ[3];
+		T xyz[3];
 	};
 
 	// Constructors
-	TVector3() : X(0), Y(0), Z(0)
+	vec3_t() : x(0), y(0), z(0)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector3(T InX) : X(InX), Y(InX), Z(InX)
+	vec3_t(T inX) : x(inX), y(inX), z(inX)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector3(T InX, T InY, T InZ) : X(InX), Y(InY), Z(InZ)
+	vec3_t(T inX, T inY, T inZ) : x(inX), y(inY), z(inZ)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector3(const TVector2<T>& V, T InZ = T(1)) : X(V.X), Y(V.Y), Z(InZ)
+	vec3_t(const vec2_t<T>& v, T inZ = T(1)) : x(v.x), y(v.y), z(inZ)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector3(const std::initializer_list<T>& Values)
+	vec3_t(const std::initializer_list<T>& values)
 	{
-		X = *(Values.begin());
-		Y = *(Values.begin() + 1);
-		Z = *(Values.begin() + 2);
+		x = *(values.begin());
+		y = *(values.begin() + 1);
+		z = *(values.begin() + 2);
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
 
 	// Functions
-	static TVector3 ZeroVector() { return TVector3(); }
-	static TVector3 IdentityVector() { return TVector3(1); }
-	static TVector3 ForwardVector() { return TVector3(1, 0, 0); }
-	static TVector3 BackVector() { return TVector3(-1, 0, 0); }
-	static TVector3 UpVector() { return TVector3(0, 1, 0); }
-	static TVector3 DownVector() { return TVector3(0, -1, 0); }
-	static TVector3 RightVector() { return TVector3(0, 0, 1); }
-	static TVector3 LeftVector() { return TVector3(0, 0, -1); }
+	static vec3_t zeroVector() { return vec3_t(); }
+	static vec3_t identityVector() { return vec3_t(1); }
+	static vec3_t forwardVector() { return vec3_t(1, 0, 0); }
+	static vec3_t backVector() { return vec3_t(-1, 0, 0); }
+	static vec3_t upVector() { return vec3_t(0, 1, 0); }
+	static vec3_t downVector() { return vec3_t(0, -1, 0); }
+	static vec3_t rightVector() { return vec3_t(0, 0, 1); }
+	static vec3_t leftVector() { return vec3_t(0, 0, -1); }
 
-	void CheckNaN() const
+	void checkNaN() const
 	{
-		if (!(Math::IsFinite(X) && Math::IsFinite(Y) && Math::IsFinite(Z)))
+		if (!(Math::isFinite(x) && Math::isFinite(y) && Math::isFinite(z)))
 		{
-			LOG_ERROR("Vector [{}, {}, {}] contains NaN", X, Y, Z)
+			LOG_ERROR("Vector [{}, {}, {}] contains NaN", x, y, z)
 		}
 	}
 
 	template <typename ToType>
-	TVector3<ToType> ToType() const
+	vec3_t<ToType> toType() const
 	{
-		return TVector3<ToType>{static_cast<ToType>(X), static_cast<ToType>(Y), static_cast<ToType>(Z)};
+		return vec3_t<ToType>{static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z)};
 	}
 
-	void Normalize()
+	void normalize()
 	{
-		const T Magnitude = Length();
-		if (Magnitude < 0.000001f)
+		const T magnitude = length();
+		if (magnitude < 0.000001f)
 		{
-			*this = ZeroVector();
+			*this = zeroVector();
 		}
 		else
 		{
-			X /= Magnitude;
-			Y /= Magnitude;
-			Z /= Magnitude;
+			x /= magnitude;
+			y /= magnitude;
+			z /= magnitude;
 		}
-		CheckNaN();
+		checkNaN();
 	}
 
-	TVector3 Normalized() const
+	vec3_t normalized() const
 	{
-		TVector3 Out(X, Y, Z);
-		Out.Normalize();
-		return Out;
+		vec3_t out(x, y, z);
+		out.normalize();
+		return out;
 	}
 
-	constexpr T Length() const
+	constexpr T length() const
 	{
-		return Math::Sqrt(X * X + Y * Y + Z * Z);
+		return std::sqrtf(x * x + y * y + z * z);
 	}
 
-	TVector3 Cross(const TVector3& V) const
+	vec3_t cross(const vec3_t& v) const
 	{
-		return TVector3{
-			Y * V.Z - Z * V.Y,
-			X * V.Z - Z * V.X,
-			X * V.Y - Y * V.X
+		return vec3_t{
+			y * v.z - z * v.y,
+			x * v.z - z * v.x,
+			x * v.y - y * v.x
 		};
 	}
 
-	T Dot(const TVector3& V) const
+	T dot(const vec3_t& v) const
 	{
-		T Result = 0;
-		for (int32 Index = 0; Index < 3; Index++)
+		T result = 0;
+		for (int32 index = 0; index < 3; index++)
 		{
-			Result += XYZ[Index] * V[Index];
+			result += xyz[index] * v[index];
 		}
-		return Result;
+		return result;
 	}
 
-	T Size() const
+	T size() const
 	{
-		return Math::Sqrt(Math::Square(X) + Math::Square(Y) + Math::Square(Z));
+		return std::sqrtf(Math::square(x) + Math::square(y) + Math::square(z));
 	}
 
-	TVector3 SwizzleXY() const
+	vec3_t swizzleXY() const
 	{
-		return {Y, X, Z};
+		return {y, x, z};
 	}
 
-	TVector3 SwizzleXZ() const
+	vec3_t swizzleXZ() const
 	{
-		return {Z, Y, X};
+		return {z, y, x};
 	}
 
-	TVector3 SwizzleYZ() const
+	vec3_t swizzleYZ() const
 	{
-		return {X, Z, Y};
+		return {x, z, y};
 	}
 
-	TVector3 SwizzleXYZ() const
+	vec3_t swizzleXYZ() const
 	{
-		return {Z, X, Y};
+		return {z, x, y};
 	}
 
-	std::string ToString() const { return std::format("[{}, {}, {}]", X, Y, Z); }
+	std::string toString() const { return std::format("[{}, {}, {}]", x, y, z); }
 
 	// Operators
-	TVector3 operator+(const TVector3& V) const { return {X + V.X, Y + V.Y, Z + V.Z}; }
+	vec3_t operator+(const vec3_t& v) const { return {x + v.x, y + v.y, z + v.z}; }
 
-	TVector3& operator +=(const TVector3& V)
+	vec3_t& operator +=(const vec3_t& v)
 	{
-		X += V.X;
-		Y += V.Y;
-		Z += V.Z;
+		x += v.x;
+		y += v.y;
+		z += v.z;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector3 operator-(const TVector3& V) const { return {X - V.X, Y - V.Y, Z - V.Z}; }
+	vec3_t operator-(const vec3_t& v) const { return {x - v.x, y - v.y, z - v.z}; }
 
-	TVector3& operator -=(const TVector3& V)
+	vec3_t& operator -=(const vec3_t& v)
 	{
-		X -= V.X;
-		Y -= V.Y;
-		Z -= V.Z;
+		x -= v.x;
+		y -= v.y;
+		z -= v.z;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector3 operator*(const TVector3& V) const { return {X * V.X, Y * V.Y, Z * V.Z}; }
+	vec3_t operator*(const vec3_t& v) const { return {x * v.x, y * v.y, z * v.z}; }
 
-	TVector3& operator *=(const TVector3& V)
+	vec3_t& operator *=(const vec3_t& v)
 	{
-		X *= V.X;
-		Y *= V.Y;
-		Z *= V.Z;
+		x *= v.x;
+		y *= v.y;
+		z *= v.z;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	TVector3 operator/(const TVector3& V) const { return {X / V.X, Y / V.Y, Z / V.Z}; }
+	vec3_t operator/(const vec3_t& v) const { return {x / v.x, y / v.y, z / v.z}; }
 
-	TVector3& operator /=(const TVector3& V)
+	vec3_t& operator /=(const vec3_t& v)
 	{
-		X /= V.X;
-		Y /= V.Y;
-		Z /= V.Z;
+		x /= v.x;
+		y /= v.y;
+		z /= v.z;
 		{
 #ifdef _DEBUG
-            CheckNaN();
+			checkNaN();
 #endif
 		}
 		return *this;
 	}
 
-	bool operator==(const TVector3& V) const { return X == V.X && Y == V.Y && Z == V.Z; }
-	bool operator!=(const TVector3& V) const { return X != V.X || Y != V.Y || Z != V.Z; }
+	bool operator==(const vec3_t& v) const { return x == v.x && y == v.y && z == v.z; }
+	bool operator!=(const vec3_t& v) const { return x != v.x || y != v.y || z != v.z; }
 
-	TVector3 operator-() const
+	vec3_t operator-() const
 	{
-		return TVector3(-X, -Y, -Z);
+		return vec3_t(-x, -y, -z);
 	}
 
-	bool operator<(const TVector3& Other)
+	bool operator<(const vec3_t& other)
 	{
-		return X < Other.X && Y < Other.Y && Z < Other.Z;
+		return x < other.x && y < other.y && z < other.z;
 	}
 
-	bool operator>(const TVector3& Other)
+	bool operator>(const vec3_t& other)
 	{
-		return X > Other.X && Y > Other.Y && Z > Other.Z;
+		return x > other.x && y > other.y && z > other.z;
 	}
 
-	T operator[](int32 Index) const { return XYZ[Index]; }
-	T& operator[](int32 Index) { return XYZ[Index]; }
+	T operator[](int32 index) const { return xyz[index]; }
+	T& operator[](int32 index) { return xyz[index]; }
 
-	operator TVector2<T>() const
+	operator vec2_t<T>() const
 	{
-		return {X, Y};
+		return {x, y};
 	}
 };
 
 template <typename T>
-struct TVector4
+struct vec4_t
 {
 	static_assert(std::is_arithmetic_v<T>, "Type is not a number.");
 
@@ -447,393 +447,352 @@ struct TVector4
 	{
 		struct // NOLINT(clang-diagnostic-nested-anon-types)
 		{
-			T X;
-			T Y;
-			T Z;
-			T W;
+			T x;
+			T y;
+			T z;
+			T w;
 		};
 
-		T XYZW[4];
+		T xyzw[4];
 	};
 
 	// Constructors
-	TVector4() : X(0), Y(0), Z(0), W(0)
+	vec4_t() : x(0), y(0), z(0), w(0)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector4(T InX) : X(InX), Y(InX), Z(InX), W(InX)
+	vec4_t(T inX) : x(inX), y(inX), z(inX), w(inX)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector4(T InX, T InY, T InZ, T InW) : X(InX), Y(InY), Z(InZ), W(InW)
+	vec4_t(T inX, T inY, T inZ, T inW) : x(inX), y(inY), z(inZ), w(inW)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector4(T* Values) : X(Values[0]), Y(Values[1]), Z(Values[2]), W(Values[3])
+	vec4_t(T* values) : x(values[0]), y(values[1]), z(values[2]), w(values[3])
 	{
 	}
 
-	TVector4(const std::initializer_list<T>& Values)
+	vec4_t(const std::initializer_list<T>& values)
 	{
-		X = *(Values.begin());
-		Y = *(Values.begin() + 1);
-		Z = *(Values.begin() + 2);
-		W = *(Values.begin() + 3);
+		x = *(values.begin());
+		y = *(values.begin() + 1);
+		z = *(values.begin() + 2);
+		w = *(values.begin() + 3);
 #ifdef _DEBUG
-            CheckNaN();
+		checkNaN();
 #endif
 	}
 
-	TVector4(const TVector3<T>& V, T InW = T(1)) : X(V.X), Y(V.Y), Z(V.Z), W(InW)
+	vec4_t(const vec3_t<T>& v, T inW = T(1)) : x(v.x), y(v.y), z(v.z), w(inW)
 	{
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 	}
 
 	// Functions
-	static TVector4 ZeroVector() { return TVector4(); }
-	static TVector4 IdentityVector() { return TVector4(1); }
+	static vec4_t zeroVector() { return vec4_t(); }
+	static vec4_t identityVector() { return vec4_t(1); }
 
-	void CheckNaN() const
+	void checkNaN() const
 	{
-		if (!(Math::IsFinite(X) && Math::IsFinite(Y) && Math::IsFinite(Z) && Math::IsFinite(W)))
+		if (!(Math::isFinite(x) && Math::isFinite(y) && Math::isFinite(z) && Math::isFinite(w)))
 		{
-			LOG_ERROR("Vector [{}, {}, {}, {}] contains NaN", X, Y, Z, W)
+			LOG_ERROR("Vector [{}, {}, {}, {}] contains NaN", x, y, z, w)
 		}
 	}
 
 
 	template <typename ToType>
-	TVector4<ToType> ToType() const
+	vec4_t<ToType> toType() const
 	{
-		return {static_cast<ToType>(X), static_cast<ToType>(Y), static_cast<ToType>(Z), static_cast<ToType>(W)};
+		return {static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w)};
 	}
 
 
-	void Normalize()
+	void normalize()
 	{
-		X = T(1.0) / X;
-		Y = T(1.0) / Y;
-		Z = T(1.0) / Z;
-		W = T(1.0) / W;
+		x = T(1.0) / x;
+		y = T(1.0) / y;
+		z = T(1.0) / z;
+		w = T(1.0) / w;
 	}
 
-	TVector4 Normalized() const { return {T(1.0) / X, T(1.0) / Y, T(1.0) / Z, T(1.0) / W}; }
+	vec4_t normalized() const { return {T(1.0) / x, T(1.0) / y, T(1.0) / z, T(1.0) / w}; }
 
-	std::string ToString() const { return std::format("[{}, {}, {}, {}]", X, Y, Z, W); }
+	std::string toString() const { return std::format("[{}, {}, {}, {}]", x, y, z, w); }
 
 	// Operators
-	TVector4 operator+(const TVector4& V) const { return {X + V.X, Y + V.Y, Z + V.Z, W + V.W}; }
+	vec4_t operator+(const vec4_t& v) const { return {x + v.x, y + v.y, z + v.z, w + v.w}; }
 
-	TVector4& operator +=(const TVector4& V)
+	vec4_t& operator +=(const vec4_t& v)
 	{
-		X += V.X;
-		Y += V.Y;
-		Z += V.Z;
-		W += V.W;
+		x += v.x;
+		y += v.y;
+		z += v.z;
+		w += v.w;
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TVector4 operator-(const TVector4& V) const { return {X - V.X, Y - V.Y, Z - V.Z, W - V.W}; }
+	vec4_t operator-(const vec4_t& v) const { return {x - v.x, y - v.y, z - v.z, w - v.w}; }
 
-	TVector4& operator -=(const TVector4& V)
+	vec4_t& operator -=(const vec4_t& v)
 	{
-		X -= V.X;
-		Y -= V.Y;
-		Z -= V.Z;
-		W -= V.W;
+		x -= v.x;
+		y -= v.y;
+		z -= v.z;
+		w -= v.w;
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TVector4 operator*(const TVector4& V) const { return {X * V.X, Y * V.Y, Z * V.Z, W * V.W}; }
+	vec4_t operator*(const vec4_t& v) const { return {x * v.x, y * v.y, z * v.z, w * v.w}; }
 
-	TVector4& operator *=(const TVector4& V)
+	vec4_t& operator *=(const vec4_t& v)
 	{
-		X *= V.X;
-		Y *= V.Y;
-		Z *= V.Z;
-		W *= V.W;
+		x *= v.x;
+		y *= v.y;
+		z *= v.z;
+		w *= v.w;
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TVector4 operator/(const TVector4& V) const { return {X / V.X, Y / V.Y, Z / V.Z, W / V.W}; }
+	vec4_t operator/(const vec4_t& v) const { return {x / v.x, y / v.y, z / v.z, w / v.w}; }
 
-	TVector4& operator /=(const TVector4& V)
+	vec4_t& operator /=(const vec4_t& v)
 	{
-		X /= V.X;
-		Y /= V.Y;
-		Z /= V.Z;
-		W /= V.W;
+		x /= v.x;
+		y /= v.y;
+		z /= v.z;
+		w /= v.w;
 #ifdef _DEBUG
-        CheckNaN();
+		checkNaN();
 #endif
 		return *this;
 	}
 
-	TVector4 operator-()
+	vec4_t operator-()
 	{
-		return TVector4(-X, -Y, -Z, -W);
+		return vec4_t(-x, -y, -z, -w);
 	}
 
-	bool operator<(const TVector4& Other)
+	bool operator<(const vec4_t& other)
 	{
-		return X < Other.X && Y < Other.Y && Z < Other.Z;
+		return x < other.x && y < other.y && z < other.z;
 	}
 
-	bool operator>(const TVector4& Other)
+	bool operator>(const vec4_t& other)
 	{
-		return X > Other.X && Y > Other.Y && Z > Other.Z && W > Other.W;
+		return x > other.x && y > other.y && z > other.z && w > other.w;
 	}
 
-	T operator[](int32 Index) const { return XYZW[Index]; }
-	T& operator[](int32 Index) { return XYZW[Index]; }
+	T operator[](int32 index) const { return xyzw[index]; }
+	T& operator[](int32 index) { return xyzw[index]; }
 
-	operator TVector2<T>() const
+	operator vec2_t<T>() const
 	{
-		return {X, Y};
+		return {x, y};
 	}
 
-	operator TVector3<T>() const
+	operator vec3_t<T>() const
 	{
-		return {X, Y, Z};
+		return {x, y, z};
 	}
 };
 
 namespace Math
 {
 	template <typename T>
-	static T Cross(const TVector2<T>& A, const TVector2<T>& B)
+	static T cross(const vec2_t<T>& a, const vec2_t<T>& b)
 	{
-		return A.X * B.Y - A.Y * B.X;
+		return a.x * b.y - a.y * b.x;
 	}
 
 	/**
 	 * @brief Computes the cross product of two 3D vectors.
 	 * @tparam T The type of the vector elements.
-	 * @param A The first vector.
-	 * @param B The second vector.
+	 * @param a The first vector.
+	 * @param b The second vector.
 	 * @return The cross product of A and B.
 	 */
 	template <typename T>
-	static TVector3<T> Cross(const TVector3<T>& A, const TVector3<T>& B)
+	static vec3_t<T> cross(const vec3_t<T>& a, const vec3_t<T>& b)
 	{
-		return TVector3<T>{
-			A.Y * B.Z - B.Y * A.Z,
-			A.Z * B.X - B.Z * A.X,
-			A.X * B.Y - B.X * A.Y
+		return vec3_t<T>{
+			a.y * b.z - b.y * a.z,
+			a.z * b.x - b.z * a.x,
+			a.x * b.y - b.x * a.y
 		};
 	}
 
 	template <typename T>
-	static T Dot(const TVector3<T>& A, const TVector3<T>& B)
+	static T dot(const vec3_t<T>& A, const vec3_t<T>& B)
 	{
-		TVector3<T> Tmp = A * B;
-		return Tmp.X + Tmp.Y + Tmp.Z;
+		vec3_t<T> tmp = A * B;
+		return tmp.x + tmp.y + tmp.z;
 	}
 
 	template <typename T>
-	static T CrossDot(const TVector3<T>& A, const TVector3<T>& B, const TVector3<T>& P)
+	static T crossDot(const vec3_t<T>& a, const vec3_t<T>& b, const vec3_t<T>& p)
 	{
-		return Math::Dot(Math::Cross(A, B), P);
+		return Math::dot(Math::cross(a, b), p);
 	}
 
 	/* Distance between two points in 3D space */
 	template <typename T>
-	static T Distance(const TVector3<T> V0, const TVector3<T>& V1)
+	static T distance(const vec3_t<T> v0, const vec3_t<T>& v1)
 	{
-		T A = Math::Square(V1.X - V0.X);
-		T B = Math::Square(V1.Y - V0.Y);
-		T C = Math::Square(V1.Z - V0.Z);
-		return Math::Sqrt(A + B + C);
+		T a = Math::square(v1.x - v0.x);
+		T b = Math::square(v1.y - v0.y);
+		T c = Math::square(v1.z - v0.z);
+		return std::sqrtf(a + b + c);
 	}
 
 	template <typename T>
-	static T Dot(const TVector4<T>& A, const TVector4<T>& B)
+	static T dot(const vec4_t<T>& a, const vec4_t<T>& b)
 	{
-		T Result = T(0);
-		for (int32 Index = 0; Index < 4; Index++)
+		T result = T(0);
+		for (int32 index = 0; index < 4; index++)
 		{
-			Result += A[Index] * B[Index];
+			result += a[index] * b[index];
 		}
-		return Result;
+		return result;
 	}
 
 	template <typename T>
-	static T Area2D(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+	static T area2D(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
 	{
-		T A = V0.X * (V1.Y - V2.Y);
-		T B = V1.X * (V2.Y - V0.Y);
-		T C = V2.X * (V0.Y - V1.Y);
-		return Math::Abs((A + B + C) / T(2));
+		T a = v0.x * (v1.y - v2.y);
+		T b = v1.x * (v2.y - v0.y);
+		T c = v2.x * (v0.y - v1.y);
+		return std::abs((a + b + c) / T(2));
 	}
 
 	// Vector Sign
 	template <typename T>
-	static bool EdgeSign(const TVector2<T>& A, const TVector2<T>& B, const TVector2<T>& C)
+	static bool edgeSign(const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& c)
 	{
-		T Result = (C[0] - A[0]) * (B[1] - A[1]) - (C[1] - A[1]) * (B[0] - A[0]);
-		return Math::Sign(Result);
+		T result = (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]);
+		return Math::sign(result);
 	}
 
 	template <typename T>
-	static float EdgeValue(const TVector2<T>& A, const TVector2<T>& B, const TVector2<T>& P)
+	static float edgeValue(const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& p)
 	{
-		return Math::Cross(B - A, P - A);
+		return Math::cross(b - a, p - a);
 	}
 
 	/**
 	 * Calculates the barycentric coordinates of a point P with respect to a triangle defined by vertices V0, V1, and V2.
-	 * 
-	 * @param P The point to calculate the barycentric coordinates for.
-	 * @param V0 The first vertex of the triangle.
-	 * @param V1 The second vertex of the triangle.
-	 * @param V2 The third vertex of the triangle.
-	 * @param UVW The output parameter that will store the calculated barycentric coordinates.
-	 * @param Tolerance The tolerance value for determining if the point is inside the triangle.
+	 *
+	 * @param p The point to calculate the barycentric coordinates for.
+	 * @param v0 The first vertex of the triangle.
+	 * @param v1 The second vertex of the triangle.
+	 * @param v2 The third vertex of the triangle.
+	 * @param uvw The output parameter that will store the calculated barycentric coordinates.
 	 * @return True if the point is inside the triangle, false otherwise.
 	 */
 	template <typename T>
-	static bool GetBarycentric(const TVector3<T>& P,
-	                           const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2,
-	                           TVector3<T>& UVW,
-	                           T Tolerance = VERY_SMALL_NUMBER)
+	static bool getBarycentric(const vec3_t<T>& p,
+	                           const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2,
+	                           vec3_t<T>& uvw)
 	{
 		// Calculate the vectors representing the edges of the triangle
-		const TVector3<T> BA = V1 - V0;
-		const TVector3<T> CA = V2 - V0;
-		const TVector3<T> PA = P - V0;
+		const vec3_t<T> ba = v1 - v0;
+		const vec3_t<T> ca = v2 - v0;
+		const vec3_t<T> pa = p - v0;
 
 		// Calculate the dot products
-		const T D00 = BA.Dot(BA);
-		const T D01 = BA.Dot(CA);
-		const T D11 = CA.Dot(CA);
-		const T D20 = PA.Dot(BA);
-		const T D21 = PA.Dot(CA);
+		const T d00 = ba.Dot(ba);
+		const T d01 = ba.Dot(ca);
+		const T d11 = ca.Dot(ca);
+		const T d20 = pa.Dot(ba);
+		const T d21 = pa.Dot(ca);
 
 		// Calculate the denominator of the formula
-		const T Denom = T(1) / (D00 * D11 - D01 * D01);
+		const T denom = T(1) / (d00 * d11 - d01 * d01);
 
 		// Calculate the barycentric coordinates
-		const T V = (D11 * D20 - D01 * D21) * Denom;
-		const T W = (D00 * D21 - D01 * D20) * Denom;
-		const T U = T(1) - V - W;
+		const T v = (d11 * d20 - d01 * d21) * denom;
+		const T w = (d00 * d21 - d01 * d20) * denom;
+		const T u = T(1) - v - w;
 
 		// Store the barycentric coordinates in the output parameter
-		UVW.X = U;
-		UVW.Y = V;
-		UVW.Z = W;
+		uvw.x = u;
+		uvw.y = v;
+		uvw.z = w;
 
 		// Check if the point is inside the triangle
 		return (
-			UVW.X >= T(0) &&
-			UVW.Y >= T(0) &&
-			UVW.Z >= T(0)
+			uvw.x >= T(0) &&
+			uvw.y >= T(0) &&
+			uvw.z >= T(0)
 		);
 	}
 
 	template <typename T>
-	static EWindingOrder GetVertexOrder(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+	static EWindingOrder getVertexOrder(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
 	{
-		const float Result = (V1.Y - V0.Y) * (V2.X - V1.X) - (V1.X - V0.X) * (V2.Y - V1.Y);
-		if (Result == T(0))
+		const float result = (v1.y - v0.y) * (v2.x - v1.x) - (v1.x - v0.x) * (v2.y - v1.y);
+		if (result == T(0))
 		{
 			return EWindingOrder::CL;
 		}
-		return Result > T(0) ? EWindingOrder::CW : EWindingOrder::CCW;
+		return result > T(0) ? EWindingOrder::CW : EWindingOrder::CCW;
+	}
+
+	static constexpr float edgeFunction(const float x0, const float y0, const float x1, const float y1, const float x2,
+	                                    const float y2)
+	{
+		return (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
 	}
 
 	template <typename T>
-	static void GetLine(const TVector3<T>& A, const TVector3<T>& B, std::vector<vec2i>& Points, int32 Width,
-	                    int32 Height)
+	static T edgeFunction(const vec3_t<T>& a, const vec3_t<T>& b, const vec3_t<T>& c)
 	{
-		int32 X0 = static_cast<int32>(A.X);
-		int32 Y0 = static_cast<int32>(A.Y);
-		int32 X1 = static_cast<int32>(B.X);
-		int32 Y1 = static_cast<int32>(B.Y);
-		int32 DeltaX = Abs(X1 - X0);
-		int32 DeltaY = Abs(Y1 - Y0);
-		int32 StepX = (X0 < X1) ? 1 : -1;
-		int32 StepY = (Y0 < Y1) ? 1 : -1;
-		int32 Error = DeltaX - DeltaY;
-
-		while (true)
-		{
-			if (X0 >= 0 && X0 < Width && Y0 >= 0 && Y0 < Height)
-			{
-				Points.emplace_back(X0, Y0);
-			}
-
-			if (X0 == X1 && Y0 == Y1)
-			{
-				break;
-			}
-
-			const int32 DoubleError = Error * 2;
-			if (DoubleError > -DeltaY)
-			{
-				Error -= DeltaY;
-				X0 += StepX;
-			}
-			if (DoubleError < DeltaX)
-			{
-				Error += DeltaX;
-				Y0 += StepY;
-			}
-		}
-	}
-
-	static constexpr float EdgeFunction(float X0, float Y0, float X1, float Y1, float X2, float Y2)
-	{
-		return (X1 - X0) * (Y2 - Y0) - (Y1 - Y0) * (X2 - X0);
+		return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 	}
 
 	template <typename T>
-	static T EdgeFunction(const TVector3<T>& A, const TVector3<T>& B, const TVector3<T>& C)
-	{
-		return (B.X - A.X) * (C.Y - A.Y) - (B.Y - A.Y) * (C.X - A.X);
-	}
-
-	template <typename T>
-	static T GetDepth(const TVector3<T>& P, const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2, T Area)
+	static T getDepth(const vec3_t<T>& p, const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2, T area)
 	{
 		// Calculate depth
-		T W0 = Math::EdgeFunction(V1, V2, P);
-		T W1 = Math::EdgeFunction(V2, V0, P);
-		T W2 = Math::EdgeFunction(V0, V1, P);
+		T w0 = Math::edgeFunction(v1, v2, p);
+		T w1 = Math::edgeFunction(v2, v0, p);
+		T w2 = Math::edgeFunction(v0, v1, p);
 
-		W0 /= Area;
-		W1 /= Area;
-		W2 /= Area;
+		w0 /= area;
+		w1 /= area;
+		w2 /= area;
 
-		return V0.Z * W0 + V1.Z * W1 + V2.Z * W2;
+		return v0.z * w0 + v1.z * w1 + v2.z * w2;
 	}
 
 	// // https://www.khronos.org/opengl/wiki/Calculating_a_Surface_Normal
 	template <typename T>
-	static TVector3<T> GetSurfaceNormal(const TVector3<T>& V0, const TVector3<T>& V1, const TVector3<T>& V2)
+	static vec3_t<T> getSurfaceNormal(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
 	{
-		TVector3<T> Edge0 = V0 - V2;
-		TVector3<T> Edge1 = V1 - V2;
-		TVector3<T> Normal = Math::Cross(Edge0, Edge1);
-		return Normal.Normalized();
+		vec3_t<T> edge0 = v0 - v2;
+		vec3_t<T> edge1 = v1 - v2;
+		vec3_t<T> normal = Math::cross(edge0, edge1);
+		return normal.normalized();
 	}
 };
