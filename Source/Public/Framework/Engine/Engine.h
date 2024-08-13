@@ -28,22 +28,22 @@ public:
 
 	void tick();
 
-	Renderer* getRenderer() const
+	[[nodiscard]] Renderer* getRenderer() const
 	{
 		return m_renderer.get();
 	}
 
-	Viewport* getViewport() const
+	[[nodiscard]] Viewport* getViewport() const
 	{
 		return getRenderer()->getViewport();
 	}
 
-	Camera* getViewportCamera() const
+	[[nodiscard]] Camera* getViewportCamera() const
 	{
 		return getViewport()->getCamera();
 	}
 
-	bool isRunning() const
+	[[nodiscard]] bool isRunning() const
 	{
 		return m_isRunning;
 	}
@@ -57,12 +57,12 @@ public:
 
 	std::vector<std::shared_ptr<Mesh>> m_meshes;
 
-	std::vector<std::shared_ptr<Mesh>> getMeshes() const
+	[[nodiscard]] std::vector<std::shared_ptr<Mesh>> getMeshes() const
 	{
 		return m_meshes;
 	}
 
-	constexpr float getFps() const
+	[[nodiscard]] constexpr float getFps() const
 	{
 		return 1000.0f / m_deltaTime;
 	}

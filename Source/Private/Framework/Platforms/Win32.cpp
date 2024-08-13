@@ -183,8 +183,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			m_bitmapInfo.bmiHeader.biWidth = width;
 			m_bitmapInfo.bmiHeader.biHeight = height;
 
-			const HDC deviceContext = GetDC(hwnd);
-			const HDC memoryContext = CreateCompatibleDC(deviceContext);
+			// Create a new empty bitmap with the updated width and height
 			m_displayBitmap = CreateBitmap(width, height, 1, 32, nullptr);
 
 			return 0;
