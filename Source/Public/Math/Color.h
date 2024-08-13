@@ -30,22 +30,66 @@ protected:
 	}
 
 public:
-	static Color red() { return fromRgba(255, 0, 0); }
-	static Color green() { return fromRgba(0, 255, 0); }
-	static Color blue() { return fromRgba(0, 0, 255); }
+	static Color red()
+	{
+		return fromRgba(255, 0, 0);
+	}
 
-	static Color yellow() { return fromRgba(255, 255, 0); }
-	static Color magenta() { return fromRgba(255, 0, 255); }
-	static Color cyan() { return fromRgba(0, 255, 255); }
+	static Color green()
+	{
+		return fromRgba(0, 255, 0);
+	}
 
-	static Color white() { return fromRgba(255, 255, 255); }
-	static Color gray() { return fromRgba(128, 128, 128); }
-	static Color black() { return fromRgba(0, 0, 0); }
+	static Color blue()
+	{
+		return fromRgba(0, 0, 255);
+	}
 
-	static Color fromRgba(uint8 r, uint8 g, uint8 b, uint8 a = 255) { return {r, g, b, a}; }
+	static Color yellow()
+	{
+		return fromRgba(255, 255, 0);
+	}
 
+	static Color magenta()
+	{
+		return fromRgba(255, 0, 255);
+	}
 
-	int32 toInt32() const
+	static Color cyan()
+	{
+		return fromRgba(0, 255, 255);
+	}
+
+	static Color white()
+	{
+		return fromRgba(255, 255, 255);
+	}
+
+	static Color gray()
+	{
+		return fromRgba(128, 128, 128);
+	}
+
+	static Color black()
+	{
+		return fromRgba(0, 0, 0);
+	}
+
+	static Color fromRgba(uint8 r, uint8 g, uint8 b, uint8 a = 255)
+	{
+		return {r, g, b, a};
+	}
+
+	static Color fromInt32(const int32 value)
+	{
+		auto a = (uint8)(value & 0xFF);
+		auto b = (uint8)((value >> 8) & 0xFF);
+		auto g = (uint8)((value >> 16) & 0xFF);
+		auto r = (uint8)((value >> 32) & 0xFF);
+		return {r, g, b, a};
+	}
+
+	[[nodiscard]] int32 toInt32() const
 	{
 		return (r << 16) | (g << 8) | b | 0;
 	}

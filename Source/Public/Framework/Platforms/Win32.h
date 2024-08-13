@@ -94,7 +94,7 @@ class Win32Platform : public IPlatform
 	inline static HBITMAP m_displayBitmap;
 
 	/** @brief Static pointer to the buffer which contains the pixel information to be displayed. */
-	inline static int8* m_displayBuffer;
+	inline static int32* m_displayBuffer;
 
 	/** @brief Stores initialization state of this platform. */
 	bool m_initialized = false;
@@ -156,8 +156,8 @@ public:
 	/** @copydoc IPlatform::end() */
 	int32 end() override;
 
-	/** @copydoc IPlatform::swap() */
-	int32 swap() override;
+	/** @copydoc IPlatform::swapBuffers() */
+	int32 swapBuffers() override;
 
 	/** @copydoc IPlatform::isInitialized() */
 	[[nodiscard]] bool isInitialized() const override

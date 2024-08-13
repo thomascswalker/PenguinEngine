@@ -7,7 +7,6 @@
 #include "Framework/Engine/Engine.h"
 #include "Framework/Input/InputHandler.h"
 
-
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
 	LRESULT result = 0;
@@ -119,16 +118,18 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			}
 
 			// Get the current window size from the buffer
-			const std::shared_ptr<Channel> channel = renderer->getColorChannel();
-			const int32 width = channel->width;
-			const int32 height = channel->height;
+			//const std::shared_ptr<Channel> channel = renderer->getColorChannel();
+			const int32 width = renderer->getWidth();
+			const int32 height = renderer->getHeight();
 
 			// Create a bitmap with the current renderer buffer memory the size of the window
 			InvalidateRect(hwnd, nullptr, TRUE);
 			PAINTSTRUCT paint;
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
-			SetDIBits(renderContext, m_displayBitmap, 0, height, channel->memory, &m_bitmapInfo, 0);
+
+			// Associate the memory from the display buffer to the display bitmap
+			SetDIBits(renderContext, m_displayBitmap, 0, height, m_displayBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
 			{
@@ -169,7 +170,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 		{
 			if (!renderer)
 			{
-				LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_SIZE")
+				LOG_WARNING("Renderer is not initialized in Win32Platform::windowProc::WM_SIZE")
 				break;
 			}
 			const int32 width = LOWORD(lParam);
@@ -183,12 +184,22 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC deviceContext = GetDC(hwnd);
 			const HDC memoryContext = CreateCompatibleDC(deviceContext);
 
+			void* memory = renderer->getColorChannel()->memory;
 			const int32 memorySize = width * height * g_bytesPerPixel * 4;
-			PlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
+			m_displayBuffer = PlatformMemory::realloc<int32>(memory, memorySize);
 			m_displayBitmap = CreateDIBitmap(memoryContext, &m_bitmapInfo.bmiHeader, DIB_RGB_COLORS, m_displayBuffer,
 			                                 &m_bitmapInfo, 0);
 
 			break;
+		}
+	case WM_GETMINMAXINFO:
+		{
+			auto minMaxInfo = (MINMAXINFO*)lParam;
+			minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
+			minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
+			minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
+			minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
+			return 0;
 		}
 	case WM_EXITSIZEMOVE:
 	case WM_ERASEBKGND:
@@ -221,7 +232,6 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 	return result;
 }
-
 
 // ReSharper disable CppParameterMayBeConst
 bool Win32Platform::Register()
@@ -323,14 +333,15 @@ int32 Win32Platform::start()
 	m_displayBitmap = CreateDIBSection(memoryContext, &m_bitmapInfo, DIB_RGB_COLORS,
 	                                   reinterpret_cast<void**>(m_displayBuffer), nullptr, 0);
 
-	const int32 memorySize = m_defaultWidth * m_defaultHeight * g_bytesPerPixel * 4;
-	PlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
+	const size_t memorySize = m_defaultWidth * m_defaultHeight * g_bytesPerPixel * 4;
+	m_displayBuffer = PlatformMemory::alloc<int32>(memorySize);
 
 	// Process all messages and update the window
 	LOG_DEBUG("Engine loop start")
 	MSG msg = {};
 	while (engine->isRunning() && GetMessage(&msg, nullptr, 0, 0) > 0)
 	{
+		// Process messages prior to running the main loop
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 
@@ -346,7 +357,6 @@ int32 Win32Platform::start()
 	return end();
 }
 
-
 int32 Win32Platform::loop()
 {
 	// Tick the engine forward
@@ -359,10 +369,7 @@ int32 Win32Platform::loop()
 		{
 			// Draw the actual frame
 			renderer->draw();
-			if (m_displayBuffer)
-			{
-				swap();
-			}
+			swapBuffers();
 
 			// Return
 			return Success;
@@ -381,16 +388,27 @@ int32 Win32Platform::end()
 	return Success;
 }
 
-int32 Win32Platform::swap()
+int32 Win32Platform::swapBuffers()
 {
 	const Engine* engine = Engine::getInstance();
 	const Renderer* renderer = engine->getRenderer();
 
 	// Copy from the color channel into the display buffer
-	const void* src = renderer->getColorChannel()->memory;
-	void* dst = m_displayBuffer;
-	const size_t size = renderer->getColorChannel()->getMemorySize();
-	memcpy(dst, src, size);
+	auto colorChannel = renderer->getColorChannel();
+
+	// The source memory from the color channel
+	const void* src = colorChannel->memory;
+
+	// The source memory size, recalculated when WM_SIZE is called in Win32Platform::windowProc
+	const size_t size = colorChannel->memorySize;
+
+	// Copy from the source to a temporary buffer
+	auto tmp = (void*)m_displayBuffer;
+	memcpy(tmp, src, size);
+
+	// Cast the temporary buffer back to int32*
+	m_displayBuffer = static_cast<int32*>(tmp);
+
 	return 0;
 }
 

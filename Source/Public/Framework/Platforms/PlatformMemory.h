@@ -25,10 +25,11 @@ namespace PlatformMemory
 	 * @param size The size of the new memory block.
 	 * @return The memory block which was allocated.
 	 */
-	static void* alloc(const size_t size)
+	template <typename T = void>
+	static T* alloc(const size_t size)
 	{
 #if _WIN32
-		return VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE);
+		return (T*)VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE);
 #endif
 	}
 
@@ -38,13 +39,14 @@ namespace PlatformMemory
 	 * @param size The size of the new memory block.
 	 * @return The memory block which was reallocated.
 	 */
-	static void* realloc(void* memory, const size_t size)
+	template <typename T = void>
+	static T* realloc(void* memory, const size_t size)
 	{
 		if (memory != nullptr)
 		{
 			free(memory);
 		}
-		return alloc(size);
+		return alloc<T>(size);
 	}
 
 	/**

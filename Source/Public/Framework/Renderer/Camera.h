@@ -8,6 +8,10 @@ constexpr int32 g_windowWidthClip = 16;
 constexpr int32 g_windowHeightClip = 59;
 constexpr int32 g_defaultViewportWidth = 640 + g_windowWidthClip;
 constexpr int32 g_defaultViewportHeight = 480 + g_windowHeightClip;
+constexpr int32 g_minWindowWidth = 320;
+constexpr int32 g_minWindowHeight = 240;
+constexpr int32 g_maxWindowWidth = 1280;
+constexpr int32 g_maxWindowHeight = 720;
 
 constexpr float g_defaultFov = 54.3f;
 constexpr float g_defaultMinz = 0.1f;
@@ -89,13 +93,21 @@ public:
 		setTranslation(g_defaultCameraTranslation);
 	}
 
-	constexpr float getAspect() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
+	constexpr float getAspect() const
+	{
+		return static_cast<float>(m_width) / static_cast<float>(m_height);
+	}
+
 	void computeViewProjectionMatrix();
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
 	void zoom(float value);
 	void setFov(float newFov);
-	void setLookAt(const vec3f& newLookAt) { m_target = newLookAt; }
+
+	void setLookAt(const vec3f& newLookAt)
+	{
+		m_target = newLookAt;
+	}
 
 	void update(float deltaTime) override;
 

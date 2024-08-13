@@ -9,6 +9,7 @@ constexpr uint32 g_bytesPerPixel = 32;
 struct Channel
 {
 	void* memory;                                              // Memory Order BB GG RR XX
+	size_t memorySize;                                         // Size of the 'memory' blob
 	uint32 channelCount = g_bytesPerPixel / g_bytesPerChannel; // 4
 	uint32 width;                                              // Width of the frame in pixels
 	uint32 height;                                             // Height of the frame in pixels
@@ -25,12 +26,13 @@ struct Channel
 		width = inWidth;
 		height = inHeight;
 		pitch = channelCount * inWidth;
+		memorySize = width * height * g_bytesPerPixel * channelCount;
 		realloc();
 	}
 
 	void realloc()
 	{
-		memory = PlatformMemory::realloc(memory, getMemorySize());
+		memory = PlatformMemory::realloc<void>(memory, memorySize);
 	}
 
 	[[nodiscard]] constexpr uint32 getOffset(const uint32 x, const uint32 y) const
@@ -43,14 +45,9 @@ struct Channel
 		return width * height;
 	}
 
-	[[nodiscard]] constexpr uint32 getMemorySize() const
-	{
-		return width * height * g_bytesPerPixel * channelCount;
-	}
-
 	void setPixel(const uint32 x, const uint32 y, const float value) const
 	{
-		assert(m_type == EChannelType::Data);
+		assert(channelType == EChannelType::Data);
 		if (x < 0 || x >= width || y < 0 || y >= height)
 		{
 			return;
@@ -62,7 +59,7 @@ struct Channel
 
 	void setPixel(const uint32 x, const uint32 y, const Color& color) const
 	{
-		assert(m_type == EChannelType::Color);
+		assert(channelType == EChannelType::Color);
 		if (x < 0 || x >= width || y < 0 || y >= height)
 		{
 			return;
