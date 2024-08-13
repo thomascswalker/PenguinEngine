@@ -129,7 +129,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
 
 			// Associate the memory from the display buffer to the display bitmap
-			void* colorBuffer = renderer->getColorBitmap()->getMemory();
+			void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
@@ -442,7 +442,7 @@ void Win32Platform::constructMenuBar()
 	// File menu
 	AppendMenuW(m_mainMenu, MF_POPUP, UINT_PTR(m_fileMenu), L"&File");
 	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::Open), L"&Open...");
-	AppendMenuW(m_fileMenu, MF_SEPARATOR, 0, NULL);
+	AppendMenuW(m_fileMenu, MF_SEPARATOR, 0, nullptr);
 	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::Quit), L"&Quit");
 
 	// Display menu

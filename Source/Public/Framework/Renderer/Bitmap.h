@@ -63,7 +63,12 @@ public:
 		m_data = PlatformMemory::realloc(m_data, getMemorySize());
 	}
 
-	template <typename T = void>
+	void* getRawMemory() const
+	{
+		return m_data;
+	}
+
+	template <typename T>
 	T* getMemory() const
 	{
 		return static_cast<T*>(m_data);
@@ -94,6 +99,11 @@ public:
 		PlatformMemory::fill(m_data, getMemorySize(), color);
 	}
 
+	void fill(const float inColor) const
+	{
+		PlatformMemory::fill(m_data, getMemorySize(), inColor);
+	}
+
 	template <typename T>
 	[[nodiscard]] T* scanline(const int y) const
 	{
@@ -101,23 +111,28 @@ public:
 		return static_cast<T*>(m_data) + (y * m_pitch);
 	}
 
-	[[nodiscard]] int8* scanlineInt8(const int y) const
+	template <typename T>
+	[[nodiscard]] T getPixel(const int32 x, const int32 y) const
 	{
-		return scanline<int8>(y);
+		T* line = scanline<T>(y);
+		return line[x];
 	}
 
-	[[nodiscard]] int32* scanlineInt32(const int y) const
+	[[nodiscard]] Color getPixelAsColor(const int32 x, const int32 y) const
 	{
-		return scanline<int32>(y);
-	}
-
-	[[nodiscard]] Color getPixel(const int32 x, const int32 y) const
-	{
-		auto line = scanlineInt32(y);
+		int32* line = scanline<int32>(y);
 		return Color::fromInt32(line[x]);
 	}
 
-	void setPixel(const int32 x, const int32 y, const Color& color) const
+	template <typename T>
+	void setPixel(const int32 x, const int32 y, const T color) const
+	{
+		auto t = static_cast<T*>(m_data);
+		T* line = t + (y * m_pitch);
+		line[x] = color;
+	}
+
+	void setPixelFromColor(const int32 x, const int32 y, const Color& color) const
 	{
 		auto t = static_cast<int32*>(m_data);
 		int32* line = t + (y * m_pitch);

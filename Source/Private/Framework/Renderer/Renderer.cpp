@@ -21,12 +21,14 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 	m_currentShader = std::make_shared<DefaultShader>();
 
 	m_colorBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
+	m_depthBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
 }
 
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 {
 	m_viewport->resize(inWidth, inHeight);
 	m_colorBitmap->resize(vec2i(inWidth, inHeight));
+	m_depthBitmap->resize(vec2i(inWidth, inHeight));
 	for (const auto& channel : m_channels | std::views::values)
 	{
 		channel->resize(inWidth, inHeight);
@@ -40,6 +42,7 @@ void Renderer::draw() const
 
 	// Reset all buffers to their default values (namely z to Inf)
 	m_colorBitmap->fill(Color::black());
+	m_depthBitmap->fill(10000.0f);
 	clearChannels();
 
 	// Draw the world grid prior to drawing any geometry
@@ -222,7 +225,7 @@ void Renderer::scanline() const
 			m_currentShader->computePixelShader(point.x, point.y);
 
 			// Set the current pixel in memory to the computed color
-			m_colorBitmap->setPixel(x, y, m_currentShader->outColor);
+			m_colorBitmap->setPixelFromColor(x, y, m_currentShader->outColor);
 		}
 		depthMemory += width;
 		colorMemory += width;
@@ -350,7 +353,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			m_colorBitmap->setPixel(y, x, color);
+			m_colorBitmap->setPixelFromColor(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -363,7 +366,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			m_colorBitmap->setPixel(x, y, color);
+			m_colorBitmap->setPixelFromColor(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
