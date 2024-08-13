@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <assert.h>
+
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #endif
@@ -61,6 +63,6 @@ namespace PlatformMemory
 	template <typename T>
 	static void fill(void* memory, const size_t size, T value)
 	{
-		std::memset(memory, value, size);
+		std::memset(memory, (int32)value, size);
 	}
 };

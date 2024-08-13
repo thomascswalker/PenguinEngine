@@ -11,26 +11,22 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 	m_viewport = std::make_shared<Viewport>(inWidth, inHeight);
 	m_grid = std::make_unique<FGrid>(8, 4.0f);
 
-	addChannel(EChannelType::Data, "Depth");
-	addChannel(EChannelType::Color, "Color");
+	// Color and depth buffer storage
+	m_colorBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
+	m_depthBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
 
 	// Set default render flags
 	m_settings = RenderSettings();
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
-
-	m_colorBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
 }
 
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 {
 	m_viewport->resize(inWidth, inHeight);
 	m_colorBitmap->resize(vec2i(inWidth, inHeight));
-	for (const auto& channel : m_channels | std::views::values)
-	{
-		channel->resize(inWidth, inHeight);
-	}
+	m_depthBitmap->resize(vec2i(inWidth, inHeight));
 }
 
 void Renderer::draw() const
@@ -40,7 +36,7 @@ void Renderer::draw() const
 
 	// Reset all buffers to their default values (namely z to Inf)
 	m_colorBitmap->fill(Color::black());
-	clearChannels();
+	m_depthBitmap->fill(10000.0f);
 
 	// Draw the world grid prior to drawing any geometry
 	drawGrid();
@@ -51,18 +47,6 @@ void Renderer::draw() const
 	{
 		drawMesh(mesh.get());
 	}
-
-	// Draw mouse cursor line from click origin
-	const IInputHandler* inputHandler = IInputHandler::getInstance();
-	if (inputHandler->isMouseDown(EMouseButtonType::Left) && inputHandler->isAltDown())
-	{
-		const vec3f a = inputHandler->getClickPosition();
-		if (a.x != 0.0f && a.y != 0.0f)
-		{
-			const vec3f b = inputHandler->getCurrentCursorPosition();
-			drawLine(a, b, Color::red());
-		}
-	}
 }
 
 // TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
@@ -70,7 +54,7 @@ void Renderer::drawMesh(const Mesh* mesh) const
 {
 	for (const auto& triangle : mesh->m_triangles)
 	{
-		drawTriangle(triangle.m_v0, triangle.m_v1, triangle.m_v2);
+		drawTriangle(triangle.v0, triangle.v1, triangle.v2);
 	}
 }
 
@@ -104,9 +88,9 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	if (m_settings.getRenderFlag(Normals))
 	{
 		// Get the center of the triangle
-		vec3f triangleCenter = (m_currentShader->v0.m_position
-			+ m_currentShader->v1.m_position
-			+ m_currentShader->v2.m_position) / 3.0f;
+		vec3f triangleCenter = (m_currentShader->v0.position
+			+ m_currentShader->v1.position
+			+ m_currentShader->v2.position) / 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
 		vec3f triangleNormal = m_currentShader->triangleWorldNormal;
@@ -152,14 +136,6 @@ void Renderer::scanline() const
 	const float area = Math::area2D(s0, s1, s2) * 2.0f;
 	const float oneOverArea = 1.0f / area;
 
-	const int32 initialOffset = minY * width;
-
-	std::shared_ptr<Channel> depthChannel = getDepthChannel();
-	float* depthMemory = static_cast<float*>(depthChannel->memory) + initialOffset; // float, 32-bytes
-
-	std::shared_ptr<Channel> colorChannel = getColorChannel();
-	int32* colorMemory = static_cast<int32*>(colorChannel->memory) + initialOffset; // int32, 32-bytes
-
 	// Prior to the loop computing each pixel in the triangle, get the render settings
 	const bool renderDepth = m_settings.getRenderFlag(Depth);
 
@@ -184,9 +160,6 @@ void Renderer::scanline() const
 				continue;
 			}
 
-			float* depthPixel = depthMemory + x;
-			int32* colorPixel = colorMemory + x;
-
 			// From the edge vectors, extrapolate the barycentric coordinates for this pixel.
 			w0 *= oneOverArea;
 			w1 *= oneOverArea;
@@ -205,27 +178,27 @@ void Renderer::scanline() const
 
 				// Compare the new depth to the current depth at this pixel. If the new depth is further than
 				// the current depth, continue.
-				float currentDepth = *depthPixel;
+				//float currentDepth = *depthPixel;
+				float currentDepth = m_depthBitmap->getPixelAsFloat(x, y);
 				if (newDepth > currentDepth)
 				{
 					continue;
 				}
 				// If the new depth is closer than the current depth, set the current depth
 				// at this pixel to the new depth we just got.
-				*depthPixel = newDepth;
+				//*depthPixel = newDepth;
+				m_depthBitmap->setPixelFromFloat(x, y, newDepth);
 			}
 
-			m_currentShader->pixelWorldPosition = m_currentShader->v0.m_position * uvw.x + m_currentShader->v1.
-				m_position * uvw.y + m_currentShader->v2.m_position * uvw.z;
+			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * uvw.x + m_currentShader->v1.
+				position * uvw.y + m_currentShader->v2.position * uvw.z;
 
 			// Compute the final color for this pixel
 			m_currentShader->computePixelShader(point.x, point.y);
 
 			// Set the current pixel in memory to the computed color
-			m_colorBitmap->setPixel(x, y, m_currentShader->outColor);
+			m_colorBitmap->setPixelFromColor(x, y, m_currentShader->outColor);
 		}
-		depthMemory += width;
-		colorMemory += width;
 	}
 }
 
@@ -350,7 +323,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			m_colorBitmap->setPixel(y, x, color);
+			m_colorBitmap->setPixelFromColor(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -363,7 +336,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			m_colorBitmap->setPixel(x, y, color);
+			m_colorBitmap->setPixelFromColor(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{

@@ -1,21 +1,20 @@
 ﻿#include "Framework/Engine/Mesh.h"
 
-
 void Mesh::processTriangles()
 {
 	for (Triangle& triangle : m_triangles)
 	{
-		triangle.m_v0.m_position = m_positions[triangle.m_positionIndexes[0]];
-		triangle.m_v1.m_position = m_positions[triangle.m_positionIndexes[1]];
-		triangle.m_v2.m_position = m_positions[triangle.m_positionIndexes[2]];
+		triangle.v0.position = m_positions[triangle.positionIndexes[0]];
+		triangle.v1.position = m_positions[triangle.positionIndexes[1]];
+		triangle.v2.position = m_positions[triangle.positionIndexes[2]];
 
-		triangle.m_v0.m_normal = m_normals[triangle.m_normalIndexes[0]];
-		triangle.m_v1.m_normal = m_normals[triangle.m_normalIndexes[1]];
-		triangle.m_v2.m_normal = m_normals[triangle.m_normalIndexes[2]];
+		triangle.v0.normal = m_normals[triangle.normalIndexes[0]];
+		triangle.v1.normal = m_normals[triangle.normalIndexes[1]];
+		triangle.v2.normal = m_normals[triangle.normalIndexes[2]];
 
-		triangle.m_v0.m_texCoord = m_texCoords[triangle.m_texCoordIndexes[0]];
-		triangle.m_v1.m_texCoord = m_texCoords[triangle.m_texCoordIndexes[1]];
-		triangle.m_v2.m_texCoord = m_texCoords[triangle.m_texCoordIndexes[2]];
+		triangle.v0.texCoord = m_texCoords[triangle.texCoordIndexes[0]];
+		triangle.v1.texCoord = m_texCoords[triangle.texCoordIndexes[1]];
+		triangle.v2.texCoord = m_texCoords[triangle.texCoordIndexes[2]];
 	}
 }
 
@@ -49,12 +48,12 @@ std::shared_ptr<Mesh> Mesh::createPlane(float width, float height)
 	triangles.emplace_back(
 		std::vector{2, 0, 3}, // Position indexes
 		std::vector{0, 0, 0}, // Normal indexes
-		std::vector{6, 4, 7} // TexCoord indexes
+		std::vector{6, 4, 7}  // TexCoord indexes
 	);
 	triangles.emplace_back(
 		std::vector{1, 3, 0}, // Position indexes
 		std::vector{0, 0, 0}, // Normal indexes
-		std::vector{5, 7, 4} // TexCoord indexes
+		std::vector{5, 7, 4}  // TexCoord indexes
 	);
 	return std::make_shared<Mesh>(triangles, positions, normals, texCoords);
 }

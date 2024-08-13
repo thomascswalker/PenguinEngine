@@ -78,7 +78,7 @@ class ObjImporter
 		std::vector<std::string> indexComponents;
 
 		// Split the face line by spaces
-		Strings::split(line, indexComponents, " "); // [f, v/vt/vn, v/vt/vn, v/vt/vn]
+		Strings::split(line, indexComponents, " ");     // [f, v/vt/vn, v/vt/vn, v/vt/vn]
 		indexComponents.erase(indexComponents.begin()); // remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
 
 		// For each index group...
@@ -108,8 +108,7 @@ class ObjImporter
 					normalIndexes->emplace_back(std::stoi(componentGroup[2]) - 1);
 					break;
 				}
-			default:
-				throw std::runtime_error("Invalid index format.");
+			default: throw std::runtime_error("Invalid index format.");
 			}
 		}
 	}
@@ -187,8 +186,8 @@ public:
 			case 'f': // Parse face indices
 				{
 					Triangle triangle;
-					parseFace(line, &triangle.m_positionIndexes, &triangle.m_normalIndexes,
-					          &triangle.m_texCoordIndexes);
+					parseFace(line, &triangle.positionIndexes, &triangle.normalIndexes,
+					          &triangle.texCoordIndexes);
 					triangles.emplace_back(triangle);
 					triangleCount++;
 					break;
@@ -198,7 +197,6 @@ public:
 				break;
 			}
 		}
-
 
 		mesh->m_triangles = triangles;
 		mesh->m_positions = positions;

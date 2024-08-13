@@ -59,9 +59,9 @@ struct DefaultShader : IShader
 
 		// Project the world-space points to screen-space
 		bool triangleOnScreen = false;
-		triangleOnScreen |= Math::projectWorldToScreen(v0.m_position, s0, viewData);
-		triangleOnScreen |= Math::projectWorldToScreen(v1.m_position, s1, viewData);
-		triangleOnScreen |= Math::projectWorldToScreen(v2.m_position, s2, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v0.position, s0, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v1.position, s1, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v2.position, s2, viewData);
 
 		// If the triangle is completely off screen, exit
 		if (!triangleOnScreen)
@@ -91,10 +91,10 @@ struct DefaultShader : IShader
 
 		// Average each of the vertices' normals to get the triangle normal
 		vec4f v01Normal;
-		vecAddVec(v0.m_normal, v1.m_normal, v01Normal);
+		vecAddVec(v0.normal, v1.normal, v01Normal);
 
 		vec4f v012Normal;
-		vecAddVec(v01Normal, v2.m_normal, v012Normal);
+		vecAddVec(v01Normal, v2.normal, v012Normal);
 
 		triangleWorldNormal = v012Normal * 0.33333333f;
 
@@ -118,16 +118,20 @@ struct DefaultShader : IShader
 	{
 		// Calculate the weighted normal of the current point on this triangle. This uses the UVW
 		// barycentric coordinates to weight each vertex normal of the triangle.
-		const vec3f weightedWorldNormal = v0.m_normal * uvw.x + v1.m_normal * uvw.y + v2.m_normal * uvw.
-			z;
+		const vec3f weightedWorldNormal = v0.normal * uvw.x + v1.normal * uvw.y + v2.normal * uvw.z;
 
-		// Calculate the dot product of the triangle normal and camera direction
-		vecDotVec(-cameraWorldDirection, weightedWorldNormal, &facingRatio);
-		facingRatio = std::max(0.0f, facingRatio);                               // Floor to a min of 0
-		const float clampedFacingRatio = std::min(facingRatio * 255.0f, 255.0f); // Clamp to a max of 255
+		// Calculate the dot product of the triangle normal and inverse camera direction
+		float weightedFacingRatio;
+		vecDotVec(-cameraWorldDirection, weightedWorldNormal, &weightedFacingRatio);
 
-		outColor.r = static_cast<uint8>(clampedFacingRatio);
-		outColor.g = outColor.r;
-		outColor.b = outColor.r;
+		// Clamp to 0..1
+		weightedFacingRatio = std::clamp(weightedFacingRatio, 0.0f, 1.0f);
+
+		// Convert from 0..1 to 0..255
+		const uint8 clampedFacingRatio = (uint8)(weightedFacingRatio * 255.0f);
+
+		outColor.r = clampedFacingRatio;
+		outColor.g = clampedFacingRatio;
+		outColor.b = clampedFacingRatio;
 	}
 };

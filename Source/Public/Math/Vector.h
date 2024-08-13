@@ -67,9 +67,15 @@ struct vec2_t
 		}
 	}
 
-	static vec2_t zeroVector() { return vec2_t(); }
-	static vec2_t identityVector() { return vec2_t(1); }
+	static vec2_t zeroVector()
+	{
+		return vec2_t();
+	}
 
+	static vec2_t identityVector()
+	{
+		return vec2_t(1);
+	}
 
 	template <typename ToType>
 	vec2_t<ToType> toType() const
@@ -88,12 +94,21 @@ struct vec2_t
 		}
 	}
 
-	vec2_t normalized() const { return {1.0f / x, 1.0f / y}; }
+	vec2_t normalized() const
+	{
+		return {1.0f / x, 1.0f / y};
+	}
 
-	std::string toString() const { return std::format("[{}, {}]", x, y); }
+	std::string toString() const
+	{
+		return std::format("[{}, {}]", x, y);
+	}
 
 	// Operators
-	vec2_t operator+(const vec2_t& v) const { return {x + v.x, y + v.y}; }
+	vec2_t operator+(const vec2_t& v) const
+	{
+		return {x + v.x, y + v.y};
+	}
 
 	vec2_t& operator +=(const vec2_t& v)
 	{
@@ -107,7 +122,10 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator-(const vec2_t& v) const { return {x - v.x, y - v.y}; }
+	vec2_t operator-(const vec2_t& v) const
+	{
+		return {x - v.x, y - v.y};
+	}
 
 	vec2_t& operator -=(const vec2_t& v)
 	{
@@ -121,7 +139,10 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator*(const vec2_t& v) const { return {x * v.x, y * v.y}; }
+	vec2_t operator*(const vec2_t& v) const
+	{
+		return {x * v.x, y * v.y};
+	}
 
 	vec2_t& operator *=(const vec2_t& v)
 	{
@@ -135,7 +156,10 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator/(const vec2_t& v) const { return {x / v.x, y / v.y}; }
+	vec2_t operator/(const vec2_t& v) const
+	{
+		return {x / v.x, y / v.y};
+	}
 
 	vec2_t& operator /=(const vec2_t& v)
 	{
@@ -189,8 +213,15 @@ struct vec2_t
 		return x != other.x || y != other.y;
 	}
 
-	T operator[](int32 index) const { return xy[index]; }
-	T& operator[](int32 index) { return xy[index]; }
+	T operator[](int32 index) const
+	{
+		return xy[index];
+	}
+
+	T& operator[](int32 index)
+	{
+		return xy[index];
+	}
 };
 
 template <typename T>
@@ -250,16 +281,46 @@ struct vec3_t
 #endif
 	}
 
-
 	// Functions
-	static vec3_t zeroVector() { return vec3_t(); }
-	static vec3_t identityVector() { return vec3_t(1); }
-	static vec3_t forwardVector() { return vec3_t(1, 0, 0); }
-	static vec3_t backVector() { return vec3_t(-1, 0, 0); }
-	static vec3_t upVector() { return vec3_t(0, 1, 0); }
-	static vec3_t downVector() { return vec3_t(0, -1, 0); }
-	static vec3_t rightVector() { return vec3_t(0, 0, 1); }
-	static vec3_t leftVector() { return vec3_t(0, 0, -1); }
+	static vec3_t zeroVector()
+	{
+		return vec3_t();
+	}
+
+	static vec3_t identityVector()
+	{
+		return vec3_t(1);
+	}
+
+	static vec3_t forwardVector()
+	{
+		return vec3_t(1, 0, 0);
+	}
+
+	static vec3_t backVector()
+	{
+		return vec3_t(-1, 0, 0);
+	}
+
+	static vec3_t upVector()
+	{
+		return vec3_t(0, 1, 0);
+	}
+
+	static vec3_t downVector()
+	{
+		return vec3_t(0, -1, 0);
+	}
+
+	static vec3_t rightVector()
+	{
+		return vec3_t(0, 0, 1);
+	}
+
+	static vec3_t leftVector()
+	{
+		return vec3_t(0, 0, -1);
+	}
 
 	void checkNaN() const
 	{
@@ -347,10 +408,16 @@ struct vec3_t
 		return {z, x, y};
 	}
 
-	std::string toString() const { return std::format("[{}, {}, {}]", x, y, z); }
+	std::string toString() const
+	{
+		return std::format("[{}, {}, {}]", x, y, z);
+	}
 
 	// Operators
-	vec3_t operator+(const vec3_t& v) const { return {x + v.x, y + v.y, z + v.z}; }
+	vec3_t operator+(const vec3_t& v) const
+	{
+		return {x + v.x, y + v.y, z + v.z};
+	}
 
 	vec3_t& operator +=(const vec3_t& v)
 	{
@@ -365,7 +432,10 @@ struct vec3_t
 		return *this;
 	}
 
-	vec3_t operator-(const vec3_t& v) const { return {x - v.x, y - v.y, z - v.z}; }
+	vec3_t operator-(const vec3_t& v) const
+	{
+		return {x - v.x, y - v.y, z - v.z};
+	}
 
 	vec3_t& operator -=(const vec3_t& v)
 	{
@@ -380,7 +450,10 @@ struct vec3_t
 		return *this;
 	}
 
-	vec3_t operator*(const vec3_t& v) const { return {x * v.x, y * v.y, z * v.z}; }
+	vec3_t operator*(const vec3_t& v) const
+	{
+		return {x * v.x, y * v.y, z * v.z};
+	}
 
 	vec3_t& operator *=(const vec3_t& v)
 	{
@@ -395,7 +468,10 @@ struct vec3_t
 		return *this;
 	}
 
-	vec3_t operator/(const vec3_t& v) const { return {x / v.x, y / v.y, z / v.z}; }
+	vec3_t operator/(const vec3_t& v) const
+	{
+		return {x / v.x, y / v.y, z / v.z};
+	}
 
 	vec3_t& operator /=(const vec3_t& v)
 	{
@@ -410,8 +486,15 @@ struct vec3_t
 		return *this;
 	}
 
-	bool operator==(const vec3_t& v) const { return x == v.x && y == v.y && z == v.z; }
-	bool operator!=(const vec3_t& v) const { return x != v.x || y != v.y || z != v.z; }
+	bool operator==(const vec3_t& v) const
+	{
+		return x == v.x && y == v.y && z == v.z;
+	}
+
+	bool operator!=(const vec3_t& v) const
+	{
+		return x != v.x || y != v.y || z != v.z;
+	}
 
 	vec3_t operator-() const
 	{
@@ -428,8 +511,15 @@ struct vec3_t
 		return x > other.x && y > other.y && z > other.z;
 	}
 
-	T operator[](int32 index) const { return xyz[index]; }
-	T& operator[](int32 index) { return xyz[index]; }
+	T operator[](int32 index) const
+	{
+		return xyz[index];
+	}
+
+	T& operator[](int32 index)
+	{
+		return xyz[index];
+	}
 
 	operator vec2_t<T>() const
 	{
@@ -478,9 +568,7 @@ struct vec4_t
 #endif
 	}
 
-	vec4_t(T* values) : x(values[0]), y(values[1]), z(values[2]), w(values[3])
-	{
-	}
+	vec4_t(T* values) : x(values[0]), y(values[1]), z(values[2]), w(values[3]) {}
 
 	vec4_t(const std::initializer_list<T>& values)
 	{
@@ -501,8 +589,15 @@ struct vec4_t
 	}
 
 	// Functions
-	static vec4_t zeroVector() { return vec4_t(); }
-	static vec4_t identityVector() { return vec4_t(1); }
+	static vec4_t zeroVector()
+	{
+		return vec4_t();
+	}
+
+	static vec4_t identityVector()
+	{
+		return vec4_t(1);
+	}
 
 	void checkNaN() const
 	{
@@ -512,13 +607,11 @@ struct vec4_t
 		}
 	}
 
-
 	template <typename ToType>
 	vec4_t<ToType> toType() const
 	{
 		return {static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w)};
 	}
-
 
 	void normalize()
 	{
@@ -528,12 +621,21 @@ struct vec4_t
 		w = T(1.0) / w;
 	}
 
-	vec4_t normalized() const { return {T(1.0) / x, T(1.0) / y, T(1.0) / z, T(1.0) / w}; }
+	vec4_t normalized() const
+	{
+		return {T(1.0) / x, T(1.0) / y, T(1.0) / z, T(1.0) / w};
+	}
 
-	std::string toString() const { return std::format("[{}, {}, {}, {}]", x, y, z, w); }
+	std::string toString() const
+	{
+		return std::format("[{}, {}, {}, {}]", x, y, z, w);
+	}
 
 	// Operators
-	vec4_t operator+(const vec4_t& v) const { return {x + v.x, y + v.y, z + v.z, w + v.w}; }
+	vec4_t operator+(const vec4_t& v) const
+	{
+		return {x + v.x, y + v.y, z + v.z, w + v.w};
+	}
 
 	vec4_t& operator +=(const vec4_t& v)
 	{
@@ -547,7 +649,10 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator-(const vec4_t& v) const { return {x - v.x, y - v.y, z - v.z, w - v.w}; }
+	vec4_t operator-(const vec4_t& v) const
+	{
+		return {x - v.x, y - v.y, z - v.z, w - v.w};
+	}
 
 	vec4_t& operator -=(const vec4_t& v)
 	{
@@ -561,7 +666,10 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator*(const vec4_t& v) const { return {x * v.x, y * v.y, z * v.z, w * v.w}; }
+	vec4_t operator*(const vec4_t& v) const
+	{
+		return {x * v.x, y * v.y, z * v.z, w * v.w};
+	}
 
 	vec4_t& operator *=(const vec4_t& v)
 	{
@@ -575,7 +683,10 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator/(const vec4_t& v) const { return {x / v.x, y / v.y, z / v.z, w / v.w}; }
+	vec4_t operator/(const vec4_t& v) const
+	{
+		return {x / v.x, y / v.y, z / v.z, w / v.w};
+	}
 
 	vec4_t& operator /=(const vec4_t& v)
 	{
@@ -604,8 +715,15 @@ struct vec4_t
 		return x > other.x && y > other.y && z > other.z && w > other.w;
 	}
 
-	T operator[](int32 index) const { return xyzw[index]; }
-	T& operator[](int32 index) { return xyzw[index]; }
+	T operator[](int32 index) const
+	{
+		return xyzw[index];
+	}
+
+	T& operator[](int32 index)
+	{
+		return xyzw[index];
+	}
 
 	operator vec2_t<T>() const
 	{

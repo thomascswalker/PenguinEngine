@@ -13,39 +13,35 @@ enum EPrimitiveType
 
 struct Vertex
 {
-	vec3f m_position;
-	vec3f m_normal;
-	vec3f m_texCoord;
+	vec3f position;
+	vec3f normal;
+	vec3f texCoord;
 
 	Vertex() = default;
 
 	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec3f& inTexCoord)
-		: m_position(inPosition),
-		  m_normal(inNormal),
-		  m_texCoord(inTexCoord)
-	{
-	}
+		: position(inPosition),
+		  normal(inNormal),
+		  texCoord(inTexCoord) {}
 };
 
 struct Triangle
 {
-	std::vector<int32> m_positionIndexes;
-	std::vector<int32> m_normalIndexes;
-	std::vector<int32> m_texCoordIndexes;
+	std::vector<int32> positionIndexes;
+	std::vector<int32> normalIndexes;
+	std::vector<int32> texCoordIndexes;
 
-	Vertex m_v0;
-	Vertex m_v1;
-	Vertex m_v2;
+	Vertex v0;
+	Vertex v1;
+	Vertex v2;
 
 	Triangle() = default;
 
 	Triangle(const std::vector<int32>& inPositionIndexes, const std::vector<int32>& inNormalIndexes,
 	         const std::vector<int32>& inTexCoordIndexes)
-		: m_positionIndexes(inPositionIndexes),
-		  m_normalIndexes(inNormalIndexes),
-		  m_texCoordIndexes(inTexCoordIndexes)
-	{
-	}
+		: positionIndexes(inPositionIndexes),
+		  normalIndexes(inNormalIndexes),
+		  texCoordIndexes(inTexCoordIndexes) {}
 };
 
 struct Mesh : Object

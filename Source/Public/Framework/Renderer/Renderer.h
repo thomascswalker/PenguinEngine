@@ -10,12 +10,10 @@
 #include "Viewport.h"
 #include "Framework/Engine/Mesh.h"
 #include "Math/MathCommon.h"
-#include "Framework/Renderer/Channel.h"
 
 class Renderer
 {
 	// Draw channels
-	std::map<std::string, std::shared_ptr<Channel>> m_channels;
 	std::shared_ptr<Viewport> m_viewport;
 	std::unique_ptr<FGrid> m_grid;
 
@@ -54,45 +52,6 @@ public:
 	[[nodiscard]] Bitmap* getColorBitmap() const
 	{
 		return m_colorBitmap.get();
-	}
-
-	/* Channels */
-
-	void addChannel(EChannelType type, const char* name)
-	{
-		m_channels.emplace(name, std::make_shared<Channel>(type, getWidth(), getHeight()));
-	}
-
-	std::shared_ptr<Channel> getChannel(const char* name) const
-	{
-		return m_channels.at(name);
-	}
-
-	void clearChannels() const
-	{
-		// Set all channels to 0
-		for (const auto& [key, channel] : m_channels)
-		{
-			// Ignore the depth channel, we'll handle that later
-			if (key == "Depth") // NOLINT
-			{
-				continue;
-			}
-			channel->clear();
-		}
-
-		// Fill the depth buffer with the Max z-depth
-		getDepthChannel()->fill(g_defaultMaxz);
-	}
-
-	[[nodiscard]] std::shared_ptr<Channel> getColorChannel() const
-	{
-		return m_channels.at("Color");
-	}
-
-	[[nodiscard]] std::shared_ptr<Channel> getDepthChannel() const
-	{
-		return m_channels.at("Depth");
 	}
 
 	/* Drawing */
