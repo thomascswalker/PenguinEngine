@@ -4,6 +4,11 @@
 #include <windows.h>
 #endif
 
+#include "Math/MathFwd.h"
+
+constexpr uint32 g_bytesPerChannel = 8;
+constexpr uint32 g_bytesPerPixel = 32;
+
 /**
  * @brief Platform-specific memory management functions.
  */
@@ -25,10 +30,11 @@ namespace PlatformMemory
 	 * @param size The size of the new memory block.
 	 * @return The memory block which was allocated.
 	 */
-	static void* alloc(const size_t size)
+	template <typename T = void>
+	static T* alloc(const size_t size)
 	{
 #if _WIN32
-		return VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE);
+		return (T*)VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE);
 #endif
 	}
 
@@ -38,13 +44,11 @@ namespace PlatformMemory
 	 * @param size The size of the new memory block.
 	 * @return The memory block which was reallocated.
 	 */
-	static void* realloc(void* memory, const size_t size)
+	template <typename T = void>
+	static T* realloc(void* memory, const size_t size)
 	{
-		if (memory != nullptr)
-		{
-			free(memory);
-		}
-		return alloc(size);
+		free(memory);
+		return alloc<T>(size);
 	}
 
 	/**
@@ -57,10 +61,6 @@ namespace PlatformMemory
 	template <typename T>
 	static void fill(void* memory, const size_t size, T value)
 	{
-		T* ptr = static_cast<T*>(memory);
-		for (size_t index = 0; index < size; index++)
-		{
-			*(ptr++) = value;
-		}
+		std::memset(memory, value, size);
 	}
 };

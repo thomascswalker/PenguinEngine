@@ -8,40 +8,40 @@
 struct IShader
 {
 	virtual ~IShader() = default;
-	int32 m_width, m_height;
-	Vertex m_v0, m_v1, m_v2;
-	vec3f m_s0, m_s1, m_s2;
+	int32 width, height;
+	Vertex v0, v1, v2;
+	vec3f s0, s1, s2;
 
-	vec3f m_cameraPosition;
-	vec3f m_cameraWorldDirection;
+	vec3f cameraPosition;
+	vec3f cameraWorldDirection;
 
-	vec3f m_triangleWorldNormal;
-	vec3f m_triangleCameraNormal;
+	vec3f triangleWorldNormal;
+	vec3f triangleCameraNormal;
 
-	vec3f m_pixelWorldPosition;
-	float m_facingRatio;
+	vec3f pixelWorldPosition;
+	float facingRatio;
 
-	rectf m_screenBounds;
-	mat4f m_mvp;
-	mat4f m_viewMatrix;
-	mat4f m_projectionMatrix;
-	vec3f m_uvw;
+	rectf screenBounds;
+	mat4f mvp;
+	mat4f viewMatrix;
+	mat4f projectionMatrix;
+	vec3f uvw;
 
-	bool m_hasNormals = false;
-	bool m_hasTexCoords = false;
+	bool hasNormals = false;
+	bool hasTexCoords = false;
 
-	int32 m_outColor = Color::magenta().toInt32();
+	Color outColor = Color::magenta();
 
-	PViewData m_viewData;
+	PViewData viewData;
 
 	void init(const PViewData& inViewData)
 	{
-		m_viewData = inViewData;
-		m_mvp = inViewData.m_viewProjectionMatrix;
-		m_cameraWorldDirection = inViewData.m_direction;
-		m_cameraPosition = inViewData.m_translation;
-		m_width = inViewData.m_width;
-		m_height = inViewData.m_height;
+		viewData = inViewData;
+		mvp = inViewData.m_viewProjectionMatrix;
+		cameraWorldDirection = inViewData.m_direction;
+		cameraPosition = inViewData.m_translation;
+		width = inViewData.m_width;
+		height = inViewData.m_height;
 	}
 
 	// No default implementation
@@ -53,15 +53,15 @@ struct DefaultShader : IShader
 {
 	bool computeVertexShader(const Vertex& inV0, const Vertex& inV1, const Vertex& inV2) override
 	{
-		m_v0 = inV0;
-		m_v1 = inV1;
-		m_v2 = inV2;
+		v0 = inV0;
+		v1 = inV1;
+		v2 = inV2;
 
 		// Project the world-space points to screen-space
 		bool triangleOnScreen = false;
-		triangleOnScreen |= Math::projectWorldToScreen(m_v0.m_position, m_s0, m_viewData);
-		triangleOnScreen |= Math::projectWorldToScreen(m_v1.m_position, m_s1, m_viewData);
-		triangleOnScreen |= Math::projectWorldToScreen(m_v2.m_position, m_s2, m_viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v0.m_position, s0, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v1.m_position, s1, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v2.m_position, s2, viewData);
 
 		// If the triangle is completely off screen, exit
 		if (!triangleOnScreen)
@@ -70,7 +70,7 @@ struct DefaultShader : IShader
 		}
 
 		// Reverse the order to CCW if the order is CW
-		switch (Math::getVertexOrder(m_s0, m_s1, m_s2))
+		switch (Math::getVertexOrder(s0, s1, s2))
 		{
 		case EWindingOrder::CW: // Triangle is back-facing, exit
 		case EWindingOrder::CL: // Triangle has zero area, exit
@@ -80,57 +80,54 @@ struct DefaultShader : IShader
 		}
 
 		// Get the bounding box of the 2d triangle clipped to the viewport
-		m_screenBounds = rectf::makeBoundingBox(m_s0, m_s1, m_s2);
+		screenBounds = rectf::makeBoundingBox(s0, s1, s2);
 
 		// Grow the bounds by 1 pixel to account for gaps between pixels.
-		m_screenBounds.grow(1.0f);
+		screenBounds.grow(1.0f);
 
 		// Clamp the bounds to the viewport
-		const rectf viewportRect = {0, 0, static_cast<float>(m_width), static_cast<float>(m_height)};
-		m_screenBounds.clamp(viewportRect);
+		const rectf viewportRect = {0, 0, static_cast<float>(width), static_cast<float>(height)};
+		screenBounds.clamp(viewportRect);
 
 		// Average each of the vertices' normals to get the triangle normal
 		vec4f v01Normal;
-		vecAddVec(m_v0.m_normal, m_v1.m_normal, v01Normal);
+		vecAddVec(v0.m_normal, v1.m_normal, v01Normal);
 
 		vec4f v012Normal;
-		vecAddVec(v01Normal, m_v2.m_normal, v012Normal);
+		vecAddVec(v01Normal, v2.m_normal, v012Normal);
 
-		m_triangleWorldNormal = v012Normal * 0.33333333f;
+		triangleWorldNormal = v012Normal * 0.33333333f;
 
-		vecDotVec(-m_cameraWorldDirection, m_triangleWorldNormal, &m_facingRatio);
-		if (m_facingRatio < 0.0f)
+		vecDotVec(-cameraWorldDirection, triangleWorldNormal, &facingRatio);
+		if (facingRatio < 0.0f)
 		{
 			return false;
 		}
 
 		// Calculate the triangle normal relative to the camera
 		vec4f tmp;
-		vecCrossVec(m_triangleWorldNormal, m_cameraWorldDirection, tmp);
-		m_triangleCameraNormal.x = tmp.x;
-		m_triangleCameraNormal.y = tmp.y;
-		m_triangleCameraNormal.z = tmp.z;
+		vecCrossVec(triangleWorldNormal, cameraWorldDirection, tmp);
+		triangleCameraNormal.x = tmp.x;
+		triangleCameraNormal.y = tmp.y;
+		triangleCameraNormal.z = tmp.z;
 
 		return true;
 	}
-
 
 	void computePixelShader(float u, float v) override
 	{
 		// Calculate the weighted normal of the current point on this triangle. This uses the UVW
 		// barycentric coordinates to weight each vertex normal of the triangle.
-		const vec3f weightedWorldNormal = m_v0.m_normal * m_uvw.x + m_v1.m_normal * m_uvw.y + m_v2.m_normal * m_uvw.
+		const vec3f weightedWorldNormal = v0.m_normal * uvw.x + v1.m_normal * uvw.y + v2.m_normal * uvw.
 			z;
 
 		// Calculate the dot product of the triangle normal and camera direction
-		vecDotVec(-m_cameraWorldDirection, weightedWorldNormal, &m_facingRatio);
-		m_facingRatio = std::max(0.0f, m_facingRatio); // Floor to a min of 0
-		const float clampedFacingRatio = std::min(m_facingRatio * 255.0f, 255.0f); // Clamp to a max of 255
+		vecDotVec(-cameraWorldDirection, weightedWorldNormal, &facingRatio);
+		facingRatio = std::max(0.0f, facingRatio);                               // Floor to a min of 0
+		const float clampedFacingRatio = std::min(facingRatio * 255.0f, 255.0f); // Clamp to a max of 255
 
-		uint8 r = static_cast<uint8>(clampedFacingRatio);
-		uint8 g = r;
-		uint8 b = r;
-
-		m_outColor = (r << 16) | (g << 8) | b | 0;
+		outColor.r = static_cast<uint8>(clampedFacingRatio);
+		outColor.g = outColor.r;
+		outColor.b = outColor.r;
 	}
 };

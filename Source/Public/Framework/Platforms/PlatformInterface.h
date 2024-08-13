@@ -60,10 +60,10 @@ public:
 	virtual int32 end() = 0;
 
 	/**
-	 * @brief Swaps the current front buffer for the current back buffer.
-	 * @return The result of swapping the front and back buffers.
+	 * @brief Swaps the current color buffer into the display buffer.
+	 * @return The resulting status code.
 	 */
-	virtual int32 swap() = 0;
+	virtual int32 swapBuffers() = 0;
 
 	/**
 	 * @brief Returns if this platform is fully initialized or not.
@@ -83,7 +83,6 @@ public:
 	 * @return The platform type.
 	 */
 	virtual EPlatformType getPlatformType() = 0;
-
 
 	/**
 	 * @brief Opens a file dialog to select a file to open.

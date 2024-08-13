@@ -7,7 +7,6 @@
 #include "Framework/Engine/Engine.h"
 #include "Framework/Input/InputHandler.h"
 
-
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
 	LRESULT result = 0;
@@ -119,16 +118,19 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			}
 
 			// Get the current window size from the buffer
-			const std::shared_ptr<Channel> channel = renderer->getColorChannel();
-			const int32 width = channel->width;
-			const int32 height = channel->height;
+			//const std::shared_ptr<Channel> channel = renderer->getColorChannel();
+			const int32 width = renderer->getWidth();
+			const int32 height = renderer->getHeight();
 
 			// Create a bitmap with the current renderer buffer memory the size of the window
 			InvalidateRect(hwnd, nullptr, TRUE);
 			PAINTSTRUCT paint;
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
-			SetDIBits(renderContext, m_displayBitmap, 0, height, channel->memory, &m_bitmapInfo, 0);
+
+			// Associate the memory from the display buffer to the display bitmap
+			void* colorBuffer = renderer->getColorBitmap()->getMemory();
+			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
 			{
@@ -169,7 +171,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 		{
 			if (!renderer)
 			{
-				LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_SIZE")
+				LOG_WARNING("Renderer is not initialized in Win32Platform::windowProc::WM_SIZE")
 				break;
 			}
 			const int32 width = LOWORD(lParam);
@@ -177,18 +179,24 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			// Update the renderer size
 			renderer->resize(width, height);
-			m_bitmapInfo.bmiHeader.biWidth = engine->getRenderer()->getWidth();
-			m_bitmapInfo.bmiHeader.biHeight = engine->getRenderer()->getHeight();
+			LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
+			m_bitmapInfo.bmiHeader.biWidth = width;
+			m_bitmapInfo.bmiHeader.biHeight = height;
 
 			const HDC deviceContext = GetDC(hwnd);
 			const HDC memoryContext = CreateCompatibleDC(deviceContext);
+			m_displayBitmap = CreateBitmap(width, height, 1, 32, nullptr);
 
-			const int32 memorySize = width * height * g_bytesPerPixel * 4;
-			PlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
-			m_displayBitmap = CreateDIBitmap(memoryContext, &m_bitmapInfo.bmiHeader, DIB_RGB_COLORS, m_displayBuffer,
-			                                 &m_bitmapInfo, 0);
-
-			break;
+			return 0;
+		}
+	case WM_GETMINMAXINFO:
+		{
+			auto minMaxInfo = (MINMAXINFO*)lParam;
+			minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
+			minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
+			minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
+			minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
+			return 0;
 		}
 	case WM_EXITSIZEMOVE:
 	case WM_ERASEBKGND:
@@ -221,7 +229,6 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 	return result;
 }
-
 
 // ReSharper disable CppParameterMayBeConst
 bool Win32Platform::Register()
@@ -277,6 +284,25 @@ int32 Win32Platform::create()
 
 	constructMenuBar();
 
+	// Construct the engine
+	Engine* engine = Engine::getInstance();
+
+	// Initialize the engine
+	RECT clientRect;
+	GetClientRect(m_hwnd, &clientRect);
+	engine->startup(clientRect.right, clientRect.bottom);
+
+	// Fill the default bitmap info
+	m_bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	m_bitmapInfo.bmiHeader.biWidth = engine->getRenderer()->getWidth();
+	m_bitmapInfo.bmiHeader.biHeight = engine->getRenderer()->getHeight();
+	m_bitmapInfo.bmiHeader.biPlanes = 1;
+	m_bitmapInfo.bmiHeader.biBitCount = 32;
+	m_bitmapInfo.bmiHeader.biCompression = BI_RGB;
+
+	// Create an empty bitmap which we'll use to display on the window
+	m_displayBitmap = CreateBitmap(m_defaultWidth, m_defaultHeight, 1, 32, nullptr);
+
 	return Success;
 }
 
@@ -301,36 +327,14 @@ int32 Win32Platform::start()
 		return PlatformStartError; // Start failure
 	}
 
-	// Construct the engine
-	Engine* engine = Engine::getInstance();
-
-	// Initialize the engine
-	RECT clientRect;
-	GetClientRect(m_hwnd, &clientRect);
-	engine->startup(clientRect.right, clientRect.bottom);
-
-	// Initialize Win32 members
-	const HDC deviceContext = GetDC(m_hwnd);
-	const HDC memoryContext = CreateCompatibleDC(deviceContext);
-
-	m_bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	m_bitmapInfo.bmiHeader.biWidth = engine->getRenderer()->getWidth();
-	m_bitmapInfo.bmiHeader.biHeight = engine->getRenderer()->getHeight();
-	m_bitmapInfo.bmiHeader.biPlanes = 1;
-	m_bitmapInfo.bmiHeader.biBitCount = 32;
-	m_bitmapInfo.bmiHeader.biCompression = BI_RGB;
-
-	m_displayBitmap = CreateDIBSection(memoryContext, &m_bitmapInfo, DIB_RGB_COLORS,
-	                                   reinterpret_cast<void**>(m_displayBuffer), nullptr, 0);
-
-	const int32 memorySize = m_defaultWidth * m_defaultHeight * g_bytesPerPixel * 4;
-	PlatformMemory::realloc(m_displayBuffer, static_cast<size_t>(memorySize));
-
 	// Process all messages and update the window
 	LOG_DEBUG("Engine loop start")
 	MSG msg = {};
+
+	Engine* engine = Engine::getInstance();
 	while (engine->isRunning() && GetMessage(&msg, nullptr, 0, 0) > 0)
 	{
+		// Process messages prior to running the main loop
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 
@@ -346,7 +350,6 @@ int32 Win32Platform::start()
 	return end();
 }
 
-
 int32 Win32Platform::loop()
 {
 	// Tick the engine forward
@@ -359,10 +362,7 @@ int32 Win32Platform::loop()
 		{
 			// Draw the actual frame
 			renderer->draw();
-			if (m_displayBuffer)
-			{
-				swap();
-			}
+			swapBuffers();
 
 			// Return
 			return Success;
@@ -381,16 +381,11 @@ int32 Win32Platform::end()
 	return Success;
 }
 
-int32 Win32Platform::swap()
+int32 Win32Platform::swapBuffers()
 {
 	const Engine* engine = Engine::getInstance();
 	const Renderer* renderer = engine->getRenderer();
 
-	// Copy from the color channel into the display buffer
-	const void* src = renderer->getColorChannel()->memory;
-	void* dst = m_displayBuffer;
-	const size_t size = renderer->getColorChannel()->getMemorySize();
-	memcpy(dst, src, size);
 	return 0;
 }
 
