@@ -13,7 +13,8 @@ class Bitmap
 public:
 	explicit Bitmap(const vec2i inSize) : m_size(inSize), m_pitch(inSize.x)
 	{
-		m_data = PlatformMemory::alloc(getMemorySize());
+		size_t memSize = getMemorySize();
+		m_data = PlatformMemory::alloc(memSize);
 	}
 
 	Bitmap(const Bitmap& other)
@@ -59,18 +60,22 @@ public:
 	{
 		m_size = inSize;
 		m_pitch = inSize.x;
-		PlatformMemory::realloc(m_data, getMemorySize());
+		m_data = PlatformMemory::realloc(m_data, getMemorySize());
 	}
 
-	template <typename T>
+	template <typename T = void>
 	T* getMemory() const
 	{
 		return static_cast<T*>(m_data);
 	}
 
+	/**
+	 * @brief Returns the memory blob size of this bitmap in bytes.
+	 * @return The number of bytes this bitmap allocates.
+	 */
 	[[nodiscard]] size_t getMemorySize() const
 	{
-		return m_size.y * m_pitch;
+		return m_size.x * m_size.y * g_bytesPerChannel;
 	}
 
 	[[nodiscard]] int32 getWidth() const
@@ -83,11 +88,17 @@ public:
 		return m_size.y;
 	}
 
+	void fill(const Color& inColor) const
+	{
+		int32 color = inColor.toInt32();
+		PlatformMemory::fill(m_data, getMemorySize(), color);
+	}
+
 	template <typename T>
 	[[nodiscard]] T* scanline(const int y) const
 	{
 		// ReSharper disable once CppReinterpretCastFromVoidPtr
-		return reinterpret_cast<T*>(m_data) + (y * m_pitch);
+		return static_cast<T*>(m_data) + (y * m_pitch);
 	}
 
 	[[nodiscard]] int8* scanlineInt8(const int y) const
@@ -108,7 +119,8 @@ public:
 
 	void setPixel(const int32 x, const int32 y, const Color& color) const
 	{
-		int32* line = scanlineInt32(y);
+		auto t = static_cast<int32*>(m_data);
+		int32* line = t + (y * m_pitch);
 		line[x] = color.toInt32();
 	}
 };

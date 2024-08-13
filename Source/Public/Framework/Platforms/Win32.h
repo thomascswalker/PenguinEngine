@@ -93,9 +93,6 @@ class Win32Platform : public IPlatform
 	/** @brief Static bitmap for storing the Win32 bitmap memory that's displayed. */
 	inline static HBITMAP m_displayBitmap;
 
-	/** @brief Static pointer to the buffer which contains the pixel information to be displayed. */
-	inline static int32* m_displayBuffer;
-
 	/** @brief Stores initialization state of this platform. */
 	bool m_initialized = false;
 

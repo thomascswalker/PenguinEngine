@@ -19,11 +19,14 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
+
+	m_colorBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
 }
 
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 {
 	m_viewport->resize(inWidth, inHeight);
+	m_colorBitmap->resize(vec2i(inWidth, inHeight));
 	for (const auto& channel : m_channels | std::views::values)
 	{
 		channel->resize(inWidth, inHeight);
@@ -36,6 +39,7 @@ void Renderer::draw() const
 	m_viewport->getCamera()->computeViewProjectionMatrix();
 
 	// Reset all buffers to their default values (namely z to Inf)
+	m_colorBitmap->fill(Color::black());
 	clearChannels();
 
 	// Draw the world grid prior to drawing any geometry
@@ -82,13 +86,13 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 
 	if (m_settings.getRenderFlag(Shaded))
 	{
-		m_currentShader->m_viewMatrix = camera->m_viewMatrix;
+		m_currentShader->viewMatrix = camera->m_viewMatrix;
 		scanline();
 	}
 
-	vec3f s0 = m_currentShader->m_s0;
-	vec3f s1 = m_currentShader->m_s1;
-	vec3f s2 = m_currentShader->m_s2;
+	vec3f s0 = m_currentShader->s0;
+	vec3f s1 = m_currentShader->s1;
+	vec3f s2 = m_currentShader->s2;
 	if (m_settings.getRenderFlag(Wireframe))
 	{
 		drawLine({s0.x, s0.y}, {s1.x, s1.y}, m_wireColor);
@@ -100,12 +104,12 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	if (m_settings.getRenderFlag(Normals))
 	{
 		// Get the center of the triangle
-		vec3f triangleCenter = (m_currentShader->m_v0.m_position
-			+ m_currentShader->m_v1.m_position
-			+ m_currentShader->m_v2.m_position) / 3.0f;
+		vec3f triangleCenter = (m_currentShader->v0.m_position
+			+ m_currentShader->v1.m_position
+			+ m_currentShader->v2.m_position) / 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
-		vec3f triangleNormal = m_currentShader->m_triangleWorldNormal;
+		vec3f triangleNormal = m_currentShader->triangleWorldNormal;
 
 		vec3f normalStartScreen;
 		vec3f normalEndScreen;
@@ -128,14 +132,14 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 
 void Renderer::scanline() const
 {
-	const vec3f s0 = m_currentShader->m_s0;
-	const vec3f s1 = m_currentShader->m_s1;
-	const vec3f s2 = m_currentShader->m_s2;
+	const vec3f s0 = m_currentShader->s0;
+	const vec3f s1 = m_currentShader->s1;
+	const vec3f s2 = m_currentShader->s2;
 
 	// Compute the bounds of just this triangle on the screen
 	const int32 width = getWidth();
 	const int32 height = getHeight();
-	const rectf bounds = m_currentShader->m_screenBounds;
+	const rectf bounds = m_currentShader->screenBounds;
 
 	const vec2f boundsMin = bounds.min();
 	const vec2f boundsMax = bounds.max();
@@ -192,7 +196,7 @@ void Renderer::scanline() const
 			uvw.x = w0;
 			uvw.y = w1;
 			uvw.z = w2;
-			m_currentShader->m_uvw = uvw;
+			m_currentShader->uvw = uvw;
 
 			if (renderDepth)
 			{
@@ -211,14 +215,14 @@ void Renderer::scanline() const
 				*depthPixel = newDepth;
 			}
 
-			m_currentShader->m_pixelWorldPosition = m_currentShader->m_v0.m_position * uvw.x + m_currentShader->m_v1.
-				m_position * uvw.y + m_currentShader->m_v2.m_position * uvw.z;
+			m_currentShader->pixelWorldPosition = m_currentShader->v0.m_position * uvw.x + m_currentShader->v1.
+				m_position * uvw.y + m_currentShader->v2.m_position * uvw.z;
 
 			// Compute the final color for this pixel
 			m_currentShader->computePixelShader(point.x, point.y);
 
 			// Set the current pixel in memory to the computed color
-			*colorPixel = m_currentShader->m_outColor;
+			m_colorBitmap->setPixel(x, y, m_currentShader->outColor);
 		}
 		depthMemory += width;
 		colorMemory += width;
@@ -346,7 +350,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			getColorChannel()->setPixel(y, x, color);
+			m_colorBitmap->setPixel(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -359,7 +363,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			getColorChannel()->setPixel(x, y, color);
+			m_colorBitmap->setPixel(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{

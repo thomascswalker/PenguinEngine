@@ -3,9 +3,6 @@
 #include "Framework/Platforms/PlatformMemory.h"
 #include "Math/MathCommon.h"
 
-constexpr uint32 g_bytesPerChannel = 8;
-constexpr uint32 g_bytesPerPixel = 32;
-
 struct Channel
 {
 	void* memory;                                              // Memory Order BB GG RR XX

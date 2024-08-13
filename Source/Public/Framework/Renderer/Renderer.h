@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 
+#include "Bitmap.h"
 #include "Grid.h"
 #include "Settings.h"
 #include "Shader.h"
@@ -25,6 +26,9 @@ class Renderer
 	// Shaders
 	std::shared_ptr<IShader> m_currentShader = nullptr;
 
+	std::shared_ptr<Bitmap> m_colorBitmap;
+	std::shared_ptr<Bitmap> m_depthBitmap;
+
 public:
 	// Settings
 	RenderSettings m_settings;
@@ -45,6 +49,11 @@ public:
 	[[nodiscard]] Viewport* getViewport() const
 	{
 		return m_viewport.get();
+	}
+
+	[[nodiscard]] Bitmap* getColorBitmap() const
+	{
+		return m_colorBitmap.get();
 	}
 
 	/* Channels */
