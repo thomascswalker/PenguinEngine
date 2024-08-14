@@ -3,7 +3,10 @@
 #define NOMINMAX
 
 #include "Framework/Application.h"
+#include "Framework/Core/Buffer.h"
 #include "Framework/Core/ErrorCodes.h"
+#include "Framework/Core/IO.h"
+#include "Framework/Importers/ImageImporter.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -15,6 +18,10 @@ int32 WINAPI wWinMain(_In_ HINSTANCE hInstance,
                       _In_ LPWSTR lpCmdLine,
                       _In_ int nShowCmd)
 {
+	std::string fileName = R"(C:\Users\thoma\OneDrive\Pictures\Screenshots\test.png)";
+	Bitmap bitmap;
+	PngImporter::import(fileName, &bitmap);
+
 	// Create a new application
 	Application* app = Application::getInstance();
 

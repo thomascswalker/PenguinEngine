@@ -17,6 +17,8 @@ class Bitmap
 	size_t m_pitch;
 
 public:
+	Bitmap() {}
+
 	explicit Bitmap(const vec2i inSize) : m_size(inSize), m_pitch(inSize.x)
 	{
 		size_t memSize = getMemorySize();
@@ -63,6 +65,13 @@ public:
 		free(m_data);
 	}
 
+	static Bitmap* fromData(uint8* inData, int32 inWidth, int32 inHeight)
+	{
+		Bitmap* bm = new Bitmap(vec2i(inWidth, inHeight));
+		bm->setMemory(inData);
+		return bm;
+	}
+
 	void resize(const vec2i inSize)
 	{
 		m_size = inSize;
@@ -85,6 +94,13 @@ public:
 	T* getMemory() const
 	{
 		return static_cast<T*>(m_data);
+	}
+
+	template <typename T>
+	void setMemory(T* newMemory)
+	{
+		auto size = getMemorySize();
+		memcpy(m_data, newMemory, size);
 	}
 
 	/**
