@@ -28,23 +28,86 @@ namespace PngChunkTypes
 
 enum class EPngCompressionMethod
 {
-	Default = 0
+	Default = 0 // ZLib
+};
+
+enum class EPngChunkType
+{
+	// Required
+	IHDR,
+	PLTE,
+	IDAT,
+	IEND,
+
+	// Optional
+	BKGD,
+	CHRM,
+	CICP,
+	DSIG,
+	EXIF,
+	GAMA,
+	HIST,
+	ICCP,
+	ITXT,
+	PHYS,
+	SBIT,
+	SPLT,
+	SRGB,
+	STER,
+	TEXT,
+	TIME,
+	TRNS,
+	ZTXT
+};
+
+inline std::map<std::string, EPngChunkType> g_pngChunkTypeMap =
+{
+	{"IHDR", EPngChunkType::IHDR},
+	{"PLTE", EPngChunkType::PLTE},
+	{"IDAT", EPngChunkType::IDAT},
+	{"IEND", EPngChunkType::IEND},
+	{"bKGD", EPngChunkType::BKGD},
+	{"cHRM", EPngChunkType::CHRM},
+	{"cICP", EPngChunkType::CICP},
+	{"dSIG", EPngChunkType::DSIG},
+	{"eXIf", EPngChunkType::EXIF},
+	{"gAMA", EPngChunkType::GAMA},
+	{"hIST", EPngChunkType::HIST},
+	{"iCCP", EPngChunkType::ICCP},
+	{"iTXt", EPngChunkType::ITXT},
+	{"pHYs", EPngChunkType::PHYS},
+	{"sBIT", EPngChunkType::SBIT},
+	{"sPLT", EPngChunkType::SPLT},
+	{"sRGB", EPngChunkType::SRGB},
+	{"sTER", EPngChunkType::STER},
+	{"tEXt", EPngChunkType::TEXT},
+	{"tIME", EPngChunkType::TIME},
+	{"tRNS", EPngChunkType::TRNS},
+	{"zTXt", EPngChunkType::ZTXT}
 };
 
 struct PngChunk
 {
-	/** The length of data in the chunk. This does not include the length of the header. */
+	uint8* rawData;
 	uint8* data;
-	uint8* uncompressedData;
-	uint32 length;
-	std::string name;
-	uint32 width;
-	uint32 height;
-	uint8 bitDepth;
+
+	uint32 size; // The size of rawData in the chunk. This does not include the size of the header.
+	EPngChunkType type;
+};
+
+struct PngMetadata
+{
+	uint32 width;   // Width of the image in pixels.
+	uint32 height;  // Height of the image in pixels.
+	uint8 bitDepth; // 1, 2, 4, 8, or 16 bits/channel
 	EPngColorType colorType;
-	uint8 compressionMethod;
+	EPngCompressionMethod compressionMethod;
 	uint8 filterMethod;
 	uint8 interlaceMethod;
+
+	uint8 channelCount; // Number of rawData channels per pixel (1,2,3,4).
+	uint8 pixelDepth;   // Number of bits per channel.
+	uint8 spareByte;    // To align the rawData.
 };
 
 /** https://www.nayuki.io/page/png-file-chunk-inspector */
@@ -60,38 +123,35 @@ class PngImporter
 		return (bool)isValid;
 	}
 
-	static bool parseIHDR(PngChunk* chunk)
+	static bool parseIHDR(const PngChunk* chunk, PngMetadata* metadata)
 	{
-		BufferedReader reader(chunk->data, chunk->length);
+		BufferedReader reader(chunk->rawData, chunk->size);
 
-		// 13 bytes
-		chunk->width = reader.readInt32();                   // 4
-		chunk->height = reader.readInt32();                  // 8
-		chunk->bitDepth = reader.readInt8();                 // 9
-		chunk->colorType = (EPngColorType)reader.readInt8(); // 10
-		chunk->compressionMethod = reader.readInt8();        // 11
-		chunk->filterMethod = reader.readInt8();             // 12
-		chunk->interlaceMethod = reader.readInt8();          // 13
+		metadata->width = swapByteOrder(reader.readInt32());                    // 4
+		metadata->height = swapByteOrder(reader.readInt32());                   // 8
+		metadata->bitDepth = reader.readInt8();                                 // 9
+		metadata->colorType = (EPngColorType)reader.readInt8();                 // 10
+		metadata->compressionMethod = (EPngCompressionMethod)reader.readInt8(); // 11
+		metadata->filterMethod = reader.readInt8();                             // 12
+		metadata->interlaceMethod = reader.readInt8();                          // 13
 
 		return true;
 	}
 
-	static bool parseIDAT(PngChunk* chunk, const EPngCompressionMethod compressionMethod)
+	static bool parseIDAT(PngChunk* chunk, const PngMetadata* metadata)
 	{
-		BufferedReader reader(chunk->data, chunk->length);
-		chunk->uncompressedData = (uint8*)PlatformMemory::alloc(chunk->length);
-
-		switch (compressionMethod)
+		BufferedReader reader(chunk->rawData, chunk->size);
+		chunk->data = (uint8*)PlatformMemory::alloc(chunk->size);
+		uint32 chunkByteSize = chunk->size;
+		switch (metadata->compressionMethod)
 		{
-		// Uncompressed
+		// TODO: Account for zlib compression here
+		// Each pixel row starts with a single byte which determines the filter type for that row
 		case EPngCompressionMethod::Default:
 			{
-				for (int32 index = 0; index < chunk->length;)
+				for (uint32 index = 0; index < chunkByteSize; index++)
 				{
-					chunk->uncompressedData[index++] = reader.readUInt8();
-					chunk->uncompressedData[index++] = reader.readUInt8();
-					chunk->uncompressedData[index++] = reader.readUInt8();
-					chunk->uncompressedData[index++] = reader.readUInt8();
+					chunk->data[index] = reader.readUInt8();
 				}
 				break;
 			}
@@ -104,40 +164,43 @@ class PngImporter
 		return true;
 	}
 
-	static bool readChunk(BufferedReader& reader, PngChunk* chunk, const std::string& name = "")
+	static bool readChunk(BufferedReader* reader, PngChunk* chunk, PngMetadata* metadata)
 	{
-		chunk->length = reader.readUInt32();
+		// Read the size of the rawData, in bytes, in this chunk
+		chunk->size = reader->readUInt32();
 
-		int8 name0 = reader.readInt8();
-		int8 name1 = reader.readInt8();
-		int8 name2 = reader.readInt8();
-		int8 name3 = reader.readInt8();
+		// Read each char of the name
+		int8 name0 = reader->readInt8();
+		int8 name1 = reader->readInt8();
+		int8 name2 = reader->readInt8();
+		int8 name3 = reader->readInt8();
 
-		chunk->name.push_back(name0);
-		chunk->name.push_back(name1);
-		chunk->name.push_back(name2);
-		chunk->name.push_back(name3);
+		// Determine the chunk type
+		std::string name;
+		name.push_back(name0);
+		name.push_back(name1);
+		name.push_back(name2);
+		name.push_back(name3);
+		chunk->type = g_pngChunkTypeMap[name];
 
-		chunk->data = (uint8*)PlatformMemory::alloc(chunk->length);
-		for (uint32 i = 0; i < chunk->length; i++)
+		// Allocate the memory for this chunk's rawData, given the rawData size
+		chunk->rawData = (uint8*)PlatformMemory::alloc(chunk->size);
+
+		// Loop through and read all bytes
+		for (uint32 i = 0; i < chunk->size; i++)
 		{
-			chunk->data[i] = reader.readUInt8();
+			chunk->rawData[i] = reader->readUInt8();
 		}
 
 		// TODO: Actually calculate the CRC and validate it
-		auto crc = reader.readUInt32();
+		auto crc = reader->readUInt32();
 
-		auto pos = reader.getPos();
-
-		if (!name.empty())
-		{
-			return chunk->name == name;
-		}
+		// If a name argument was passed in, verify the name we read above is the same.
 		return true;
 	}
 
 public:
-	static bool import(const std::string& fileName, Bitmap* bitmap)
+	static bool import(const std::string& fileName, Bitmap& bitmap)
 	{
 		// Read the file into a buffer
 		std::string data;
@@ -147,7 +210,7 @@ public:
 			return false;
 		}
 
-		// Create a reader from the string data
+		// Create a reader from the string rawData
 		BufferedReader reader(data, data.size(), std::endian::big);
 
 		// Validate the header is the correct PNG header
@@ -158,44 +221,65 @@ public:
 			return false;
 		}
 
-		std::vector<PngChunk> chunks;
-
 		// Read and parse the IHDR chunk. This is always the first one.
+		PngMetadata metadata;
 		PngChunk ihdrChunk;
-		if (!readChunk(reader, &ihdrChunk, "IHDR"))
+		if (!readChunk(&reader, &ihdrChunk, &metadata))
 		{
 			LOG_ERROR("Error reading IHDR chunk.")
 			return false;
 		}
-		parseIHDR(&ihdrChunk);
-		chunks.emplace_back(ihdrChunk);
+		parseIHDR(&ihdrChunk, &metadata);
 
 		// Read chunks until we hit the end of the file.
-		while (true)
+		bool atEnd = false;
+		while (!atEnd)
 		{
 			PngChunk chunk;
-			readChunk(reader, &chunk);
+			readChunk(&reader, &chunk, &metadata);
 
 			// If we reach the end chunk, exit
-			if (chunk.name == PngChunkTypes::IEND)
+			switch (chunk.type)
 			{
-				chunks.emplace_back(chunk);
-				break;
-			}
+			case EPngChunkType::IHDR:
+				{
+					break;
+				}
+			case EPngChunkType::IDAT:
+				{
+					parseIDAT(&chunk, &metadata);
+					bitmap = Bitmap::fromData(chunk.rawData, metadata.width, metadata.height);
+					break;
+				}
 
-			// If we reach any other chunk other than a data chunk, just continue
-			// TODO: Implement other chunk types
-			if (chunk.name != PngChunkTypes::IDAT)
-			{
-				chunks.emplace_back(chunk);
-				continue;
+			case EPngChunkType::IEND:
+				{
+					atEnd = true;
+					break;
+				}
+			case EPngChunkType::PLTE:
+			case EPngChunkType::BKGD:
+			case EPngChunkType::CHRM:
+			case EPngChunkType::CICP:
+			case EPngChunkType::DSIG:
+			case EPngChunkType::EXIF:
+			case EPngChunkType::GAMA:
+			case EPngChunkType::HIST:
+			case EPngChunkType::ICCP:
+			case EPngChunkType::ITXT:
+			case EPngChunkType::PHYS:
+			case EPngChunkType::SBIT:
+			case EPngChunkType::SPLT:
+			case EPngChunkType::SRGB:
+			case EPngChunkType::STER:
+			case EPngChunkType::TEXT:
+			case EPngChunkType::TIME:
+			case EPngChunkType::TRNS:
+			case EPngChunkType::ZTXT:
+				{
+					break;
+				}
 			}
-
-			// At this point we should only be dealing with a data chunk, so parse it.
-			parseIDAT(&chunk, (EPngCompressionMethod)ihdrChunk.compressionMethod);
-			// TODO: This doesn't actually load the data correctly
-			bitmap = Bitmap::fromData(chunk.uncompressedData, chunk.width, chunk.height);
-			break;
 		}
 
 		return true;

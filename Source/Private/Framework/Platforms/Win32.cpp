@@ -5,7 +5,11 @@
 #include "Framework/Platforms/Win32.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Engine/Engine.h"
+#include "Framework/Importers/ImageImporter.h"
 #include "Framework/Input/InputHandler.h"
+
+std::string g_fileName = R"(C:\Users\thoma\OneDrive\Pictures\Screenshots\snowman.png)";
+Bitmap g_bitmap;
 
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
@@ -128,7 +132,19 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
 
+			// TODO: REMOVE THIS
 			// Associate the memory from the display buffer to the display bitmap
+			auto colorBm = renderer->getColorBitmap();
+			for (int x = 0; x < g_bitmap.getWidth(); x++)
+			{
+				for (int y = 0; y < g_bitmap.getHeight(); y++)
+				{
+					Color color = g_bitmap.getPixelAsColor(x, y);
+					colorBm->setPixel(x, y, color);
+				}
+			}
+			// TODO: REMOVE THIS
+
 			void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
@@ -325,6 +341,10 @@ int32 Win32Platform::start()
 		LOG_ERROR("Window failed to initialize (Win32Platform::Start).")
 		return PlatformStartError; // Start failure
 	}
+
+	// TODO: REMOVE THIS
+	PngImporter::import(g_fileName, g_bitmap);
+	// TODO: REMOVE THIS
 
 	// Process all messages and update the window
 	LOG_DEBUG("Engine loop start")

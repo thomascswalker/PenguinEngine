@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdlib.h>
+
 #include "Framework/Platforms/PlatformMemory.h"
 #include "Math/Color.h"
 #include "Math/Vector.h"
@@ -22,7 +24,7 @@ public:
 	explicit Bitmap(const vec2i inSize) : m_size(inSize), m_pitch(inSize.x)
 	{
 		size_t memSize = getMemorySize();
-		m_data = PlatformMemory::alloc(memSize);
+		m_data = std::malloc(memSize);
 	}
 
 	Bitmap(const Bitmap& other)
@@ -62,13 +64,21 @@ public:
 	~Bitmap()
 	{
 		// Free the memory blob upon this bitmap's destruction
-		free(m_data);
+		//free(m_data);
 	}
 
-	static Bitmap* fromData(uint8* inData, int32 inWidth, int32 inHeight)
+	static Bitmap fromData(uint8* inData, const uint32 inWidth, const uint32 inHeight)
 	{
-		Bitmap* bm = new Bitmap(vec2i(inWidth, inHeight));
-		bm->setMemory(inData);
+		auto bm = Bitmap(vec2i(inWidth, inHeight));
+		for (uint32 x = 0; x < inWidth; x++)
+		{
+			for (uint32 y = 0; y < inHeight; y++)
+			{
+				int32 offset = (y * inWidth) + x;
+				uint8 color = inData[offset];
+				bm.setPixel(x, y, color);
+			}
+		}
 		return bm;
 	}
 
@@ -97,9 +107,9 @@ public:
 	}
 
 	template <typename T>
-	void setMemory(T* newMemory)
+	void setMemory(T* newMemory, const size_t inSize = 0)
 	{
-		auto size = getMemorySize();
+		auto size = inSize ? inSize : getMemorySize();
 		memcpy(m_data, newMemory, size);
 	}
 
@@ -109,7 +119,7 @@ public:
 	 */
 	[[nodiscard]] size_t getMemorySize() const
 	{
-		return m_size.x * m_size.y * g_bytesPerChannel;
+		return m_size.x * m_size.y * g_bytesPerPixel;
 	}
 
 	/**

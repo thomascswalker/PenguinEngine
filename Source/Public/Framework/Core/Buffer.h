@@ -7,7 +7,7 @@
 #include "Math/MathFwd.h"
 
 template <typename T>
-T swapEndian(T value)
+T swapByteOrder(T value)
 {
 	T result = 0;
 	int size = sizeof(T) - 1;
@@ -80,6 +80,13 @@ struct StreamBuffer : std::streambuf
 	}
 };
 
+enum class ESeekDir : int32
+{
+	Beginning = std::ios_base::beg,
+	Current   = std::ios_base::cur,
+	End       = std::ios_base::end,
+};
+
 class BufferedReader
 {
 	int32 m_pos = 0;
@@ -95,7 +102,7 @@ class BufferedReader
 		m_pos += size;
 		if (std::endian::native != m_endian)
 		{
-			return swapEndian(value);
+			return swapByteOrder(value);
 		}
 		return value;
 	}
@@ -166,5 +173,12 @@ public:
 	uint64 readUInt64()
 	{
 		return read<uint64>(8);
+	}
+
+	uint32 seek(const int32 offset, ESeekDir seekDir = ESeekDir::Current)
+	{
+		m_pos += offset;
+		m_stream->seekg(offset, (int32)seekDir);
+		return m_pos;
 	}
 };
