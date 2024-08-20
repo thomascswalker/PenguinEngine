@@ -1,5 +1,7 @@
 #pragma once
+
 #include <bit>
+
 #include "Math/MathFwd.h"
 #include "Framework/Core/Bitmask.h"
 #include "Framework/Core/IO.h"
@@ -18,13 +20,6 @@ enum class EPngColorType : uint8
 };
 
 DEFINE_BITMASK_OPERATORS(EPngColorType)
-
-namespace PngChunkTypes
-{
-	inline auto IHDR = "IHDR";
-	inline auto IEND = "IEND";
-	inline auto IDAT = "IDAT";
-}
 
 enum class EPngCompressionMethod
 {
@@ -138,6 +133,12 @@ class PngImporter
 		return true;
 	}
 
+	/**
+	 * @brief Based on https://pyokagan.name/blog/2019-10-18-zlibinflate/.
+	 * @param chunk The IDAT chunk we are parsing.
+	 * @param metadata The PNG file metadata.
+	 * @return True if parsing is successful, false otherwise.
+	 */
 	static bool parseIDAT(PngChunk* chunk, const PngMetadata* metadata)
 	{
 		BufferedReader reader(chunk->rawData, chunk->size);
