@@ -5,6 +5,9 @@
 #include <fstream>
 
 #include "Math/MathFwd.h"
+#include "Framework/Platforms/PlatformMemory.h"
+
+inline uint8 g_bitsPerByte = 8;
 
 template <typename T>
 T swapByteOrder(T value)
@@ -27,6 +30,13 @@ private:
 	size_t size = 0;
 
 public:
+	Buffer() {}
+
+	explicit Buffer(const size_t inSize) : size(inSize)
+	{
+		data = (T*)std::malloc(inSize);
+	}
+
 	explicit Buffer(T* inData, const size_t inSize)
 		: data(inData), size(inSize) {}
 
@@ -38,6 +48,16 @@ public:
 	[[nodiscard]] size_t getSize() const
 	{
 		return size;
+	}
+
+	void resize(const uint32 width, const uint32 height)
+	{
+		if (data)
+		{
+			PlatformMemory::free(data);
+		}
+		size = width * height * g_bytesPerPixel;
+		data = (T*)std::malloc(size);
 	}
 
 	T* begin()
@@ -87,19 +107,43 @@ enum class ESeekDir : int32
 	End       = std::ios_base::end,
 };
 
-class BufferedReader
+class ByteReader
 {
 	int32 m_pos = 0;
+	size_t m_size = 0;
 	std::endian m_endian;
 	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
 	std::unique_ptr<std::istream> m_stream = nullptr;
 
+	// Bit reading
+	uint8 m_bitCount = 0;
+	uint8 m_codeBuffer = 0;
+
+	uint8 m_bitPos = 0;
+	uint8 m_currentByte = 0;
+
 	template <typename T>
 	T read(const size_t size)
 	{
+		// Reset the bit position
+		m_bitPos = 0;
+
+		// Read size
 		T value;
 		m_stream->read(reinterpret_cast<int8*>(&value), (int64)size);
-		m_pos += size;
+		m_pos += (int32)size;
+		if (std::endian::native != m_endian)
+		{
+			return swapByteOrder(value);
+		}
+		return value;
+	}
+
+	template <typename T>
+	T peek(const size_t size)
+	{
+		T value;
+		m_stream->peek(reinterpret_cast<int8*>(&value), (int64)size);
 		if (std::endian::native != m_endian)
 		{
 			return swapByteOrder(value);
@@ -108,23 +152,26 @@ class BufferedReader
 	}
 
 public:
-	BufferedReader(std::string& inString, const size_t inSize,
-	               const std::endian endian = std::endian::native) : m_endian(endian)
+	ByteReader() {}
+
+	ByteReader(std::string& inString, const size_t inSize,
+	           const std::endian endian = std::endian::native) : m_size(inSize), m_endian(endian)
 	{
 		Buffer buffer((uint8*)inString.data(), inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
 		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
-	explicit BufferedReader(uint8* inBuffer, const size_t inSize,
-	                        const std::endian endian = std::endian::native) : m_endian(endian)
+	explicit ByteReader(uint8* inBuffer, const size_t inSize,
+	                    const std::endian endian = std::endian::native) : m_size(inSize), m_endian(endian)
 	{
 		Buffer buffer(inBuffer, inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
 		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
-	explicit BufferedReader(Buffer<uint8>& inBuffer, const std::endian endian = std::endian::native) : m_endian(endian)
+	explicit ByteReader(Buffer<uint8>& inBuffer,
+	                    const std::endian endian = std::endian::native) : m_size(inBuffer.getSize()), m_endian(endian)
 	{
 		m_streamBuffer = std::make_unique<StreamBuffer>(inBuffer);
 		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
@@ -133,6 +180,16 @@ public:
 	[[nodiscard]] int32 getPos() const
 	{
 		return m_pos;
+	}
+
+	[[nodiscard]] int32 getBitPos() const
+	{
+		return (g_bitsPerByte * m_pos) + m_bitPos;
+	}
+
+	[[nodiscard]] size_t getSize() const
+	{
+		return m_size;
 	}
 
 	int8 readInt8()
@@ -173,6 +230,31 @@ public:
 	uint64 readUInt64()
 	{
 		return read<uint64>(8);
+	}
+
+	void fillBits()
+	{
+		while (m_bitCount <= 24)
+		{
+			if (m_codeBuffer >= (1U << m_bitCount))
+			{
+				return; // EOF
+			}
+			m_codeBuffer |= (uint32)readInt8() << m_bitCount;
+			m_bitCount += 8;
+		}
+	}
+
+	uint8 readBits(const int32 count)
+	{
+		if (m_bitCount < count)
+		{
+			fillBits();
+		}
+		uint8 outValue = (uint8)(m_codeBuffer & (1 << count) - 1);
+		m_codeBuffer >>= count;
+		m_bitCount -= count;
+		return outValue;
 	}
 
 	uint32 seek(const int32 offset, ESeekDir seekDir = ESeekDir::Current)

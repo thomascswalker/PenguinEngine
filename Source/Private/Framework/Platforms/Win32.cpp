@@ -343,7 +343,7 @@ int32 Win32Platform::start()
 	}
 
 	// TODO: REMOVE THIS
-	PngImporter::import(g_fileName, g_bitmap);
+	PngImporter::importStb(g_fileName, g_bitmap);
 	// TODO: REMOVE THIS
 
 	// Process all messages and update the window

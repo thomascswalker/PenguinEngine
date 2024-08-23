@@ -70,15 +70,7 @@ public:
 	static Bitmap fromData(uint8* inData, const uint32 inWidth, const uint32 inHeight)
 	{
 		auto bm = Bitmap(vec2i(inWidth, inHeight));
-		for (uint32 x = 0; x < inWidth; x++)
-		{
-			for (uint32 y = 0; y < inHeight; y++)
-			{
-				int32 offset = (y * inWidth) + x;
-				uint8 color = inData[offset];
-				bm.setPixel(x, y, color);
-			}
-		}
+		bm.setMemory(inData);
 		return bm;
 	}
 
