@@ -2,6 +2,9 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "Framework/Core/Compression.h"
+
+#include "zlib/zlib.h"
 
 bool PngImporter::isValidHeader(ByteReader& reader)
 {
@@ -13,9 +16,9 @@ bool PngImporter::isValidHeader(ByteReader& reader)
 	return (bool)isValid;
 }
 
-bool PngImporter::parseIHDR(const PngChunk* chunk, PngMetadata* metadata)
+bool PngImporter::parseIHDR(PngChunk* chunk, PngMetadata* metadata)
 {
-	ByteReader reader(chunk->rawData, chunk->size);
+	ByteReader reader(chunk->compressedBuffer);
 
 	metadata->width = swapByteOrder(reader.readInt32());                    // 4
 	metadata->height = swapByteOrder(reader.readInt32());                   // 8
@@ -35,8 +38,8 @@ bool PngImporter::parseIHDR(const PngChunk* chunk, PngMetadata* metadata)
 bool PngImporter::parseIDAT(PngChunk* chunk, const PngMetadata* metadata)
 {
 	uint32 bytesPerLine = (metadata->width * metadata->bitDepth + 7) / 8;
-	chunk->size = bytesPerLine * metadata->height * metadata->channelCount + metadata->height;
-	ByteReader reader(chunk->rawData, chunk->size);
+	uint32 uncompressedSize = bytesPerLine * metadata->height * metadata->channelCount + metadata->height;
+	chunk->uncompressedBuffer.resize(uncompressedSize);
 
 	switch (metadata->compressionMethod)
 	{
@@ -44,10 +47,8 @@ bool PngImporter::parseIDAT(PngChunk* chunk, const PngMetadata* metadata)
 	// Each pixel row starts with a single byte which determines the filter type for that row
 	case EPngCompressionMethod::Default:
 		{
-			uint32 sizeDataCompressed = chunk->size;
-			//uLongf sizeDataUncompressed = chunk->size * 4;
-			//auto dataUncompressed = (BYTE*)std::malloc(sizeDataUncompressed);
-			//uncompress(dataUncompressed, &sizeDataUncompressed, chunk->rawData, sizeDataCompressed);
+			bool result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);
+			return result;
 			break;
 		}
 	default:
@@ -55,14 +56,13 @@ bool PngImporter::parseIDAT(PngChunk* chunk, const PngMetadata* metadata)
 			return false;
 		}
 	}
-
-	return true;
 }
 
 bool PngImporter::readChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* metadata)
 {
-	// Read the size of the rawData, in bytes, in this chunk
-	chunk->size = reader->readUInt32();
+	// Read the compressedSize of the uncompressedData, in bytes, in this chunk
+	auto compressedSize = reader->readUInt32();
+	chunk->compressedBuffer.resize(compressedSize);
 
 	// Read each char of the name
 	int8 name0 = reader->readInt8();
@@ -78,13 +78,12 @@ bool PngImporter::readChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* me
 	name.push_back(name3);
 	chunk->type = g_pngChunkTypeMap[name];
 
-	// Allocate the memory for this chunk's rawData, given the rawData size
-	chunk->rawData = (uint8*)PlatformMemory::alloc(chunk->size);
+	// Allocate the memory for this chunk's uncompressedData, given the uncompressedData compressedSize
 
 	// Loop through and read all bytes
-	for (uint32 i = 0; i < chunk->size; i++)
+	for (uint32 i = 0; i < chunk->compressedBuffer.getSize(); i++)
 	{
-		chunk->rawData[i] = reader->readUInt8();
+		chunk->compressedBuffer[i] = reader->readUInt8();
 	}
 
 	// TODO: Actually calculate the CRC and validate it
@@ -96,6 +95,11 @@ bool PngImporter::readChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* me
 
 int32 PngImporter::import(const std::string& fileName, Bitmap& bitmap)
 {
+	return importStb(fileName, bitmap);
+}
+
+int32 PngImporter::importNative(const std::string& fileName, Bitmap& bitmap)
+{
 	// Read the file into a buffer
 	std::string data;
 	if (!IO::readFile(fileName, data))
@@ -104,7 +108,7 @@ int32 PngImporter::import(const std::string& fileName, Bitmap& bitmap)
 		return g_invalidImageIndex;
 	}
 
-	// Create a reader from the string rawData
+	// Create a reader from the string uncompressedData
 	ByteReader reader(data, data.size(), std::endian::big);
 
 	// Validate the header is the correct PNG header
@@ -124,7 +128,6 @@ int32 PngImporter::import(const std::string& fileName, Bitmap& bitmap)
 		return g_invalidImageIndex;
 	}
 	parseIHDR(&ihdrChunk, &png.metadata);
-	png.data.resize(png.metadata.width, png.metadata.height);
 
 	// Read chunks until we hit the end of the file.
 	bool atEnd = false;
@@ -143,7 +146,8 @@ int32 PngImporter::import(const std::string& fileName, Bitmap& bitmap)
 		case EPngChunkType::IDAT:
 			{
 				parseIDAT(&chunk, &png.metadata);
-				memcpy(png.data.getData(), chunk.data, chunk.size);
+				png.data.resize(chunk.uncompressedBuffer.getSize());
+				memcpy(png.data.getData(), chunk.uncompressedBuffer.getData(), chunk.uncompressedBuffer.getSize());
 				break;
 			}
 

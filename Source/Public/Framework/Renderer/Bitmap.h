@@ -13,9 +13,9 @@ class Bitmap
 {
 	/** The memory pointer this bitmap uses to store pixels. */
 	void* m_data = nullptr;
-	/** The 2-dimensional size of this bitmap. */
+	/** The 2-dimensional compressedSize of this bitmap. */
 	vec2i m_size;
-	/** The size of a single row of pixels. */
+	/** The compressedSize of a single row of pixels. */
 	size_t m_pitch;
 
 public:

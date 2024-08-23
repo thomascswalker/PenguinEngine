@@ -40,6 +40,12 @@ namespace PlatformMemory
 #endif
 	}
 
+	template <typename T = void>
+	static T* malloc(const size_t size)
+	{
+		return (T*)std::malloc(size);
+	}
+
 	/**
 	 * @brief Frees and then allocates the specified memory block.
 	 * @param memory The memory block to free.

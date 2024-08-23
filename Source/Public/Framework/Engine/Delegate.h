@@ -12,7 +12,7 @@
 
 #define DELEGATE_STATIC_ASSERT(Expr, Msg) static_assert(Expr, Msg)
 
-//The allocation Size of delegate data.
+//The allocation Size of delegate compressedData.
 //Delegates larger than this will be heap allocated.
 #ifndef DELEGATE_INLINE_ALLOCATION_SIZE
 #define DELEGATE_INLINE_ALLOCATION_SIZE 32

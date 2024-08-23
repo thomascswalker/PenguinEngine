@@ -121,12 +121,12 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 				break;
 			}
 
-			// Get the current window size from the buffer
+			// Get the current window compressedSize from the buffer
 			//const std::shared_ptr<Channel> channel = renderer->getColorChannel();
 			const int32 width = renderer->getWidth();
 			const int32 height = renderer->getHeight();
 
-			// Create a bitmap with the current renderer buffer memory the size of the window
+			// Create a bitmap with the current renderer buffer memory the compressedSize of the window
 			InvalidateRect(hwnd, nullptr, TRUE);
 			PAINTSTRUCT paint;
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
@@ -193,7 +193,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const int32 width = LOWORD(lParam);
 			const int32 height = HIWORD(lParam);
 
-			// Update the renderer size
+			// Update the renderer compressedSize
 			renderer->resize(width, height);
 			LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
 			m_bitmapInfo.bmiHeader.biWidth = width;
@@ -343,7 +343,7 @@ int32 Win32Platform::start()
 	}
 
 	// TODO: REMOVE THIS
-	PngImporter::importStb(g_fileName, g_bitmap);
+	PngImporter::import(g_fileName, g_bitmap);
 	// TODO: REMOVE THIS
 
 	// Process all messages and update the window
@@ -419,7 +419,7 @@ rectf Win32Platform::getSize()
 		return {0, 0, width, height};
 	}
 
-	LOG_ERROR("Unable to get window size (Win32Platform::GetSize).")
+	LOG_ERROR("Unable to get window compressedSize (Win32Platform::GetSize).")
 	return {};
 }
 

@@ -34,7 +34,7 @@ public:
 
 	explicit Buffer(const size_t inSize) : size(inSize)
 	{
-		data = (T*)std::malloc(inSize);
+		data = PlatformMemory::malloc(inSize);
 	}
 
 	explicit Buffer(T* inData, const size_t inSize)
@@ -50,6 +50,16 @@ public:
 		return size;
 	}
 
+	void resize(const size_t inSize)
+	{
+		if (data)
+		{
+			PlatformMemory::free(data);
+		}
+		size = inSize;
+		data = PlatformMemory::malloc<T>(size);
+	}
+
 	void resize(const uint32 width, const uint32 height)
 	{
 		if (data)
@@ -57,7 +67,7 @@ public:
 			PlatformMemory::free(data);
 		}
 		size = width * height * g_bytesPerPixel;
-		data = (T*)std::malloc(size);
+		data = PlatformMemory::malloc<T>(size);
 	}
 
 	T* begin()
@@ -128,7 +138,7 @@ class ByteReader
 		// Reset the bit position
 		m_bitPos = 0;
 
-		// Read size
+		// Read compressedSize
 		T value;
 		m_stream->read(reinterpret_cast<int8*>(&value), (int64)size);
 		m_pos += (int32)size;

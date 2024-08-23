@@ -87,9 +87,12 @@ inline std::map<std::string, EPngChunkType> g_pngChunkTypeMap =
 
 struct PngChunk
 {
-	uint8* rawData;
-	uint8* data;
-	size_t size;
+	Buffer<uint8> uncompressedBuffer;
+	Buffer<uint8> compressedBuffer;
+	//uint8* uncompressedData;
+	//uint8* compressedData;
+	//int32 uncompressedSize;
+	//int32 compressedSize;
 	EPngChunkType type;
 };
 
@@ -103,9 +106,9 @@ struct PngMetadata
 	uint8 filterMethod;
 	uint8 interlaceMethod;
 
-	uint8 channelCount; // Number of rawData channels per pixel (1,2,3,4).
+	uint8 channelCount; // Number of uncompressedData channels per pixel (1,2,3,4).
 	uint8 pixelDepth;   // Number of bits per channel.
-	uint8 spareByte;    // To align the rawData.
+	uint8 spareByte;    // To align the uncompressedData.
 };
 
 struct PngBitmap
@@ -119,7 +122,7 @@ class PngImporter
 {
 	static bool isValidHeader(ByteReader& reader);
 
-	static bool parseIHDR(const PngChunk* chunk, PngMetadata* metadata);
+	static bool parseIHDR(PngChunk* chunk, PngMetadata* metadata);
 
 	/**
 	 * @brief Based on https://pyokagan.name/blog/2019-10-18-zlibinflate/.
@@ -131,7 +134,9 @@ class PngImporter
 
 	static bool readChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* metadata);
 
+	static int32 importNative(const std::string& fileName, Bitmap& bitmap);
+	static int32 importStb(const std::string& fileName, Bitmap& bitmap);
+
 public:
 	static int32 import(const std::string& fileName, Bitmap& bitmap);
-	static int32 importStb(const std::string& fileName, Bitmap& bitmap);
 };
