@@ -4441,7 +4441,6 @@ static int stbi__parse_zlib_header(stbi__zbuf *a)
    int cm    = cmf & 15;
    /* int cinfo = cmf >> 4; */
    int flg   = stbi__zget8(a);
-   int test = 5;
    if (stbi__zeof(a)) return stbi__err("bad zlib header","Corrupt PNG"); // zlib spec
    if ((cmf*256+flg) % 31 != 0) return stbi__err("bad zlib header","Corrupt PNG"); // zlib spec
    if (flg & 32) return stbi__err("no preset dict","Corrupt PNG"); // preset dictionary not allowed in png
@@ -4490,7 +4489,6 @@ static int stbi__parse_zlib(stbi__zbuf *a, int parse_header)
    do {
       final = stbi__zreceive(a,1);
       type = stbi__zreceive(a,2);
-      int b = 5;
       if (type == 0) {
          if (!stbi__parse_uncompressed_block(a)) return 0;
       } else if (type == 3) {
@@ -4674,6 +4672,7 @@ static const stbi_uc stbi__depth_scale_table[9] = { 0, 0xff, 0x55, 0, 0x11, 0,0,
 // adds an extra all-255 alpha channel
 // dest == src is legal
 // img_n must be 1 or 3
+// x is image width
 static void stbi__create_png_alpha_expand8(stbi_uc *dest, stbi_uc *src, stbi__uint32 x, int img_n)
 {
    int i;

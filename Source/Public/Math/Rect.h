@@ -7,10 +7,10 @@ struct rect_t
 {
 	struct
 	{
-		T X;
-		T Y;
-		T Width;
-		T Height;
+		T x = 0;
+		T y = 0;
+		T width = 0;
+		T height = 0;
 	};
 
 	rect_t()
@@ -19,22 +19,22 @@ struct rect_t
 
 	rect_t(const vec2_t<T>& inMin, const vec2_t<T>& inMax)
 	{
-		X = inMin.x;
-		Y = inMin.y;
-		Width = inMax.x - inMin.x;
-		Height = inMax.y - inMin.y;
+		x = inMin.x;
+		y = inMin.y;
+		width = inMax.x - inMin.x;
+		height = inMax.y - inMin.y;
 	}
 
 	rect_t(T inX, T inY, T inWidth, T inHeight)
 	{
-		X = inX;
-		Y = inY;
-		Width = inWidth;
-		Height = inHeight;
+		x = inX;
+		y = inY;
+		width = inWidth;
+		height = inHeight;
 	}
 
-	vec2_t<T> min() const { return vec2_t(X, Y); }
-	vec2_t<T> max() const { return vec2_t(X + Width, Y + Height); }
+	vec2_t<T> min() const { return vec2_t(x, y); }
+	vec2_t<T> max() const { return vec2_t(x + width, y + height); }
 
 	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1)
 	{
@@ -70,25 +70,25 @@ struct rect_t
 
 	void clamp(const rect_t& other)
 	{
-		X = std::max(X, other.X);
-		Y = std::max(Y, other.Y);
-		Width = std::min(Width, other.Width);
-		Height = std::min(Height, other.Height);
+		x = std::max(x, other.x);
+		y = std::max(y, other.y);
+		width = std::min(width, other.width);
+		height = std::min(height, other.height);
 	}
 
 	void grow(T value)
 	{
-		X -= value;
-		Y -= value;
-		Width += value;
-		Height += value;
+		x -= value;
+		y -= value;
+		width += value;
+		height += value;
 	}
 
 	void shrink(T value)
 	{
-		X += value;
-		Y += value;
-		Width -= value;
-		Height += value;
+		x += value;
+		y += value;
+		width -= value;
+		height += value;
 	}
 };

@@ -8,8 +8,9 @@
 
 #include "Math/MathFwd.h"
 
+constexpr uint32 g_bytesPerPixel = 4;
 constexpr uint32 g_bytesPerChannel = 8;
-constexpr uint32 g_bytesPerPixel = 32;
+constexpr uint32 g_bitsPerPixel = 32;
 
 /**
  * @brief Platform-specific memory management functions.

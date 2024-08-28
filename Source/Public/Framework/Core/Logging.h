@@ -111,7 +111,7 @@ namespace Logging
 } // namespace Logging
 
 
-#define LOG_DEBUG(X, ...) Logging::debug(X, __VA_ARGS__);
-#define LOG_INFO(X, ...) Logging::info(X, __VA_ARGS__);
-#define LOG_WARNING(X, ...) Logging::warning(X, __VA_ARGS__);
-#define LOG_ERROR(X, ...) Logging ::error(X, __VA_ARGS__);
+#define LOG_DEBUG(x, ...) Logging::debug(x, __VA_ARGS__);
+#define LOG_INFO(x, ...) Logging::info(x, __VA_ARGS__);
+#define LOG_WARNING(x, ...) Logging::warning(x, __VA_ARGS__);
+#define LOG_ERROR(x, ...) Logging ::error(x, __VA_ARGS__);

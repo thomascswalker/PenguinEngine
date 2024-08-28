@@ -34,15 +34,29 @@ public:
 
 	explicit Buffer(const size_t inSize) : size(inSize)
 	{
-		data = PlatformMemory::malloc(inSize);
+		data = PlatformMemory::malloc<T>(inSize);
 	}
 
 	explicit Buffer(T* inData, const size_t inSize)
 		: data(inData), size(inSize) {}
 
-	T* getData()
+	~Buffer()
+	{
+		if (data)
+		{
+			PlatformMemory::free(data);
+		}
+		data = nullptr;
+	}
+
+	T* getPtr()
 	{
 		return data;
+	}
+
+	void setPtr(T* ptr)
+	{
+		data = ptr;
 	}
 
 	[[nodiscard]] size_t getSize() const
@@ -66,7 +80,7 @@ public:
 		{
 			PlatformMemory::free(data);
 		}
-		size = width * height * g_bytesPerPixel;
+		size = width * height * g_bitsPerPixel;
 		data = PlatformMemory::malloc<T>(size);
 	}
 
@@ -105,7 +119,7 @@ struct StreamBuffer : std::streambuf
 {
 	explicit StreamBuffer(Buffer<uint8>& buffer)
 	{
-		auto begin = (int8*)buffer.getData();
+		auto begin = (int8*)buffer.getPtr();
 		this->setg(begin, begin, begin + buffer.getSize());
 	}
 };
@@ -121,7 +135,7 @@ class ByteReader
 {
 	int32 m_pos = 0;
 	size_t m_size = 0;
-	std::endian m_endian;
+	std::endian m_endian = std::endian::native;
 	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
 	std::unique_ptr<std::istream> m_stream = nullptr;
 
@@ -133,7 +147,7 @@ class ByteReader
 	uint8 m_currentByte = 0;
 
 	template <typename T>
-	T read(const size_t size)
+	T read(size_t size)
 	{
 		// Reset the bit position
 		m_bitPos = 0;

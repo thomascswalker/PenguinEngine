@@ -6,7 +6,6 @@
 #include "Framework/Core/Buffer.h"
 #include "Framework/Core/ErrorCodes.h"
 #include "Framework/Core/IO.h"
-#include "Framework/Importers/ImageImporter.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
