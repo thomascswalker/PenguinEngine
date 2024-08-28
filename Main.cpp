@@ -3,7 +3,9 @@
 #define NOMINMAX
 
 #include "Framework/Application.h"
+#include "Framework/Core/Buffer.h"
 #include "Framework/Core/ErrorCodes.h"
+#include "Framework/Core/IO.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 

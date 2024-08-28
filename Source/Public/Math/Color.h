@@ -16,11 +16,11 @@ struct Color
 			uint8 b;
 			uint8 a;
 		};
-
-		uint8 rgba[4];
+		uint8 rgba[4] = { 0, 0, 0, 0 };
 	};
 
 protected:
+	Color() {}
 	Color(const uint8 inR, const uint8 inG, const uint8 inB, const uint8 inA = 255)
 	{
 		r = inR;
@@ -77,10 +77,10 @@ public:
 
 	static Color fromRgba(uint8 r, uint8 g, uint8 b, uint8 a = 255)
 	{
-		return {r, g, b, a};
+		return { r, g, b, a };
 	}
 
-	static Color fromInt32(const int32 value)
+	static Color fromInt32(const uint32 value)
 	{
 		auto a = (uint8)(value & 0xFF);
 		auto b = (uint8)((value >> 8) & 0xFF);

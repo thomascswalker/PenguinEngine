@@ -22,7 +22,7 @@ struct vec2_t
 			T y;
 		};
 
-		T xy[2];
+		T xy[2] = {};
 	};
 
 	// Constructors

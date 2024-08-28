@@ -16,6 +16,8 @@
 #define VERY_LARGE_NUMBER 10000000.0f
 
 // Basic types
+using bit = unsigned char;
+
 using int8 = char;
 using int16 = short;
 using int32 = int;

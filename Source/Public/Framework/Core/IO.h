@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include "String.h"
+#include "Framework/Core/Logging.h"
 
 namespace IO
 {
@@ -72,7 +73,6 @@ namespace IO
 
 		// Create a new buffer from our Stream
 		std::streambuf* streamBuffer = stream.rdbuf();
-
 
 		// Switch on current char
 		while (true)

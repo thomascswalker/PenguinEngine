@@ -12,8 +12,8 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 	m_grid = std::make_unique<FGrid>(8, 4.0f);
 
 	// Color and depth buffer storage
-	m_colorBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
-	m_depthBitmap = std::make_shared<Bitmap>(vec2i(inWidth, inHeight));
+	m_colorBitmap = std::make_shared<Texture>(vec2i(inWidth, inHeight));
+	m_depthBitmap = std::make_shared<Texture>(vec2i(inWidth, inHeight));
 
 	// Set default render flags
 	m_settings = RenderSettings();
