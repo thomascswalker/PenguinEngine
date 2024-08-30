@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "Framework/Platforms/PlatformMemory.h"
+#include "Framework/Platforms/Platform.h"
 #include "Math/Color.h"
 #include "Math/Vector.h"
 
@@ -16,7 +17,13 @@ namespace TextureManager
 	{
 		return &g_textures[index];
 	}
-}
+} // namespace TextureManager
+
+enum class ETextureByteOrder
+{
+	RGBA,
+	BRGA
+};
 
 /**
  * @brief Texture class for storing pixel data in a 2D format.
@@ -30,28 +37,48 @@ class Texture
 	/** The size of a single row of pixels. */
 	size_t m_pitch = 0;
 	/** The number of channels in this texture. */
-	int32 channelCount = 0;
+	int32 m_channelCount = 0;
+	/** The order of RGB bytes in RGBA */
+	ETextureByteOrder m_byteOrder;
+
+	void _initFromPlatformType()
+	{
+		EPlatformType platformType = getPlatformType();
+		switch (platformType)
+		{
+			case EPlatformType::Windows:
+				m_byteOrder = ETextureByteOrder::BRGA;
+				break;
+			case EPlatformType::MacOS:
+			case EPlatformType::Linux:
+			default:
+				m_byteOrder = ETextureByteOrder::RGBA;
+				break;
+		}
+	}
 
 public:
 	Texture() {}
 
-	explicit Texture(const vec2i inSize) : m_size(inSize), m_pitch(inSize.x)
+	explicit Texture(const vec2i inSize)
+		: m_size(inSize), m_pitch(inSize.x)
 	{
 		size_t memSize = getMemorySize();
 		m_data = PlatformMemory::malloc(memSize);
+		//_initFromPlatformType();
 	}
 
 	Texture(const Texture& other)
-		: m_data(other.m_data),
-		m_size(other.m_size),
-		m_pitch(other.m_pitch)
-	{}
+		: m_data(other.m_data), m_size(other.m_size), m_pitch(other.m_pitch)
+	{
+		//_initFromPlatformType();
+	}
 
 	Texture(Texture&& other) noexcept
-		: m_data(other.m_data),
-		m_size(other.m_size),
-		m_pitch(other.m_pitch)
-	{}
+		: m_data(other.m_data), m_size(other.m_size), m_pitch(other.m_pitch)
+	{
+		//_initFromPlatformType();
+	}
 
 	Texture& operator=(const Texture& other)
 	{
@@ -80,7 +107,7 @@ public:
 	~Texture()
 	{
 		// Free the memory blob upon this texture's destruction
-		//free(m_data);
+		PlatformMemory::free(m_data);
 	}
 
 	static Texture fromData(uint8* inData, const uint32 inWidth, const uint32 inHeight)
@@ -125,7 +152,7 @@ public:
 		if (newMemory == nullptr)
 		{
 			LOG_ERROR("Invalid memory allocation.")
-				return;
+			return;
 		}
 		auto size = inSize ? inSize : getMemorySize();
 		memcpy(m_data, newMemory, size);
@@ -156,6 +183,16 @@ public:
 		return m_size.y;
 	}
 
+	int32 getChannelCount()
+	{
+		return m_channelCount;
+	}
+
+	void setChannelCount(int32 count)
+	{
+		m_channelCount = count;
+	}
+
 	/**
 	 * @brief Fills this texture with the specified color.
 	 * @param inColor The color to fill this texture with.
@@ -173,7 +210,7 @@ public:
 	 */
 	void fill(const float value) const
 	{
-		auto floatData = (float*)m_data;
+		auto  floatData = (float*)m_data;
 		int32 size = m_size.x * m_size.y;
 		for (int32 i = 0; i < size; i++)
 		{
@@ -181,7 +218,7 @@ public:
 		}
 
 		// TODO: Figure out why this fails for floats
-		//PlatformMemory::fill(m_data, getMemorySize(), value);
+		// PlatformMemory::fill(m_data, getMemorySize(), value);
 	}
 
 	/**
@@ -245,7 +282,7 @@ public:
 	static void flipVertical(void* ptr, int32 width, int32 height)
 	{
 		size_t bytesPerRow = (size_t)width * g_bytesPerPixel;
-		uint8 temp[2048];
+		uint8  temp[2048];
 		uint8* bytes = (uint8*)ptr;
 
 		for (int32 row = 0; row < (height >> 1); row++)

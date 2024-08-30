@@ -165,12 +165,6 @@ public:
 	/** @copydoc IPlatform::getSize() */
 	rectf getSize() override;
 
-	/** @copydoc IPlatform::getPlatformType() */
-	EPlatformType getPlatformType() override
-	{
-		return EPlatformType::Windows;
-	}
-
 	/** @copydoc IPlatform::getFileDialog() */
 	bool getFileDialog(std::string& outFileName) override;
 

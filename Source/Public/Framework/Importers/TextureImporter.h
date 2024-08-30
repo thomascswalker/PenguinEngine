@@ -13,13 +13,21 @@
 inline uint8 g_magicPng[8] = { 137, 'P', 'N', 'G', 13, 10, 26, 10 };
 
 constexpr int32 g_invalidImageIndex = -1;
+inline uint8	depthScaleTable[9] = { 0, 255, 85, 0, 17, 0, 0, 0, 1 };
 
-enum class ETextureFileFormat
+enum class ETextureFileType : uint8
 {
 	Unknown,
 	Png,
 	Bmp,
 	Jpg
+};
+
+enum class ETextureFileFormat : uint8
+{
+	Grayscale = 1,
+	RGB = 3,
+	RGBA = 4
 };
 
 enum class EPngColorType : uint8
@@ -90,30 +98,29 @@ enum class EPngChunkType
 	ZTXT
 };
 
-inline std::map<std::string, EPngChunkType> g_pngChunkTypeMap =
-{
-	{"IHDR", EPngChunkType::IHDR},
-	{"IDAT", EPngChunkType::IDAT},
-	{"IEND", EPngChunkType::IEND},
-	{"PLTE", EPngChunkType::PLTE},
-	{"bKGD", EPngChunkType::BKGD},
-	{"cHRM", EPngChunkType::CHRM},
-	{"cICP", EPngChunkType::CICP},
-	{"dSIG", EPngChunkType::DSIG},
-	{"eXIf", EPngChunkType::EXIF},
-	{"gAMA", EPngChunkType::GAMA},
-	{"hIST", EPngChunkType::HIST},
-	{"iCCP", EPngChunkType::ICCP},
-	{"iTXt", EPngChunkType::ITXT},
-	{"pHYs", EPngChunkType::PHYS},
-	{"sBIT", EPngChunkType::SBIT},
-	{"sPLT", EPngChunkType::SPLT},
-	{"sRGB", EPngChunkType::SRGB},
-	{"sTER", EPngChunkType::STER},
-	{"tEXt", EPngChunkType::TEXT},
-	{"tIME", EPngChunkType::TIME},
-	{"tRNS", EPngChunkType::TRNS},
-	{"zTXt", EPngChunkType::ZTXT}
+inline std::map<std::string, EPngChunkType> g_pngChunkTypeMap = {
+	{ "IHDR", EPngChunkType::IHDR },
+	{ "IDAT", EPngChunkType::IDAT },
+	{ "IEND", EPngChunkType::IEND },
+	{ "PLTE", EPngChunkType::PLTE },
+	{ "bKGD", EPngChunkType::BKGD },
+	{ "cHRM", EPngChunkType::CHRM },
+	{ "cICP", EPngChunkType::CICP },
+	{ "dSIG", EPngChunkType::DSIG },
+	{ "eXIf", EPngChunkType::EXIF },
+	{ "gAMA", EPngChunkType::GAMA },
+	{ "hIST", EPngChunkType::HIST },
+	{ "iCCP", EPngChunkType::ICCP },
+	{ "iTXt", EPngChunkType::ITXT },
+	{ "pHYs", EPngChunkType::PHYS },
+	{ "sBIT", EPngChunkType::SBIT },
+	{ "sPLT", EPngChunkType::SPLT },
+	{ "sRGB", EPngChunkType::SRGB },
+	{ "sTER", EPngChunkType::STER },
+	{ "tEXt", EPngChunkType::TEXT },
+	{ "tIME", EPngChunkType::TIME },
+	{ "tRNS", EPngChunkType::TRNS },
+	{ "zTXt", EPngChunkType::ZTXT }
 };
 
 struct PngChunk
@@ -125,38 +132,49 @@ struct PngChunk
 
 struct PngMetadata
 {
-	uint32 width;   // Width of the image in pixels.
-	uint32 height;  // Height of the image in pixels.
-	uint8 bitDepth; // 1, 2, 4, 8, or 16 bits/channel
-	EPngColorType colorType;
+	uint32				  width;	// Width of the image in pixels.
+	uint32				  height;	// Height of the image in pixels.
+	uint8				  bitDepth; // 1, 2, 4, 8, or 16 bits/channel
+	EPngColorType		  colorType;
 	EPngCompressionMethod compressionMethod;
-	uint8 filterMethod;
-	bool interlaced;
-	uint8 channelCount; // Number of uncompressedData channels per pixel
+	uint8				  filterMethod;
+	bool				  interlaced;
+	uint8				  inChannelCount;  // Number of uncompressedData channels per pixel
+	uint8				  outChannelCount; // The desired channel count
 };
 
 struct PngTexture
 {
-	PngMetadata metadata;
+	PngMetadata	  metadata;
 	Buffer<uint8> data;
 };
 
 class TextureImporter
 {
-	static ETextureFileFormat getTextureFileFormat(const std::string& fileName);
-	static bool isValidPngHeader(ByteReader* reader);
+	static ETextureFileType getTextureFileType(const std::string& fileName);
+	static bool				isValidPngHeader(ByteReader* reader);
 
 	static bool readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* metadata);
 	static bool parsePngIHDR(PngChunk* chunk, PngTexture* png);
 	static bool parsePngIDAT(PngChunk* chunk, PngTexture* png);
-	
-	static void expandPngScanline(int32 depth, int32 color, uint8* currentScanline, uint8* outScanline, int32 width, int32 inChannels, int32 outChannels);
+
+	static int32 paeth(int32 a, int32 b, int32 c)
+	{
+		int32 threshold = c * 3 - (a + b);
+		int32 low = a < b ? a : b;
+		int32 high = a < b ? b : a;
+		int32 t0 = (high <= threshold) ? low : c;
+		int32 t1 = (threshold <= low) ? high : t0;
+		return t1;
+	}
+	static void addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount);
 	static void unfilterPngScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw, int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline);
 
 	static bool createPng(Buffer<uint8>* buffer, PngTexture* png);
 	static bool createPngInterlaced(Buffer<uint8>* buffer, PngTexture* png);
 
-	static int32 importPng(ByteReader* reader, Texture& texture);
+	static int32 importPng(ByteReader* reader, Texture& texture, ETextureFileFormat format);
+
 public:
-	static int32 import(const std::string & fileName, Texture & texture);
+	static int32 import(const std::string& fileName, Texture& texture, ETextureFileFormat format = ETextureFileFormat::RGBA);
 };

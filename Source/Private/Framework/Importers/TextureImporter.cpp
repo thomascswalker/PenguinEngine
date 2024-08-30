@@ -1,27 +1,31 @@
 #include "Framework/Importers/TextureImporter.h"
 #include "Framework/Core/Compression.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+constexpr int32 g_channelCount = 4; // Desired channel count for all textures
+constexpr int32 g_channelGray = 1;	// Gray scale (single channel)
+constexpr int32 g_channelRgb = 3;	// RGB (no alpha)
+constexpr int32 g_channelRgba = 4;	// RGBA (includes alpha)
 
-constexpr int32 g_channelCount = 4;
-#define TRUNCATE(width) ((uint8) ((width) & 255))
+inline uint8 truncate(int32 value)
+{
+	return (uint8)(value & UINT8_MAX);
+}
 
-inline ETextureFileFormat TextureImporter::getTextureFileFormat(const std::string& fileName)
+inline ETextureFileType TextureImporter::getTextureFileType(const std::string& fileName)
 {
 	if (fileName.ends_with(".png"))
 	{
-		return ETextureFileFormat::Png;
+		return ETextureFileType::Png;
 	}
-	else if (fileName.ends_with(".bmp"))
+	if (fileName.ends_with(".bmp"))
 	{
-		return ETextureFileFormat::Bmp;
+		return ETextureFileType::Bmp;
 	}
-	else if (fileName.ends_with(".jpg") || fileName.ends_with(".jpeg"))
+	if (fileName.ends_with(".jpg") || fileName.ends_with(".jpeg"))
 	{
-		return ETextureFileFormat::Bmp;
+		return ETextureFileType::Bmp;
 	}
-	return ETextureFileFormat::Unknown;
+	return ETextureFileType::Unknown;
 }
 
 bool TextureImporter::isValidPngHeader(ByteReader* reader)
@@ -36,25 +40,34 @@ bool TextureImporter::isValidPngHeader(ByteReader* reader)
 
 bool TextureImporter::parsePngIHDR(PngChunk* chunk, PngTexture* png)
 {
-	ByteReader reader(chunk->compressedBuffer);
+	ByteReader	 reader(chunk->compressedBuffer);
 	PngMetadata* metadata = &png->metadata;
 
-	metadata->width = swapByteOrder(reader.readInt32());                    // 4
-	metadata->height = swapByteOrder(reader.readInt32());                   // 8
-	metadata->bitDepth = reader.readInt8();                                 // 9
-	metadata->colorType = (EPngColorType)reader.readInt8();                 // 10
+	// Read the first 13 bytes of the chunk. This always totals to 13.
+	// We swap the byte order for width and height as it's always stored in Big endian, but your computer
+	// may be Little endian. `swapByteOrder` performs the swap if the expected order is not your default.
+	metadata->width = swapByteOrder(reader.readInt32());					// 4
+	metadata->height = swapByteOrder(reader.readInt32());					// 8
+	metadata->bitDepth = reader.readInt8();									// 9
+	metadata->colorType = (EPngColorType)reader.readInt8();					// 10
 	metadata->compressionMethod = (EPngCompressionMethod)reader.readInt8(); // 11
-	metadata->filterMethod = reader.readInt8();                             // 12
-	metadata->interlaced = (bool)reader.readInt8();                          // 13
+	metadata->filterMethod = reader.readInt8();								// 12
+	metadata->interlaced = (bool)reader.readInt8();							// 13
+
+	if (reader.getPos() != 13)
+	{
+		LOG_ERROR("Error reading IHDR chunk.")
+		return false;
+	}
 
 	// Compute the channel count from the color type
-	int8 color = (int8)metadata->colorType;
-	metadata->channelCount = (color & 2 ? 3 : 1) + (color & 4 ? 1 : 0);
+	auto color = (int8)metadata->colorType;
+	metadata->inChannelCount = (color & 2 ? 3 : 1) + (color & 4 ? 1 : 0);
 
-	if (metadata->channelCount != 4)
+	if (metadata->inChannelCount != 4)
 	{
 		LOG_ERROR("Currently only RGBA PNG files are supported.")
-			return false;
+		return false;
 	}
 
 	return true;
@@ -64,37 +77,40 @@ bool TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 {
 	PngMetadata* metadata = &png->metadata;
 
-	// Compute the uncompressed size of the image
-	uint32 bytesPerLine = (metadata->width * metadata->bitDepth + 7) / 8;
-	uint32 uncompressedSize = bytesPerLine * metadata->height * metadata->channelCount + metadata->height;
+	// Compute the uncompressed size of the image.
+	// (PixelCount in each row + an extra pixel for the filter type)
+	uint32 inUncompressedSize = (metadata->width * metadata->height * metadata->inChannelCount) + metadata->height;
 
 	// Resize the uncompressed buffer to the uncompressed size
-	chunk->uncompressedBuffer.resize((size_t)uncompressedSize);
+	chunk->uncompressedBuffer.resize((size_t)inUncompressedSize);
 
-	// Resize the final PNG data to the uncompressed size
-	png->data.resize((size_t)uncompressedSize);
+	// Resize the final PNG data to the output uncompressed size, accounting for if, for example, input channel
+	// count is 3 and output is 4.
+	uint32 outUncompressedSize = metadata->width * metadata->height * metadata->outChannelCount + metadata->height;
+	png->data.resize((size_t)outUncompressedSize);
 
-	// Based on the PNG spec, the only method available is the Default method (ZLib).
+	// Based on the PNG spec, the only method available is the Default method
+	// (ZLib).
 	switch (metadata->compressionMethod)
 	{
-	case EPngCompressionMethod::Default:
-	{
-		// Uncompress the whole compressedBuffer with ZLib's inflate
-		bool result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);
-		if (!result)
+		case EPngCompressionMethod::Default:
+		{
+			// Uncompress the whole compressedBuffer with ZLib's inflate
+			bool result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);
+			if (!result)
+			{
+				return false;
+			}
+			// If interlaced, create the final PNG image data by deinterlacing, or
+			// if not, create the final PNG image data from the raw uncompressed
+			// data. This involves unfiltering each row.
+			return metadata->interlaced ? createPngInterlaced(&chunk->uncompressedBuffer, png) : createPng(&chunk->uncompressedBuffer, png);
+		}
+		case EPngCompressionMethod::Invalid:
+		default:
 		{
 			return false;
 		}
-		// If interlaced, create the final PNG image data by deinterlacing, or if not, create
-		// the final PNG image data from the raw uncompressed data.
-		// This involves unfiltering each row.
-		return metadata->interlaced ? createPngInterlaced(&chunk->uncompressedBuffer, png) : createPng(&chunk->uncompressedBuffer, png);
-	}
-	case EPngCompressionMethod::Invalid:
-	default:
-	{
-		return false;
-	}
 	}
 }
 
@@ -118,7 +134,8 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	name.push_back(name3);
 	chunk->type = g_pngChunkTypeMap[name];
 
-	// Allocate the memory for this chunk's uncompressedData, given the uncompressedData compressedSize
+	// Allocate the memory for this chunk's uncompressedData, given the
+	// uncompressedData compressedSize
 
 	// Loop through and read all bytes
 	for (uint32 i = 0; i < chunk->compressedBuffer.getSize(); i++)
@@ -129,53 +146,66 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	// TODO: Actually calculate the CRC and validate it
 	auto crc = reader->readUInt32();
 
-	// If a name argument was passed in, verify the name we read above is the same.
+	// If a name argument was passed in, verify the name we read above is the
+	// same.
 	return true;
 }
 
 bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* png)
 {
-	uint8* raw = uncompressedBuffer->getPtr();
+	// Raw pointer to the final PNG data which is pushed to the Texture object
+	uint8* out = png->data.getPtr();
 
+	// Raw pointer to the uncompressed image data. This pointer is what is incremented and accessed
+	// to retrieve the current working byte.
+	uint8* in = uncompressedBuffer->getPtr();
+
+	// Metadata local vars
 	PngMetadata* metadata = &png->metadata;
-	int32 color = (int32)metadata->colorType;
+
+	auto  colorType = (int32)metadata->colorType;
 	int32 totalSize = uncompressedBuffer->getSize();
 	int32 depth = metadata->bitDepth;
 	int32 width = metadata->width;
 	int32 height = metadata->height;
-	int32 inChannels = metadata->channelCount; // copy it into a local for later
+	int32 inChannelCount = metadata->inChannelCount;
+	int32 outChannelCount = metadata->outChannelCount;
 
-	int32 bytes = (depth == 16 ? 2 : 1);
-	uint32 stride = width * g_channelCount * bytes;
-	uint32 imageLength, imageWidthBytes;
-	uint8* filterBuffer;
-	int32 all_ok = 1;
+	int32  bpc = (depth == DEPTH_16 ? 2 : 1);	  // Bytes-per-component (R, G, B, A)
+	uint32 stride = width * inChannelCount * bpc; // Total number of bytes in a single row of pixels
 
-	int32 outputBytes = g_channelCount * bytes;
-	int32 filterBytes = inChannels * bytes;
+	// Compute the input and output bytes-per-pixel. These may be different depending on the number
+	// of requested channels for the Texture to load vs. the actual number of channels in the PNG image.
+	int32 outBpp = outChannelCount * bpc; // Bytes-per-pixel for the output image
+	int32 inBpp = inChannelCount * bpc;	  // Bytes-per-pixel from the input image
 
-	uint8* out = png->data.getPtr();
-	out = PlatformMemory::malloc<uint8>(width * height * outputBytes); // extra bytes to write off the end into
+	// Allocate memory to the output PNG given the bytes-per-pixel of the desired channel count.
+	out = PlatformMemory::malloc<uint8>(width * height * outBpp); // extra bytes to write off the end into
 	if (!out)
 	{
 		LOG_ERROR("Out of memory.");
 		return false;
 	}
 
-	imageWidthBytes = (((inChannels * width * depth) + 7) >> 3);
-	imageLength = (imageWidthBytes + 1) * height;
+	uint32 inRowByteCount = (((inChannelCount * width * depth) + 7) >> 3); // Number of bytes in a single row of pixels
+	uint32 inTotalByteCount = (inRowByteCount + 1) * height;			   // Total number of bytes in the entire image.
 
-	// we used to check for exact match between raw_len and img_len on non-interlaced PNGs,
-	// but issue #276 reported a PNG in the wild that had extra data at the end (all zeros),
-	// so just check for raw_len < img_len always.
-	if (totalSize < imageLength)
+	uint32 outRowByteCount = (((outChannelCount * width * depth) + 7) >> 3); // Number of bytes in a single row of pixels
+	uint32 outTotalByteCount = (outRowByteCount + 1) * height;				 // Total number of bytes in the entire image.
+
+	// we used to check for exact match between raw_len and img_len on
+	// non-interlaced PNGs, but issue #276 reported a PNG in the wild that had
+	// extra data at the end (all zeros), so just check for raw_len < img_len
+	// always.
+	if (totalSize < outTotalByteCount)
 	{
 		LOG_ERROR("Not enough pixels; corrupt PNG.");
 		return false;
 	}
 
-	// Allocate two scan lines worth of filter workspace buffer.
-	filterBuffer = PlatformMemory::malloc<uint8>(imageWidthBytes * 2);
+	// Allocate two scan lines worth of memory to the workspace buffer. This buffer will contain the temporary
+	// unfiltered bytes. This is eventually copied into the final PNG buffer.
+	auto filterBuffer = PlatformMemory::malloc<uint8>(inRowByteCount * 2);
 	if (!filterBuffer)
 	{
 		LOG_ERROR("Out of memory.");
@@ -183,155 +213,108 @@ bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* p
 	}
 
 	// Filtering for low-bit-depth images
-	if (depth < 8)
+	if (depth < DEPTH_8)
 	{
-		filterBytes = 1;
-		width = imageWidthBytes;
+		inBpp = 1;
+		width = inRowByteCount;
 	}
 
+	// Iterate through each row of the image
 	for (int32 y = 0; y < height; y++)
 	{
-		// cur/prior filter buffers alternate
-		uint8* currentScanline = filterBuffer + (y & 1) * imageWidthBytes;
-		uint8* previousScanline = filterBuffer + (~y & 1) * imageWidthBytes;
+		// Pointer to the beginning of the current scanline we're working on.
+		uint8* currentScanline = filterBuffer + (y & 1) * inRowByteCount;
+		// Pointer to the beginning of the previous scanline we had worked on.
+		uint8* previousScanline = filterBuffer + (~y & 1) * inRowByteCount;
+		// Pointer to the current scanline in the final PNG image.
 		uint8* outScanline = out + stride * y;
-		int32 rowSizeBytes = width * filterBytes;
-		EPngFilterType filter = (EPngFilterType)*raw++;
 
-		// check filter type
+		// The first byte of a row is always the filter type.
+		auto filter = (EPngFilterType)*in++;
+
+		// Validate the filter type.
 		if (filter > EPngFilterType::Paeth)
 		{
 			LOG_ERROR("Invalid filter; corrupt PNG.");
 			break;
 		}
 
-		unfilterPngScanline(y, filter, currentScanline, raw, rowSizeBytes, filterBytes, previousScanline);
-		expandPngScanline(depth, color, currentScanline, outScanline, width, inChannels, g_channelCount);
-		raw += rowSizeBytes;
+		// Unfilter the current scanline
+		unfilterPngScanline(y, filter, currentScanline, in, inRowByteCount, inBpp, previousScanline);
+
+		// If the image's channel count is the same as our desired channel count, copy the current
+		// scanline into the out scanline
+		if (inChannelCount == outChannelCount)
+		{
+			memcpy(outScanline, currentScanline, width * inChannelCount);
+		}
+		// Otherwise add an alpha channel filled with 255 to the image
+		else
+		{
+			addAlphaChannel(outScanline, currentScanline, width, inChannelCount);
+		}
+
+		// Offset our in buffer by the rest of the row size so we start at a new row. The current byte
+		// after this is the next row's filter type.
+		in += inRowByteCount;
 	}
 
+	// Free the temporary workspace buffer we were using
 	PlatformMemory::free(filterBuffer);
 
-	// Swap the RGBA bytes for BRGA (RGB => BRG)
-	for (int32 index = 0; index < imageLength; index += 4)
+	// On Windows, the output image is BGRA, not RGBA, so we need to swap the pixels
+#if defined(_WIN32) || defined(_WIN64)
+	// Swap the RGBA bytes for BGRA
+	for (int32 index = 0; index < outTotalByteCount; index += 4)
 	{
 		uint8 r = out[index];
 		uint8 g = out[index + 1];
 		uint8 b = out[index + 2];
 		uint8 a = out[index + 3];
 
-		out[index] = b;     // blue
-		out[index + 1] = r; // red
-		out[index + 2] = g; // green
+		out[index] = b;		// blue
+		out[index + 1] = g; // red
+		out[index + 2] = r; // green
 		out[index + 3] = a;
 	}
+#endif
 
+	// Set the final PNG data pointer to our `out` pointer where we've stored all the data. This probably shouldn't
+	// be necessary as the `out` pointer is derived from `png->data.getPtr()` in the first place, but this seems
+	// to be required.
 	png->data.setPtr(out);
 
 	return true;
 }
 
-inline void TextureImporter::expandPngScanline(int32 depth, int32 color, uint8* currentScanline, uint8* outScanline, int32 width, int32 inChannels, int32 outChannels)
+inline void TextureImporter::addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount)
 {
-	// expand decoded bits in cur to dest, also adding an extra alpha channel if desired
-	if (depth < 8)
-	{
-		stbi_uc scale = (color == 0) ? stbi__depth_scale_table[depth] : 1; // scale grayscale values to 0..255 range
-		stbi_uc* in = currentScanline;
-		stbi_uc* out = outScanline;
-		stbi_uc inb = 0;
-		stbi__uint32 nsmp = width * inChannels;
+	assert(in != out);
 
-		// expand bits to bytes first
-		if (depth == 4)
-		{
-			for (int32 i = 0; i < nsmp; ++i)
-			{
-				if ((i & 1) == 0)
-				{
-					inb = *in++;
-				}
-				*out++ = scale * (inb >> 4);
-				inb <<= 4;
-			}
-		}
-		else if (depth == 2)
-		{
-			for (int32 i = 0; i < nsmp; ++i)
-			{
-				if ((i & 3) == 0)
-				{
-					inb = *in++;
-				}
-				*out++ = scale * (inb >> 6);
-				inb <<= 2;
-			}
-		}
-		else
-		{
-			for (int32 i = 0; i < nsmp; ++i)
-			{
-				if ((i & 7) == 0)
-				{
-					inb = *in++;
-				}
-				*out++ = scale * (inb >> 7);
-				inb <<= 1;
-			}
-		}
-
-		// insert alpha=255 values if desired
-		if (inChannels != outChannels)
-		{
-			stbi__create_png_alpha_expand8(outScanline, outScanline, width, inChannels);
-		}
-	}
-	else if (depth == 8)
+	switch (channelCount)
 	{
-		if (inChannels == outChannels)
+		case 1:
 		{
-			memcpy(outScanline, currentScanline, width * inChannels);
-		}
-		else
-		{
-			stbi__create_png_alpha_expand8(outScanline, currentScanline, width, inChannels);
-		}
-	}
-	else if (depth == 16)
-	{
-		// convert the image data from big-endian to platform-native
-		uint16* dest16 = (uint16*)outScanline;
-		uint32 nsmp = width * inChannels;
-
-		if (inChannels == outChannels)
-		{
-			for (int32 i = 0; i < nsmp; ++i, ++dest16, currentScanline += 2)
+			for (int32 i = 0; i < width; i++)
 			{
-				*dest16 = (currentScanline[0] << 8) | currentScanline[1];
+				in[i * 2 + 1] = UINT8_MAX;
+				in[i * 2 + 0] = out[i];
 			}
+			break;
 		}
-		else
+		case 3:
 		{
-			if (inChannels == 1)
+			for (int32 i = 0; i < width; i++)
 			{
-				for (int32 i = 0; i < width; ++i, dest16 += 2, currentScanline += 2)
-				{
-					dest16[0] = (currentScanline[0] << 8) | currentScanline[1];
-					dest16[1] = 0xffff;
-				}
+				in[i * 4 + 3] = UINT8_MAX;
+				in[i * 4 + 2] = out[i * 3 + 2];
+				in[i * 4 + 1] = out[i * 3 + 1];
+				in[i * 4 + 0] = out[i * 3 + 0];
 			}
-			else
-			{
-				STBI_ASSERT(inChannels == 3);
-				for (int32 i = 0; i < width; ++i, dest16 += 4, currentScanline += 6)
-				{
-					dest16[0] = (currentScanline[0] << 8) | currentScanline[1];
-					dest16[1] = (currentScanline[2] << 8) | currentScanline[3];
-					dest16[2] = (currentScanline[4] << 8) | currentScanline[5];
-					dest16[3] = 0xffff;
-				}
-			}
+			break;
 		}
+		default:
+			return;
 	}
 }
 
@@ -342,81 +325,92 @@ inline void TextureImporter::unfilterPngScanline(int32 y, EPngFilterType filter,
 	{
 		switch (filter)
 		{
-		case EPngFilterType::Up:
-			filter = EPngFilterType::None;
-			break;
-		case EPngFilterType::Average:
-			filter = EPngFilterType::First;
-			break;
-		case EPngFilterType::Paeth:
-			filter = EPngFilterType::Sub;
-			break;
-		case EPngFilterType::None:
-		case EPngFilterType::Sub:
-		case EPngFilterType::First:
-		default:
-			break;
+			// Up => None
+			case EPngFilterType::Up:
+			{
+				filter = EPngFilterType::None;
+				break;
+			}
+			// Average => First
+			case EPngFilterType::Average:
+			{
+				filter = EPngFilterType::First;
+				break;
+			}
+			// Paeth => Sub
+			case EPngFilterType::Paeth:
+			{
+				filter = EPngFilterType::Sub;
+				break;
+			}
+			case EPngFilterType::None:
+			case EPngFilterType::Sub:
+			case EPngFilterType::First:
+			default:
+			{
+				break;
+			}
 		}
 	}
 
 	// perform actual filtering
 	switch (filter)
 	{
-	case EPngFilterType::None:
-	{
-		memcpy(currentScanline, raw, rowSizeBytes);
-		break;
-	}
-	case EPngFilterType::Sub:
-	{
-		memcpy(currentScanline, raw, filterBytes);
-		for (int32 x = filterBytes; x < rowSizeBytes; x++)
+		case EPngFilterType::None:
 		{
-			currentScanline[x] = TRUNCATE(raw[x] + currentScanline[x - filterBytes]);
+			memcpy(currentScanline, raw, rowSizeBytes);
+			break;
 		}
-		break;
-	}
-	case EPngFilterType::Up:
-	{
-		for (int32 x = 0; x < rowSizeBytes; x++)
+		case EPngFilterType::Sub:
 		{
-			currentScanline[x] = TRUNCATE(raw[x] + previousScanline[x]);
+			memcpy(currentScanline, raw, filterBytes);
+			for (int32 x = filterBytes; x < rowSizeBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + currentScanline[x - filterBytes]);
+			}
+			break;
 		}
-		break;
-	}
-	case EPngFilterType::Average:
-	{
-		for (int32 x = 0; x < filterBytes; x++)
+		case EPngFilterType::Up:
 		{
-			currentScanline[x] = TRUNCATE(raw[x] + (previousScanline[x] >> 1));
+			for (int32 x = 0; x < rowSizeBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + previousScanline[x]);
+			}
+			break;
 		}
-		for (int32 x = filterBytes; x < rowSizeBytes; x++)
+		case EPngFilterType::Average:
 		{
-			currentScanline[x] = TRUNCATE(raw[x] + ((previousScanline[x] + currentScanline[x - filterBytes]) >> 1));
+			for (int32 x = 0; x < filterBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + (previousScanline[x] >> 1));
+			}
+			for (int32 x = filterBytes; x < rowSizeBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + ((previousScanline[x] + currentScanline[x - filterBytes]) >> 1));
+			}
+			break;
 		}
-		break;
-	}
-	case EPngFilterType::Paeth:
-	{
-		for (int32 x = 0; x < filterBytes; x++)
+		case EPngFilterType::Paeth:
 		{
-			currentScanline[x] = TRUNCATE(raw[x] + previousScanline[x]);  // prior[x] == stbi__paeth(0,prior[x],0)
+			for (int32 x = 0; x < filterBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + previousScanline[x]);
+			}
+			for (int32 x = filterBytes; x < rowSizeBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + paeth(currentScanline[x - filterBytes], previousScanline[x], previousScanline[x - filterBytes]));
+			}
+			break;
 		}
-		for (int32 x = filterBytes; x < rowSizeBytes; x++)
+		case EPngFilterType::First:
 		{
-			currentScanline[x] = TRUNCATE(raw[x] + stbi__paeth(currentScanline[x - filterBytes], previousScanline[x], previousScanline[x - filterBytes]));
+			memcpy(currentScanline, raw, filterBytes);
+			for (int32 x = filterBytes; x < rowSizeBytes; x++)
+			{
+				currentScanline[x] = truncate(raw[x] + (currentScanline[x - filterBytes] >> 1));
+			}
+			break;
 		}
-		break;
-	}
-	case EPngFilterType::First:
-	{
-		memcpy(currentScanline, raw, filterBytes);
-		for (int32 x = filterBytes; x < rowSizeBytes; x++)
-		{
-			currentScanline[x] = TRUNCATE(raw[x] + (currentScanline[x - filterBytes] >> 1));
-		}
-		break;
-	}
 	}
 }
 
@@ -426,9 +420,8 @@ bool TextureImporter::createPngInterlaced(Buffer<uint8>* buffer, PngTexture* png
 	return false;
 }
 
-int32 TextureImporter::importPng(ByteReader* reader, Texture& texture)
+int32 TextureImporter::importPng(ByteReader* reader, Texture& texture, ETextureFileFormat format)
 {
-
 	// Validate the header is the correct PNG header
 	if (!isValidPngHeader(reader))
 	{
@@ -438,6 +431,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture& texture)
 
 	// Read and parse the IHDR chunk. This is always the first one.
 	PngTexture png;
+	png.metadata.outChannelCount = (uint8)format;
 	PngChunk ihdrChunk;
 	if (!readPngChunk(reader, &ihdrChunk, &png.metadata))
 	{
@@ -456,57 +450,59 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture& texture)
 		// If we reach the end chunk, exit
 		switch (chunk.type)
 		{
-		case EPngChunkType::IHDR:
-		{
-			break;
-		}
-		case EPngChunkType::IDAT:
-		{
-			if (!parsePngIDAT(&chunk, &png))
+			case EPngChunkType::IHDR:
 			{
-				return false;
+				break;
 			}
-			break;
-		}
+			case EPngChunkType::IDAT:
+			{
+				if (!parsePngIDAT(&chunk, &png))
+				{
+					return false;
+				}
+				break;
+			}
 
-		case EPngChunkType::IEND:
-		{
-			atEnd = true;
-			break;
-		}
-		case EPngChunkType::PLTE:
-		case EPngChunkType::BKGD:
-		case EPngChunkType::CHRM:
-		case EPngChunkType::CICP:
-		case EPngChunkType::DSIG:
-		case EPngChunkType::EXIF:
-		case EPngChunkType::GAMA:
-		case EPngChunkType::HIST:
-		case EPngChunkType::ICCP:
-		case EPngChunkType::ITXT:
-		case EPngChunkType::PHYS:
-		case EPngChunkType::SBIT:
-		case EPngChunkType::SPLT:
-		case EPngChunkType::SRGB:
-		case EPngChunkType::STER:
-		case EPngChunkType::TEXT:
-		case EPngChunkType::TIME:
-		case EPngChunkType::TRNS:
-		case EPngChunkType::ZTXT:
-		{
-			break;
-		}
+			case EPngChunkType::IEND:
+			{
+				atEnd = true;
+				break;
+			}
+			case EPngChunkType::PLTE:
+			case EPngChunkType::BKGD:
+			case EPngChunkType::CHRM:
+			case EPngChunkType::CICP:
+			case EPngChunkType::DSIG:
+			case EPngChunkType::EXIF:
+			case EPngChunkType::GAMA:
+			case EPngChunkType::HIST:
+			case EPngChunkType::ICCP:
+			case EPngChunkType::ITXT:
+			case EPngChunkType::PHYS:
+			case EPngChunkType::SBIT:
+			case EPngChunkType::SPLT:
+			case EPngChunkType::SRGB:
+			case EPngChunkType::STER:
+			case EPngChunkType::TEXT:
+			case EPngChunkType::TIME:
+			case EPngChunkType::TRNS:
+			case EPngChunkType::ZTXT:
+			{
+				break;
+			}
 		}
 	}
 
 	uint8* data = png.data.getPtr();
 	texture = Texture::fromData(data, png.metadata.width, png.metadata.height);
+	texture.setChannelCount((uint8)format);
+	return 0;
 
-	g_textures.emplace_back(texture);
-	return (int32)g_textures.size() - 1;
+	//g_textures.emplace_back(texture);
+	//return (int32)g_textures.size() - 1;
 }
 
-int32 TextureImporter::import(const std::string & fileName, Texture & texture)
+int32 TextureImporter::import(const std::string& fileName, Texture& texture, ETextureFileFormat format)
 {
 	// Read the file into a buffer
 	std::string data;
@@ -519,26 +515,27 @@ int32 TextureImporter::import(const std::string & fileName, Texture & texture)
 	// Create a reader from the string uncompressedData
 	ByteReader reader(data, data.size(), std::endian::big);
 
-	ETextureFileFormat format = getTextureFileFormat(fileName);
-	switch (format)
+	ETextureFileType fileType = getTextureFileType(fileName);
+	switch (fileType)
 	{
-	case ETextureFileFormat::Png:
-	{
-		return importPng(&reader, texture);
+		case ETextureFileType::Png:
+		{
+			return importPng(&reader, texture, format);
+		}
+		case ETextureFileType::Bmp:
+		{
+			LOG_ERROR("Bmp not currently supported.");
+			return -1;
+		}
+		case ETextureFileType::Jpg:
+		{
+			LOG_ERROR("Jpg not currently supported.");
+			return -1;
+		}
+		default:
+		{
+			LOG_ERROR("Invalid filetype for {}", fileName);
+			return -1;
+		}
 	}
-	case ETextureFileFormat::Bmp:
-	{
-		LOG_ERROR("Bmp not currently supported.");
-		return -1;
-	}
-	case ETextureFileFormat::Jpg:
-	{
-		LOG_ERROR("Jpg not currently supported.");
-		return -1;
-	}
-	default:
-		LOG_ERROR("Invalid filetype for {}", fileName);
-		return -1;
-	}
-
 }

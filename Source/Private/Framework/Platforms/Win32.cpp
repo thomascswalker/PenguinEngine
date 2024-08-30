@@ -8,237 +8,246 @@
 #include "Framework/Importers/TextureImporter.h"
 #include "Framework/Input/InputHandler.h"
 
-std::string g_fileName = R"(C:\Users\thoma\Desktop\yuta.png)";
-Texture g_texture;
+std::string g_fileName = R"(C:\Users\thoma\Desktop\snowman.png)";
+Texture		g_texture;
 
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
-	LRESULT result = 0;
-	Engine* engine = Engine::getInstance();
-	Renderer* renderer = engine->getRenderer();
+	LRESULT		   result = 0;
+	Engine*		   engine = Engine::getInstance();
+	Renderer*	   renderer = engine->getRenderer();
 	IInputHandler* inputHandler = IInputHandler::getInstance();
 
 	switch (msg)
 	{
-	case WM_CREATE:
-	{
-		SetTimer(hwnd, g_windowsTimerId, 1, nullptr);
-		ShowCursor(TRUE);
-		return 0;
-	}
-	case WM_DESTROY:
-	{
-		DeleteObject(m_displayBitmap);
-		engine->shutdown();
-		PostQuitMessage(0);
-		return 0;
-	}
-	case WM_LBUTTONDOWN:
-	case WM_LBUTTONUP:
-	case WM_RBUTTONDOWN:
-	case WM_RBUTTONUP:
-	case WM_MBUTTONUP:
-	case WM_MBUTTONDOWN:
-	{
-		bool mouseUp = false;
-		EMouseButtonType buttonType;
-
-		switch (msg)
+		case WM_CREATE:
 		{
-		case WM_LBUTTONDOWN: buttonType = EMouseButtonType::Left;
-			break;
-		case WM_LBUTTONUP: buttonType = EMouseButtonType::Left;
-			mouseUp = true;
-			break;
-		case WM_RBUTTONDOWN: buttonType = EMouseButtonType::Right;
-			break;
-		case WM_RBUTTONUP: buttonType = EMouseButtonType::Right;
-			mouseUp = true;
-			break;
-		case WM_MBUTTONUP: buttonType = EMouseButtonType::Middle;
-			mouseUp = true;
-			break;
-		case WM_MBUTTONDOWN: buttonType = EMouseButtonType::Middle;
-			break;
-		default: return 1;
-		}
-
-		const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
-		if (mouseUp)
-		{
-			inputHandler->onMouseUp(buttonType, cursorPosition);
-		}
-		else
-		{
-			inputHandler->onMouseDown(buttonType, cursorPosition);
-		}
-		return 0;
-	}
-
-	// Mouse movement
-	case WM_MOUSEMOVE:
-	case WM_INPUT:
-	{
-		const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
-		inputHandler->onMouseMove(cursorPosition);
-		return 0;
-	}
-	case WM_MOUSEWHEEL:
-	{
-		const float deltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
-		inputHandler->onMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
-		return 0;
-	}
-	// Keyboard input
-	case WM_SYSKEYDOWN:
-	case WM_KEYDOWN:
-	{
-		const int32 key = static_cast<int32>(wParam);
-		if (!g_win32KeyMap.contains(key))
-		{
+			SetTimer(hwnd, g_windowsTimerId, 1, nullptr);
+			ShowCursor(TRUE);
 			return 0;
 		}
-		inputHandler->onKeyDown(g_win32KeyMap.at(key), 0, false);
-		return 0;
-	}
-	case WM_SYSKEYUP:
-	case WM_KEYUP:
-	{
-		const int32 key = static_cast<int32>(wParam);
-		if (!g_win32KeyMap.contains(key))
+		case WM_DESTROY:
 		{
+			DeleteObject(m_displayBitmap);
+			engine->shutdown();
+			PostQuitMessage(0);
 			return 0;
 		}
-		inputHandler->onKeyUp(g_win32KeyMap.at(key), 0, false);
-		return 0;
-	}
-	case WM_PAINT:
-	{
-		if (!renderer)
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONUP:
+		case WM_MBUTTONDOWN:
 		{
-			Logging::warning("Renderer.");
-			LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
-				break;
-		}
+			bool			 mouseUp = false;
+			EMouseButtonType buttonType;
 
-		// Get the current window compressedSize from the buffer
-		//const std::shared_ptr<Channel> channel = renderer->getColorChannel();
-		const int32 width = renderer->getWidth();
-		const int32 height = renderer->getHeight();
-
-		// Create a bitmap with the current renderer buffer memory the compressedSize of the window
-		InvalidateRect(hwnd, nullptr, TRUE);
-		PAINTSTRUCT paint;
-		const HDC deviceContext = BeginPaint(hwnd, &paint);
-		const HDC renderContext = CreateCompatibleDC(deviceContext);
-
-		// TODO: REMOVE THIS
-		// Associate the memory from the display buffer to the display bitmap
-		auto colorBm = renderer->getColorBitmap();
-		if (colorBm && g_texture.isValid())
-		{
-			for (int x = 0; x < g_texture.getWidth(); x++)
+			switch (msg)
 			{
-				for (int y = 0; y < g_texture.getHeight(); y++)
+				case WM_LBUTTONDOWN:
+					buttonType = EMouseButtonType::Left;
+					break;
+				case WM_LBUTTONUP:
+					buttonType = EMouseButtonType::Left;
+					mouseUp = true;
+					break;
+				case WM_RBUTTONDOWN:
+					buttonType = EMouseButtonType::Right;
+					break;
+				case WM_RBUTTONUP:
+					buttonType = EMouseButtonType::Right;
+					mouseUp = true;
+					break;
+				case WM_MBUTTONUP:
+					buttonType = EMouseButtonType::Middle;
+					mouseUp = true;
+					break;
+				case WM_MBUTTONDOWN:
+					buttonType = EMouseButtonType::Middle;
+					break;
+				default:
+					return 1;
+			}
+
+			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
+			if (mouseUp)
+			{
+				inputHandler->onMouseUp(buttonType, cursorPosition);
+			}
+			else
+			{
+				inputHandler->onMouseDown(buttonType, cursorPosition);
+			}
+			return 0;
+		}
+
+		// Mouse movement
+		case WM_MOUSEMOVE:
+		case WM_INPUT:
+		{
+			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
+			inputHandler->onMouseMove(cursorPosition);
+			return 0;
+		}
+		case WM_MOUSEWHEEL:
+		{
+			const float deltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
+			inputHandler->onMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
+			return 0;
+		}
+		// Keyboard input
+		case WM_SYSKEYDOWN:
+		case WM_KEYDOWN:
+		{
+			const auto key = static_cast<int32>(wParam);
+			if (!g_win32KeyMap.contains(key))
+			{
+				return 0;
+			}
+			inputHandler->onKeyDown(g_win32KeyMap.at(key), 0, false);
+			return 0;
+		}
+		case WM_SYSKEYUP:
+		case WM_KEYUP:
+		{
+			const auto key = static_cast<int32>(wParam);
+			if (!g_win32KeyMap.contains(key))
+			{
+				return 0;
+			}
+			inputHandler->onKeyUp(g_win32KeyMap.at(key), 0, false);
+			return 0;
+		}
+		case WM_PAINT:
+		{
+			if (!renderer)
+			{
+				Logging::warning("Renderer.");
+				LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
+				break;
+			}
+
+			// Get the current window compressedSize from the buffer
+			// const std::shared_ptr<Channel> channel = renderer->getColorChannel();
+			const int32 width = renderer->getWidth();
+			const int32 height = renderer->getHeight();
+
+			// Create a bitmap with the current renderer buffer memory the compressedSize of the window
+			InvalidateRect(hwnd, nullptr, TRUE);
+			PAINTSTRUCT paint;
+			const HDC	deviceContext = BeginPaint(hwnd, &paint);
+			const HDC	renderContext = CreateCompatibleDC(deviceContext);
+
+			// TODO: REMOVE THIS
+			// Associate the memory from the display buffer to the display bitmap
+			auto colorBm = renderer->getColorBitmap();
+			if (colorBm && g_texture.isValid())
+			{
+				for (int x = 0; x < g_texture.getWidth(); x++)
 				{
-					Color color = g_texture.getPixelAsColor(x, y);
-					colorBm->setPixel(x, y, color);
+					for (int y = 0; y < g_texture.getHeight(); y++)
+					{
+						Color color = g_texture.getPixelAsColor(x, y);
+						//std::string  colorString = color.toString();
+						//LOG_INFO("{}", colorString.c_str());
+						colorBm->setPixel(x, y, color);
+					}
 				}
 			}
-		}
-		// TODO: REMOVE THIS
+			// TODO: REMOVE THIS
 
-		void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
-		SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
-		SelectObject(renderContext, m_displayBitmap);
-		if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
-		{
-			LOG_ERROR("Failed during BitBlt")
+			void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
+			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
+			SelectObject(renderContext, m_displayBitmap);
+			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
+			{
+				LOG_ERROR("Failed during BitBlt")
 				result = 1;
+			}
+
+			// Display debug text
+			if (renderer->getViewport()->getShowDebugText())
+			{
+				// Draw text indicating the current FPS
+				RECT clientRect;
+				GetClientRect(hwnd, &clientRect);
+				clientRect.top += 10;
+				clientRect.left += 10;
+
+				std::string outputString = renderer->getViewport()->getDebugText();
+				SetTextColor(deviceContext, RGB(255, 255, 0));
+				SetBkColor(deviceContext, TRANSPARENT);
+				DrawText(
+					deviceContext,													// DC
+					std::wstring(outputString.begin(), outputString.end()).c_str(), // Message
+					-1,
+					&clientRect,	 // Client rectangle (the window)
+					DT_TOP | DT_LEFT // Drawing options
+				);
+			}
+
+			// Cleanup and end painting
+			ReleaseDC(hwnd, deviceContext);
+			DeleteDC(deviceContext);
+			DeleteDC(renderContext);
+			EndPaint(hwnd, &paint);
+
+			break;
 		}
-
-		// Display debug text
-		if (renderer->getViewport()->getShowDebugText())
+		case WM_SIZE:
 		{
-			// Draw text indicating the current FPS
-			RECT clientRect;
-			GetClientRect(hwnd, &clientRect);
-			clientRect.top += 10;
-			clientRect.left += 10;
-
-			std::string outputString = renderer->getViewport()->getDebugText();
-			SetTextColor(deviceContext, RGB(255, 255, 0));
-			SetBkColor(deviceContext, TRANSPARENT);
-			DrawText(
-				deviceContext,                                                  // DC
-				std::wstring(outputString.begin(), outputString.end()).c_str(), // Message
-				-1,
-				&clientRect,     // Client rectangle (the window)
-				DT_TOP | DT_LEFT // Drawing options
-			);
-		}
-
-		// Cleanup and end painting
-		ReleaseDC(hwnd, deviceContext);
-		DeleteDC(deviceContext);
-		DeleteDC(renderContext);
-		EndPaint(hwnd, &paint);
-
-		break;
-	}
-	case WM_SIZE:
-	{
-		if (!renderer)
-		{
-			LOG_WARNING("Renderer is not initialized in Win32Platform::windowProc::WM_SIZE")
+			if (!renderer)
+			{
+				LOG_WARNING("Renderer is not initialized in Win32Platform::windowProc::WM_SIZE")
 				break;
-		}
-		const int32 width = LOWORD(lParam);
-		const int32 height = HIWORD(lParam);
+			}
+			const int32 width = LOWORD(lParam);
+			const int32 height = HIWORD(lParam);
 
-		// Update the renderer compressedSize
-		renderer->resize(width, height);
-		LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
+			// Update the renderer compressedSize
+			renderer->resize(width, height);
+			LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
 			m_bitmapInfo.bmiHeader.biWidth = width;
-		m_bitmapInfo.bmiHeader.biHeight = height;
+			m_bitmapInfo.bmiHeader.biHeight = height;
 
-		// Create a new empty bitmap with the updated width and height
-		m_displayBitmap = CreateBitmap(width, height, 1, 32, nullptr);
+			// Create a new empty bitmap with the updated width and height
+			m_displayBitmap = CreateBitmap(width, height, 1, 32, nullptr);
 
-		return 0;
-	}
-	case WM_GETMINMAXINFO:
-	{
-		auto minMaxInfo = (MINMAXINFO*)lParam;
-		minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
-		minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
-		minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
-		minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
-		return 0;
-	}
-	case WM_EXITSIZEMOVE:
-	case WM_ERASEBKGND:
-	{
-		return 1;
-	}
-	// Timer called every ms to update
-	case WM_TIMER:
-	{
-		InvalidateRect(hwnd, nullptr, FALSE);
-		UpdateWindow(hwnd);
-		break;
-	}
-	case WM_COMMAND:
-	{
-		const auto actionId = static_cast<EMenuAction>(LOWORD(wParam));
-		inputHandler->m_menuActionPressed.broadcast(actionId);
-		break;
-	}
-	default:
-	{
-		result = DefWindowProcW(hwnd, msg, wParam, lParam);
-		break;
-	}
+			return 0;
+		}
+		case WM_GETMINMAXINFO:
+		{
+			auto minMaxInfo = (MINMAXINFO*)lParam;
+			minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
+			minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
+			minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
+			minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
+			return 0;
+		}
+		case WM_EXITSIZEMOVE:
+		case WM_ERASEBKGND:
+		{
+			return 1;
+		}
+		// Timer called every ms to update
+		case WM_TIMER:
+		{
+			InvalidateRect(hwnd, nullptr, FALSE);
+			UpdateWindow(hwnd);
+			break;
+		}
+		case WM_COMMAND:
+		{
+			const auto actionId = static_cast<EMenuAction>(LOWORD(wParam));
+			inputHandler->m_menuActionPressed.broadcast(actionId);
+			break;
+		}
+		default:
+		{
+			result = DefWindowProcW(hwnd, msg, wParam, lParam);
+			break;
+		}
 	}
 
 	// If the mouse has not moved, and we move past all other messages, reset the delta cursor
@@ -258,11 +267,11 @@ bool Win32Platform::Register()
 	windowClass.hInstance = m_hInstance;
 	windowClass.lpszClassName = m_className;
 
-	//Registering the window class
+	// Registering the window class
 	if (!RegisterClass(&windowClass))
 	{
 		LOG_ERROR("Failed to register class (Win32Platform::Register).")
-			return false;
+		return false;
 	}
 
 	// Create the window.
@@ -276,19 +285,18 @@ bool Win32Platform::Register()
 		nullptr,
 		nullptr,
 		m_hInstance,
-		nullptr
-	);
+		nullptr);
 
 	m_initialized = m_hwnd != nullptr;
 
 	if (!m_initialized)
 	{
 		LOG_ERROR("Failed to create window (Win32Platform::Register).")
-			return false;
+		return false;
 	}
 
 	LOG_INFO("Registered class.")
-		return true;
+	return true;
 }
 
 int32 Win32Platform::create()
@@ -297,7 +305,7 @@ int32 Win32Platform::create()
 	if (!m_initialized)
 	{
 		LOG_ERROR("Window failed to initialize (Win32Platform::Create).")
-			return PlatformInitError;
+		return PlatformInitError;
 	}
 
 	constructMenuBar();
@@ -329,11 +337,11 @@ int32 Win32Platform::show()
 	if (!m_initialized)
 	{
 		LOG_ERROR("Window failed to initialize (Win32Platform::Show).")
-			return PlatformShowError; // Show window failure
+		return PlatformShowError; // Show window failure
 	}
 
 	LOG_INFO("Showing window.")
-		ShowWindow(m_hwnd, 1);
+	ShowWindow(m_hwnd, 1);
 	return Success;
 }
 
@@ -342,17 +350,17 @@ int32 Win32Platform::start()
 	if (!m_initialized)
 	{
 		LOG_ERROR("Window failed to initialize (Win32Platform::Start).")
-			return PlatformStartError; // Start failure
+		return PlatformStartError; // Start failure
 	}
 
 	// TODO: REMOVE THIS
-	TextureImporter::import(g_fileName, g_texture);
+	TextureImporter::import(g_fileName, g_texture, ETextureFileFormat::RGBA);
 	g_texture.flipVertical();
 	// TODO: REMOVE THIS
 
 	// Process all messages and update the window
 	LOG_DEBUG("Engine loop start")
-		MSG msg = {};
+	MSG msg = {};
 
 	Engine* engine = Engine::getInstance();
 	while (engine->isRunning() && GetMessage(&msg, nullptr, 0, 0) > 0)
@@ -365,12 +373,12 @@ int32 Win32Platform::start()
 		if (const int32 loopResult = loop())
 		{
 			LOG_ERROR("Loop failed (Win32Platform::Start).")
-				return loopResult; // Start failure
+			return loopResult; // Start failure
 		}
 	}
 	LOG_INFO("Ending engine loop.")
 
-		return end();
+	return end();
 }
 
 int32 Win32Platform::loop()
@@ -406,7 +414,7 @@ int32 Win32Platform::end()
 
 int32 Win32Platform::swapBuffers()
 {
-	const Engine* engine = Engine::getInstance();
+	const Engine*	engine = Engine::getInstance();
 	const Renderer* renderer = engine->getRenderer();
 
 	return 0;
@@ -424,13 +432,13 @@ rectf Win32Platform::getSize()
 	}
 
 	LOG_ERROR("Unable to get window compressedSize (Win32Platform::GetSize).")
-		return {};
+	return {};
 }
 
 bool Win32Platform::getFileDialog(std::string& outFileName)
 {
-	OPENFILENAME ofn;
-	TCHAR szFile[MAX_PATH];
+	OPENFILENAME ofn = { 0 };
+	TCHAR		 szFile[MAX_PATH] = { 0 };
 	szFile[0] = '\0';
 
 	SecureZeroMemory(&ofn, sizeof(ofn));
@@ -450,7 +458,7 @@ bool Win32Platform::getFileDialog(std::string& outFileName)
 		return false;
 	}
 	int32 fileSize = WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, nullptr, 0, nullptr, nullptr);
-	auto tmp = new int8[fileSize];
+	auto  tmp = new int8[fileSize];
 	WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, tmp, fileSize, nullptr, nullptr);
 	outFileName = std::string(tmp);
 	return true;

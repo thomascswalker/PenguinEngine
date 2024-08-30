@@ -2,17 +2,9 @@
 
 #include <string>
 #include <Math/MathFwd.h>
+#include "Platform.h"
 
 #include "Framework/Input/InputHandler.h"
-
-/* @brief Enumerator defining the platform type. */
-enum class EPlatformType : uint8
-{
-	Windows,
-	MacOS,
-	Linux,
-	Unknown
-};
 
 /** @brief Base class of all OS Platforms (Win32, Mac, Linux).
  *  This abstracts the implementation of each platform based on its
@@ -77,12 +69,6 @@ public:
 	 * @return The size of the main platform window.
 	 */
 	virtual rectf getSize() = 0;
-
-	/**
-	 * @brief Returns the EPlatformType of the implemented platform.
-	 * @return The platform type.
-	 */
-	virtual EPlatformType getPlatformType() = 0;
 
 	/**
 	 * @brief Opens a file dialog to select a file to open.

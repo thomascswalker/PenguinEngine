@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <format>
 #include "MathFwd.h"
 
 struct Color;
@@ -82,16 +83,21 @@ public:
 
 	static Color fromInt32(const uint32 value)
 	{
-		auto a = (uint8)(value & 0xFF);
-		auto b = (uint8)((value >> 8) & 0xFF);
-		auto g = (uint8)((value >> 16) & 0xFF);
-		auto r = (uint8)((value >> 32) & 0xFF);
+		auto r = (uint8)(value & 0xFF);
+		auto g = (uint8)((value >> 8) & 0xFF);
+		auto b = (uint8)((value >> 16) & 0xFF);
+		auto a = (uint8)((value >> 32) & 0xFF);
 		return {r, g, b, a};
 	}
 
 	[[nodiscard]] int32 toInt32() const
 	{
 		return (r << 16) | (g << 8) | b | 0;
+	}
+
+	std::string toString()
+	{
+		return std::format("RGBA[{}, {}, {}, {}]", r, g, b, a);
 	}
 };
 

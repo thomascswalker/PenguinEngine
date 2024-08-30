@@ -4,7 +4,7 @@
 #include "Framework/Platforms/PlatformMemory.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#define ZLIB_WINAPI
+	#define ZLIB_WINAPI
 #endif
 
 #include "zlib/zlib.h"
@@ -47,13 +47,23 @@ namespace Compression
 		while (result != Z_STREAM_END)
 		{
 			result = inflate(&stream, Z_NO_FLUSH);
-			if (result == Z_STREAM_ERROR)
+			switch (result)
 			{
-				inflateEnd(&stream);
-				return false;
+				case Z_ERRNO:
+				case Z_STREAM_ERROR:
+				case Z_DATA_ERROR:
+				case Z_MEM_ERROR:
+				case Z_BUF_ERROR:
+				case Z_VERSION_ERROR:
+					LOG_ERROR("ZLib error: {}", result);
+					inflateEnd(&stream);
+					return false;
+				case Z_OK:
+					break;
 			}
-			//size_t have = uncompressedBuffer->getSize() - stream.avail_out;
-			//memcpy(uncompressedBuffer->getPtr(), )
+
+			// size_t have = uncompressedBuffer->getSize() - stream.avail_out;
+			// memcpy(uncompressedBuffer->getPtr(), )
 		}
 		result = inflateEnd(&stream);
 
@@ -61,4 +71,4 @@ namespace Compression
 
 		return result == Z_OK;
 	}
-}
+} // namespace Compression
