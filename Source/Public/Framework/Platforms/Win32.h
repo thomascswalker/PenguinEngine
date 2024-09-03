@@ -173,4 +173,6 @@ public:
 
 	/** @copydoc IPlatform::setMenuItemChecked() */
 	void setMenuItemChecked(EMenuAction actionId, bool checkState) override;
+
+	void messageBox(const std::string& title, const std::string& message) override;
 };

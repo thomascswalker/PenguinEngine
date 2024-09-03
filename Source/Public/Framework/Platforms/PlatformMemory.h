@@ -26,6 +26,7 @@ namespace PlatformMemory
 #if _WIN32
 		VirtualFree(memory, 0, MEM_RELEASE);
 #endif
+		memory = nullptr;
 	}
 
 	/**
@@ -44,7 +45,8 @@ namespace PlatformMemory
 	template <typename T = void>
 	static T* malloc(const size_t size)
 	{
-		return (T*)std::malloc(size);
+		auto tmp = std::malloc(size);
+		return (T*)tmp;
 	}
 
 	/**

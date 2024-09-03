@@ -89,4 +89,6 @@ public:
 	 * @param checkState The new state of the menu item.
 	 */
 	virtual void setMenuItemChecked(EMenuAction actionId, bool checkState) = 0;
+
+	virtual void messageBox(const std::string& title, const std::string& message) = 0;
 };

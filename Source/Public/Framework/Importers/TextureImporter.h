@@ -15,6 +15,26 @@ inline uint8 g_magicPng[8] = { 137, 'P', 'N', 'G', 13, 10, 26, 10 };
 constexpr int32 g_invalidImageIndex = -1;
 inline uint8	depthScaleTable[9] = { 0, 255, 85, 0, 17, 0, 0, 0, 1 };
 
+namespace TextureImporterError
+{
+	inline int32 Ok = 0;
+	inline int32 NotImplementedError = 1;
+	inline int32 FileTypeError = 2;
+	inline int32 FileReadError = 3;
+	inline int32 FileNotFoundError = 4;
+
+	inline int32 HeaderError = 5;
+	inline int32 DataError = 6;
+	inline int32 MemoryError = 7;
+	inline int32 BufferError = 8;
+	inline int32 CompressionError = 9;
+	inline int32 DecompressionError = 10;
+	inline int32 ChannelError = 11;
+
+	inline int32 PngChunkError = 20;
+	inline int32 PngFilterError = 21;
+} // namespace TextureImporterError
+
 enum class ETextureFileType : uint8
 {
 	Unknown,
@@ -151,30 +171,25 @@ struct PngTexture
 
 class TextureImporter
 {
+
 	static ETextureFileType getTextureFileType(const std::string& fileName);
 	static bool				isValidPngHeader(ByteReader* reader);
 
-	static bool readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* metadata);
-	static bool parsePngIHDR(PngChunk* chunk, PngTexture* png);
-	static bool parsePngIDAT(PngChunk* chunk, PngTexture* png);
+	static bool	 readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetadata* metadata);
+	static int32 parsePngIHDR(PngChunk* chunk, PngTexture* png);
+	static int32 parsePngIDAT(PngChunk* chunk, PngTexture* png);
 
-	static int32 paeth(int32 a, int32 b, int32 c)
-	{
-		int32 threshold = c * 3 - (a + b);
-		int32 low = a < b ? a : b;
-		int32 high = a < b ? b : a;
-		int32 t0 = (high <= threshold) ? low : c;
-		int32 t1 = (threshold <= low) ? high : t0;
-		return t1;
-	}
-	static void addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount);
-	static void unfilterPngScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw, int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline);
+	static int32 pngPaeth(int32 a, int32 b, int32 c);
+	static int32 pngUnfilterScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw, int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline);
+	static int32 pngStripFilterByte(uint8* in, uint8* out, int32 inSize);
 
-	static bool createPng(Buffer<uint8>* buffer, PngTexture* png);
-	static bool createPngInterlaced(Buffer<uint8>* buffer, PngTexture* png);
+	static int32 pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_t offset = 0);
+	static int32 pngUnfilterInterlaced(Buffer<uint8>* buffer, PngTexture* png, size_t offset = 0);
 
-	static int32 importPng(ByteReader* reader, Texture& texture, ETextureFileFormat format);
+	static int32 importPng(ByteReader* reader, Texture* texture, ETextureFileFormat format);
+
+	static int32 addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount);
 
 public:
-	static int32 import(const std::string& fileName, Texture& texture, ETextureFileFormat format = ETextureFileFormat::RGBA);
+	static int32 import(const std::string& fileName, ETextureFileFormat format = ETextureFileFormat::RGBA);
 };

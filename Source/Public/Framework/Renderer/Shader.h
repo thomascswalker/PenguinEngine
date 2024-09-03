@@ -3,20 +3,18 @@
 #include "Camera.h"
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
+#include "Framework/Renderer/Texture.h"
 #include "Framework/Engine/Mesh.h"
 
 struct IShader
 {
 	virtual ~IShader() = default;
-	int32 width, height;
+	int32  width, height;
 	Vertex v0, v1, v2;
-	vec3f s0, s1, s2;
+	vec3f  s0, s1, s2;
 
 	vec3f cameraPosition;
 	vec3f cameraWorldDirection;
-
-	vec3f triangleWorldNormal;
-	vec3f triangleCameraNormal;
 
 	vec3f pixelWorldPosition;
 	float facingRatio;
@@ -27,8 +25,12 @@ struct IShader
 	mat4f projectionMatrix;
 	vec3f uvw;
 
-	bool hasNormals = false;
-	bool hasTexCoords = false;
+	bool  hasNormals = false;
+	vec3f triangleWorldNormal;
+	vec3f triangleCameraNormal;
+
+	bool	 hasTexCoords = false;
+	Texture* texture = nullptr;
 
 	Color outColor = Color::magenta();
 
@@ -72,11 +74,11 @@ struct DefaultShader : IShader
 		// Reverse the order to CCW if the order is CW
 		switch (Math::getVertexOrder(s0, s1, s2))
 		{
-		case EWindingOrder::CW: // Triangle is back-facing, exit
-		case EWindingOrder::CL: // Triangle has zero area, exit
-			return false;
-		case EWindingOrder::CCW: // Triangle is front-facing, continue
-			break;
+			case EWindingOrder::CW: // Triangle is back-facing, exit
+			case EWindingOrder::CL: // Triangle has zero area, exit
+				return false;
+			case EWindingOrder::CCW: // Triangle is front-facing, continue
+				break;
 		}
 
 		// Get the bounding box of the 2d triangle clipped to the viewport
@@ -86,7 +88,7 @@ struct DefaultShader : IShader
 		screenBounds.grow(1.0f);
 
 		// Clamp the bounds to the viewport
-		const rectf viewportRect = {0, 0, static_cast<float>(width), static_cast<float>(height)};
+		const rectf viewportRect = { 0, 0, static_cast<float>(width), static_cast<float>(height) };
 		screenBounds.clamp(viewportRect);
 
 		// Average each of the vertices' normals to get the triangle normal
@@ -128,10 +130,24 @@ struct DefaultShader : IShader
 		weightedFacingRatio = std::clamp(weightedFacingRatio, 0.0f, 1.0f);
 
 		// Convert from 0..1 to 0..255
-		const uint8 clampedFacingRatio = (uint8)(weightedFacingRatio * 255.0f);
+		const auto clampedFacingRatio = (uint8)(weightedFacingRatio * 255.0f);
 
-		outColor.r = clampedFacingRatio;
-		outColor.g = clampedFacingRatio;
-		outColor.b = clampedFacingRatio;
+		// Compute the absolute UV position in 0..1
+		if (texture)
+		{
+			vec2f uv = v0.texCoord * uvw.x + v1.texCoord * uvw.y + v2.texCoord * uvw.z;
+			uint32 x = uv.x * (texture->getWidth() - 1);
+			uint32 y = uv.y * (texture->getHeight() - 1);
+			outColor = texture->getPixelAsColor(x, y);
+			outColor.r *= weightedFacingRatio;
+			outColor.g *= weightedFacingRatio;
+			outColor.b *= weightedFacingRatio;
+		}
+		else
+		{
+			outColor.r = clampedFacingRatio;
+			outColor.g = clampedFacingRatio;
+			outColor.b = clampedFacingRatio;
+		}
 	}
 };

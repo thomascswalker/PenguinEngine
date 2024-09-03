@@ -24,7 +24,7 @@ namespace Compression
 		PlatformMemory::free(p);
 	}
 
-	static bool uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
+	static int32 uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
 	{
 		uint32 uncompressedSize = uncompressedBuffer->getSize();
 		uint8* uncompressedData = PlatformMemory::malloc<uint8>(uncompressedSize);
@@ -38,12 +38,12 @@ namespace Compression
 		stream.next_out = uncompressedData;
 		stream.avail_out = uncompressedSize;
 
-		if (inflateInit2(&stream, g_defaultZlibBitWindow) != Z_OK)
+		int32 result = inflateInit2(&stream, g_defaultZlibBitWindow);
+		if (result != Z_OK)
 		{
-			return false;
+			return result;
 		}
 
-		int32 result = 0;
 		while (result != Z_STREAM_END)
 		{
 			result = inflate(&stream, Z_NO_FLUSH);
@@ -57,7 +57,7 @@ namespace Compression
 				case Z_VERSION_ERROR:
 					LOG_ERROR("ZLib error: {}", result);
 					inflateEnd(&stream);
-					return false;
+					return result;
 				case Z_OK:
 					break;
 			}
@@ -69,6 +69,6 @@ namespace Compression
 
 		memcpy(uncompressedBuffer->getPtr(), uncompressedData, uncompressedSize);
 
-		return result == Z_OK;
+		return result;
 	}
 } // namespace Compression

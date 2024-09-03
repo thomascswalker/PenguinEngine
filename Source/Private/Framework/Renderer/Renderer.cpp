@@ -5,6 +5,8 @@
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 #include "Framework/Renderer/Shader.h"
+#include "Framework/Renderer/Texture.h"
+#include "Framework/Importers/TextureImporter.h"
 
 Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 {
@@ -20,6 +22,18 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
+
+	std::string fileName = "C:\\Users\\thoma\\Desktop\\tinyrenderer-master\\obj\\african_head\\african_head_diffuse.png";
+	 //std::string fileName = "C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\PenguinEngine\\Examples\\floor_diffuse.png";
+	 //std::string fileName = "C:\\Users\\thoma\\Desktop\\mario\\mario_eyes_center_alpha.png";
+	 //std::string fileName = "C:\\Users\\thoma\\Desktop\\snowman.png";
+	int32 result = TextureImporter::import(fileName, ETextureFileFormat::RGBA);
+
+	if (!result)
+	{
+		Texture* tex = TextureManager::getTexture(0);
+		m_currentShader->texture = tex;
+	}
 }
 
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
@@ -79,9 +93,9 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	vec3f s2 = m_currentShader->s2;
 	if (m_settings.getRenderFlag(Wireframe))
 	{
-		drawLine({s0.x, s0.y}, {s1.x, s1.y}, m_wireColor);
-		drawLine({s1.x, s1.y}, {s2.x, s2.y}, m_wireColor);
-		drawLine({s2.x, s2.y}, {s0.x, s0.y}, m_wireColor);
+		drawLine({ s0.x, s0.y }, { s1.x, s1.y }, m_wireColor);
+		drawLine({ s1.x, s1.y }, { s2.x, s2.y }, m_wireColor);
+		drawLine({ s2.x, s2.y }, { s0.x, s0.y }, m_wireColor);
 	}
 
 	// Draw normal direction
@@ -89,8 +103,9 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	{
 		// Get the center of the triangle
 		vec3f triangleCenter = (m_currentShader->v0.position
-			+ m_currentShader->v1.position
-			+ m_currentShader->v2.position) / 3.0f;
+								   + m_currentShader->v1.position
+								   + m_currentShader->v2.position)
+			/ 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
 		vec3f triangleNormal = m_currentShader->triangleWorldNormal;
@@ -103,14 +118,13 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
 		Math::projectWorldToScreen(triangleCenter, normalStartScreen, m_viewport->getCamera()->getViewData());
 		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen,
-		                           m_viewport->getCamera()->getViewData());
+			m_viewport->getCamera()->getViewData());
 
 		// Draw the line between the two points
 		drawLine(
 			normalStartScreen, // Start
 			normalEndScreen,   // End
-			Color::yellow()
-		);
+			Color::yellow());
 	}
 }
 
@@ -178,7 +192,7 @@ void Renderer::scanline() const
 
 				// Compare the new depth to the current depth at this pixel. If the new depth is further than
 				// the current depth, continue.
-				//float currentDepth = *depthPixel;
+				// float currentDepth = *depthPixel;
 				float currentDepth = m_depthBitmap->getPixelAsFloat(x, y);
 				if (newDepth > currentDepth)
 				{
@@ -190,8 +204,7 @@ void Renderer::scanline() const
 				m_depthBitmap->setPixelFromFloat(x, y, newDepth);
 			}
 
-			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * uvw.x + m_currentShader->v1.
-				position * uvw.y + m_currentShader->v2.position * uvw.z;
+			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * uvw.x + m_currentShader->v1.position * uvw.y + m_currentShader->v2.position * uvw.z;
 
 			// Compute the final color for this pixel
 			m_currentShader->computePixelShader(point.x, point.y);
@@ -230,7 +243,7 @@ bool Renderer::clipLine(vec2f* a, vec2f* b) const
 
 		// Find the endpoint outside the viewport
 		const int32 code = code1 ? code1 : code2;
-		int32 x, y;
+		int32		x, y;
 
 		// Find intersection point using the parametric equation of the line
 		if (code & 1)
@@ -314,7 +327,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	const int32 deltaX = b.x - a.x;
 	const int32 deltaY = b.y - a.y;
 	const int32 deltaError = std::abs(deltaY) * 2;
-	int32 errorCount = 0;
+	int32		errorCount = 0;
 
 	// https://github.com/ssloy/tinyrenderer/issues/28
 	int32 y = a.y;
@@ -358,7 +371,7 @@ void Renderer::drawGrid() const
 	{
 		// Project the world-space points to screen-space
 		vec3f s0, s1;
-		bool lineOnScreen = false;
+		bool  lineOnScreen = false;
 		lineOnScreen |= m_viewport->projectWorldToScreen(line.a, s0);
 		lineOnScreen |= m_viewport->projectWorldToScreen(line.b, s1);
 

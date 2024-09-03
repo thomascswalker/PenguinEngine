@@ -85,6 +85,7 @@ using trianglef = triangle_t<float>;
 using triangled = triangle_t<double>;
 
 // Matrix
+
 template <typename T>
 struct mat4_t;
 using mat4f = mat4_t<float>;

@@ -8,9 +8,6 @@
 #include "Framework/Importers/TextureImporter.h"
 #include "Framework/Input/InputHandler.h"
 
-std::string g_fileName = R"(C:\Users\thoma\Desktop\snowman.png)";
-Texture		g_texture;
-
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
 	LRESULT		   result = 0;
@@ -139,23 +136,22 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC	deviceContext = BeginPaint(hwnd, &paint);
 			const HDC	renderContext = CreateCompatibleDC(deviceContext);
 
-			// TODO: REMOVE THIS
-			// Associate the memory from the display buffer to the display bitmap
-			auto colorBm = renderer->getColorBitmap();
-			if (colorBm && g_texture.isValid())
+			// TODO: DELETE THIS
+			auto colorbm = renderer->getColorBitmap();
+			if (TextureManager::count() > 0)
 			{
-				for (int x = 0; x < g_texture.getWidth(); x++)
+				auto tex = TextureManager::getTexture(0);
+				for (int32 i = 0; i < std::min(tex->getWidth(), width); i++)
 				{
-					for (int y = 0; y < g_texture.getHeight(); y++)
+					for (int32 j = 0; j < std::min(tex->getHeight(), height); j++)
 					{
-						Color color = g_texture.getPixelAsColor(x, y);
-						//std::string  colorString = color.toString();
-						//LOG_INFO("{}", colorString.c_str());
-						colorBm->setPixel(x, y, color);
+						auto col = tex->getPixelAsColor(i, j);
+						colorbm->setPixelFromColor(i, j, col);
 					}
 				}
 			}
-			// TODO: REMOVE THIS
+
+			// TODO: DELETE THIS
 
 			void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
@@ -353,11 +349,6 @@ int32 Win32Platform::start()
 		return PlatformStartError; // Start failure
 	}
 
-	// TODO: REMOVE THIS
-	TextureImporter::import(g_fileName, g_texture, ETextureFileFormat::RGBA);
-	g_texture.flipVertical();
-	// TODO: REMOVE THIS
-
 	// Process all messages and update the window
 	LOG_DEBUG("Engine loop start")
 	MSG msg = {};
@@ -490,4 +481,11 @@ void Win32Platform::constructMenuBar()
 void Win32Platform::setMenuItemChecked(EMenuAction actionId, const bool checkState)
 {
 	CheckMenuItem(m_displayMenu, UINT_PTR(actionId), checkState ? MF_CHECKED : MF_UNCHECKED);
+}
+
+void Win32Platform::messageBox(const std::string& title, const std::string& message)
+{
+	MessageBox(nullptr, (LPCWSTR)std::wstring(title.begin(), title.end()).c_str(),
+		(LPCWSTR)std::wstring(message.begin(), message.end()).c_str(),
+		MB_ICONINFORMATION);
 }

@@ -1,10 +1,15 @@
+#include <filesystem>
+
 #include "Framework/Importers/TextureImporter.h"
 #include "Framework/Core/Compression.h"
+#include "Framework/Application.h"
 
 constexpr int32 g_channelCount = 4; // Desired channel count for all textures
 constexpr int32 g_channelGray = 1;	// Gray scale (single channel)
 constexpr int32 g_channelRgb = 3;	// RGB (no alpha)
 constexpr int32 g_channelRgba = 4;	// RGBA (includes alpha)
+
+auto app = Application::getInstance();
 
 inline uint8 truncate(int32 value)
 {
@@ -25,6 +30,7 @@ inline ETextureFileType TextureImporter::getTextureFileType(const std::string& f
 	{
 		return ETextureFileType::Bmp;
 	}
+	app->getPlatform()->messageBox("TextureImporter", std::format("Invalid texture type {}.", fileName));
 	return ETextureFileType::Unknown;
 }
 
@@ -33,12 +39,13 @@ bool TextureImporter::isValidPngHeader(ByteReader* reader)
 	int32 isValid = 0;
 	for (uint8 value : g_magicPng)
 	{
-		isValid |= reader->readUInt8() == value;
+		unsigned char c = reader->readUInt8();
+		isValid |= c == value;
 	}
 	return (bool)isValid;
 }
 
-bool TextureImporter::parsePngIHDR(PngChunk* chunk, PngTexture* png)
+int32 TextureImporter::parsePngIHDR(PngChunk* chunk, PngTexture* png)
 {
 	ByteReader	 reader(chunk->compressedBuffer);
 	PngMetadata* metadata = &png->metadata;
@@ -57,37 +64,44 @@ bool TextureImporter::parsePngIHDR(PngChunk* chunk, PngTexture* png)
 	if (reader.getPos() != 13)
 	{
 		LOG_ERROR("Error reading IHDR chunk.")
-		return false;
+		return TextureImporterError::PngChunkError;
 	}
 
 	// Compute the channel count from the color type
 	auto color = (int8)metadata->colorType;
 	metadata->inChannelCount = (color & 2 ? 3 : 1) + (color & 4 ? 1 : 0);
 
-	if (metadata->inChannelCount != 4)
-	{
-		LOG_ERROR("Currently only RGBA PNG files are supported.")
-		return false;
-	}
-
-	return true;
+	return TextureImporterError::Ok;
 }
 
-bool TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
+int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 {
 	PngMetadata* metadata = &png->metadata;
 
 	// Compute the uncompressed size of the image.
 	// (PixelCount in each row + an extra pixel for the filter type)
-	uint32 inUncompressedSize = (metadata->width * metadata->height * metadata->inChannelCount) + metadata->height;
-
+	uint32 tmp = chunk->compressedBuffer.getSize();
+	uint32 inCompressedSize = metadata->width * metadata->height * metadata->outChannelCount + metadata->height;
+	if (inCompressedSize >= UINT32_MAX)
+	{
+		LOG_ERROR("Cannot allocate {} bytes. Memory limit reached.", inCompressedSize);
+		return TextureImporterError::MemoryError;
+	}
 	// Resize the uncompressed buffer to the uncompressed size
-	chunk->uncompressedBuffer.resize((size_t)inUncompressedSize);
+	chunk->uncompressedBuffer.resize((size_t)inCompressedSize);
 
 	// Resize the final PNG data to the output uncompressed size, accounting for if, for example, input channel
 	// count is 3 and output is 4.
-	uint32 outUncompressedSize = metadata->width * metadata->height * metadata->outChannelCount + metadata->height;
-	png->data.resize((size_t)outUncompressedSize);
+	uint32 outUncompressedSize = (metadata->width * metadata->height * metadata->outChannelCount) + metadata->height;
+	if (outUncompressedSize >= UINT32_MAX)
+	{
+		LOG_ERROR("Cannot allocate {} bytes. Memory limit reached.", outUncompressedSize);
+		return TextureImporterError::MemoryError;
+	}
+
+	size_t offset = png->data.getSize();
+	size_t newSize = offset + outUncompressedSize;
+	png->data.extend(newSize);
 
 	// Based on the PNG spec, the only method available is the Default method
 	// (ZLib).
@@ -96,20 +110,21 @@ bool TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 		case EPngCompressionMethod::Default:
 		{
 			// Uncompress the whole compressedBuffer with ZLib's inflate
-			bool result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);
-			if (!result)
+			int32 result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);
+			if (result != Z_OK)
 			{
-				return false;
+				return TextureImporterError::DecompressionError;
 			}
 			// If interlaced, create the final PNG image data by deinterlacing, or
 			// if not, create the final PNG image data from the raw uncompressed
-			// data. This involves unfiltering each row.
-			return metadata->interlaced ? createPngInterlaced(&chunk->uncompressedBuffer, png) : createPng(&chunk->uncompressedBuffer, png);
+			// data. This involves unfiltering each row.]
+			result = metadata->interlaced ? pngUnfilterInterlaced(&chunk->uncompressedBuffer, png) : pngUnfilter(&chunk->uncompressedBuffer, png);
+			return result;
 		}
 		case EPngCompressionMethod::Invalid:
 		default:
 		{
-			return false;
+			return TextureImporterError::DecompressionError;
 		}
 	}
 }
@@ -151,28 +166,30 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	return true;
 }
 
-bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* png)
+int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_t offset)
 {
 	// Raw pointer to the final PNG data which is pushed to the Texture object
-	uint8* out = png->data.getPtr();
+	// This is offset by the size of the previous IDAT chunk, in case there's multiple chunks.
+	uint8* out = png->data.getPtr() + offset;
+	size_t outSize = png->data.getSize();
 
 	// Raw pointer to the uncompressed image data. This pointer is what is incremented and accessed
 	// to retrieve the current working byte.
-	uint8* in = uncompressedBuffer->getPtr();
+	uint8* in = buffer->getPtr();
 
 	// Metadata local vars
 	PngMetadata* metadata = &png->metadata;
 
 	auto  colorType = (int32)metadata->colorType;
-	int32 totalSize = uncompressedBuffer->getSize();
+	int32 totalSize = buffer->getSize();
 	int32 depth = metadata->bitDepth;
 	int32 width = metadata->width;
 	int32 height = metadata->height;
 	int32 inChannelCount = metadata->inChannelCount;
 	int32 outChannelCount = metadata->outChannelCount;
 
-	int32  bpc = (depth == DEPTH_16 ? 2 : 1);	  // Bytes-per-component (R, G, B, A)
-	uint32 stride = width * inChannelCount * bpc; // Total number of bytes in a single row of pixels
+	int32  bpc = (depth == DEPTH_16 ? 2 : 1);	   // Bytes-per-component (R, G, B, A)
+	uint32 stride = width * outChannelCount * bpc; // Total number of bytes in a single row of pixels in the output buffer
 
 	// Compute the input and output bytes-per-pixel. These may be different depending on the number
 	// of requested channels for the Texture to load vs. the actual number of channels in the PNG image.
@@ -184,7 +201,7 @@ bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* p
 	if (!out)
 	{
 		LOG_ERROR("Out of memory.");
-		return false;
+		return TextureImporterError::MemoryError;
 	}
 
 	uint32 inRowByteCount = (((inChannelCount * width * depth) + 7) >> 3); // Number of bytes in a single row of pixels
@@ -197,19 +214,19 @@ bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* p
 	// non-interlaced PNGs, but issue #276 reported a PNG in the wild that had
 	// extra data at the end (all zeros), so just check for raw_len < img_len
 	// always.
-	if (totalSize < outTotalByteCount)
+	if (totalSize < inTotalByteCount)
 	{
 		LOG_ERROR("Not enough pixels; corrupt PNG.");
-		return false;
+		return TextureImporterError::DataError;
 	}
 
 	// Allocate two scan lines worth of memory to the workspace buffer. This buffer will contain the temporary
 	// unfiltered bytes. This is eventually copied into the final PNG buffer.
-	auto filterBuffer = PlatformMemory::malloc<uint8>(inRowByteCount * 2);
+	auto filterBuffer = PlatformMemory::malloc<uint8>(outRowByteCount * 2);
 	if (!filterBuffer)
 	{
 		LOG_ERROR("Out of memory.");
-		return false;
+		return TextureImporterError::MemoryError;
 	}
 
 	// Filtering for low-bit-depth images
@@ -236,11 +253,11 @@ bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* p
 		if (filter > EPngFilterType::Paeth)
 		{
 			LOG_ERROR("Invalid filter; corrupt PNG.");
-			break;
+			return TextureImporterError::PngFilterError;
 		}
 
 		// Unfilter the current scanline
-		unfilterPngScanline(y, filter, currentScanline, in, inRowByteCount, inBpp, previousScanline);
+		pngUnfilterScanline(y, filter, currentScanline, in, inRowByteCount, inBpp, previousScanline);
 
 		// If the image's channel count is the same as our desired channel count, copy the current
 		// scanline into the out scanline
@@ -251,7 +268,12 @@ bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* p
 		// Otherwise add an alpha channel filled with 255 to the image
 		else
 		{
-			addAlphaChannel(outScanline, currentScanline, width, inChannelCount);
+			int32 result = addAlphaChannel(currentScanline, outScanline, width, inChannelCount);
+			if (result != TextureImporterError::Ok)
+			{
+				return result;
+			}
+			memcpy(outScanline, currentScanline, width * inChannelCount);
 		}
 
 		// Offset our in buffer by the rest of the row size so we start at a new row. The current byte
@@ -262,63 +284,55 @@ bool TextureImporter::createPng(Buffer<uint8>* uncompressedBuffer, PngTexture* p
 	// Free the temporary workspace buffer we were using
 	PlatformMemory::free(filterBuffer);
 
-	// On Windows, the output image is BGRA, not RGBA, so we need to swap the pixels
-#if defined(_WIN32) || defined(_WIN64)
-	// Swap the RGBA bytes for BGRA
-	for (int32 index = 0; index < outTotalByteCount; index += 4)
-	{
-		uint8 r = out[index];
-		uint8 g = out[index + 1];
-		uint8 b = out[index + 2];
-		uint8 a = out[index + 3];
-
-		out[index] = b;		// blue
-		out[index + 1] = g; // red
-		out[index + 2] = r; // green
-		out[index + 3] = a;
-	}
-#endif
-
 	// Set the final PNG data pointer to our `out` pointer where we've stored all the data. This probably shouldn't
 	// be necessary as the `out` pointer is derived from `png->data.getPtr()` in the first place, but this seems
 	// to be required.
 	png->data.setPtr(out);
 
-	return true;
+	return TextureImporterError::Ok;
 }
 
-inline void TextureImporter::addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount)
+int32 TextureImporter::addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount)
 {
-	assert(in != out);
-
-	switch (channelCount)
+	if (channelCount == 4)
 	{
-		case 1:
-		{
-			for (int32 i = 0; i < width; i++)
-			{
-				in[i * 2 + 1] = UINT8_MAX;
-				in[i * 2 + 0] = out[i];
-			}
-			break;
-		}
-		case 3:
-		{
-			for (int32 i = 0; i < width; i++)
-			{
-				in[i * 4 + 3] = UINT8_MAX;
-				in[i * 4 + 2] = out[i * 3 + 2];
-				in[i * 4 + 1] = out[i * 3 + 1];
-				in[i * 4 + 0] = out[i * 3 + 0];
-			}
-			break;
-		}
-		default:
-			return;
+		return TextureImporterError::Ok;
 	}
+
+	if (channelCount != 3)
+	{
+		LOG_ERROR("Currently can only add alpha channel to RGB. Does not work with grayscale.")
+		return TextureImporterError::ChannelError;
+	}
+
+	for (int x = width - 1; x >= 0; x--)
+	{
+		int32 inOffset = x * 3;
+		int32 outOffset = x * 4;
+		
+		auto b = in[inOffset + 2];
+		auto g = in[inOffset + 1];
+		auto r = in[inOffset + 0];
+		out[outOffset + 3] = 255;
+		out[outOffset + 2] = b;
+		out[outOffset + 1] = g;
+		out[outOffset + 0] = r;
+	}
+
+	return TextureImporterError::Ok;
 }
 
-inline void TextureImporter::unfilterPngScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw, int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline)
+inline int32 TextureImporter::pngPaeth(int32 a, int32 b, int32 c)
+{
+	int32 threshold = c * 3 - (a + b);
+	int32 low = a < b ? a : b;
+	int32 high = a < b ? b : a;
+	int32 t0 = (high <= threshold) ? low : c;
+	int32 t1 = (threshold <= low) ? high : t0;
+	return t1;
+}
+
+int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw, int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline)
 {
 	// if first row, use special filter that doesn't sample previous row
 	if (y == 0)
@@ -398,7 +412,7 @@ inline void TextureImporter::unfilterPngScanline(int32 y, EPngFilterType filter,
 			}
 			for (int32 x = filterBytes; x < rowSizeBytes; x++)
 			{
-				currentScanline[x] = truncate(raw[x] + paeth(currentScanline[x - filterBytes], previousScanline[x], previousScanline[x - filterBytes]));
+				currentScanline[x] = truncate(raw[x] + pngPaeth(currentScanline[x - filterBytes], previousScanline[x], previousScanline[x - filterBytes]));
 			}
 			break;
 		}
@@ -412,21 +426,28 @@ inline void TextureImporter::unfilterPngScanline(int32 y, EPngFilterType filter,
 			break;
 		}
 	}
+
+	return 0;
+}
+
+int32 TextureImporter::pngStripFilterByte(uint8* in, uint8* out, int32 inSize)
+{
+	return int32();
 }
 
 // stbi__create_png_image
-bool TextureImporter::createPngInterlaced(Buffer<uint8>* buffer, PngTexture* png)
+int32 TextureImporter::pngUnfilterInterlaced(Buffer<uint8>* buffer, PngTexture* png, size_t offset)
 {
-	return false;
+	return 0;
 }
 
-int32 TextureImporter::importPng(ByteReader* reader, Texture& texture, ETextureFileFormat format)
+int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureFileFormat format)
 {
 	// Validate the header is the correct PNG header
 	if (!isValidPngHeader(reader))
 	{
 		LOG_ERROR("Unable to load texture.");
-		return g_invalidImageIndex;
+		return TextureImporterError::HeaderError;
 	}
 
 	// Read and parse the IHDR chunk. This is always the first one.
@@ -436,12 +457,13 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture& texture, ETextureF
 	if (!readPngChunk(reader, &ihdrChunk, &png.metadata))
 	{
 		LOG_ERROR("Error reading IHDR chunk.");
-		return g_invalidImageIndex;
+		return TextureImporterError::PngChunkError;
 	}
 	parsePngIHDR(&ihdrChunk, &png);
 
 	// Read chunks until we hit the end of the file.
-	bool atEnd = false;
+	bool  atEnd = false;
+	int32 result = 0;
 	while (!atEnd)
 	{
 		PngChunk chunk;
@@ -456,9 +478,11 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture& texture, ETextureF
 			}
 			case EPngChunkType::IDAT:
 			{
-				if (!parsePngIDAT(&chunk, &png))
+				result = parsePngIDAT(&chunk, &png);
+				if (result != TextureImporterError::Ok)
 				{
-					return false;
+					png.data.clear();
+					return result;
 				}
 				break;
 			}
@@ -493,49 +517,78 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture& texture, ETextureF
 		}
 	}
 
-	uint8* data = png.data.getPtr();
-	texture = Texture::fromData(data, png.metadata.width, png.metadata.height);
-	texture.setChannelCount((uint8)format);
-	return 0;
+	Buffer<uint8> data = png.data;
+	int32  bpr = (png.metadata.width * g_bytesPerPixel) + 1;
+	int32  tmpSize = bpr * png.metadata.height;
+	Buffer<uint8> tmp(tmpSize);
 
-	//g_textures.emplace_back(texture);
-	//return (int32)g_textures.size() - 1;
+	for (int32 row = 0; row < png.metadata.height; row++)
+	{
+		size_t offset = row * bpr;
+		memcpy(tmp.getPtr() + offset, data.getPtr() + offset, bpr);
+	}
+
+	texture->resize({ (int32)png.metadata.width, (int32)png.metadata.height });
+	texture->setMemory(&data);
+#if defined(_WIN32) || defined(_WIN64)
+	texture->setByteOrder(ETextureByteOrder::BRGA);
+#endif
+	texture->setChannelCount((uint8)format);
+
+	g_textures.emplace_back(*texture);
+
+	return result;
 }
 
-int32 TextureImporter::import(const std::string& fileName, Texture& texture, ETextureFileFormat format)
+int32 TextureImporter::import(const std::string& fileName, ETextureFileFormat format)
 {
+	if (!std::filesystem::exists(fileName))
+	{
+		LOG_ERROR("File {} not found.", fileName);
+		return TextureImporterError::FileNotFoundError;
+	}
+
 	// Read the file into a buffer
-	std::string data;
-	if (!IO::readFile(fileName, data))
+	std::string fileData;
+	if (!IO::readFile(fileName, fileData))
 	{
 		LOG_ERROR("Unable to read file {}", fileName);
-		return g_invalidImageIndex;
+		return TextureImporterError::FileReadError;
 	}
 
 	// Create a reader from the string uncompressedData
-	ByteReader reader(data, data.size(), std::endian::big);
+	ByteReader reader(fileData, fileData.size(), std::endian::big);
 
+	Texture			 texture;
+	int32			 result = 0;
 	ETextureFileType fileType = getTextureFileType(fileName);
+
 	switch (fileType)
 	{
 		case ETextureFileType::Png:
 		{
-			return importPng(&reader, texture, format);
+			result = importPng(&reader, &texture, format);
+			break;
 		}
 		case ETextureFileType::Bmp:
 		{
 			LOG_ERROR("Bmp not currently supported.");
-			return -1;
+			result = TextureImporterError::NotImplementedError;
+			break;
 		}
 		case ETextureFileType::Jpg:
 		{
 			LOG_ERROR("Jpg not currently supported.");
-			return -1;
+			result = TextureImporterError::NotImplementedError;
+			break;
 		}
 		default:
 		{
 			LOG_ERROR("Invalid filetype for {}", fileName);
-			return -1;
+			result = TextureImporterError::FileTypeError;
+			break;
 		}
 	}
+
+	return result;
 }
