@@ -9,7 +9,7 @@
 #include "Math/Vector.h"
 
 class Texture;
-inline std::vector<Texture> g_textures{};
+inline std::vector<std::shared_ptr<Texture>> g_textures;
 
 namespace TextureManager
 {
@@ -20,7 +20,7 @@ namespace TextureManager
 
 	inline Texture* getTexture(int32 index)
 	{
-		return &g_textures[index];
+		return g_textures[index].get();
 	}
 } // namespace TextureManager
 

@@ -136,23 +136,6 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC	deviceContext = BeginPaint(hwnd, &paint);
 			const HDC	renderContext = CreateCompatibleDC(deviceContext);
 
-			// TODO: DELETE THIS
-			auto colorbm = renderer->getColorBitmap();
-			if (TextureManager::count() > 0)
-			{
-				auto tex = TextureManager::getTexture(0);
-				for (int32 i = 0; i < std::min(tex->getWidth(), width); i++)
-				{
-					for (int32 j = 0; j < std::min(tex->getHeight(), height); j++)
-					{
-						auto col = tex->getPixelAsColor(i, j);
-						colorbm->setPixelFromColor(i, j, col);
-					}
-				}
-			}
-
-			// TODO: DELETE THIS
-
 			void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
@@ -426,21 +409,27 @@ rectf Win32Platform::getSize()
 	return {};
 }
 
-bool Win32Platform::getFileDialog(std::string& outFileName)
+bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& filter)
 {
 	OPENFILENAME ofn = { 0 };
 	TCHAR		 szFile[MAX_PATH] = { 0 };
-	szFile[0] = '\0';
+	szFile[0] =W '\0';
+
+	std::string	 fmtFilter = filter;
+	fmtFilter.push_back('\0');
+	fmtFilter.append(std::format("*.{}", filter));
+	fmtFilter.push_back('\0');
+	std::wstring wFilter = Strings::toWString(fmtFilter);
 
 	SecureZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = m_hwnd;
 	ofn.lpstrFile = szFile;
 	ofn.nMaxFile = sizeof(szFile);
-	ofn.lpstrFilter = TEXT("OBJ (.obj*.obj)\0\0");
+	ofn.lpstrFilter = wFilter.c_str();
 	ofn.nFilterIndex = 1;
 	ofn.lpstrFileTitle = nullptr;
-	ofn.lpstrTitle = TEXT("Load a .obj file.");
+	ofn.lpstrTitle = TEXT("Load a file.");
 	ofn.lpstrInitialDir = nullptr;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
@@ -452,6 +441,7 @@ bool Win32Platform::getFileDialog(std::string& outFileName)
 	auto  tmp = new int8[fileSize];
 	WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, tmp, fileSize, nullptr, nullptr);
 	outFileName = std::string(tmp);
+
 	return true;
 }
 
@@ -463,7 +453,8 @@ void Win32Platform::constructMenuBar()
 
 	// File menu
 	AppendMenuW(m_mainMenu, MF_POPUP, UINT_PTR(m_fileMenu), L"&File");
-	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::Open), L"&Open...");
+	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::LoadModel), L"&Load Model...");
+	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::LoadTexture), L"&Load Texture...");
 	AppendMenuW(m_fileMenu, MF_SEPARATOR, 0, nullptr);
 	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::Quit), L"&Quit");
 

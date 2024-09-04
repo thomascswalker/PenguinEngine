@@ -53,6 +53,10 @@ public:
 	{
 		return m_colorBitmap.get();
 	}
+	[[nodiscard]] IShader* getShader() const
+	{
+		return m_currentShader.get();
+	}
 
 	/* Drawing */
 

@@ -4,6 +4,7 @@
 #include "Framework/Input/InputHandler.h"
 #include "Framework/Application.h"
 #include "Framework/Importers/MeshImporter.h"
+#include "Framework/Importers/TextureImporter.h"
 
 #include "Framework/Platforms/PlatformInterface.h"
 
@@ -64,7 +65,7 @@ void Engine::tick()
 	if (const IInputHandler* input = Win32InputHandler::getInstance())
 	{
 		// Update camera position
-		Camera* camera = getViewportCamera();
+		Camera*		camera = getViewportCamera();
 		const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
 
 		// Orbit
@@ -93,50 +94,42 @@ void Engine::tick()
 	getViewport()->formatDebugText();
 }
 
-void Engine::openFile(const std::string& fileName)
-{
-	m_meshes.clear();
-	const auto objMesh = std::make_shared<Mesh>();
-	ObjImporter::import(fileName, objMesh.get());
-	objMesh->processTriangles();
-	m_meshes.push_back(objMesh);
-}
-
 void Engine::onKeyPressed(const EKey keyCode) const
 {
 	switch (keyCode)
 	{
-	case EKey::T:
+		case EKey::T:
 		{
 			getViewport()->toggleShowDebugText();
 			break;
 		}
-	case EKey::F:
+		case EKey::F:
 		{
 			getViewport()->resetView();
 			break;
 		}
-	case EKey::F1:
+		case EKey::F1:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Wireframe);
 			break;
 		}
-	case EKey::F2:
+		case EKey::F2:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Shaded);
 			break;
 		}
-	case EKey::F3:
+		case EKey::F3:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Depth);
 			break;
 		}
-	case EKey::F4:
+		case EKey::F4:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Normals);
 			break;
 		}
-	default: break;
+		default:
+			break;
 	}
 }
 
@@ -156,39 +149,84 @@ void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const
 void Engine::onMenuActionPressed(const EMenuAction actionId)
 {
 	const Application* app = Application::getInstance();
-	IPlatform* platform = app->getPlatform();
+	IPlatform*		   platform = app->getPlatform();
 	switch (actionId)
 	{
-	case EMenuAction::Open: onOpenPressed();
-		break;
-	case EMenuAction::Quit: m_isRunning = false;
-		break;
-	case EMenuAction::Wireframe: platform->setMenuItemChecked(EMenuAction::Wireframe,
-	                                                          m_renderer->m_settings.toggleRenderFlag(
-		                                                          Wireframe));
-		break;
-	case EMenuAction::Shaded: platform->setMenuItemChecked(EMenuAction::Shaded,
-	                                                       m_renderer->m_settings.toggleRenderFlag(
-		                                                       Shaded));
-		break;
-	case EMenuAction::Depth: platform->setMenuItemChecked(EMenuAction::Depth,
-	                                                      m_renderer->m_settings.toggleRenderFlag(Depth));
-		break;
-	case EMenuAction::Normals: platform->setMenuItemChecked(EMenuAction::Normals,
-	                                                        m_renderer->m_settings.toggleRenderFlag(
-		                                                        Normals));
+		case EMenuAction::LoadModel:
+		{
+			onLoadModelPressed();
+			break;
+		}
+		case EMenuAction::LoadTexture:
+		{
+			onLoadTexturePressed();
+			break;
+		}
+		case EMenuAction::Quit:
+		{
+			m_isRunning = false;
+			break;
+		}
+		case EMenuAction::Wireframe:
+		{
+			platform->setMenuItemChecked(EMenuAction::Wireframe,
+				m_renderer->m_settings.toggleRenderFlag(
+					Wireframe));
+			break;
+		}
+		case EMenuAction::Shaded:
+		{
+			platform->setMenuItemChecked(EMenuAction::Shaded,
+				m_renderer->m_settings.toggleRenderFlag(
+					Shaded));
+			break;
+		}
+		case EMenuAction::Depth:
+		{
+			platform->setMenuItemChecked(EMenuAction::Depth,
+				m_renderer->m_settings.toggleRenderFlag(Depth));
+			break;
+		}
+		case EMenuAction::Normals:
+		{
+			platform->setMenuItemChecked(EMenuAction::Normals,
+				m_renderer->m_settings.toggleRenderFlag(
+					Normals));
+			break;
+		}
 	}
 }
 
-void Engine::onOpenPressed()
+void Engine::onLoadModelPressed()
 {
 	Application* app = Application::getInstance();
-	IPlatform* platform = app->getPlatform();
-	std::string fileName;
-	if (platform->getFileDialog(fileName))
+	IPlatform*	 platform = app->getPlatform();
+	std::string	 fileName;
+	if (platform->getFileDialog(fileName, "obj"))
 	{
 		// Load model
-		openFile(fileName);
+		g_meshes.clear();
+		const auto mesh = std::make_shared<Mesh>();
+		ObjImporter::import(fileName, mesh.get());
+		mesh->processTriangles();
+		g_meshes.push_back(mesh);
+	}
+}
+
+void Engine::onLoadTexturePressed()
+{
+	Application* app = Application::getInstance();
+	IPlatform*	 platform = app->getPlatform();
+	std::string	 fileName;
+	if (platform->getFileDialog(fileName, "png"))
+	{
+		// Load texture
+		g_textures.clear();
+		const auto texture = std::make_shared<Texture>();
+		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::RGBA);
+		texture->flipVertical();
+		g_textures.emplace_back(texture);
+		m_renderer->getShader()->texture = TextureManager::getTexture(0);
 	}
 }
 

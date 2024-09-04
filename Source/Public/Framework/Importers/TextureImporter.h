@@ -191,5 +191,5 @@ class TextureImporter
 	static int32 addAlphaChannel(uint8* in, uint8* out, uint32 width, int32 channelCount);
 
 public:
-	static int32 import(const std::string& fileName, ETextureFileFormat format = ETextureFileFormat::RGBA);
+	static int32 import(const std::string& fileName, Texture* texture, ETextureFileFormat format = ETextureFileFormat::RGBA);
 };

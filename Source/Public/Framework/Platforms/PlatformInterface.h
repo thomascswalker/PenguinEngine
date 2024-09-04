@@ -75,7 +75,7 @@ public:
 	 * @param outFileName The file name of the file to open.
 	 * @return True if the file name can be retrieved, false otherwise.
 	 */
-	virtual bool getFileDialog(std::string& outFileName) = 0;
+	virtual bool getFileDialog(std::string& outFileName, const std::string& filter) = 0;
 
 	/**
 	 * @brief Constructs a platform-specific menu bar at the top of the dialog.

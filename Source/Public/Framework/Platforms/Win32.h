@@ -166,7 +166,7 @@ public:
 	rectf getSize() override;
 
 	/** @copydoc IPlatform::getFileDialog() */
-	bool getFileDialog(std::string& outFileName) override;
+	bool getFileDialog(std::string& outFileName, const std::string& filter) override;
 
 	/** @copydoc IPlatform::constructMenuBar() */
 	void constructMenuBar() override;

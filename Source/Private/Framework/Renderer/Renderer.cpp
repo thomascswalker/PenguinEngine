@@ -22,18 +22,6 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
-
-	std::string fileName = "C:\\Users\\thoma\\Desktop\\tinyrenderer-master\\obj\\african_head\\african_head_diffuse.png";
-	 //std::string fileName = "C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\PenguinEngine\\Examples\\floor_diffuse.png";
-	 //std::string fileName = "C:\\Users\\thoma\\Desktop\\mario\\mario_eyes_center_alpha.png";
-	 //std::string fileName = "C:\\Users\\thoma\\Desktop\\snowman.png";
-	int32 result = TextureImporter::import(fileName, ETextureFileFormat::RGBA);
-
-	if (!result)
-	{
-		Texture* tex = TextureManager::getTexture(0);
-		m_currentShader->texture = tex;
-	}
 }
 
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
@@ -57,7 +45,7 @@ void Renderer::draw() const
 
 	// Draw each mesh
 	const Engine* engine = Engine::getInstance();
-	for (const auto& mesh : engine->getMeshes())
+	for (const auto& mesh : g_meshes)
 	{
 		drawMesh(mesh.get());
 	}

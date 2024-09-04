@@ -7,4 +7,3 @@ enum class EOrientation
 	Horizontal,
 	Vertical
 };
-

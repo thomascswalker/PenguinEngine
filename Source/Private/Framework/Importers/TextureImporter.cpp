@@ -273,7 +273,6 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 			{
 				return result;
 			}
-			memcpy(outScanline, currentScanline, width * inChannelCount);
 		}
 
 		// Offset our in buffer by the rest of the row size so we start at a new row. The current byte
@@ -535,12 +534,10 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 #endif
 	texture->setChannelCount((uint8)format);
 
-	g_textures.emplace_back(*texture);
-
 	return result;
 }
 
-int32 TextureImporter::import(const std::string& fileName, ETextureFileFormat format)
+int32 TextureImporter::import(const std::string& fileName, Texture* texture, ETextureFileFormat format)
 {
 	if (!std::filesystem::exists(fileName))
 	{
@@ -559,7 +556,6 @@ int32 TextureImporter::import(const std::string& fileName, ETextureFileFormat fo
 	// Create a reader from the string uncompressedData
 	ByteReader reader(fileData, fileData.size(), std::endian::big);
 
-	Texture			 texture;
 	int32			 result = 0;
 	ETextureFileType fileType = getTextureFileType(fileName);
 
@@ -567,7 +563,7 @@ int32 TextureImporter::import(const std::string& fileName, ETextureFileFormat fo
 	{
 		case ETextureFileType::Png:
 		{
-			result = importPng(&reader, &texture, format);
+			result = importPng(&reader, texture, format);
 			break;
 		}
 		case ETextureFileType::Bmp:
