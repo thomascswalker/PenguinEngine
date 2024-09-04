@@ -12,10 +12,10 @@ class ObjImporter
 {
 	/**
 	 * @brief Parses a line representing a 2D vector and adds it to the given vector.
-	 * 
+	 *
 	 * @param line The line to parse.
 	 * @param v The vector to add the parsed vector to.
-	 * 
+	 *
 	 * @throws std::invalid_argument If the line does not contain enough components.
 	 */
 	static void parseVec2(const std::string& line, std::vector<vec2f>* v)
@@ -32,15 +32,15 @@ class ObjImporter
 
 		// Create a new vec3f from the components and add it to the vector
 		v->emplace_back(std::stof(components[1]),
-		                std::stof(components[2]));
+			std::stof(components[2]));
 	}
 
 	/**
 	 * @brief Parses a line representing a 3D vector and adds it to the given vector.
-	 * 
+	 *
 	 * @param line The line to parse.
 	 * @param v The vector to add the parsed vector to.
-	 * 
+	 *
 	 * @throws std::invalid_argument If the line does not contain enough components.
 	 */
 	static void parseVec3(const std::string& line, std::vector<vec3f>* v)
@@ -57,13 +57,13 @@ class ObjImporter
 
 		// Create a new vec3f from the components and add it to the vector
 		v->emplace_back(std::stof(components[1]),
-		                std::stof(components[2]),
-		                std::stof(components[3]));
+			std::stof(components[2]),
+			std::stof(components[3]));
 	}
 
 	/**
 	 * @brief Parses a face line from an OBJ file and populates the given vectors with the corresponding index values.
-	 * 
+	 *
 	 * @param line The face line from the OBJ file.
 	 * @param positionIndexes The vector to store position index values.
 	 * @param normalIndexes The vector to store normal index values.
@@ -71,14 +71,14 @@ class ObjImporter
 	 * @throws std::runtime_error If the index format is invalid.
 	 */
 	static void parseFace(const std::string& line,
-	                      std::vector<int32>* positionIndexes,
-	                      std::vector<int32>* normalIndexes,
-	                      std::vector<int32>* texCoordIndexes)
+		std::vector<int32>*					 positionIndexes,
+		std::vector<int32>*					 normalIndexes,
+		std::vector<int32>*					 texCoordIndexes)
 	{
 		std::vector<std::string> indexComponents;
 
 		// Split the face line by spaces
-		Strings::split(line, indexComponents, " ");     // [f, v/vt/vn, v/vt/vn, v/vt/vn]
+		Strings::split(line, indexComponents, " ");		// [f, v/vt/vn, v/vt/vn, v/vt/vn]
 		indexComponents.erase(indexComponents.begin()); // remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
 
 		// For each index group...
@@ -90,25 +90,26 @@ class ObjImporter
 			// Determine the number of components in the index group
 			switch (componentGroup.size())
 			{
-			case 1: // [v]
+				case 1: // [v]
 				{
 					positionIndexes->emplace_back(std::stoi(indexGroup) - 1);
 					break;
 				}
-			case 2: // [v/vn]
+				case 2: // [v/vn]
 				{
 					positionIndexes->emplace_back(std::stoi(componentGroup[0]) - 1);
 					normalIndexes->emplace_back(std::stoi(componentGroup[1]) - 1);
 					break;
 				}
-			case 3: // [v/vt/vn]
+				case 3: // [v/vt/vn]
 				{
 					positionIndexes->emplace_back(std::stoi(componentGroup[0]) - 1);
 					texCoordIndexes->emplace_back(std::stoi(componentGroup[1]) - 1);
 					normalIndexes->emplace_back(std::stoi(componentGroup[2]) - 1);
 					break;
 				}
-			default: throw std::runtime_error("Invalid index format.");
+				default:
+					throw std::runtime_error("Invalid index format.");
 			}
 		}
 	}
@@ -116,7 +117,7 @@ class ObjImporter
 public:
 	/**
 	 * @brief Import a mesh from an OBJ file.
-	 * 
+	 *
 	 * @param fileName The path to the OBJ file.
 	 * @param mesh The mesh object to fill.
 	 * @return true if the import is successful, false otherwise.
@@ -141,10 +142,10 @@ public:
 		std::vector<vec2f> texCoords;
 
 		std::vector<Triangle> triangles;
-		int32 triangleCount = 0;
-		std::vector<uint32> positionIndexes;
-		std::vector<uint32> normalIndexes;
-		std::vector<uint32> texCoordIndexes;
+		int32				  triangleCount = 0;
+		std::vector<uint32>	  positionIndexes;
+		std::vector<uint32>	  normalIndexes;
+		std::vector<uint32>	  texCoordIndexes;
 
 		// Process each line in the file
 		while (stream.peek() != -1)
@@ -161,7 +162,7 @@ public:
 			const char token = *line.c_str();
 			switch (token)
 			{
-			case 'v': // Parse vertex positions, normals, and texture coordinates
+				case 'v': // Parse vertex positions, normals, and texture coordinates
 				{
 					if (line.starts_with("vn"))
 					{
@@ -183,18 +184,29 @@ public:
 					break;
 				}
 
-			case 'f': // Parse face indices
+				case 'f': // Parse face indices
 				{
 					Triangle triangle;
 					parseFace(line, &triangle.positionIndexes, &triangle.normalIndexes,
-					          &triangle.texCoordIndexes);
+						&triangle.texCoordIndexes);
 					triangles.emplace_back(triangle);
 					triangleCount++;
 					break;
 				}
-			default:
-				LOG_WARNING("Token {} is either invalid or not implemented. (Line: {})", token, *line.c_str())
-				break;
+				case '\0':
+				{
+					break;
+				}
+				case 'o':
+				case 'g':
+				case 's':
+					LOG_WARNING("Token {} is not implemented (Line: {}", token, *line.c_str());
+					break;
+				default:
+				{
+					LOG_WARNING("Token {} is invalid (Line: {})", token, *line.c_str())
+					break;
+				}
 			}
 		}
 
@@ -204,7 +216,10 @@ public:
 		{
 			mesh->m_normals = normals;
 		}
-		mesh->m_texCoords = texCoords;
+		if (!texCoords.empty())
+		{
+			mesh->m_texCoords = texCoords;
+		}
 
 		return true;
 	}

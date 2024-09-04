@@ -5,18 +5,20 @@
 #include "Framework/Input/InputHandler.h"
 #include "Framework/Renderer/Renderer.h"
 
+inline std::vector<std::shared_ptr<Mesh>> g_meshes;
+
 class Engine
 {
 	std::shared_ptr<Renderer> m_renderer;
-	bool m_isRunning = false;
+	bool					  m_isRunning = false;
 
 	timePoint m_startTime;
-	float m_deltaTime = 0.0f;
+	float	  m_deltaTime = 0.0f;
 
 	float m_cameraSpeed = .01f;
 	float m_cameraSpeedMultiplier = 1.0f;
 
-	std::vector<float*> m_vertexes;
+	std::vector<float*>	 m_vertexes;
 	std::vector<uint32*> m_indexes;
 
 public:
@@ -53,15 +55,6 @@ public:
 		m_isRunning = newState;
 	}
 
-	void openFile(const std::string& fileName);
-
-	std::vector<std::shared_ptr<Mesh>> m_meshes;
-
-	[[nodiscard]] std::vector<std::shared_ptr<Mesh>> getMeshes() const
-	{
-		return m_meshes;
-	}
-
 	[[nodiscard]] constexpr float getFps() const
 	{
 		return 1000.0f / m_deltaTime;
@@ -74,5 +67,6 @@ public:
 	void onMiddleMouseUp(const vec2f& cursorPosition) const;
 
 	void onMenuActionPressed(EMenuAction actionId);
-	void onOpenPressed();
+	void onLoadModelPressed();
+	void onLoadTexturePressed();
 };

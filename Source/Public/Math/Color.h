@@ -1,9 +1,15 @@
 ﻿#pragma once
 
+#include <format>
 #include "MathFwd.h"
 
 struct Color;
 struct LinearColor;
+
+inline int32 g_redMask = 0xFF000000;
+inline int32 g_greenMask = 0xFF0000;
+inline int32 g_blueMask = 0xFF00;
+inline int32 g_alphaMask = 0xFF;
 
 struct Color
 {
@@ -80,18 +86,23 @@ public:
 		return { r, g, b, a };
 	}
 
-	static Color fromInt32(const uint32 value)
+	static Color fromUInt32(const int32 value)
 	{
-		auto a = (uint8)(value & 0xFF);
-		auto b = (uint8)((value >> 8) & 0xFF);
-		auto g = (uint8)((value >> 16) & 0xFF);
-		auto r = (uint8)((value >> 32) & 0xFF);
-		return {r, g, b, a};
+		uint8 a = UINT8_MAX & value >> 24;
+		uint8 r = UINT8_MAX & value >> 16;
+		uint8 g = UINT8_MAX & value >> 8;
+		uint8 b = UINT8_MAX & value;
+		return { r, g, b, a };
 	}
 
 	[[nodiscard]] int32 toInt32() const
 	{
 		return (r << 16) | (g << 8) | b | 0;
+	}
+
+	std::string toString()
+	{
+		return std::format("RGBA[{}, {}, {}, {}]", r, g, b, a);
 	}
 };
 

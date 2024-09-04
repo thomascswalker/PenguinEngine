@@ -12,7 +12,7 @@ namespace Strings
 		outStrings.clear();
 
 		std::string temp;
-		int32 stringSize = static_cast<int32>(inString.size());
+		int32		stringSize = static_cast<int32>(inString.size());
 		for (int32 index = 0; index < stringSize; index++)
 		{
 			if (inString.substr(index, delimiter.size()) == delimiter)
@@ -46,4 +46,9 @@ namespace Strings
 	{
 		return inString.find(otherString) != std::string::npos;
 	}
-}
+
+	inline std::wstring toWString(const std::string& str)
+	{
+		return { str.begin(), str.end() };
+	}
+} // namespace Strings

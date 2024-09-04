@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <cstdint>
+
 #define NOMINMAX
 
 #define PI 3.14159265358979323846f
@@ -14,6 +16,13 @@
 #define SMALL_NUMBER 0.0001f
 #define LARGE_NUMBER 10000.0f
 #define VERY_LARGE_NUMBER 10000000.0f
+
+#define DEPTH_1 1
+#define DEPTH_2 2
+#define DEPTH_4 4
+#define DEPTH_8 8
+#define DEPTH_16 16
+#define DEPTH_32 32
 
 // Basic types
 using bit = unsigned char;
@@ -76,6 +85,7 @@ using trianglef = triangle_t<float>;
 using triangled = triangle_t<double>;
 
 // Matrix
+
 template <typename T>
 struct mat4_t;
 using mat4f = mat4_t<float>;

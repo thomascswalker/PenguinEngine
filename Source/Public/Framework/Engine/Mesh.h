@@ -15,11 +15,11 @@ struct Vertex
 {
 	vec3f position;
 	vec3f normal;
-	vec3f texCoord;
+	vec2f texCoord;
 
 	Vertex() = default;
 
-	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec3f& inTexCoord)
+	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec2f& inTexCoord)
 		: position(inPosition),
 		  normal(inNormal),
 		  texCoord(inTexCoord) {}

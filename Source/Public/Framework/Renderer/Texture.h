@@ -3,20 +3,32 @@
 #include <map>
 #include <stdlib.h>
 
-#include "Framework/Platforms/PlatformMemory.h"
+#include "Framework/Core/Buffer.h"
+#include "Framework/Platforms/Platform.h"
 #include "Math/Color.h"
 #include "Math/Vector.h"
 
 class Texture;
-inline std::vector<Texture> g_textures{};
+inline std::vector<std::shared_ptr<Texture>> g_textures;
 
 namespace TextureManager
 {
-	inline Texture* getTexture(const int32 index)
+	inline int32 count()
 	{
-		return &g_textures[index];
+		return g_textures.size();
 	}
-}
+
+	inline Texture* getTexture(int32 index)
+	{
+		return g_textures[index].get();
+	}
+} // namespace TextureManager
+
+enum class ETextureByteOrder
+{
+	RGBA,
+	BRGA
+};
 
 /**
  * @brief Texture class for storing pixel data in a 2D format.
@@ -24,34 +36,67 @@ namespace TextureManager
 class Texture
 {
 	/** The memory pointer this texture uses to store pixels. */
-	void* m_data = nullptr;
+	Buffer<uint8> m_buffer;
 	/** The 2-dimensional compressedSize of this texture. */
 	vec2i m_size;
 	/** The size of a single row of pixels. */
 	size_t m_pitch = 0;
 	/** The number of channels in this texture. */
-	int32 channelCount = 0;
+	int32 m_channelCount = 0;
+	/** The order of RGB bytes in RGBA */
+	ETextureByteOrder m_byteOrder = ETextureByteOrder::RGBA;
+
+	void _initFromPlatformType()
+	{
+		EPlatformType platformType = getPlatformType();
+		switch (platformType)
+		{
+			case EPlatformType::Windows:
+				m_byteOrder = ETextureByteOrder::BRGA;
+				break;
+			case EPlatformType::MacOS:
+			case EPlatformType::Linux:
+			default:
+				m_byteOrder = ETextureByteOrder::RGBA;
+				break;
+		}
+	}
 
 public:
-	Texture() {}
+	Texture()
+	{
+		m_size.x = 1;
+		m_size.y = 1;
+		m_pitch = 1;
+		size_t memSize = getMemorySize();
+		m_buffer.resize(memSize);
+	}
 
-	explicit Texture(const vec2i inSize) : m_size(inSize), m_pitch(inSize.x)
+	explicit Texture(const vec2i inSize)
+		: m_size(inSize), m_pitch(inSize.x)
 	{
 		size_t memSize = getMemorySize();
-		m_data = PlatformMemory::malloc(memSize);
+		m_buffer.resize(memSize);
+	}
+
+	Texture(Buffer<uint8>* inData, vec2i inSize)
+		: m_size(inSize), m_pitch(inSize.x)
+	{
+		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
+		assert(targetSize == inData->getSize());
+		m_buffer.resize(inData->getSize());
+		memcpy(m_buffer.getPtr(), inData->getPtr(), inData->getSize());
 	}
 
 	Texture(const Texture& other)
-		: m_data(other.m_data),
-		m_size(other.m_size),
-		m_pitch(other.m_pitch)
-	{}
+		: m_buffer(other.m_buffer), m_size(other.m_size), m_pitch(other.m_pitch)
+	{
+	}
 
 	Texture(Texture&& other) noexcept
-		: m_data(other.m_data),
-		m_size(other.m_size),
-		m_pitch(other.m_pitch)
-	{}
+		: m_buffer(other.m_buffer), m_size(other.m_size), m_pitch(other.m_pitch)
+	{
+	}
 
 	Texture& operator=(const Texture& other)
 	{
@@ -59,7 +104,7 @@ public:
 		{
 			return *this;
 		}
-		m_data = other.m_data;
+		m_buffer = other.m_buffer;
 		m_size = other.m_size;
 		m_pitch = other.m_pitch;
 		return *this;
@@ -71,43 +116,30 @@ public:
 		{
 			return *this;
 		}
-		m_data = other.m_data;
+		m_buffer = other.m_buffer;
 		m_size = other.m_size;
 		m_pitch = other.m_pitch;
 		return *this;
 	}
 
-	~Texture()
+	bool isValid()
 	{
-		// Free the memory blob upon this texture's destruction
-		//free(m_data);
-	}
-
-	static Texture fromData(uint8* inData, const uint32 inWidth, const uint32 inHeight)
-	{
-		Texture bm(vec2i(inWidth, inHeight));
-		bm.setMemory(inData);
-		return bm;
-	}
-
-	bool isValid() const
-	{
-		return m_data != nullptr;
+		return m_buffer.getPtr() != nullptr;
 	}
 
 	void resize(const vec2i inSize)
 	{
 		m_size = inSize;
 		m_pitch = inSize.x;
-		m_data = PlatformMemory::malloc<uint8>(getMemorySize());
+		m_buffer.resize(getMemorySize());
 	}
 
 	/**
 	 * @brief Returns the raw void pointer to this texture's memory.
 	 */
-	[[nodiscard]] void* getRawMemory() const
+	[[nodiscard]] void* getRawMemory()
 	{
-		return m_data;
+		return (void*)m_buffer.getPtr();
 	}
 
 	/**
@@ -116,19 +148,18 @@ public:
 	template <typename T>
 	T* getMemory() const
 	{
-		return static_cast<T*>(m_data);
+		return m_buffer.getPtr();
 	}
 
-	template <typename T>
-	void setMemory(T* newMemory, const size_t inSize = 0)
+	void setMemory(Buffer<uint8>* newMemory, const size_t inSize = 0)
 	{
-		if (newMemory == nullptr)
+		if (newMemory->getPtr() == nullptr)
 		{
 			LOG_ERROR("Invalid memory allocation.")
-				return;
+			return;
 		}
 		auto size = inSize ? inSize : getMemorySize();
-		memcpy(m_data, newMemory, size);
+		memcpy(m_buffer.getPtr(), newMemory->getPtr(), size);
 	}
 
 	/**
@@ -156,14 +187,24 @@ public:
 		return m_size.y;
 	}
 
+	int32 getChannelCount()
+	{
+		return m_channelCount;
+	}
+
+	void setChannelCount(int32 count)
+	{
+		m_channelCount = count;
+	}
+
 	/**
 	 * @brief Fills this texture with the specified color.
 	 * @param inColor The color to fill this texture with.
 	 */
-	void fill(const Color& inColor) const
+	void fill(const Color& inColor)
 	{
 		int32 color = inColor.toInt32();
-		PlatformMemory::fill(m_data, getMemorySize(), color);
+		PlatformMemory::fill(m_buffer.getPtr(), getMemorySize(), color);
 	}
 
 	/**
@@ -171,9 +212,9 @@ public:
 	 * @note This is currently probably slower than it needs to be. std::memset & `std::fill` don't accept floats.
 	 * @param value The value to fill this texture with.
 	 */
-	void fill(const float value) const
+	void fill(const float value)
 	{
-		auto floatData = (float*)m_data;
+		auto  floatData = (float*)m_buffer.getPtr();
 		int32 size = m_size.x * m_size.y;
 		for (int32 i = 0; i < size; i++)
 		{
@@ -181,7 +222,7 @@ public:
 		}
 
 		// TODO: Figure out why this fails for floats
-		//PlatformMemory::fill(m_data, getMemorySize(), value);
+		// PlatformMemory::fill(m_data, getMemorySize(), value);
 	}
 
 	/**
@@ -190,54 +231,54 @@ public:
 	 * @param y The row to return.
 	 * @return A type T pointer to the row of pixels.
 	 */
-	template <typename T>
-	[[nodiscard]] T* scanline(const int y) const
+	[[nodiscard]] uint32* scanline(const int y)
 	{
-		return static_cast<T*>(m_data) + (y * m_pitch);
+		return (uint32*)m_buffer.getPtr() + (y * m_pitch);
 	}
 
 	template <typename T>
-	[[nodiscard]] T getPixel(const int32 x, const int32 y) const
+	[[nodiscard]] T getPixel(const int32 x, const int32 y)
 	{
 		T* line = scanline<T>(y);
 		return line[x];
 	}
 
-	[[nodiscard]] Color getPixelAsColor(const int32 x, const int32 y) const
+	[[nodiscard]] Color getPixelAsColor(const int32 x, const int32 y)
 	{
-		int32* line = scanline<int32>(y);
-		return Color::fromInt32(line[x]);
+		uint32* line = scanline(y);
+		uint32	v = line[x];
+		return Color::fromUInt32(v);
 	}
 
-	[[nodiscard]] int32 getPixelAsInt32(const int32 x, const int32 y) const
+	[[nodiscard]] uint32 getPixelAsUInt32(const int32 x, const int32 y)
 	{
-		int32* line = scanline<int32>(y);
+		uint32* line = scanline(y);
 		return line[x];
 	}
 
-	[[nodiscard]] float getPixelAsFloat(const int32 x, const int32 y) const
+	[[nodiscard]] float getPixelAsFloat(const int32 x, const int32 y)
 	{
-		int32 pixel = getPixelAsInt32(x, y);
+		uint32 pixel = getPixelAsUInt32(x, y);
 		return *(reinterpret_cast<float*>(&pixel));
 	}
 
-	template <typename T>
-	void setPixel(const int32 x, const int32 y, const T color) const
+	void setPixel(const int32 x, const int32 y, const uint8 color)
 	{
-		T* line = static_cast<T*>(m_data) + (y * m_pitch);
+		uint8* line = m_buffer.getPtr() + (y * m_pitch);
 		line[x] = color;
 	}
 
-	void setPixelFromColor(const int32 x, const int32 y, const Color& color) const
+	void setPixelFromColor(const int32 x, const int32 y, const Color& color)
 	{
-		int32* line = (int32*)m_data + (y * m_pitch);
+		auto line = (uint32*)m_buffer.getPtr();
+		line += (y * m_pitch);
 		line[x] = color.toInt32();
 	}
 
-	void setPixelFromFloat(const int32 x, const int32 y, float value) const
+	void setPixelFromFloat(const int32 x, const int32 y, float value)
 	{
-		int32* line = (int32*)m_data + (y * m_pitch);
-		int32* castInt = reinterpret_cast<int32*>(&value);
+		uint32* line = (uint32*)m_buffer.getPtr() + (y * m_pitch);
+		auto*	castInt = reinterpret_cast<uint32*>(&value);
 		line[x] = *castInt;
 	}
 
@@ -245,8 +286,8 @@ public:
 	static void flipVertical(void* ptr, int32 width, int32 height)
 	{
 		size_t bytesPerRow = (size_t)width * g_bytesPerPixel;
-		uint8 temp[2048];
-		uint8* bytes = (uint8*)ptr;
+		uint8  temp[2048];
+		auto*  bytes = static_cast<uint8*>(ptr);
 
 		for (int32 row = 0; row < (height >> 1); row++)
 		{
@@ -269,6 +310,63 @@ public:
 
 	void flipVertical()
 	{
-		Texture::flipVertical(m_data, m_size.x, m_size.y);
+		Texture::flipVertical(m_buffer.getPtr(), m_size.x, m_size.y);
+	}
+
+	// Swap the RGBA bytes for BGRA
+	void setByteOrder(ETextureByteOrder newOrder)
+	{
+		// TODO: Somehow this is corrupting the heap
+		size_t index = 0;
+		size_t size = getMemorySize();
+		uint8* ptr = m_buffer.getPtr();
+
+		if (!ptr)
+		{
+			throw std::runtime_error("Texture data is malformed.");
+		}
+
+		switch (newOrder)
+		{
+			case ETextureByteOrder::RGBA:
+				while (index < size)
+				{
+					uint8 b = ptr[index];
+					uint8 g = ptr[index + 1];
+					uint8 r = ptr[index + 2];
+					uint8 a = ptr[index + 3];
+
+					ptr[index] = r;
+					ptr[index + 1] = g;
+					ptr[index + 2] = b;
+					ptr[index + 3] = a;
+
+					index += 4;
+				}
+			case ETextureByteOrder::BRGA:
+				while (index < size - 4)
+				{
+					uint8 r = ptr[index];
+					uint8 g = ptr[index + 1];
+					uint8 b = ptr[index + 2];
+					uint8 a = ptr[index + 3];
+
+					ptr[index] = b;
+					ptr[index + 1] = g;
+					ptr[index + 2] = r;
+					ptr[index + 3] = a;
+
+					index += 4;
+				}
+				break;
+			default:
+				break;
+		}
+
+		m_byteOrder = newOrder;
+	}
+
+	void addAlphaChannel()
+	{
 	}
 };

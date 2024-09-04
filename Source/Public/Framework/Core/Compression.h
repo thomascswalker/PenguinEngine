@@ -4,7 +4,7 @@
 #include "Framework/Platforms/PlatformMemory.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-#define ZLIB_WINAPI
+	#define ZLIB_WINAPI
 #endif
 
 #include "zlib/zlib.h"
@@ -24,7 +24,7 @@ namespace Compression
 		PlatformMemory::free(p);
 	}
 
-	static bool uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
+	static int32 uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
 	{
 		uint32 uncompressedSize = uncompressedBuffer->getSize();
 		uint8* uncompressedData = PlatformMemory::malloc<uint8>(uncompressedSize);
@@ -38,27 +38,37 @@ namespace Compression
 		stream.next_out = uncompressedData;
 		stream.avail_out = uncompressedSize;
 
-		if (inflateInit2(&stream, g_defaultZlibBitWindow) != Z_OK)
+		int32 result = inflateInit2(&stream, g_defaultZlibBitWindow);
+		if (result != Z_OK)
 		{
-			return false;
+			return result;
 		}
 
-		int32 result = 0;
 		while (result != Z_STREAM_END)
 		{
 			result = inflate(&stream, Z_NO_FLUSH);
-			if (result == Z_STREAM_ERROR)
+			switch (result)
 			{
-				inflateEnd(&stream);
-				return false;
+				case Z_ERRNO:
+				case Z_STREAM_ERROR:
+				case Z_DATA_ERROR:
+				case Z_MEM_ERROR:
+				case Z_BUF_ERROR:
+				case Z_VERSION_ERROR:
+					LOG_ERROR("ZLib error: {}", result);
+					inflateEnd(&stream);
+					return result;
+				case Z_OK:
+					break;
 			}
-			//size_t have = uncompressedBuffer->getSize() - stream.avail_out;
-			//memcpy(uncompressedBuffer->getPtr(), )
+
+			// size_t have = uncompressedBuffer->getSize() - stream.avail_out;
+			// memcpy(uncompressedBuffer->getPtr(), )
 		}
 		result = inflateEnd(&stream);
 
 		memcpy(uncompressedBuffer->getPtr(), uncompressedData, uncompressedSize);
 
-		return result == Z_OK;
+		return result;
 	}
-}
+} // namespace Compression

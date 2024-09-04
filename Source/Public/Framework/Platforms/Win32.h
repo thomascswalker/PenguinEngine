@@ -165,18 +165,14 @@ public:
 	/** @copydoc IPlatform::getSize() */
 	rectf getSize() override;
 
-	/** @copydoc IPlatform::getPlatformType() */
-	EPlatformType getPlatformType() override
-	{
-		return EPlatformType::Windows;
-	}
-
 	/** @copydoc IPlatform::getFileDialog() */
-	bool getFileDialog(std::string& outFileName) override;
+	bool getFileDialog(std::string& outFileName, const std::string& filter) override;
 
 	/** @copydoc IPlatform::constructMenuBar() */
 	void constructMenuBar() override;
 
 	/** @copydoc IPlatform::setMenuItemChecked() */
 	void setMenuItemChecked(EMenuAction actionId, bool checkState) override;
+
+	void messageBox(const std::string& title, const std::string& message) override;
 };

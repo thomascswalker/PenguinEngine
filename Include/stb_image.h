@@ -6127,7 +6127,7 @@ static int stbi__psd_decode_rle(stbi__context *s, stbi_uc *p, int pixelCount)
 static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
 {
    int pixelCount;
-   int channelCount, compression;
+   int inChannelCount, compression;
    int channel, i;
    int bitdepth;
    int w,h;
@@ -6146,8 +6146,8 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
    stbi__skip(s, 6 );
 
    // Read the number of channels (R, G, B, A, etc).
-   channelCount = stbi__get16be(s);
-   if (channelCount < 0 || channelCount > 16)
+   inChannelCount = stbi__get16be(s);
+   if (inChannelCount < 0 || inChannelCount > 16)
       return stbi__errpuc("wrong channel count", "Unsupported number of channels in PSD image");
 
    // Read the rows and columns of the image.
@@ -6222,14 +6222,14 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
 
       // The RLE-compressed data is preceded by a 2-byte data count for each row in the data,
       // which we're going to just skip.
-      stbi__skip(s, h * channelCount * 2 );
+      stbi__skip(s, h * inChannelCount * 2 );
 
       // Read the RLE data by channel.
       for (channel = 0; channel < 4; channel++) {
          stbi_uc *p;
 
          p = out+channel;
-         if (channel >= channelCount) {
+         if (channel >= inChannelCount) {
             // Fill this channel with default data.
             for (i = 0; i < pixelCount; i++, p += 4)
                *p = (channel == 3 ? 255 : 0);
@@ -6248,7 +6248,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
 
       // Read the data by channel.
       for (channel = 0; channel < 4; channel++) {
-         if (channel >= channelCount) {
+         if (channel >= inChannelCount) {
             // Fill this channel with default data.
             if (bitdepth == 16 && bpc == 16) {
                stbi__uint16 *q = ((stbi__uint16 *) out) + channel;
@@ -6281,7 +6281,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
    }
 
    // remove weird white matte from PSD
-   if (channelCount >= 4) {
+   if (inChannelCount >= 4) {
       if (ri->bits_per_channel == 16) {
          for (i=0; i < w*h; ++i) {
             stbi__uint16 *pixel = (stbi__uint16 *) out + 4*i;
@@ -7359,7 +7359,7 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_PSD
 static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   int channelCount, dummy, depth;
+   int inChannelCount, dummy, depth;
    if (!x) x = &dummy;
    if (!y) y = &dummy;
    if (!comp) comp = &dummy;
@@ -7372,8 +7372,8 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
        return 0;
    }
    stbi__skip(s, 6);
-   channelCount = stbi__get16be(s);
-   if (channelCount < 0 || channelCount > 16) {
+   inChannelCount = stbi__get16be(s);
+   if (inChannelCount < 0 || inChannelCount > 16) {
        stbi__rewind( s );
        return 0;
    }
@@ -7394,7 +7394,7 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 
 static int stbi__psd_is16(stbi__context *s)
 {
-   int channelCount, depth;
+   int inChannelCount, depth;
    if (stbi__get32be(s) != 0x38425053) {
        stbi__rewind( s );
        return 0;
@@ -7404,8 +7404,8 @@ static int stbi__psd_is16(stbi__context *s)
        return 0;
    }
    stbi__skip(s, 6);
-   channelCount = stbi__get16be(s);
-   if (channelCount < 0 || channelCount > 16) {
+   inChannelCount = stbi__get16be(s);
+   if (inChannelCount < 0 || inChannelCount > 16) {
        stbi__rewind( s );
        return 0;
    }

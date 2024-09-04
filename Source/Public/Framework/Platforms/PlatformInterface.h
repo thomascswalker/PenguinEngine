@@ -2,17 +2,9 @@
 
 #include <string>
 #include <Math/MathFwd.h>
+#include "Platform.h"
 
 #include "Framework/Input/InputHandler.h"
-
-/* @brief Enumerator defining the platform type. */
-enum class EPlatformType : uint8
-{
-	Windows,
-	MacOS,
-	Linux,
-	Unknown
-};
 
 /** @brief Base class of all OS Platforms (Win32, Mac, Linux).
  *  This abstracts the implementation of each platform based on its
@@ -79,17 +71,11 @@ public:
 	virtual rectf getSize() = 0;
 
 	/**
-	 * @brief Returns the EPlatformType of the implemented platform.
-	 * @return The platform type.
-	 */
-	virtual EPlatformType getPlatformType() = 0;
-
-	/**
 	 * @brief Opens a file dialog to select a file to open.
 	 * @param outFileName The file name of the file to open.
 	 * @return True if the file name can be retrieved, false otherwise.
 	 */
-	virtual bool getFileDialog(std::string& outFileName) = 0;
+	virtual bool getFileDialog(std::string& outFileName, const std::string& filter) = 0;
 
 	/**
 	 * @brief Constructs a platform-specific menu bar at the top of the dialog.
@@ -103,4 +89,6 @@ public:
 	 * @param checkState The new state of the menu item.
 	 */
 	virtual void setMenuItemChecked(EMenuAction actionId, bool checkState) = 0;
+
+	virtual void messageBox(const std::string& title, const std::string& message) = 0;
 };
