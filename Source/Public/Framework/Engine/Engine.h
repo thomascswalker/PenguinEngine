@@ -18,7 +18,7 @@ class Engine
 	float m_cameraSpeed = .01f;
 	float m_cameraSpeedMultiplier = 1.0f;
 
-	std::vector<float*>	 m_vertexes;
+	std::vector<float*>	 m_vertices;
 	std::vector<uint32*> m_indexes;
 
 public:

@@ -831,7 +831,7 @@ namespace Math
 	template <typename T>
 	static bool getBarycentric(const vec3_t<T>& p,
 	                           const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2,
-	                           vec3_t<T>& uvw)
+	                           vec3_t<T>& bary)
 	{
 		// Calculate the vectors representing the edges of the triangle
 		const vec3_t<T> ba = v1 - v0;
@@ -854,15 +854,15 @@ namespace Math
 		const T u = T(1) - v - w;
 
 		// Store the barycentric coordinates in the output parameter
-		uvw.x = u;
-		uvw.y = v;
-		uvw.z = w;
+		bary.x = u;
+		bary.y = v;
+		bary.z = w;
 
 		// Check if the point is inside the triangle
 		return (
-			uvw.x >= T(0) &&
-			uvw.y >= T(0) &&
-			uvw.z >= T(0)
+			bary.x >= T(0) &&
+			bary.y >= T(0) &&
+			bary.z >= T(0)
 		);
 	}
 

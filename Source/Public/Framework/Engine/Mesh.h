@@ -61,6 +61,8 @@ struct Mesh : Object
 		processTriangles();
 	}
 
+	bool hasNormals() const { return !m_normals.empty(); }
+	bool hasTexCoords() const { return !m_texCoords.empty(); }
 	void processTriangles();
 
 	// Primitives

@@ -413,7 +413,7 @@ bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& f
 {
 	OPENFILENAME ofn = { 0 };
 	TCHAR		 szFile[MAX_PATH] = { 0 };
-	szFile[0] =W '\0';
+	szFile[0] = '\0';
 
 	std::string	 fmtFilter = filter;
 	fmtFilter.push_back('\0');
