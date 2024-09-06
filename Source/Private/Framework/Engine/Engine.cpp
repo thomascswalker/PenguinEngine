@@ -1,12 +1,12 @@
-﻿#include <Framework/Engine/Engine.h>
-#include <Framework/Engine/Mesh.h>
-#include "Framework/Engine/Timer.h"
-#include "Framework/Input/InputHandler.h"
+﻿#include "Framework/Engine/Engine.h"
+
 #include "Framework/Application.h"
+#include "Framework/Engine/Timer.h"
 #include "Framework/Importers/MeshImporter.h"
 #include "Framework/Importers/TextureImporter.h"
-
+#include "Framework/Input/InputHandler.h"
 #include "Framework/Platforms/PlatformInterface.h"
+#include "Framework/Engine/Mesh.h"
 
 Engine* Engine::m_instance = getInstance();
 
@@ -32,6 +32,7 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	// Bind input events
 	if (IInputHandler* input = Win32InputHandler::getInstance())
 	{
+		LOG_INFO("Setting up input.")
 		// Keyboard
 		input->m_keyPressed.addRaw(this, &Engine::onKeyPressed);
 
@@ -169,29 +170,22 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		}
 		case EMenuAction::Wireframe:
 		{
-			platform->setMenuItemChecked(EMenuAction::Wireframe,
-				m_renderer->m_settings.toggleRenderFlag(
-					Wireframe));
+			platform->setMenuItemChecked(EMenuAction::Wireframe, m_renderer->m_settings.toggleRenderFlag(Wireframe));
 			break;
 		}
 		case EMenuAction::Shaded:
 		{
-			platform->setMenuItemChecked(EMenuAction::Shaded,
-				m_renderer->m_settings.toggleRenderFlag(
-					Shaded));
+			platform->setMenuItemChecked(EMenuAction::Shaded, m_renderer->m_settings.toggleRenderFlag(Shaded));
 			break;
 		}
 		case EMenuAction::Depth:
 		{
-			platform->setMenuItemChecked(EMenuAction::Depth,
-				m_renderer->m_settings.toggleRenderFlag(Depth));
+			platform->setMenuItemChecked(EMenuAction::Depth, m_renderer->m_settings.toggleRenderFlag(Depth));
 			break;
 		}
 		case EMenuAction::Normals:
 		{
-			platform->setMenuItemChecked(EMenuAction::Normals,
-				m_renderer->m_settings.toggleRenderFlag(
-					Normals));
+			platform->setMenuItemChecked(EMenuAction::Normals, m_renderer->m_settings.toggleRenderFlag(Normals));
 			break;
 		}
 	}
@@ -210,6 +204,7 @@ void Engine::onLoadModelPressed()
 		ObjImporter::import(fileName, mesh.get());
 		mesh->processTriangles();
 		g_meshes.push_back(mesh);
+		LOG_INFO("Loaded model {}.", fileName);
 	}
 }
 
@@ -227,6 +222,7 @@ void Engine::onLoadTexturePressed()
 		texture->flipVertical();
 		g_textures.emplace_back(texture);
 		m_renderer->getShader()->texture = TextureManager::getTexture(0);
+		LOG_INFO("Loaded texture {}.", fileName);
 	}
 }
 

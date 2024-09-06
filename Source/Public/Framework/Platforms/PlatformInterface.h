@@ -90,5 +90,11 @@ public:
 	 */
 	virtual void setMenuItemChecked(EMenuAction actionId, bool checkState) = 0;
 
+
+	/**
+	 * @brief Displays a modal message box using the platform-specific method of doing so.
+	 * @param title The title of the message box.
+	 * @param message The text to display within the message box.
+	 */
 	virtual void messageBox(const std::string& title, const std::string& message) = 0;
 };

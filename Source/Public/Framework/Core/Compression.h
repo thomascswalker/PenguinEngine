@@ -61,9 +61,6 @@ namespace Compression
 				case Z_OK:
 					break;
 			}
-
-			// size_t have = uncompressedBuffer->getSize() - stream.avail_out;
-			// memcpy(uncompressedBuffer->getPtr(), )
 		}
 		result = inflateEnd(&stream);
 

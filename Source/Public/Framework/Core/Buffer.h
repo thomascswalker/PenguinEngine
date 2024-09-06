@@ -10,8 +10,16 @@
 
 inline uint8 g_bitsPerByte = 8;
 
+/**
+ * @brief Swaps the specified value's byte order.
+ *
+ * 01234567 <=> 76543210
+ *
+ * @param value The value to swap the order on.
+ * @return T The swapped value.
+ */
 template <typename T>
-T swapByteOrder(T value)
+inline T swapByteOrder(T value)
 {
 	T	result = 0;
 	int size = sizeof(T) - 1;
@@ -23,6 +31,10 @@ T swapByteOrder(T value)
 	return result;
 }
 
+/**
+ * @brief This class stores data of type T with a specified size. The management of this class' memory is done
+ * with PlatformMemory functions.
+ */
 template <typename T>
 struct Buffer
 {
@@ -106,15 +118,6 @@ public:
 		return *this;
 	}
 
-	//~Buffer()
-	//{
-	//	if (data)
-	//	{
-	//		PlatformMemory::free(data);
-	//	}
-	//	data = nullptr;
-	//}
-
 	T* getPtr()
 	{
 		return data;
@@ -137,7 +140,9 @@ public:
 
 	void resize(const size_t inSize)
 	{
+#if _DEBUG
 		assert(inSize < UINT32_MAX);
+#endif
 		if (data != nullptr)
 		{
 			PlatformMemory::free(data);
@@ -150,7 +155,9 @@ public:
 	void resize(const uint32 width, const uint32 height)
 	{
 		size = width * height * g_bitsPerPixel;
+#if _DEBUG
 		assert(size < UINT32_MAX);
+#endif
 		if (data != nullptr)
 		{
 			PlatformMemory::free(data);
@@ -227,7 +234,7 @@ public:
 			return false;
 		}
 
-		if (memcmp(data, other.data, size) != 0)
+		if (std::memcmp(data, other.data, size) != 0)
 		{
 			return false;
 		}
@@ -254,9 +261,13 @@ enum class ESeekDir : int32
 
 class ByteReader
 {
+	/* Position of the cursor. */
 	int32						  m_pos = 0;
+	/* Size of the entire buffer. */
 	size_t						  m_size = 0;
+	/* Endian type this buffer reads bytes by. */
 	std::endian					  m_endian = std::endian::native;
+
 	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
 	std::unique_ptr<std::istream> m_stream = nullptr;
 
@@ -406,7 +417,7 @@ public:
 		{
 			fillBits();
 		}
-		uint8 outValue = (uint8)(m_codeBuffer & (1 << count) - 1);
+		auto outValue = (uint8)(m_codeBuffer & (1 << count) - 1);
 		m_codeBuffer >>= count;
 		m_bitCount -= count;
 		return outValue;
