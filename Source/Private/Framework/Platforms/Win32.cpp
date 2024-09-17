@@ -168,6 +168,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			// Cleanup and end painting
 			ReleaseDC(hwnd, deviceContext);
+			ReleaseDC(hwnd, renderContext);
 			DeleteDC(deviceContext);
 			DeleteDC(renderContext);
 			EndPaint(hwnd, &paint);
@@ -394,6 +395,11 @@ int32 Win32Platform::swapBuffers()
 	return 0;
 }
 
+bool Win32Platform::isInitialized() const
+{
+	return m_initialized;
+}
+
 rectf Win32Platform::getSize()
 {
 	RECT outRect;
@@ -413,9 +419,9 @@ bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& f
 {
 	OPENFILENAME ofn = { 0 };
 	TCHAR		 szFile[MAX_PATH] = { 0 };
-	szFile[0] =W '\0';
+	szFile[0] = '\0';
 
-	std::string	 fmtFilter = filter;
+	std::string fmtFilter = filter;
 	fmtFilter.push_back('\0');
 	fmtFilter.append(std::format("*.{}", filter));
 	fmtFilter.push_back('\0');
@@ -476,7 +482,10 @@ void Win32Platform::setMenuItemChecked(EMenuAction actionId, const bool checkSta
 
 void Win32Platform::messageBox(const std::string& title, const std::string& message)
 {
-	MessageBox(nullptr, (LPCWSTR)std::wstring(title.begin(), title.end()).c_str(),
-		(LPCWSTR)std::wstring(message.begin(), message.end()).c_str(),
-		MB_ICONINFORMATION);
+
+	MessageBoxW(
+		nullptr,									  // Handle
+		(LPCWSTR)Strings::toWString(title).c_str(),	  // Title
+		(LPCWSTR)Strings::toWString(message).c_str(), // Text
+		MB_ICONINFORMATION);						  // Type
 }

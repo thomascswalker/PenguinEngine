@@ -14,8 +14,8 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 	m_grid = std::make_unique<FGrid>(8, 4.0f);
 
 	// Color and depth buffer storage
-	m_colorBitmap = std::make_shared<Texture>(vec2i(inWidth, inHeight));
-	m_depthBitmap = std::make_shared<Texture>(vec2i(inWidth, inHeight));
+	m_colorTexture = std::make_shared<Texture>(vec2i(inWidth, inHeight));
+	m_depthTexture = std::make_shared<Texture>(vec2i(inWidth, inHeight));
 
 	// Set default render flags
 	m_settings = RenderSettings();
@@ -27,8 +27,8 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 {
 	m_viewport->resize(inWidth, inHeight);
-	m_colorBitmap->resize(vec2i(inWidth, inHeight));
-	m_depthBitmap->resize(vec2i(inWidth, inHeight));
+	m_colorTexture->resize(vec2i(inWidth, inHeight));
+	m_depthTexture->resize(vec2i(inWidth, inHeight));
 }
 
 void Renderer::draw() const
@@ -37,8 +37,8 @@ void Renderer::draw() const
 	m_viewport->getCamera()->computeViewProjectionMatrix();
 
 	// Reset all buffers to their default values (namely z to Inf)
-	m_colorBitmap->fill(Color::black());
-	m_depthBitmap->fill(10000.0f);
+	m_colorTexture->fill(Color::black());
+	m_depthTexture->fill(10000.0f);
 
 	// Draw the world grid prior to drawing any geometry
 	drawGrid();
@@ -47,11 +47,12 @@ void Renderer::draw() const
 	const Engine* engine = Engine::getInstance();
 	for (const auto& mesh : g_meshes)
 	{
+		m_currentShader->hasNormals = mesh->hasNormals();
+		m_currentShader->hasTexCoords = mesh->hasTexCoords();
 		drawMesh(mesh.get());
 	}
 }
 
-// TODO: Rewrite to use a single array of vertices rather than looping through meshes/triangles
 void Renderer::drawMesh(const Mesh* mesh) const
 {
 	for (const auto& triangle : mesh->m_triangles)
@@ -62,20 +63,25 @@ void Renderer::drawMesh(const Mesh* mesh) const
 
 void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) const
 {
+	// Update the current shader to use the camera's most recent parameters
 	const Camera* camera = m_viewport->getCamera();
 	m_currentShader->init(camera->getViewData());
 
+	// Compute the vertex shader given the input vertices.
+	m_currentShader->preComputeVertexShader();
 	if (!m_currentShader->computeVertexShader(v0, v1, v2))
 	{
 		return;
 	}
 
+	// Render shaded
 	if (m_settings.getRenderFlag(Shaded))
 	{
-		m_currentShader->viewMatrix = camera->m_viewMatrix;
+		// m_currentShader->viewMatrix = camera->m_viewMatrix;
 		scanline();
 	}
 
+	// Render wireframe
 	vec3f s0 = m_currentShader->s0;
 	vec3f s1 = m_currentShader->s1;
 	vec3f s2 = m_currentShader->s2;
@@ -86,7 +92,7 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 		drawLine({ s2.x, s2.y }, { s0.x, s0.y }, m_wireColor);
 	}
 
-	// Draw normal direction
+	// Render normal direction
 	if (m_settings.getRenderFlag(Normals))
 	{
 		// Get the center of the triangle
@@ -105,14 +111,13 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 		// 1. The center of the triangle
 		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
 		Math::projectWorldToScreen(triangleCenter, normalStartScreen, m_viewport->getCamera()->getViewData());
-		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen,
-			m_viewport->getCamera()->getViewData());
+		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen, m_viewport->getCamera()->getViewData());
 
 		// Draw the line between the two points
 		drawLine(
 			normalStartScreen, // Start
 			normalEndScreen,   // End
-			Color::yellow());
+			Color::yellow());  // Color
 	}
 }
 
@@ -134,7 +139,7 @@ void Renderer::scanline() const
 	const int32 minY = std::max(static_cast<int32>(boundsMin.y), 0);
 	const int32 maxY = std::min(static_cast<int32>(boundsMax.y), height - 1);
 
-	// Precompute the area of the screen triangle so we're not computing it every pixel
+	// Pre-compute the area of the screen triangle so we're not computing it every pixel
 	const float area = Math::area2D(s0, s1, s2) * 2.0f;
 	const float oneOverArea = 1.0f / area;
 
@@ -167,38 +172,40 @@ void Renderer::scanline() const
 			w1 *= oneOverArea;
 			w2 *= oneOverArea;
 
-			vec3f uvw;
-			uvw.x = w0;
-			uvw.y = w1;
-			uvw.z = w2;
-			m_currentShader->uvw = uvw;
+			vec3f bary;
+			bary.x = w0;
+			bary.y = w1;
+			bary.z = w2;
+			m_currentShader->bary = bary;
 
 			if (renderDepth)
 			{
-				// Interpolate depth given UVW
-				float newDepth = uvw.x * depth0 + uvw.y * depth1 + uvw.z * depth2;
+				// Interpolate depth given the barycentric coordinates
+				float z = bary.x * depth0 + bary.y * depth1 + bary.z * depth2;
 
 				// Compare the new depth to the current depth at this pixel. If the new depth is further than
 				// the current depth, continue.
-				// float currentDepth = *depthPixel;
-				float currentDepth = m_depthBitmap->getPixelAsFloat(x, y);
-				if (newDepth > currentDepth)
+				float oldZ = m_depthTexture->getPixelAsFloat(x, y);
+				if (z > oldZ)
 				{
 					continue;
 				}
 				// If the new depth is closer than the current depth, set the current depth
 				// at this pixel to the new depth we just got.
-				//*depthPixel = newDepth;
-				m_depthBitmap->setPixelFromFloat(x, y, newDepth);
+				m_depthTexture->setPixelFromFloat(x, y, z);
 			}
 
-			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * uvw.x + m_currentShader->v1.position * uvw.y + m_currentShader->v2.position * uvw.z;
+			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * bary.x + m_currentShader->v1.position * bary.y + m_currentShader->v2.position * bary.z;
+
+			// Compute the UV coordinates of the current pixel
+			m_currentShader->computeUv();
 
 			// Compute the final color for this pixel
+			m_currentShader->preComputePixelShader();
 			m_currentShader->computePixelShader(point.x, point.y);
 
 			// Set the current pixel in memory to the computed color
-			m_colorBitmap->setPixelFromColor(x, y, m_currentShader->outColor);
+			m_colorTexture->setPixelFromColor(x, y, m_currentShader->outColor);
 		}
 	}
 }
@@ -324,7 +331,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			m_colorBitmap->setPixelFromColor(y, x, color);
+			m_colorTexture->setPixelFromColor(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -337,7 +344,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
-			m_colorBitmap->setPixelFromColor(x, y, color);
+			m_colorTexture->setPixelFromColor(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{

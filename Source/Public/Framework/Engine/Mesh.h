@@ -3,6 +3,23 @@
 #include <vector>
 #include "Object.h"
 
+class Mesh;
+/* Global container for all mesh objects. */
+inline std::vector<std::shared_ptr<Mesh>> g_meshes;
+
+namespace MeshManager
+{
+	inline int32 count()
+	{
+		return g_meshes.size();
+	}
+
+	inline Mesh* getMesh(int32 index)
+	{
+		return g_meshes[index].get();
+	}
+} // namespace MeshManager
+
 enum EPrimitiveType
 {
 	Plane,
@@ -61,6 +78,8 @@ struct Mesh : Object
 		processTriangles();
 	}
 
+	bool hasNormals() const { return !m_normals.empty(); }
+	bool hasTexCoords() const { return !m_texCoords.empty(); }
 	void processTriangles();
 
 	// Primitives

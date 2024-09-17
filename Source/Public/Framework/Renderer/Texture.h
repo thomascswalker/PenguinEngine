@@ -1,7 +1,7 @@
 #pragma once
 
 #include <map>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "Framework/Core/Buffer.h"
 #include "Framework/Platforms/Platform.h"
@@ -9,6 +9,7 @@
 #include "Math/Vector.h"
 
 class Texture;
+/* Global container for all texture objects. */
 inline std::vector<std::shared_ptr<Texture>> g_textures;
 
 namespace TextureManager
