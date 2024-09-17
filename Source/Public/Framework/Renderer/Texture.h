@@ -10,7 +10,7 @@
 
 class Texture;
 /* Global container for all texture objects. */
-inline std::vector<std::shared_ptr<Texture>> g_textures;
+inline Array<std::shared_ptr<Texture>> g_textures;
 
 namespace TextureManager
 {
@@ -74,14 +74,16 @@ public:
 	}
 
 	explicit Texture(const vec2i inSize)
-		: m_size(inSize), m_pitch(inSize.x)
+		: m_size(inSize)
+		, m_pitch(inSize.x)
 	{
 		size_t memSize = getMemorySize();
 		m_buffer.resize(memSize);
 	}
 
 	Texture(Buffer<uint8>* inData, vec2i inSize)
-		: m_size(inSize), m_pitch(inSize.x)
+		: m_size(inSize)
+		, m_pitch(inSize.x)
 	{
 		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
 		assert(targetSize == inData->getSize());
@@ -90,14 +92,14 @@ public:
 	}
 
 	Texture(const Texture& other)
-		: m_buffer(other.m_buffer), m_size(other.m_size), m_pitch(other.m_pitch)
-	{
-	}
+		: m_buffer(other.m_buffer)
+		, m_size(other.m_size)
+		, m_pitch(other.m_pitch) {}
 
 	Texture(Texture&& other) noexcept
-		: m_buffer(other.m_buffer), m_size(other.m_size), m_pitch(other.m_pitch)
-	{
-	}
+		: m_buffer(other.m_buffer)
+		, m_size(other.m_size)
+		, m_pitch(other.m_pitch) {}
 
 	Texture& operator=(const Texture& other)
 	{
@@ -247,7 +249,7 @@ public:
 	[[nodiscard]] Color getPixelAsColor(const int32 x, const int32 y)
 	{
 		uint32* line = scanline(y);
-		uint32	v = line[x];
+		uint32  v = line[x];
 		return Color::fromUInt32(v);
 	}
 
@@ -279,7 +281,7 @@ public:
 	void setPixelFromFloat(const int32 x, const int32 y, float value)
 	{
 		uint32* line = (uint32*)m_buffer.getPtr() + (y * m_pitch);
-		auto*	castInt = reinterpret_cast<uint32*>(&value);
+		auto*   castInt = reinterpret_cast<uint32*>(&value);
 		line[x] = *castInt;
 	}
 
@@ -367,7 +369,5 @@ public:
 		m_byteOrder = newOrder;
 	}
 
-	void addAlphaChannel()
-	{
-	}
+	void addAlphaChannel() {}
 };

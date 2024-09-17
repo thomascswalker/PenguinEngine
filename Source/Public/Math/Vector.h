@@ -26,25 +26,31 @@ struct vec2_t
 	};
 
 	// Constructors
-	vec2_t() : x(0), y(0)
+	vec2_t()
+		: x(0)
+		, y(0)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec2_t(T inX) : x(inX), y(inX)
+	vec2_t(T inX)
+		: x(inX)
+		, y(inX)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec2_t(T inX, T inY) : x(inX), y(inY)
+	vec2_t(T inX, T inY)
+		: x(inX)
+		, y(inY)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
 	vec2_t(const std::initializer_list<T>& values)
@@ -52,9 +58,9 @@ struct vec2_t
 		x = *(values.begin());
 		y = *(values.begin() + 1);
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 	}
 
@@ -80,7 +86,7 @@ struct vec2_t
 	template <typename ToType>
 	vec2_t<ToType> toType() const
 	{
-		return {static_cast<ToType>(x), static_cast<ToType>(y)};
+		return { static_cast<ToType>(x), static_cast<ToType>(y) };
 	}
 
 	void normalize()
@@ -88,15 +94,15 @@ struct vec2_t
 		x = 1.0f / x;
 		y = 1.0f / y;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 	}
 
 	vec2_t normalized() const
 	{
-		return {1.0f / x, 1.0f / y};
+		return { 1.0f / x, 1.0f / y };
 	}
 
 	std::string toString() const
@@ -107,7 +113,7 @@ struct vec2_t
 	// Operators
 	vec2_t operator+(const vec2_t& v) const
 	{
-		return {x + v.x, y + v.y};
+		return { x + v.x, y + v.y };
 	}
 
 	vec2_t& operator +=(const vec2_t& v)
@@ -115,16 +121,16 @@ struct vec2_t
 		x += v.x;
 		y += v.y;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
 
 	vec2_t operator-(const vec2_t& v) const
 	{
-		return {x - v.x, y - v.y};
+		return { x - v.x, y - v.y };
 	}
 
 	vec2_t& operator -=(const vec2_t& v)
@@ -132,16 +138,16 @@ struct vec2_t
 		x -= v.x;
 		y -= v.y;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
 
 	vec2_t operator*(const vec2_t& v) const
 	{
-		return {x * v.x, y * v.y};
+		return { x * v.x, y * v.y };
 	}
 
 	vec2_t& operator *=(const vec2_t& v)
@@ -149,16 +155,16 @@ struct vec2_t
 		x *= v.x;
 		y *= v.y;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
 
 	vec2_t operator/(const vec2_t& v) const
 	{
-		return {x / v.x, y / v.y};
+		return { x / v.x, y / v.y };
 	}
 
 	vec2_t& operator /=(const vec2_t& v)
@@ -166,9 +172,9 @@ struct vec2_t
 		x /= v.x;
 		y /= v.y;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
@@ -243,32 +249,44 @@ struct vec3_t
 	};
 
 	// Constructors
-	vec3_t() : x(0), y(0), z(0)
+	vec3_t()
+		: x(0)
+		, y(0)
+		, z(0)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec3_t(T inX) : x(inX), y(inX), z(inX)
+	vec3_t(T inX)
+		: x(inX)
+		, y(inX)
+		, z(inX)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec3_t(T inX, T inY, T inZ) : x(inX), y(inY), z(inZ)
+	vec3_t(T inX, T inY, T inZ)
+		: x(inX)
+		, y(inY)
+		, z(inZ)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec3_t(const vec2_t<T>& v, T inZ = T(1)) : x(v.x), y(v.y), z(inZ)
+	vec3_t(const vec2_t<T>& v, T inZ = T(1))
+		: x(v.x)
+		, y(v.y)
+		, z(inZ)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
 	vec3_t(const std::initializer_list<T>& values)
@@ -276,9 +294,9 @@ struct vec3_t
 		x = *(values.begin());
 		y = *(values.begin() + 1);
 		z = *(values.begin() + 2);
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
 	// Functions
@@ -333,7 +351,7 @@ struct vec3_t
 	template <typename ToType>
 	vec3_t<ToType> toType() const
 	{
-		return vec3_t<ToType>{static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z)};
+		return vec3_t<ToType>{ static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z) };
 	}
 
 	void normalize()
@@ -390,22 +408,22 @@ struct vec3_t
 
 	vec3_t swizzleXY() const
 	{
-		return {y, x, z};
+		return { y, x, z };
 	}
 
 	vec3_t swizzleXZ() const
 	{
-		return {z, y, x};
+		return { z, y, x };
 	}
 
 	vec3_t swizzleYZ() const
 	{
-		return {x, z, y};
+		return { x, z, y };
 	}
 
 	vec3_t swizzleXYZ() const
 	{
-		return {z, x, y};
+		return { z, x, y };
 	}
 
 	std::string toString() const
@@ -416,7 +434,7 @@ struct vec3_t
 	// Operators
 	vec3_t operator+(const vec3_t& v) const
 	{
-		return {x + v.x, y + v.y, z + v.z};
+		return { x + v.x, y + v.y, z + v.z };
 	}
 
 	vec3_t& operator +=(const vec3_t& v)
@@ -425,16 +443,16 @@ struct vec3_t
 		y += v.y;
 		z += v.z;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
 
 	vec3_t operator-(const vec3_t& v) const
 	{
-		return {x - v.x, y - v.y, z - v.z};
+		return { x - v.x, y - v.y, z - v.z };
 	}
 
 	vec3_t& operator -=(const vec3_t& v)
@@ -443,16 +461,16 @@ struct vec3_t
 		y -= v.y;
 		z -= v.z;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
 
 	vec3_t operator*(const vec3_t& v) const
 	{
-		return {x * v.x, y * v.y, z * v.z};
+		return { x * v.x, y * v.y, z * v.z };
 	}
 
 	vec3_t& operator *=(const vec3_t& v)
@@ -461,16 +479,16 @@ struct vec3_t
 		y *= v.y;
 		z *= v.z;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
 
 	vec3_t operator/(const vec3_t& v) const
 	{
-		return {x / v.x, y / v.y, z / v.z};
+		return { x / v.x, y / v.y, z / v.z };
 	}
 
 	vec3_t& operator /=(const vec3_t& v)
@@ -479,9 +497,9 @@ struct vec3_t
 		y /= v.y;
 		z /= v.z;
 		{
-#ifdef _DEBUG
+			#ifdef _DEBUG
 			checkNaN();
-#endif
+			#endif
 		}
 		return *this;
 	}
@@ -523,7 +541,7 @@ struct vec3_t
 
 	operator vec2_t<T>() const
 	{
-		return {x, y};
+		return { x, y };
 	}
 };
 
@@ -547,28 +565,44 @@ struct vec4_t
 	};
 
 	// Constructors
-	vec4_t() : x(0), y(0), z(0), w(0)
+	vec4_t()
+		: x(0)
+		, y(0)
+		, z(0)
+		, w(0)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec4_t(T inX) : x(inX), y(inX), z(inX), w(inX)
+	vec4_t(T inX)
+		: x(inX)
+		, y(inX)
+		, z(inX)
+		, w(inX)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec4_t(T inX, T inY, T inZ, T inW) : x(inX), y(inY), z(inZ), w(inW)
+	vec4_t(T inX, T inY, T inZ, T inW)
+		: x(inX)
+		, y(inY)
+		, z(inZ)
+		, w(inW)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec4_t(T* values) : x(values[0]), y(values[1]), z(values[2]), w(values[3]) {}
+	vec4_t(T* values)
+		: x(values[0])
+		, y(values[1])
+		, z(values[2])
+		, w(values[3]) {}
 
 	vec4_t(const std::initializer_list<T>& values)
 	{
@@ -576,16 +610,20 @@ struct vec4_t
 		y = *(values.begin() + 1);
 		z = *(values.begin() + 2);
 		w = *(values.begin() + 3);
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
-	vec4_t(const vec3_t<T>& v, T inW = T(1)) : x(v.x), y(v.y), z(v.z), w(inW)
+	vec4_t(const vec3_t<T>& v, T inW = T(1))
+		: x(v.x)
+		, y(v.y)
+		, z(v.z)
+		, w(inW)
 	{
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 	}
 
 	// Functions
@@ -610,7 +648,7 @@ struct vec4_t
 	template <typename ToType>
 	vec4_t<ToType> toType() const
 	{
-		return {static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w)};
+		return { static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w) };
 	}
 
 	void normalize()
@@ -623,7 +661,7 @@ struct vec4_t
 
 	vec4_t normalized() const
 	{
-		return {T(1.0) / x, T(1.0) / y, T(1.0) / z, T(1.0) / w};
+		return { T(1.0) / x, T(1.0) / y, T(1.0) / z, T(1.0) / w };
 	}
 
 	std::string toString() const
@@ -634,7 +672,7 @@ struct vec4_t
 	// Operators
 	vec4_t operator+(const vec4_t& v) const
 	{
-		return {x + v.x, y + v.y, z + v.z, w + v.w};
+		return { x + v.x, y + v.y, z + v.z, w + v.w };
 	}
 
 	vec4_t& operator +=(const vec4_t& v)
@@ -643,15 +681,15 @@ struct vec4_t
 		y += v.y;
 		z += v.z;
 		w += v.w;
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 		return *this;
 	}
 
 	vec4_t operator-(const vec4_t& v) const
 	{
-		return {x - v.x, y - v.y, z - v.z, w - v.w};
+		return { x - v.x, y - v.y, z - v.z, w - v.w };
 	}
 
 	vec4_t& operator -=(const vec4_t& v)
@@ -660,15 +698,15 @@ struct vec4_t
 		y -= v.y;
 		z -= v.z;
 		w -= v.w;
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 		return *this;
 	}
 
 	vec4_t operator*(const vec4_t& v) const
 	{
-		return {x * v.x, y * v.y, z * v.z, w * v.w};
+		return { x * v.x, y * v.y, z * v.z, w * v.w };
 	}
 
 	vec4_t& operator *=(const vec4_t& v)
@@ -677,15 +715,15 @@ struct vec4_t
 		y *= v.y;
 		z *= v.z;
 		w *= v.w;
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 		return *this;
 	}
 
 	vec4_t operator/(const vec4_t& v) const
 	{
-		return {x / v.x, y / v.y, z / v.z, w / v.w};
+		return { x / v.x, y / v.y, z / v.z, w / v.w };
 	}
 
 	vec4_t& operator /=(const vec4_t& v)
@@ -694,9 +732,9 @@ struct vec4_t
 		y /= v.y;
 		z /= v.z;
 		w /= v.w;
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		checkNaN();
-#endif
+		#endif
 		return *this;
 	}
 
@@ -727,12 +765,12 @@ struct vec4_t
 
 	operator vec2_t<T>() const
 	{
-		return {x, y};
+		return { x, y };
 	}
 
 	operator vec3_t<T>() const
 	{
-		return {x, y, z};
+		return { x, y, z };
 	}
 };
 
@@ -830,8 +868,8 @@ namespace Math
 	 */
 	template <typename T>
 	static bool getBarycentric(const vec3_t<T>& p,
-	                           const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2,
-	                           vec3_t<T>& bary)
+		const vec3_t<T>&                        v0, const vec3_t<T>& v1, const vec3_t<T>& v2,
+		vec3_t<T>&                              bary)
 	{
 		// Calculate the vectors representing the edges of the triangle
 		const vec3_t<T> ba = v1 - v0;
@@ -878,7 +916,7 @@ namespace Math
 	}
 
 	static constexpr float edgeFunction(const float x0, const float y0, const float x1, const float y1, const float x2,
-	                                    const float y2)
+		const float                                 y2)
 	{
 		return (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
 	}

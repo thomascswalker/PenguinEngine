@@ -8,15 +8,15 @@
 class Engine
 {
 	std::shared_ptr<Renderer> m_renderer;
-	bool					  m_isRunning = false;
+	bool                      m_isRunning = false;
 
-	timePoint m_startTime;
-	float	  m_deltaTime = 0.0f;
+	TimePoint m_startTime;
+	float     m_deltaTime = 0.0f;
 
 	float m_cameraSpeed = .01f;
 	float m_cameraSpeedMultiplier = 1.0f;
 
-	std::vector<float*>	 m_vertices;
+	std::vector<float*>  m_vertices;
 	std::vector<uint32*> m_indexes;
 
 public:

@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include <filesystem>
-#include <fstream>
 #include <string>
 
 #include "Framework/Core/IO.h"
@@ -71,14 +70,14 @@ class ObjImporter
 	 * @throws std::runtime_error If the index format is invalid.
 	 */
 	static void parseFace(const std::string& line,
-		std::vector<int32>*					 positionIndexes,
-		std::vector<int32>*					 normalIndexes,
-		std::vector<int32>*					 texCoordIndexes)
+		std::vector<int32>*                  positionIndexes,
+		std::vector<int32>*                  normalIndexes,
+		std::vector<int32>*                  texCoordIndexes)
 	{
 		std::vector<std::string> indexComponents;
 
 		// Split the face line by spaces
-		Strings::split(line, indexComponents, " ");		// [f, v/vt/vn, v/vt/vn, v/vt/vn]
+		Strings::split(line, indexComponents, " ");     // [f, v/vt/vn, v/vt/vn, v/vt/vn]
 		indexComponents.erase(indexComponents.begin()); // remove 'f' from vector, [v/vt/vn, v/vt/vn, v/vt/vn]
 
 		// For each index group...
@@ -142,10 +141,10 @@ public:
 		std::vector<vec2f> texCoords;
 
 		std::vector<Triangle> triangles;
-		int32				  triangleCount = 0;
-		std::vector<uint32>	  positionIndexes;
-		std::vector<uint32>	  normalIndexes;
-		std::vector<uint32>	  texCoordIndexes;
+		int32                 triangleCount = 0;
+		std::vector<uint32>   positionIndexes;
+		std::vector<uint32>   normalIndexes;
+		std::vector<uint32>   texCoordIndexes;
 
 		// Process each line in the file
 		while (stream.peek() != -1)

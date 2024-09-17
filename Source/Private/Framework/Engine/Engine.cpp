@@ -58,15 +58,15 @@ bool Engine::shutdown()
 
 void Engine::tick()
 {
-	const timePoint endTime = PTimer::now();
-	m_deltaTime = std::chrono::duration_cast<durationMs>(endTime - m_startTime).count();
+	const TimePoint endTime = PTimer::now();
+	m_deltaTime = std::chrono::duration_cast<DurationMs>(endTime - m_startTime).count();
 	m_startTime = PTimer::now();
 
 	// Update camera movement
 	if (const IInputHandler* input = Win32InputHandler::getInstance())
 	{
 		// Update camera position
-		Camera*		camera = getViewportCamera();
+		Camera*     camera = getViewportCamera();
 		const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
 
 		// Orbit
@@ -150,7 +150,7 @@ void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const
 void Engine::onMenuActionPressed(const EMenuAction actionId)
 {
 	const Application* app = Application::getInstance();
-	IPlatform*		   platform = app->getPlatform();
+	IPlatform*         platform = app->getPlatform();
 	switch (actionId)
 	{
 		case EMenuAction::LoadModel:
@@ -194,8 +194,8 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 void Engine::onLoadModelPressed()
 {
 	Application* app = Application::getInstance();
-	IPlatform*	 platform = app->getPlatform();
-	std::string	 fileName;
+	IPlatform*   platform = app->getPlatform();
+	std::string  fileName;
 	if (platform->getFileDialog(fileName, "obj"))
 	{
 		// Load model
@@ -203,16 +203,16 @@ void Engine::onLoadModelPressed()
 		const auto mesh = std::make_shared<Mesh>();
 		ObjImporter::import(fileName, mesh.get());
 		mesh->processTriangles();
-		g_meshes.push_back(mesh);
-		LOG_INFO("Loaded model {}.", fileName);
+		g_meshes.append(mesh);
+		LOG_INFO("Loaded model {}.", fileName)
 	}
 }
 
 void Engine::onLoadTexturePressed()
 {
 	Application* app = Application::getInstance();
-	IPlatform*	 platform = app->getPlatform();
-	std::string	 fileName;
+	IPlatform*   platform = app->getPlatform();
+	std::string  fileName;
 	if (platform->getFileDialog(fileName, "png"))
 	{
 		// Load texture
@@ -220,9 +220,9 @@ void Engine::onLoadTexturePressed()
 		const auto texture = std::make_shared<Texture>();
 		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::RGBA);
 		texture->flipVertical();
-		g_textures.emplace_back(texture);
+		g_textures.append(texture);
 		m_renderer->getShader()->texture = TextureManager::getTexture(0);
-		LOG_INFO("Loaded texture {}.", fileName);
+		LOG_INFO("Loaded texture {}.", fileName)
 	}
 }
 

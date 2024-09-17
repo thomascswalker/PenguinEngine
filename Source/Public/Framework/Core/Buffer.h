@@ -21,7 +21,7 @@ inline uint8 g_bitsPerByte = 8;
 template <typename T>
 inline T swapByteOrder(T value)
 {
-	T	result = 0;
+	T   result = 0;
 	int size = sizeof(T) - 1;
 	for (int i = 0; i <= size; i++)
 	{
@@ -39,7 +39,7 @@ template <typename T>
 struct Buffer
 {
 private:
-	T*	   data = nullptr;
+	T*     data = nullptr;
 	size_t size = 0;
 
 public:
@@ -52,7 +52,8 @@ public:
 	}
 
 	explicit Buffer(T* inData, const size_t inSize)
-		: data(inData), size(inSize)
+		: data(inData)
+		, size(inSize)
 	{
 		data = PlatformMemory::malloc<T>(inSize);
 		std::memcpy(data, inData, inSize);
@@ -140,9 +141,9 @@ public:
 
 	void resize(const size_t inSize)
 	{
-#if _DEBUG
+		#ifdef _DEBUG
 		assert(inSize < UINT32_MAX);
-#endif
+		#endif
 		if (data != nullptr)
 		{
 			PlatformMemory::free(data);
@@ -155,9 +156,9 @@ public:
 	void resize(const uint32 width, const uint32 height)
 	{
 		size = width * height * g_bitsPerPixel;
-#if _DEBUG
+		#ifdef _DEBUG
 		assert(size < UINT32_MAX);
-#endif
+		#endif
 		if (data != nullptr)
 		{
 			PlatformMemory::free(data);
@@ -255,18 +256,18 @@ struct StreamBuffer : std::streambuf
 enum class ESeekDir : int32
 {
 	Beginning = std::ios_base::beg,
-	Current = std::ios_base::cur,
-	End = std::ios_base::end,
+	Current   = std::ios_base::cur,
+	End       = std::ios_base::end,
 };
 
 class ByteReader
 {
 	/* Position of the cursor. */
-	int32						  m_pos = 0;
+	int32 m_pos = 0;
 	/* Size of the entire buffer. */
-	size_t						  m_size = 0;
+	size_t m_size = 0;
 	/* Endian type this buffer reads bytes by. */
-	std::endian					  m_endian = std::endian::native;
+	std::endian m_endian = std::endian::native;
 
 	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
 	std::unique_ptr<std::istream> m_stream = nullptr;
@@ -311,8 +312,9 @@ public:
 	ByteReader() {}
 
 	ByteReader(std::string& inString, const size_t inSize,
-		const std::endian endian = std::endian::native)
-		: m_size(inSize), m_endian(endian)
+		const std::endian   endian = std::endian::native)
+		: m_size(inSize)
+		, m_endian(endian)
 	{
 		Buffer buffer((uint8*)inString.data(), inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
@@ -320,8 +322,9 @@ public:
 	}
 
 	explicit ByteReader(uint8* inBuffer, const size_t inSize,
-		const std::endian endian = std::endian::native)
-		: m_size(inSize), m_endian(endian)
+		const std::endian      endian = std::endian::native)
+		: m_size(inSize)
+		, m_endian(endian)
 	{
 		Buffer buffer(inBuffer, inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
@@ -329,19 +332,15 @@ public:
 	}
 
 	explicit ByteReader(Buffer<uint8>& inBuffer,
-		const std::endian			   endian = std::endian::native)
-		: m_size(inBuffer.getSize()), m_endian(endian)
+		const std::endian              endian = std::endian::native)
+		: m_size(inBuffer.getSize())
+		, m_endian(endian)
 	{
 		m_streamBuffer = std::make_unique<StreamBuffer>(inBuffer);
 		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
-	~ByteReader()
-	{
-		m_streamBuffer.release();
-		m_stream.release();
-		int a = 5;
-	}
+	~ByteReader() = default;
 
 	[[nodiscard]] int32 getPos() const
 	{

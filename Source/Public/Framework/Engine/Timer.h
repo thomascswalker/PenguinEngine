@@ -2,14 +2,14 @@
 
 #include <chrono>
 
-using steadyClock = std::chrono::steady_clock;
-using timePoint = std::chrono::time_point<std::chrono::steady_clock>;
-using durationMs = std::chrono::duration<float, std::milli>;
+using SteadyClock = std::chrono::steady_clock;
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+using DurationMs = std::chrono::duration<float, std::milli>;
 
 struct PTimer
 {
-	static timePoint now()
+	static TimePoint now()
 	{
-		return steadyClock::now();
+		return SteadyClock::now();
 	}
 };
