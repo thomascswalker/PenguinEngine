@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "Framework/Core/Types.h"
+
 #define NOMINMAX
 
 #define PI 3.14159265358979323846f
@@ -23,19 +25,6 @@
 #define DEPTH_8 8
 #define DEPTH_16 16
 #define DEPTH_32 32
-
-// Basic types
-using bit = unsigned char;
-
-using int8 = char;
-using int16 = short;
-using int32 = int;
-using int64 = long long;
-
-using uint8 = unsigned char;
-using uint16 = unsigned short;
-using uint32 = unsigned int;
-using uint64 = unsigned long long;
 
 // Buffer
 template <int32 N>
