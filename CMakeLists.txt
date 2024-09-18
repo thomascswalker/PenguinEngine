@@ -5,9 +5,19 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_definitions(-DUNICODE -D_UNICODE)
 
-# Files
-
 set(project_dir "${CMAKE_CURRENT_SOURCE_DIR}")
+set(include_dir "${project_dir}/include")
+set(lib_dir "${project_dir}/lib")
+set(bin_dir "${project_dir}/bin")
+
+
+set(build_dir "${project_dir}/build")
+file(MAKE_DIRECTORY ${build_dir})
+set(release_dir "${build_dir}/Release")
+file(MAKE_DIRECTORY ${release_dir})
+set(debug_dir "${build_dir}/Debug")
+file(MAKE_DIRECTORY ${debug_dir})
+
 file(
     GLOB_RECURSE source_list 
     LIST_DIRECTORIES false
@@ -39,13 +49,15 @@ target_include_directories(PenguinEngine PUBLIC bin)
 # -DBUILD_SHARED_LIBS=OFF 
 # -DCMAKE_BUILD_TYPE=Release
 # Libraries
-set(ZLIB_INCLUDE_DIR "${project_dir}/include/zlib")
-set(ZLIB_LIBRARY "${project_dir}/lib/zlib.lib")
-message("${ZLIB_ROOT}")
+
+set(ZLIB_INCLUDE_DIR "${include_dir}/zlib")
+set(ZLIB_LIBRARY "${lib_dir}/zlib.lib")
+
 find_package(ZLIB REQUIRED)
 if (ZLIB_FOUND)
     include_directories(${ZLIB_INCLUDE_DIRS})
     target_link_libraries(PenguinEngine ${ZLIB_LIBRARIES})
 
-    install(FILES "${project_dir}/lib/zlib.dll" DESTINATION "${project_dir}/build/release/zlib.dll")
+    file(COPY "${bin_dir}/zlib.dll" DESTINATION ${release_dir})
+    file(COPY "${bin_dir}/zlib.dll" DESTINATION ${debug_dir})
 endif(ZLIB_FOUND)
