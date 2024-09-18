@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD 20)
 add_definitions(-DUNICODE -D_UNICODE)
 
 set(project_dir "${CMAKE_CURRENT_SOURCE_DIR}")
-set(include_dir "${project_dir}/include")
-set(lib_dir "${project_dir}/lib")
-set(bin_dir "${project_dir}/bin")
+set(include_dir "${project_dir}/ThirdParty")
+set(lib_dir "${project_dir}/Libraries")
+set(bin_dir "${project_dir}/Binaries")
 
 
-set(build_dir "${project_dir}/build")
+set(build_dir "${project_dir}/Build")
 file(MAKE_DIRECTORY ${build_dir})
 set(release_dir "${build_dir}/Release")
 file(MAKE_DIRECTORY ${release_dir})
