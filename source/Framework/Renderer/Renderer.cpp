@@ -11,7 +11,7 @@
 Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 {
 	m_viewport = std::make_shared<Viewport>(inWidth, inHeight);
-	m_grid = std::make_unique<FGrid>(8, 4.0f);
+	m_grid     = std::make_unique<Grid>(8, 4.0f);
 
 	// Color and depth buffer storage
 	m_colorTexture = std::make_shared<Texture>(vec2i(inWidth, inHeight));
@@ -47,7 +47,7 @@ void Renderer::draw() const
 	const Engine* engine = Engine::getInstance();
 	for (const auto& mesh : g_meshes)
 	{
-		m_currentShader->hasNormals = mesh->hasNormals();
+		m_currentShader->hasNormals   = mesh->hasNormals();
 		m_currentShader->hasTexCoords = mesh->hasTexCoords();
 		drawMesh(mesh.get());
 	}
@@ -87,9 +87,9 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	vec3f s2 = m_currentShader->s2;
 	if (m_settings.getRenderFlag(Wireframe))
 	{
-		drawLine({ s0.x, s0.y }, { s1.x, s1.y }, m_wireColor);
-		drawLine({ s1.x, s1.y }, { s2.x, s2.y }, m_wireColor);
-		drawLine({ s2.x, s2.y }, { s0.x, s0.y }, m_wireColor);
+		drawLine({s0.x, s0.y}, {s1.x, s1.y}, m_wireColor);
+		drawLine({s1.x, s1.y}, {s2.x, s2.y}, m_wireColor);
+		drawLine({s2.x, s2.y}, {s0.x, s0.y}, m_wireColor);
 	}
 
 	// Render normal direction
@@ -97,8 +97,8 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	{
 		// Get the center of the triangle
 		vec3f triangleCenter = (m_currentShader->v0.position
-								   + m_currentShader->v1.position
-								   + m_currentShader->v2.position)
+				+ m_currentShader->v1.position
+				+ m_currentShader->v2.position)
 			/ 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
@@ -111,7 +111,8 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 		// 1. The center of the triangle
 		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
 		Math::projectWorldToScreen(triangleCenter, normalStartScreen, m_viewport->getCamera()->getViewData());
-		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen, m_viewport->getCamera()->getViewData());
+		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen,
+		                           m_viewport->getCamera()->getViewData());
 
 		// Draw the line between the two points
 		drawLine(
@@ -128,19 +129,19 @@ void Renderer::scanline() const
 	const vec3f s2 = m_currentShader->s2;
 
 	// Compute the bounds of just this triangle on the screen
-	const int32 width = getWidth();
+	const int32 width  = getWidth();
 	const int32 height = getHeight();
 	const rectf bounds = m_currentShader->screenBounds;
 
 	const vec2f boundsMin = bounds.min();
 	const vec2f boundsMax = bounds.max();
-	const int32 minX = std::max(static_cast<int32>(boundsMin.x), 0);
-	const int32 maxX = std::min(static_cast<int32>(boundsMax.x), width - 1);
-	const int32 minY = std::max(static_cast<int32>(boundsMin.y), 0);
-	const int32 maxY = std::min(static_cast<int32>(boundsMax.y), height - 1);
+	const int32 minX      = std::max(static_cast<int32>(boundsMin.x), 0);
+	const int32 maxX      = std::min(static_cast<int32>(boundsMax.x), width - 1);
+	const int32 minY      = std::max(static_cast<int32>(boundsMin.y), 0);
+	const int32 maxY      = std::min(static_cast<int32>(boundsMax.y), height - 1);
 
 	// Pre-compute the area of the screen triangle so we're not computing it every pixel
-	const float area = Math::area2D(s0, s1, s2) * 2.0f;
+	const float area        = Math::area2D(s0, s1, s2) * 2.0f;
 	const float oneOverArea = 1.0f / area;
 
 	// Prior to the loop computing each pixel in the triangle, get the render settings
@@ -173,9 +174,9 @@ void Renderer::scanline() const
 			w2 *= oneOverArea;
 
 			vec3f bary;
-			bary.x = w0;
-			bary.y = w1;
-			bary.z = w2;
+			bary.x                = w0;
+			bary.y                = w1;
+			bary.z                = w2;
 			m_currentShader->bary = bary;
 
 			if (renderDepth)
@@ -195,7 +196,8 @@ void Renderer::scanline() const
 				m_depthTexture->setPixelFromFloat(x, y, z);
 			}
 
-			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * bary.x + m_currentShader->v1.position * bary.y + m_currentShader->v2.position * bary.z;
+			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * bary.x + m_currentShader->v1.position *
+				bary.y + m_currentShader->v2.position * bary.z;
 
 			// Compute the UV coordinates of the current pixel
 			m_currentShader->computeUv();
@@ -238,7 +240,7 @@ bool Renderer::clipLine(vec2f* a, vec2f* b) const
 
 		// Find the endpoint outside the viewport
 		const int32 code = code1 ? code1 : code2;
-		int32		x, y;
+		int32 x, y;
 
 		// Find intersection point using the parametric equation of the line
 		if (code & 1)
@@ -269,14 +271,14 @@ bool Renderer::clipLine(vec2f* a, vec2f* b) const
 		// Update the endpoint
 		if (code == code1)
 		{
-			a->x = x;
-			a->y = y;
+			a->x  = x;
+			a->y  = y;
 			code1 = (a->x < minX) << 3 | (a->x > maxX) << 2 | (a->y < minY) << 1 | (a->y > maxY);
 		}
 		else
 		{
-			b->x = x;
-			b->y = y;
+			b->x  = x;
+			b->y  = y;
 			code2 = (b->x < minX) << 3 | (b->x > maxX) << 2 | (b->y < minY) << 1 | (b->y > maxY);
 		}
 	}
@@ -300,7 +302,7 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		return;
 	}
-	/* TODO: This is a temporary fix to prevent lines getting clipped and setting one of the points to [0,0]. */
+	/* TODO: This is a temporary fix to prevent m_lines getting clipped and setting one of the points to [0,0]. */
 	if (a == 0.0f || b == 0.0f)
 	{
 		return;
@@ -309,8 +311,8 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	bool isSteep = false;
 	if (std::abs(a.x - b.x) < std::abs(a.y - b.y))
 	{
-		a = vec2f(a.y, a.x);
-		b = vec2f(b.y, b.x);
+		a       = vec2f(a.y, a.x);
+		b       = vec2f(b.y, b.x);
 		isSteep = true;
 	}
 
@@ -319,10 +321,10 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 		std::swap(a, b);
 	}
 
-	const int32 deltaX = b.x - a.x;
-	const int32 deltaY = b.y - a.y;
+	const int32 deltaX     = b.x - a.x;
+	const int32 deltaY     = b.y - a.y;
 	const int32 deltaError = std::abs(deltaY) * 2;
-	int32		errorCount = 0;
+	int32 errorCount       = 0;
 
 	// https://github.com/ssloy/tinyrenderer/issues/28
 	int32 y = a.y;
@@ -362,11 +364,11 @@ void Renderer::drawLine(const line3d& line, const Color& color) const
 
 void Renderer::drawGrid() const
 {
-	for (const line3d& line : m_grid->lines)
+	for (const line3d& line : m_grid->getLines())
 	{
 		// Project the world-space points to screen-space
 		vec3f s0, s1;
-		bool  lineOnScreen = false;
+		bool lineOnScreen = false;
 		lineOnScreen |= m_viewport->projectWorldToScreen(line.a, s0);
 		lineOnScreen |= m_viewport->projectWorldToScreen(line.b, s1);
 

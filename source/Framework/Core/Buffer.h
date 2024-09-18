@@ -19,9 +19,9 @@ inline uint8 g_bitsPerByte = 8;
  * @return T The swapped value.
  */
 template <typename T>
-inline T swapByteOrder(T value)
+T swapByteOrder(T value)
 {
-	T   result = 0;
+	T result = 0;
 	int size = sizeof(T) - 1;
 	for (int i = 0; i <= size; i++)
 	{
@@ -36,52 +36,51 @@ inline T swapByteOrder(T value)
  * with PlatformMemory functions.
  */
 template <typename T>
-struct Buffer
+class Buffer
 {
-private:
-	T*     data = nullptr;
-	size_t size = 0;
+	T* m_data     = nullptr;
+	size_t m_size = 0;
 
 public:
-	Buffer() {}
+	Buffer() = default;
 
 	explicit Buffer(const size_t inSize)
-		: size(inSize)
+		: m_size(inSize)
 	{
-		data = PlatformMemory::malloc<T>(inSize);
+		m_data = PlatformMemory::malloc<T>(inSize);
 	}
 
 	explicit Buffer(T* inData, const size_t inSize)
-		: data(inData)
-		, size(inSize)
+		: m_data(inData)
+		  , m_size(inSize)
 	{
-		data = PlatformMemory::malloc<T>(inSize);
-		std::memcpy(data, inData, inSize);
+		m_data = PlatformMemory::malloc<T>(inSize);
+		std::memcpy(m_data, inData, inSize);
 	}
 
 	// Copy constructor
 	Buffer(const Buffer& other)
-		: size(other.size)
+		: m_size(other.m_size)
 	{
-		if (other.data)
+		if (other.m_data)
 		{
-			data = PlatformMemory::malloc<T>(size);
-			std::memcpy(data, other.data, size);
+			m_data = PlatformMemory::malloc<T>(m_size);
+			std::memcpy(m_data, other.m_data, m_size);
 		}
 		else
 		{
-			data = nullptr;
-			size = 0;
+			m_data = nullptr;
+			m_size = 0;
 		}
 	}
 
 	// Move constructor
 	Buffer(Buffer&& other) noexcept
 	{
-		data = other.data;
-		size = other.size;
-		other.data = nullptr;
-		other.size = 0;
+		m_data       = other.m_data;
+		m_size       = other.m_size;
+		other.m_data = nullptr;
+		other.m_size = 0;
 	}
 
 	// Assignment operator
@@ -89,17 +88,17 @@ public:
 	{
 		if (!(*this == other))
 		{
-			PlatformMemory::free(data);
-			if (other.data)
+			PlatformMemory::free(m_data);
+			if (other.m_data)
 			{
-				size = other.size;
-				data = PlatformMemory::malloc<T>(size);
-				std::memcpy(data, other.data, size);
+				m_size = other.m_size;
+				m_data = PlatformMemory::malloc<T>(m_size);
+				std::memcpy(m_data, other.m_data, m_size);
 			}
 			else
 			{
-				data = nullptr;
-				size = 0;
+				m_data = nullptr;
+				m_size = 0;
 			}
 		}
 
@@ -110,132 +109,132 @@ public:
 	{
 		if (!(*this == other))
 		{
-			PlatformMemory::free(data);
-			data = other.data;
-			size = other.size;
-			other.data = nullptr;
-			other.size = 0;
+			PlatformMemory::free(m_data);
+			m_data       = other.m_data;
+			m_size       = other.m_size;
+			other.m_data = nullptr;
+			other.m_size = 0;
 		}
 		return *this;
 	}
 
 	T* getPtr()
 	{
-		return data;
+		return m_data;
 	}
 
 	T* getPtr() const
 	{
-		return data;
+		return m_data;
 	}
 
 	void setPtr(T* ptr)
 	{
-		data = ptr;
+		m_data = ptr;
 	}
 
-	[[nodiscard]] size_t getSize() const
+	[[nodiscard]] size_t size() const
 	{
-		return size;
+		return m_size;
 	}
 
 	void resize(const size_t inSize)
 	{
-		#ifdef _DEBUG
+#ifdef _DEBUG
 		assert(inSize < UINT32_MAX);
-		#endif
-		if (data != nullptr)
+#endif
+		if (m_data != nullptr)
 		{
-			PlatformMemory::free(data);
-			data = nullptr;
+			PlatformMemory::free(m_data);
+			m_data = nullptr;
 		}
-		size = inSize;
-		data = (T*)PlatformMemory::malloc(size);
+		m_size = inSize;
+		m_data = (T*)PlatformMemory::malloc(m_size);
 	}
 
 	void resize(const uint32 width, const uint32 height)
 	{
-		size = width * height * g_bitsPerPixel;
-		#ifdef _DEBUG
+		m_size = width * height * g_bitsPerPixel;
+#ifdef _DEBUG
 		assert(size < UINT32_MAX);
-		#endif
-		if (data != nullptr)
+#endif
+		if (m_data != nullptr)
 		{
-			PlatformMemory::free(data);
-			data = nullptr;
+			PlatformMemory::free(m_data);
+			m_data = nullptr;
 		}
-		data = (T*)PlatformMemory::malloc(size);
+		m_data = (T*)PlatformMemory::malloc(m_size);
 	}
 
 	void extend(const size_t addSize)
 	{
 		// Store the old size
-		size_t oldSize = size;
+		size_t oldSize = m_size;
 
 		// Allocate a temporary buffer for the current data
 		void* tmp = PlatformMemory::malloc(oldSize);
 
 		// Copy current data into the temp buffer
-		std::memcpy(tmp, data, oldSize);
+		std::memcpy(tmp, m_data, oldSize);
 
 		// Add the new size to the current size
-		size += addSize;
+		m_size += addSize;
 
 		// Free the old data
-		PlatformMemory::free(data);
+		PlatformMemory::free(m_data);
 
 		// Create a new array with the new size
-		data = (T*)PlatformMemory::malloc(size);
+		m_data = (T*)PlatformMemory::malloc(m_size);
 
 		// Copy the old data into the new buffer
-		std::memcpy(data, tmp, oldSize);
+		std::memcpy(m_data, tmp, oldSize);
 	}
 
 	void clear()
 	{
-		PlatformMemory::free(data);
-		size = 0;
-		data = nullptr;
+		PlatformMemory::free(m_data);
+		m_size = 0;
+		m_data = nullptr;
 	}
 
 	T* begin()
 	{
-		return data;
+		return m_data;
 	}
 
 	[[nodiscard]] const T* begin() const
 	{
-		return data;
+		return m_data;
 	}
 
 	T* end()
 	{
-		return data + size;
+		return m_data + m_size;
 	}
 
 	[[nodiscard]] const T* end() const
 	{
-		return data + size;
+		return m_data + m_size;
 	}
 
 	T& operator[](size_t index)
 	{
-		return data[index];
+		return m_data[index];
 	}
 
 	const T& operator[](size_t index) const
 	{
-		return data[index];
+		return m_data[index];
 	}
 
 	bool operator==(const Buffer& other) const
 	{
-		if (size != other.size)
+		if (m_size != other.m_size)
 		{
 			return false;
 		}
 
-		if (std::memcmp(data, other.data, size) != 0)
+		if (std::memcmp(m_data, other.m_data, m_size) != 0)
 		{
 			return false;
 		}
@@ -249,7 +248,7 @@ struct StreamBuffer : std::streambuf
 	explicit StreamBuffer(Buffer<uint8>& buffer)
 	{
 		auto begin = (int8*)buffer.getPtr();
-		this->setg(begin, begin, begin + buffer.getSize());
+		this->setg(begin, begin, begin + buffer.size());
 	}
 };
 
@@ -270,13 +269,13 @@ class ByteReader
 	std::endian m_endian = std::endian::native;
 
 	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
-	std::unique_ptr<std::istream> m_stream = nullptr;
+	std::unique_ptr<std::istream> m_stream       = nullptr;
 
 	// Bit reading
-	uint8 m_bitCount = 0;
+	uint8 m_bitCount   = 0;
 	uint8 m_codeBuffer = 0;
 
-	uint8 m_bitPos = 0;
+	uint8 m_bitPos      = 0;
 	uint8 m_currentByte = 0;
 
 	template <typename T>
@@ -309,35 +308,35 @@ class ByteReader
 	}
 
 public:
-	ByteReader() {}
+	ByteReader() = default;
 
 	ByteReader(std::string& inString, const size_t inSize,
-		const std::endian   endian = std::endian::native)
+	           const std::endian endian = std::endian::native)
 		: m_size(inSize)
-		, m_endian(endian)
+		  , m_endian(endian)
 	{
 		Buffer buffer((uint8*)inString.data(), inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
 	explicit ByteReader(uint8* inBuffer, const size_t inSize,
-		const std::endian      endian = std::endian::native)
+	                    const std::endian endian = std::endian::native)
 		: m_size(inSize)
-		, m_endian(endian)
+		  , m_endian(endian)
 	{
 		Buffer buffer(inBuffer, inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
 	explicit ByteReader(Buffer<uint8>& inBuffer,
-		const std::endian              endian = std::endian::native)
-		: m_size(inBuffer.getSize())
-		, m_endian(endian)
+	                    const std::endian endian = std::endian::native)
+		: m_size(inBuffer.size())
+		  , m_endian(endian)
 	{
 		m_streamBuffer = std::make_unique<StreamBuffer>(inBuffer);
-		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
 	~ByteReader() = default;

@@ -23,7 +23,7 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 {
 	LOG_INFO("Starting up engine.")
 
-	m_renderer = std::make_shared<Renderer>(inWidth, inHeight);
+	m_renderer  = std::make_shared<Renderer>(inWidth, inHeight);
 	m_isRunning = true;
 
 	// Track starting time
@@ -59,14 +59,14 @@ bool Engine::shutdown()
 void Engine::tick()
 {
 	const TimePoint endTime = PTimer::now();
-	m_deltaTime = std::chrono::duration_cast<DurationMs>(endTime - m_startTime).count();
-	m_startTime = PTimer::now();
+	m_deltaTime             = std::chrono::duration_cast<DurationMs>(endTime - m_startTime).count();
+	m_startTime             = PTimer::now();
 
 	// Update camera movement
 	if (const IInputHandler* input = Win32InputHandler::getInstance())
 	{
 		// Update camera position
-		Camera*     camera = getViewportCamera();
+		Camera* camera               = getViewportCamera();
 		const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
 
 		// Orbit
@@ -99,103 +99,106 @@ void Engine::onKeyPressed(const EKey keyCode) const
 {
 	switch (keyCode)
 	{
-		case EKey::T:
+	case EKey::T:
 		{
 			getViewport()->toggleShowDebugText();
 			break;
 		}
-		case EKey::F:
+	case EKey::F:
 		{
 			getViewport()->resetView();
 			break;
 		}
-		case EKey::F1:
+	case EKey::F1:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Wireframe);
 			break;
 		}
-		case EKey::F2:
+	case EKey::F2:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Shaded);
 			break;
 		}
-		case EKey::F3:
+	case EKey::F3:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Depth);
 			break;
 		}
-		case EKey::F4:
+	case EKey::F4:
 		{
 			m_renderer->m_settings.toggleRenderFlag(Normals);
 			break;
 		}
-		default:
-			break;
+	default: break;
 	}
 }
 
 void Engine::onLeftMouseUp(const vec2f& cursorPosition) const
 {
-	Camera* camera = getViewportCamera();
-	camera->m_sphericalDelta.phi = 0.0f;
+	Camera* camera                 = getViewportCamera();
+	camera->m_sphericalDelta.phi   = 0.0f;
 	camera->m_sphericalDelta.theta = 0.0f;
 }
 
 void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const
 {
-	Camera* camera = getViewportCamera();
+	Camera* camera      = getViewportCamera();
 	camera->m_panOffset = 0;
 }
 
 void Engine::onMenuActionPressed(const EMenuAction actionId)
 {
 	const Application* app = Application::getInstance();
-	IPlatform*         platform = app->getPlatform();
+	IPlatform* platform    = app->getPlatform();
 	switch (actionId)
 	{
-		case EMenuAction::LoadModel:
+	case EMenuAction::LoadModel:
 		{
-			onLoadModelPressed();
+			loadMesh();
 			break;
 		}
-		case EMenuAction::LoadTexture:
+	case EMenuAction::LoadTexture:
 		{
-			onLoadTexturePressed();
+			loadTexture();
 			break;
 		}
-		case EMenuAction::Quit:
+	case EMenuAction::Quit:
 		{
 			m_isRunning = false;
 			break;
 		}
-		case EMenuAction::Wireframe:
+	case EMenuAction::Wireframe:
 		{
 			platform->setMenuItemChecked(EMenuAction::Wireframe, m_renderer->m_settings.toggleRenderFlag(Wireframe));
 			break;
 		}
-		case EMenuAction::Shaded:
+	case EMenuAction::Shaded:
 		{
 			platform->setMenuItemChecked(EMenuAction::Shaded, m_renderer->m_settings.toggleRenderFlag(Shaded));
 			break;
 		}
-		case EMenuAction::Depth:
+	case EMenuAction::Depth:
 		{
 			platform->setMenuItemChecked(EMenuAction::Depth, m_renderer->m_settings.toggleRenderFlag(Depth));
 			break;
 		}
-		case EMenuAction::Normals:
+	case EMenuAction::Normals:
 		{
 			platform->setMenuItemChecked(EMenuAction::Normals, m_renderer->m_settings.toggleRenderFlag(Normals));
+			break;
+		}
+	case EMenuAction::VertexNormals:
+		{
 			break;
 		}
 	}
 }
 
-void Engine::onLoadModelPressed()
+void Engine::loadMesh()
 {
-	Application* app = Application::getInstance();
-	IPlatform*   platform = app->getPlatform();
-	std::string  fileName;
+	Application* app    = Application::getInstance();
+	IPlatform* platform = app->getPlatform();
+	std::string fileName;
 	if (platform->getFileDialog(fileName, "obj"))
 	{
 		// Load model
@@ -208,17 +211,17 @@ void Engine::onLoadModelPressed()
 	}
 }
 
-void Engine::onLoadTexturePressed()
+void Engine::loadTexture()
 {
-	Application* app = Application::getInstance();
-	IPlatform*   platform = app->getPlatform();
-	std::string  fileName;
+	Application* app    = Application::getInstance();
+	IPlatform* platform = app->getPlatform();
+	std::string fileName;
 	if (platform->getFileDialog(fileName, "png"))
 	{
 		// Load texture
 		g_textures.clear();
 		const auto texture = std::make_shared<Texture>();
-		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::RGBA);
+		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::Rgba);
 		texture->flipVertical();
 		g_textures.append(texture);
 		m_renderer->getShader()->texture = TextureManager::getTexture(0);

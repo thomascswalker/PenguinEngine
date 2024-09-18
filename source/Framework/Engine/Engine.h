@@ -8,15 +8,15 @@
 class Engine
 {
 	std::shared_ptr<Renderer> m_renderer;
-	bool                      m_isRunning = false;
+	bool m_isRunning = false;
 
 	TimePoint m_startTime;
-	float     m_deltaTime = 0.0f;
+	float m_deltaTime = 0.0f;
 
-	float m_cameraSpeed = .01f;
+	float m_cameraSpeed           = .01f;
 	float m_cameraSpeedMultiplier = 1.0f;
 
-	std::vector<float*>  m_vertices;
+	std::vector<float*> m_vertices;
 	std::vector<uint32*> m_indexes;
 
 public:
@@ -83,10 +83,10 @@ public:
 	/**
 	 * @brief Called when the Load Model menu action is pressed. Loads the mesh selected by the file open dialog.
 	 */
-	void onLoadModelPressed();
+	void loadMesh();
 
 	/**
 	 * @brief Called when the Load Texture menu action is pressed. Loads the texture selected by the file open dialog.
 	 */
-	void onLoadTexturePressed();
+	void loadTexture();
 };

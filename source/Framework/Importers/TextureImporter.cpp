@@ -1,13 +1,16 @@
 #include <filesystem>
 
 #include "Framework/Importers/TextureImporter.h"
-#include "Framework/Core/Compression.h"
+
+#include "zlib.h"
+
 #include "Framework/Application.h"
+#include "Framework/Core/Compression.h"
 
 constexpr int32 g_channelCount = 4; // Desired channel count for all textures
-constexpr int32 g_channelGray = 1;	// Gray scale (single channel)
-constexpr int32 g_channelRgb = 3;	// RGB (no alpha)
-constexpr int32 g_channelRgba = 4;	// RGBA (includes alpha)
+constexpr int32 g_channelGray  = 1; // Gray scale (single channel)
+constexpr int32 g_channelRgb   = 3; // RGB (no alpha)
+constexpr int32 g_channelRgba  = 4; // RGBA (includes alpha)
 
 auto app = Application::getInstance();
 
@@ -28,7 +31,7 @@ inline ETextureFileType TextureImporter::getTextureFileType(const std::string& f
 	}
 	if (fileName.ends_with(".jpg") || fileName.ends_with(".jpeg"))
 	{
-		return ETextureFileType::Bmp;
+		return ETextureFileType::Jpg;
 	}
 	app->getPlatform()->messageBox("TextureImporter", std::format("Invalid texture type {}.", fileName));
 	return ETextureFileType::Unknown;
@@ -47,19 +50,19 @@ bool TextureImporter::isValidPngHeader(ByteReader* reader)
 
 int32 TextureImporter::parsePngIHDR(PngChunk* chunk, PngTexture* png)
 {
-	ByteReader	 reader(chunk->compressedBuffer);
+	ByteReader reader(chunk->compressedBuffer);
 	PngMetadata* metadata = &png->metadata;
 
 	// Read the first 13 bytes of the chunk. This always totals to 13.
 	// We swap the byte order for width and height as it's always stored in Big endian, but your computer
 	// may be Little endian. `swapByteOrder` performs the swap if the expected order is not your default.
-	metadata->width = swapByteOrder(reader.readInt32());					// 4
-	metadata->height = swapByteOrder(reader.readInt32());					// 8
-	metadata->bitDepth = reader.readInt8();									// 9
-	metadata->colorType = (EPngColorType)reader.readInt8();					// 10
+	metadata->width             = swapByteOrder(reader.readInt32());        // 4
+	metadata->height            = swapByteOrder(reader.readInt32());        // 8
+	metadata->bitDepth          = reader.readInt8();                        // 9
+	metadata->colorType         = (EPngColorType)reader.readInt8();         // 10
 	metadata->compressionMethod = (EPngCompressionMethod)reader.readInt8(); // 11
-	metadata->filterMethod = reader.readInt8();								// 12
-	metadata->interlaced = (bool)reader.readInt8();							// 13
+	metadata->filterMethod      = reader.readInt8();                        // 12
+	metadata->interlaced        = (bool)reader.readInt8();                  // 13
 
 	if (reader.getPos() != 13)
 	{
@@ -68,7 +71,7 @@ int32 TextureImporter::parsePngIHDR(PngChunk* chunk, PngTexture* png)
 	}
 
 	// Compute the channel count from the color type
-	auto color = (int8)metadata->colorType;
+	auto color               = (int8)metadata->colorType;
 	metadata->inChannelCount = (color & 2 ? 3 : 1) + (color & 4 ? 1 : 0);
 
 	return TextureImporterError::Ok;
@@ -80,7 +83,7 @@ int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 
 	// Compute the uncompressed size of the image.
 	// (PixelCount in each row + an extra pixel for the filter type)
-	uint32 tmp = chunk->compressedBuffer.getSize();
+	uint32 tmp              = chunk->compressedBuffer.size();
 	uint32 inCompressedSize = metadata->width * metadata->height * metadata->outChannelCount + metadata->height;
 	if (inCompressedSize >= UINT32_MAX)
 	{
@@ -99,7 +102,7 @@ int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 		return TextureImporterError::MemoryError;
 	}
 
-	size_t offset = png->data.getSize();
+	size_t offset  = png->data.size();
 	size_t newSize = offset + outUncompressedSize;
 	png->data.extend(newSize);
 
@@ -107,7 +110,7 @@ int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 	// (ZLib).
 	switch (metadata->compressionMethod)
 	{
-		case EPngCompressionMethod::Default:
+	case EPngCompressionMethod::Default:
 		{
 			// Uncompress the whole compressedBuffer with ZLib's inflate
 			int32 result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);
@@ -118,11 +121,13 @@ int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 			// If interlaced, create the final PNG image data by deinterlacing, or
 			// if not, create the final PNG image data from the raw uncompressed
 			// data. This involves unfiltering each row.]
-			result = metadata->interlaced ? pngUnfilterInterlaced(&chunk->uncompressedBuffer, png) : pngUnfilter(&chunk->uncompressedBuffer, png);
+			result = metadata->interlaced
+				         ? pngUnfilterInterlaced(&chunk->uncompressedBuffer, png)
+				         : pngUnfilter(&chunk->uncompressedBuffer, png);
 			return result;
 		}
-		case EPngCompressionMethod::Invalid:
-		default:
+	case EPngCompressionMethod::Invalid:
+	default:
 		{
 			return TextureImporterError::DecompressionError;
 		}
@@ -153,7 +158,7 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	// uncompressedData compressedSize
 
 	// Loop through and read all bytes
-	for (uint32 i = 0; i < chunk->compressedBuffer.getSize(); i++)
+	for (uint32 i = 0; i < chunk->compressedBuffer.size(); i++)
 	{
 		chunk->compressedBuffer[i] = reader->readUInt8();
 	}
@@ -170,8 +175,8 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 {
 	// Raw pointer to the final PNG data which is pushed to the Texture object
 	// This is offset by the size of the previous IDAT chunk, in case there's multiple chunks.
-	uint8* out = png->data.getPtr() + offset;
-	size_t outSize = png->data.getSize();
+	uint8* out     = png->data.getPtr() + offset;
+	size_t outSize = png->data.size();
 
 	// Raw pointer to the uncompressed image data. This pointer is what is incremented and accessed
 	// to retrieve the current working byte.
@@ -180,21 +185,22 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 	// Metadata local vars
 	PngMetadata* metadata = &png->metadata;
 
-	auto  colorType = (int32)metadata->colorType;
-	int32 totalSize = buffer->getSize();
-	int32 depth = metadata->bitDepth;
-	int32 width = metadata->width;
-	int32 height = metadata->height;
-	int32 inChannelCount = metadata->inChannelCount;
+	auto colorType        = (int32)metadata->colorType;
+	int32 totalSize       = buffer->size();
+	int32 depth           = metadata->bitDepth;
+	int32 width           = metadata->width;
+	int32 height          = metadata->height;
+	int32 inChannelCount  = metadata->inChannelCount;
 	int32 outChannelCount = metadata->outChannelCount;
 
-	int32  bpc = (depth == DEPTH_16 ? 2 : 1);	   // Bytes-per-component (R, G, B, A)
-	uint32 stride = width * outChannelCount * bpc; // Total number of bytes in a single row of pixels in the output buffer
+	int32 bpc     = (depth == DEPTH_16 ? 2 : 1); // Bytes-per-component (R, G, B, A)
+	uint32 stride = width * outChannelCount * bpc;
+	// Total number of bytes in a single row of pixels in the output buffer
 
 	// Compute the input and output bytes-per-pixel. These may be different depending on the number
 	// of requested channels for the Texture to load vs. the actual number of channels in the PNG image.
 	int32 outBpp = outChannelCount * bpc; // Bytes-per-pixel for the output image
-	int32 inBpp = inChannelCount * bpc;	  // Bytes-per-pixel from the input image
+	int32 inBpp  = inChannelCount * bpc;  // Bytes-per-pixel from the input image
 
 	// Allocate memory to the output PNG given the bytes-per-pixel of the desired channel count.
 	out = PlatformMemory::malloc<uint8>(width * height * outBpp); // extra bytes to write off the end into
@@ -205,10 +211,11 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 	}
 
 	uint32 inRowByteCount = (((inChannelCount * width * depth) + 7) >> 3); // Number of bytes in a single row of pixels
-	uint32 inTotalByteCount = (inRowByteCount + 1) * height;			   // Total number of bytes in the entire image.
+	uint32 inTotalByteCount = (inRowByteCount + 1) * height; // Total number of bytes in the entire image.
 
-	uint32 outRowByteCount = (((outChannelCount * width * depth) + 7) >> 3); // Number of bytes in a single row of pixels
-	uint32 outTotalByteCount = (outRowByteCount + 1) * height;				 // Total number of bytes in the entire image.
+	uint32 outRowByteCount = (((outChannelCount * width * depth) + 7) >> 3);
+	// Number of bytes in a single row of pixels
+	uint32 outTotalByteCount = (outRowByteCount + 1) * height; // Total number of bytes in the entire image.
 
 	// we used to check for exact match between raw_len and img_len on
 	// non-interlaced PNGs, but issue #276 reported a PNG in the wild that had
@@ -220,7 +227,7 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 		return TextureImporterError::DataError;
 	}
 
-	// Allocate two scan lines worth of memory to the workspace buffer. This buffer will contain the temporary
+	// Allocate two scan m_lines worth of memory to the workspace buffer. This buffer will contain the temporary
 	// unfiltered bytes. This is eventually copied into the final PNG buffer.
 	auto filterBuffer = PlatformMemory::malloc<uint8>(outRowByteCount * 2);
 	if (!filterBuffer)
@@ -306,12 +313,12 @@ int32 TextureImporter::addAlphaChannel(uint8* in, uint8* out, uint32 width, int3
 
 	for (int x = width - 1; x >= 0; x--)
 	{
-		int32 inOffset = x * 3;
+		int32 inOffset  = x * 3;
 		int32 outOffset = x * 4;
-		
-		auto b = in[inOffset + 2];
-		auto g = in[inOffset + 1];
-		auto r = in[inOffset + 0];
+
+		auto b             = in[inOffset + 2];
+		auto g             = in[inOffset + 1];
+		auto r             = in[inOffset + 0];
 		out[outOffset + 3] = 255;
 		out[outOffset + 2] = b;
 		out[outOffset + 1] = g;
@@ -324,42 +331,43 @@ int32 TextureImporter::addAlphaChannel(uint8* in, uint8* out, uint32 width, int3
 inline int32 TextureImporter::pngPaeth(int32 a, int32 b, int32 c)
 {
 	int32 threshold = c * 3 - (a + b);
-	int32 low = a < b ? a : b;
-	int32 high = a < b ? b : a;
-	int32 t0 = (high <= threshold) ? low : c;
-	int32 t1 = (threshold <= low) ? high : t0;
+	int32 low       = a < b ? a : b;
+	int32 high      = a < b ? b : a;
+	int32 t0        = (high <= threshold) ? low : c;
+	int32 t1        = (threshold <= low) ? high : t0;
 	return t1;
 }
 
-int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw, int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline)
+int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8* currentScanline, uint8* raw,
+                                           int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline)
 {
 	// if first row, use special filter that doesn't sample previous row
 	if (y == 0)
 	{
 		switch (filter)
 		{
-			// Up => None
-			case EPngFilterType::Up:
+		// Up => None
+		case EPngFilterType::Up:
 			{
 				filter = EPngFilterType::None;
 				break;
 			}
-			// Average => First
-			case EPngFilterType::Average:
+		// Average => First
+		case EPngFilterType::Average:
 			{
 				filter = EPngFilterType::First;
 				break;
 			}
-			// Paeth => Sub
-			case EPngFilterType::Paeth:
+		// Paeth => Sub
+		case EPngFilterType::Paeth:
 			{
 				filter = EPngFilterType::Sub;
 				break;
 			}
-			case EPngFilterType::None:
-			case EPngFilterType::Sub:
-			case EPngFilterType::First:
-			default:
+		case EPngFilterType::None:
+		case EPngFilterType::Sub:
+		case EPngFilterType::First:
+		default:
 			{
 				break;
 			}
@@ -369,12 +377,12 @@ int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8
 	// perform actual filtering
 	switch (filter)
 	{
-		case EPngFilterType::None:
+	case EPngFilterType::None:
 		{
 			memcpy(currentScanline, raw, rowSizeBytes);
 			break;
 		}
-		case EPngFilterType::Sub:
+	case EPngFilterType::Sub:
 		{
 			memcpy(currentScanline, raw, filterBytes);
 			for (int32 x = filterBytes; x < rowSizeBytes; x++)
@@ -383,7 +391,7 @@ int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8
 			}
 			break;
 		}
-		case EPngFilterType::Up:
+	case EPngFilterType::Up:
 		{
 			for (int32 x = 0; x < rowSizeBytes; x++)
 			{
@@ -391,7 +399,7 @@ int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8
 			}
 			break;
 		}
-		case EPngFilterType::Average:
+	case EPngFilterType::Average:
 		{
 			for (int32 x = 0; x < filterBytes; x++)
 			{
@@ -403,7 +411,7 @@ int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8
 			}
 			break;
 		}
-		case EPngFilterType::Paeth:
+	case EPngFilterType::Paeth:
 		{
 			for (int32 x = 0; x < filterBytes; x++)
 			{
@@ -411,11 +419,12 @@ int32 TextureImporter::pngUnfilterScanline(int32 y, EPngFilterType filter, uint8
 			}
 			for (int32 x = filterBytes; x < rowSizeBytes; x++)
 			{
-				currentScanline[x] = truncate(raw[x] + pngPaeth(currentScanline[x - filterBytes], previousScanline[x], previousScanline[x - filterBytes]));
+				currentScanline[x] = truncate(raw[x] + pngPaeth(currentScanline[x - filterBytes], previousScanline[x],
+				                                                previousScanline[x - filterBytes]));
 			}
 			break;
 		}
-		case EPngFilterType::First:
+	case EPngFilterType::First:
 		{
 			memcpy(currentScanline, raw, filterBytes);
 			for (int32 x = filterBytes; x < rowSizeBytes; x++)
@@ -461,7 +470,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	parsePngIHDR(&ihdrChunk, &png);
 
 	// Read chunks until we hit the end of the file.
-	bool  atEnd = false;
+	bool atEnd   = false;
 	int32 result = 0;
 	while (!atEnd)
 	{
@@ -471,11 +480,11 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 		// If we reach the end chunk, exit
 		switch (chunk.type)
 		{
-			case EPngChunkType::IHDR:
+		case EPngChunkType::IHDR:
 			{
 				break;
 			}
-			case EPngChunkType::IDAT:
+		case EPngChunkType::IDAT:
 			{
 				result = parsePngIDAT(&chunk, &png);
 				if (result != TextureImporterError::Ok)
@@ -486,30 +495,30 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 				break;
 			}
 
-			case EPngChunkType::IEND:
+		case EPngChunkType::IEND:
 			{
 				atEnd = true;
 				break;
 			}
-			case EPngChunkType::PLTE:
-			case EPngChunkType::BKGD:
-			case EPngChunkType::CHRM:
-			case EPngChunkType::CICP:
-			case EPngChunkType::DSIG:
-			case EPngChunkType::EXIF:
-			case EPngChunkType::GAMA:
-			case EPngChunkType::HIST:
-			case EPngChunkType::ICCP:
-			case EPngChunkType::ITXT:
-			case EPngChunkType::PHYS:
-			case EPngChunkType::SBIT:
-			case EPngChunkType::SPLT:
-			case EPngChunkType::SRGB:
-			case EPngChunkType::STER:
-			case EPngChunkType::TEXT:
-			case EPngChunkType::TIME:
-			case EPngChunkType::TRNS:
-			case EPngChunkType::ZTXT:
+		case EPngChunkType::PLTE:
+		case EPngChunkType::BKGD:
+		case EPngChunkType::CHRM:
+		case EPngChunkType::CICP:
+		case EPngChunkType::DSIG:
+		case EPngChunkType::EXIF:
+		case EPngChunkType::GAMA:
+		case EPngChunkType::HIST:
+		case EPngChunkType::ICCP:
+		case EPngChunkType::ITXT:
+		case EPngChunkType::PHYS:
+		case EPngChunkType::SBIT:
+		case EPngChunkType::SPLT:
+		case EPngChunkType::SRGB:
+		case EPngChunkType::STER:
+		case EPngChunkType::TEXT:
+		case EPngChunkType::TIME:
+		case EPngChunkType::TRNS:
+		case EPngChunkType::ZTXT:
 			{
 				break;
 			}
@@ -517,8 +526,8 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	}
 
 	Buffer<uint8> data = png.data;
-	int32  bpr = (png.metadata.width * g_bytesPerPixel) + 1;
-	int32  tmpSize = bpr * png.metadata.height;
+	int32 bpr          = (png.metadata.width * g_bytesPerPixel) + 1;
+	int32 tmpSize      = bpr * png.metadata.height;
 	Buffer<uint8> tmp(tmpSize);
 
 	for (int32 row = 0; row < png.metadata.height; row++)
@@ -527,7 +536,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 		memcpy(tmp.getPtr() + offset, data.getPtr() + offset, bpr);
 	}
 
-	texture->resize({ (int32)png.metadata.width, (int32)png.metadata.height });
+	texture->resize({(int32)png.metadata.width, (int32)png.metadata.height});
 	texture->setMemory(&data);
 #if defined(_WIN32) || defined(_WIN64)
 	texture->setByteOrder(ETextureByteOrder::BRGA);
@@ -537,7 +546,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	return result;
 }
 
-int32 TextureImporter::import(const std::string& fileName, Texture* texture, ETextureFileFormat format)
+int32 TextureImporter::import(const std::string& fileName, Texture* texture, const ETextureFileFormat format)
 {
 	if (!std::filesystem::exists(fileName))
 	{
@@ -556,29 +565,28 @@ int32 TextureImporter::import(const std::string& fileName, Texture* texture, ETe
 	// Create a reader from the string uncompressedData
 	ByteReader reader(fileData, fileData.size(), std::endian::big);
 
-	int32			 result = 0;
-	ETextureFileType fileType = getTextureFileType(fileName);
+	int32 result;
 
-	switch (fileType)
+	switch (getTextureFileType(fileName))
 	{
-		case ETextureFileType::Png:
+	case ETextureFileType::Png:
 		{
 			result = importPng(&reader, texture, format);
 			break;
 		}
-		case ETextureFileType::Bmp:
+	case ETextureFileType::Bmp:
 		{
 			LOG_ERROR("Bmp not currently supported.");
 			result = TextureImporterError::NotImplementedError;
 			break;
 		}
-		case ETextureFileType::Jpg:
+	case ETextureFileType::Jpg:
 		{
 			LOG_ERROR("Jpg not currently supported.");
 			result = TextureImporterError::NotImplementedError;
 			break;
 		}
-		default:
+	default:
 		{
 			LOG_ERROR("Invalid filetype for {}", fileName);
 			result = TextureImporterError::FileTypeError;

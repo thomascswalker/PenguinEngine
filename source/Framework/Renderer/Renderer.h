@@ -17,7 +17,7 @@
 class Renderer
 {
 	std::shared_ptr<Viewport> m_viewport;
-	std::unique_ptr<FGrid>	  m_grid;
+	std::unique_ptr<Grid> m_grid;
 
 	Color m_wireColor = Color::fromRgba(255, 175, 50);
 	Color m_gridColor = Color::fromRgba(128, 128, 128);
@@ -57,6 +57,7 @@ public:
 	{
 		return m_colorTexture.get();
 	}
+
 	[[nodiscard]] IShader* getShader() const
 	{
 		return m_currentShader.get();
@@ -94,7 +95,6 @@ public:
 	 */
 	void drawGrid() const;
 
-
 	/**
 	 * @brief Draws the current scene, including all meshes and the grid.
 	 * 
@@ -106,7 +106,7 @@ public:
 	 * 
 	 * 4. Draws each mesh in `g_meshes`.
 	 */
-	 void draw() const;
+	void draw() const;
 
 	/**
 	 * @brief Renders the current frame with a standard scanline method.

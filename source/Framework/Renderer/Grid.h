@@ -15,8 +15,8 @@ struct line_t
 	void reverse()
 	{
 		vec2_t<T> tmp = a;
-		a = b;
-		b = tmp;
+		a             = b;
+		b             = tmp;
 	}
 
 	[[nodiscard]] linef getReverse() const
@@ -40,13 +40,13 @@ struct line_t
 
 		if (Math::closeEnough(det, 0.0f))
 		{
-			// The lines are parallel. This is simplified
+			// The m_lines are parallel. This is simplified
 			// by returning a pair of FLT_MAX
 			return false;
 		}
 
-		T x = (b2 * c1 - b1 * c2) / det;
-		T y = (a1 * c2 - a2 * c1) / det;
+		T x   = (b2 * c1 - b1 * c2) / det;
+		T y   = (a1 * c2 - a2 * c1) / det;
 		out.x = x;
 		out.y = y;
 		return true;
@@ -62,18 +62,24 @@ struct line3d_t
 	line3d_t(const vec3_t<T>& inA, const vec3_t<T>& inB) : a(inA), b(inB) {}
 };
 
-struct FGrid
+class Grid
 {
-	std::vector<line3d> lines;
+	std::vector<line3d> m_lines;
 
-	FGrid(const float divisions, const float cellSize)
+public:
+	Grid(const float divisions, const float cellSize)
 	{
 		for (float step = 0; step <= divisions; step += cellSize)
 		{
-			lines.emplace_back(vec3f(-divisions, 0.0f, step), vec3f(divisions, 0.0f, step));
-			lines.emplace_back(vec3f(-divisions, 0.0f, -step), vec3f(divisions, 0.0f, -step));
-			lines.emplace_back(vec3f(step, 0.0f, -divisions), vec3f(step, 0.0f, divisions));
-			lines.emplace_back(vec3f(-step, 0.0f, -divisions), vec3f(-step, 0.0f, divisions));
+			m_lines.emplace_back(vec3f(-divisions, 0.0f, step), vec3f(divisions, 0.0f, step));
+			m_lines.emplace_back(vec3f(-divisions, 0.0f, -step), vec3f(divisions, 0.0f, -step));
+			m_lines.emplace_back(vec3f(step, 0.0f, -divisions), vec3f(step, 0.0f, divisions));
+			m_lines.emplace_back(vec3f(-step, 0.0f, -divisions), vec3f(-step, 0.0f, divisions));
 		}
+	}
+
+	[[nodiscard]] std::vector<line3d> getLines() const
+	{
+		return m_lines;
 	}
 };

@@ -85,8 +85,8 @@ public:
 	{
 		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
 		assert(targetSize == inData->getSize());
-		m_buffer.resize(inData->getSize());
-		memcpy(m_buffer.getPtr(), inData->getPtr(), inData->getSize());
+		m_buffer.resize(inData->size());
+		memcpy(m_buffer.getPtr(), inData->getPtr(), inData->size());
 	}
 
 	Texture(const Texture& other)

@@ -3,7 +3,7 @@
 #include "Math/MathFwd.h"
 #include "Framework/Platforms/PlatformMemory.h"
 
-#include "zlib/zlib.h"
+#include "zlib.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define ZLIB_WINAPI
@@ -14,7 +14,7 @@ constexpr int32 g_defaultZlibBitWindow = MAX_WBITS;
 
 namespace Compression
 {
-	static voidpf zalloc(void* opaque, uint32 size, uint32 num)
+	static voidpf zalloc(void* opaque, const uint32 size, const uint32 num)
 	{
 		return PlatformMemory::malloc(static_cast<size_t>(size) * num);
 	}
@@ -26,7 +26,7 @@ namespace Compression
 
 	static int32 uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
 	{
-		uint32 uncompressedSize = uncompressedBuffer->getSize();
+		uint32 uncompressedSize = uncompressedBuffer->size();
 		uint8* uncompressedData = PlatformMemory::malloc<uint8>(uncompressedSize);
 
 		z_stream stream;
@@ -34,7 +34,7 @@ namespace Compression
 		stream.zfree     = &zfree;
 		stream.opaque    = nullptr;
 		stream.next_in   = compressedBuffer->getPtr();
-		stream.avail_in  = (uInt)compressedBuffer->getSize();
+		stream.avail_in  = (uInt)compressedBuffer->size();
 		stream.next_out  = uncompressedData;
 		stream.avail_out = uncompressedSize;
 
