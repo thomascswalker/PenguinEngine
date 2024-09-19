@@ -2,6 +2,8 @@
 // ReSharper disable CppClangTidyClangDiagnosticFloatConversion
 // ReSharper disable CppClangTidyClangDiagnosticImplicitIntFloatConversion
 
+#include <thread>
+
 #include "Framework/Renderer/Renderer.h"
 #include "Framework/Engine/Engine.h"
 #include "Framework/Renderer/Shader.h"
@@ -22,6 +24,7 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
+	m_threadCount   = std::thread::hardware_concurrency();
 }
 
 void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
@@ -29,6 +32,25 @@ void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
 	m_viewport->resize(inWidth, inHeight);
 	m_colorTexture->resize(vec2i(inWidth, inHeight));
 	m_depthTexture->resize(vec2i(inWidth, inHeight));
+}
+
+void Renderer::createTiles()
+{
+	int32 id         = 0;
+	int32 tileCountX = getWidth() / g_defaultTileSize;
+	int32 tileCountY = getHeight() / g_defaultTileSize;
+
+	for (int32 x = 0; x < tileCountX; x++)
+	{
+		for (int32 y = 0; y < tileCountY; y++)
+		{
+			m_tiles.append(Tile(vec2f(g_defaultTileSize * x, g_defaultTileSize * y), // Min
+			                    vec2f(g_defaultTileSize * x + g_defaultTileSize,     // MaxX
+			                          g_defaultTileSize * y + g_defaultTileSize),    // MaxY
+			                    id));                                                // Id
+			id++;
+		}
+	}
 }
 
 void Renderer::draw() const
@@ -53,9 +75,9 @@ void Renderer::draw() const
 	}
 }
 
-void Renderer::drawMesh(const Mesh* mesh) const
+void Renderer::drawMesh(Mesh* mesh) const
 {
-	for (const auto& triangle : mesh->m_triangles)
+	for (const auto& triangle : *mesh->getTriangles())
 	{
 		drawTriangle(triangle.v0, triangle.v1, triangle.v2);
 	}

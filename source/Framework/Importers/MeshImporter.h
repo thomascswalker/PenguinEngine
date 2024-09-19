@@ -208,15 +208,15 @@ public:
 			}
 		}
 
-		mesh->m_triangles = triangles;
-		mesh->m_positions = positions;
+		mesh->setTriangles(triangles);
+		mesh->setPositions(positions);
 		if (!normals.empty())
 		{
-			mesh->m_normals = normals;
+			mesh->setNormals(normals);
 		}
 		if (!texCoords.empty())
 		{
-			mesh->m_texCoords = texCoords;
+			mesh->setTexCoords(texCoords);
 		}
 
 		return true;

@@ -5,11 +5,13 @@
 
 #include "Framework/Engine/Mesh.h"
 #include "Grid.h"
-#include "Math/MathCommon.h"
 #include "Settings.h"
 #include "Shader.h"
 #include "Texture.h"
+#include "Tile.h"
 #include "Viewport.h"
+
+constexpr int32 g_defaultTileSize = 128;
 
 /**
  * This class manages the viewport, output color and depth buffers, and the current shader used to render.
@@ -31,12 +33,21 @@ class Renderer
 	/* The depth buffer which is used to track depth of each pixel. */
 	std::shared_ptr<Texture> m_depthTexture;
 
+	Array<Triangle> m_screenTriangles;
+	Array<Tile> m_tiles;
+	int32 m_threadCount;
+
 public:
 	/* Render settings. */
 	RenderSettings m_settings;
 
 	Renderer(uint32 inWidth, uint32 inHeight);
 	void resize(uint32 inWidth, uint32 inHeight) const;
+
+	/**
+	 * @brief Divides the screen size into tiles of a fixed size.
+	 */
+	void createTiles();
 
 	[[nodiscard]] int32 getWidth() const
 	{
@@ -88,7 +99,7 @@ public:
 	 *
 	 * @param mesh The mesh to draw. The mesh lives within the `g_meshes` global variable found in Engine.cpp.
 	 */
-	void drawMesh(const Mesh* mesh) const;
+	void drawMesh(Mesh* mesh) const;
 
 	/**
 	 * @brief Draws the default grid to the color buffer. This does NOT impact the depth buffer.

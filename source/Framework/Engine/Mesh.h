@@ -35,12 +35,15 @@ struct Vertex
 	vec3f normal;
 	vec2f texCoord;
 
+	vec3f screenPos;
+
 	Vertex() = default;
 
 	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec2f& inTexCoord)
 		: position(inPosition)
-		, normal(inNormal)
-		, texCoord(inTexCoord) {}
+		  , normal(inNormal)
+		  , texCoord(inTexCoord)
+		  , screenPos(0) {}
 };
 
 struct Triangle
@@ -56,43 +59,84 @@ struct Triangle
 	Triangle() = default;
 
 	Triangle(const std::vector<int32>& inPositionIndexes, const std::vector<int32>& inNormalIndexes,
-		const std::vector<int32>&      inTexCoordIndexes)
+	         const std::vector<int32>& inTexCoordIndexes)
 		: positionIndexes(inPositionIndexes)
-		, normalIndexes(inNormalIndexes)
-		, texCoordIndexes(inTexCoordIndexes) {}
+		  , normalIndexes(inNormalIndexes)
+		  , texCoordIndexes(inTexCoordIndexes) {}
 };
 
-struct Mesh : Object
+class Mesh : public Object
 {
 	// Properties
 	std::vector<Triangle> m_triangles;
-	std::vector<vec3f>    m_positions;
-	std::vector<vec3f>    m_normals;
-	std::vector<vec2f>    m_texCoords;
+	std::vector<vec3f> m_positions;
+	std::vector<vec3f> m_normals;
+	std::vector<vec2f> m_texCoords;
 
+public:
 	Mesh() = default;
 
-	Mesh(const std::vector<Triangle>& inTriangles, const std::vector<vec3f>&    inPositions,
-		const std::vector<vec3f>&     inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
+	Mesh(const std::vector<Triangle>& inTriangles, const std::vector<vec3f>& inPositions,
+	     const std::vector<vec3f>& inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
 		: m_triangles(inTriangles)
-		, m_positions(inPositions)
-		, m_normals(inNormals)
-		, m_texCoords(inTexCoords)
+		  , m_positions(inPositions)
+		  , m_normals(inNormals)
+		  , m_texCoords(inTexCoords)
 	{
 		processTriangles();
 	}
 
-	bool hasNormals() const
+	[[nodiscard]] bool hasNormals() const
 	{
 		return !m_normals.empty();
 	}
 
-	bool hasTexCoords() const
+	[[nodiscard]] bool hasTexCoords() const
 	{
 		return !m_texCoords.empty();
 	}
 
 	void processTriangles();
+
+	std::vector<Triangle>* getTriangles()
+	{
+		return &m_triangles;
+	}
+
+	[[nodiscard]] std::vector<vec3f>* getPositions()
+	{
+		return &m_positions;
+	}
+
+	[[nodiscard]] std::vector<vec3f>* getNormals()
+	{
+		return &m_normals;
+	}
+
+	[[nodiscard]] std::vector<vec2f>* getTexCoords()
+	{
+		return &m_texCoords;
+	}
+
+	void setTriangles(const std::vector<Triangle>& triangles)
+	{
+		m_triangles = triangles;
+	}
+
+	void setPositions(const std::vector<vec3f>& positions)
+	{
+		m_positions = positions;
+	}
+
+	void setNormals(const std::vector<vec3f>& normals)
+	{
+		m_normals = normals;
+	}
+
+	void setTexCoords(const std::vector<vec2f>& texCoords)
+	{
+		m_texCoords = texCoords;
+	}
 
 	// Primitives
 	static std::shared_ptr<Mesh> createPlane(float size);

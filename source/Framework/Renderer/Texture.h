@@ -84,7 +84,7 @@ public:
 		  , m_pitch(inSize.x)
 	{
 		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
-		assert(targetSize == inData->getSize());
+		assert(targetSize == inData->size());
 		m_buffer.resize(inData->size());
 		memcpy(m_buffer.getPtr(), inData->getPtr(), inData->size());
 	}
