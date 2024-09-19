@@ -191,6 +191,11 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		{
 			break;
 		}
+	case EMenuAction::TileRendering:
+		{
+			platform->setMenuItemChecked(EMenuAction::TileRendering, m_renderer->m_settings.toggleTileRendering());
+			break;
+		}
 	}
 }
 

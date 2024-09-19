@@ -24,31 +24,202 @@ Renderer::Renderer(uint32 inWidth, uint32 inHeight)
 
 	// Default shader
 	m_currentShader = std::make_shared<DefaultShader>();
-	m_threadCount   = std::thread::hardware_concurrency();
+
+	// Tiling
+	m_tiles.clear();
+	createTiles();
+	m_threadCount = std::thread::hardware_concurrency();
 }
 
-void Renderer::resize(const uint32 inWidth, const uint32 inHeight) const
+void Renderer::resize(const uint32 inWidth, const uint32 inHeight)
 {
 	m_viewport->resize(inWidth, inHeight);
 	m_colorTexture->resize(vec2i(inWidth, inHeight));
 	m_depthTexture->resize(vec2i(inWidth, inHeight));
+
+	m_tiles.clear();
+	createTiles();
 }
 
 void Renderer::createTiles()
 {
-	int32 id         = 0;
-	int32 tileCountX = getWidth() / g_defaultTileSize;
-	int32 tileCountY = getHeight() / g_defaultTileSize;
+	int32 id        = 0;
+	int32 tileSizeX = getWidth() / g_defaultTileCount;
+	int32 tileSizeY = getHeight() / g_defaultTileCount;
 
-	for (int32 x = 0; x < tileCountX; x++)
+	for (int32 x = 0; x < g_defaultTileCount; x++)
 	{
-		for (int32 y = 0; y < tileCountY; y++)
+		for (int32 y = 0; y < g_defaultTileCount; y++)
 		{
-			m_tiles.append(Tile(vec2f(g_defaultTileSize * x, g_defaultTileSize * y), // Min
-			                    vec2f(g_defaultTileSize * x + g_defaultTileSize,     // MaxX
-			                          g_defaultTileSize * y + g_defaultTileSize),    // MaxY
-			                    id));                                                // Id
+			m_tiles.append(Tile(
+				vec2f(tileSizeX * x, tileSizeY * y),                         // Min
+				vec2f(tileSizeX * x + tileSizeX, tileSizeY * y + tileSizeY), // Max
+				id));                                                        // Id
+
+			// Bump tile ID
 			id++;
+		}
+	}
+}
+
+bool Renderer::projectTriangle(Triangle* triangle) const
+{
+	PViewData viewData = m_currentShader->viewData;
+	vec3f s0, s1, s2;
+
+	Vertex v0 = triangle->v0;
+	Vertex v1 = triangle->v1;
+	Vertex v2 = triangle->v2;
+
+	// Project the world-space points to screen-space
+	bool triangleOnScreen = false;
+	triangleOnScreen |= Math::projectWorldToScreen(v0.position, s0, viewData);
+	triangleOnScreen |= Math::projectWorldToScreen(v1.position, s1, viewData);
+	triangleOnScreen |= Math::projectWorldToScreen(v2.position, s2, viewData);
+
+	// If the triangle is completely off screen, exit
+	if (!triangleOnScreen)
+	{
+		return false;
+	}
+
+	// Reverse the order to CCW if the order is CW
+	switch (Math::getVertexOrder(s0, s1, s2))
+	{
+	case EWindingOrder::CW: // Triangle is back-facing, exit
+	case EWindingOrder::CL: // Triangle has zero area, exit
+		return false;
+	case EWindingOrder::CCW: // Triangle is front-facing, continue
+		break;
+	}
+
+	triangle->v0.screenPos = s0;
+	triangle->v1.screenPos = s1;
+	triangle->v2.screenPos = s2;
+
+	return true;
+}
+
+void Renderer::binTriangles(Mesh* mesh) const
+{
+	// Clear all triangles in tiles
+	for (auto& tile : m_tiles)
+	{
+		tile.getTriangles()->clear();
+	}
+
+	for (Triangle& tri : *mesh->getTriangles())
+	{
+		// Project the triangle onto the screen
+		if (projectTriangle(&tri))
+		{
+			// If any part of the triangle is visible, associate it with any overlapping tiles
+			// Screen positions computed from projectTriangle().
+			vec3f s0 = tri.v0.screenPos;
+			vec3f s1 = tri.v1.screenPos;
+			vec3f s2 = tri.v2.screenPos;
+
+			// Check if the triangle overlaps with any tiles
+			rectf triangleBounds = rectf::makeBoundingBox({s0.x, s0.y}, {s1.x, s1.y}, {s2.x, s2.y});
+			for (Tile& tile : m_tiles)
+			{
+				rectf tileBounds = tile.getBounds();
+				if (triangleBounds.overlaps(tileBounds))
+				{
+					// If the triangle overlaps with this tile, add the triangle to this tile
+					tile.addTriangle(&tri);
+				}
+			}
+		}
+	}
+}
+
+void Renderer::drawBinnedTriangle(const Triangle* triangle, const Tile* tile) const
+{
+	const vec3f* s0 = &triangle->v0.screenPos;
+	const vec3f* s1 = &triangle->v1.screenPos;
+	const vec3f* s2 = &triangle->v2.screenPos;
+
+	// Compute the bounds of just this triangle on the screen
+	const int32 width  = getWidth();
+	const int32 height = getHeight();
+	const rectf bounds = tile->getBounds();
+
+	const vec2f boundsMin = bounds.min();
+	const vec2f boundsMax = bounds.max();
+	const int32 minX      = std::max(static_cast<int32>(boundsMin.x), 0);
+	const int32 maxX      = std::min(static_cast<int32>(boundsMax.x), width - 1);
+	const int32 minY      = std::max(static_cast<int32>(boundsMin.y), 0);
+	const int32 maxY      = std::min(static_cast<int32>(boundsMax.y), height - 1);
+
+	// Pre-compute the area of the screen triangle so we're not computing it every pixel
+	const float area        = Math::area2D(*s0, *s1, *s2) * 2.0f;
+	const float oneOverArea = 1.0f / area;
+
+	// Prior to the loop computing each pixel in the triangle, get the render settings
+	const bool renderDepth = m_settings.getRenderFlag(Depth);
+
+	const float depth0 = Math::getDepth(*s0, *s0, *s1, *s2, area);
+	const float depth1 = Math::getDepth(*s1, *s0, *s1, *s2, area);
+	const float depth2 = Math::getDepth(*s2, *s0, *s1, *s2, area);
+
+	// Loop through all pixels in the screen bounding box.
+	for (int32 y = minY; y <= maxY; y++)
+	{
+		for (int32 x = minX; x <= maxX; x++)
+		{
+			vec3f point(x, y, 0);
+
+			// Use Pineda's edge function to determine if the current pixel is within the triangle.
+			float w0 = EDGE_FUNCTION(s1->x, s1->y, s2->x, s2->y, point.x, point.y);
+			float w1 = EDGE_FUNCTION(s2->x, s2->y, s0->x, s0->y, point.x, point.y);
+			float w2 = EDGE_FUNCTION(s0->x, s0->y, s1->x, s1->y, point.x, point.y);
+
+			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
+			{
+				continue;
+			}
+
+			// From the edge vectors, extrapolate the barycentric coordinates for this pixel.
+			w0 *= oneOverArea;
+			w1 *= oneOverArea;
+			w2 *= oneOverArea;
+
+			vec3f bary;
+			bary.x                = w0;
+			bary.y                = w1;
+			bary.z                = w2;
+			m_currentShader->bary = bary;
+
+			if (renderDepth)
+			{
+				// Interpolate depth given the barycentric coordinates
+				float z = bary.x * depth0 + bary.y * depth1 + bary.z * depth2;
+
+				// Compare the new depth to the current depth at this pixel. If the new depth is further than
+				// the current depth, continue.
+				float oldZ = m_depthTexture->getPixelAsFloat(x, y);
+				if (z > oldZ)
+				{
+					continue;
+				}
+				// If the new depth is closer than the current depth, set the current depth
+				// at this pixel to the new depth we just got.
+				m_depthTexture->setPixelFromFloat(x, y, z);
+			}
+
+			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * bary.x + m_currentShader->v1.position *
+				bary.y + m_currentShader->v2.position * bary.z;
+
+			// Compute the UV coordinates of the current pixel
+			m_currentShader->computeUv();
+
+			// Compute the final color for this pixel
+			m_currentShader->preComputePixelShader();
+			m_currentShader->computePixelShader(point.x, point.y);
+
+			// Set the current pixel in memory to the computed color
+			m_colorTexture->setPixelFromColor(x, y, m_currentShader->outColor);
 		}
 	}
 }
@@ -65,13 +236,49 @@ void Renderer::draw() const
 	// Draw the world grid prior to drawing any geometry
 	drawGrid();
 
+	// Update the current shader to use the camera's most recent parameters
+	const Camera* camera = m_viewport->getCamera();
+
 	// Draw each mesh
-	const Engine* engine = Engine::getInstance();
-	for (const auto& mesh : g_meshes)
+	bool tiling             = m_settings.getTileRendering();
+	m_currentShader->tiling = tiling;
+	for (auto& mesh : g_meshes)
 	{
+		m_currentShader->init(camera->getViewData());
 		m_currentShader->hasNormals   = mesh->hasNormals();
 		m_currentShader->hasTexCoords = mesh->hasTexCoords();
-		drawMesh(mesh.get());
+
+		if (tiling)
+		{
+			binTriangles(mesh.get());
+
+			for (Tile& tile : m_tiles)
+			{
+				for (Triangle* triangle : *tile.getTriangles())
+				{
+					m_currentShader->computeVertexShader(triangle->v0, triangle->v1, triangle->v2);
+					drawBinnedTriangle(triangle, &tile);
+				}
+			}
+		}
+		else
+		{
+			drawMesh(mesh.get());
+		}
+	}
+
+	if (tiling)
+	{
+		for (const auto& tile : m_tiles)
+		{
+			auto color = tile.getColor();
+			auto lines = tile.getLines();
+
+			for (const auto& line : lines)
+			{
+				drawLine(line.a, line.b, color);
+			}
+		}
 	}
 }
 

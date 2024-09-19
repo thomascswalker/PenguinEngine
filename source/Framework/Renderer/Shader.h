@@ -39,6 +39,8 @@ struct IShader
 
 	PViewData viewData;
 
+	bool tiling = false;
+
 	/**
 	 * @brief Initializes this shader with the specified view data.
 	 * @param inViewData The view data from the current camera in the viewport.
@@ -106,26 +108,31 @@ struct DefaultShader : IShader
 		v1 = inV1;
 		v2 = inV2;
 
-		// Project the world-space points to screen-space
-		bool triangleOnScreen = false;
-		triangleOnScreen |= Math::projectWorldToScreen(v0.position, s0, viewData);
-		triangleOnScreen |= Math::projectWorldToScreen(v1.position, s1, viewData);
-		triangleOnScreen |= Math::projectWorldToScreen(v2.position, s2, viewData);
-
-		// If the triangle is completely off screen, exit
-		if (!triangleOnScreen)
+		// If we're not tiling, the triangle hasn't been projected yet. We need to project it and validate
+		// that some or all of it is on screen.
+		if (!tiling)
 		{
-			return false;
-		}
+			// Project the world-space points to screen-space
+			bool triangleOnScreen = false;
+			triangleOnScreen |= Math::projectWorldToScreen(v0.position, s0, viewData);
+			triangleOnScreen |= Math::projectWorldToScreen(v1.position, s1, viewData);
+			triangleOnScreen |= Math::projectWorldToScreen(v2.position, s2, viewData);
 
-		// Reverse the order to CCW if the order is CW
-		switch (Math::getVertexOrder(s0, s1, s2))
-		{
-		case EWindingOrder::CW: // Triangle is back-facing, exit
-		case EWindingOrder::CL: // Triangle has zero area, exit
-			return false;
-		case EWindingOrder::CCW: // Triangle is front-facing, continue
-			break;
+			// If the triangle is completely off screen, exit
+			if (!triangleOnScreen)
+			{
+				return false;
+			}
+
+			// Reverse the order to CCW if the order is CW
+			switch (Math::getVertexOrder(s0, s1, s2))
+			{
+			case EWindingOrder::CW: // Triangle is back-facing, exit
+			case EWindingOrder::CL: // Triangle has zero area, exit
+				return false;
+			case EWindingOrder::CCW: // Triangle is front-facing, continue
+				break;
+			}
 		}
 
 		// Get the bounding box of the 2d triangle clipped to the viewport
@@ -140,9 +147,10 @@ struct DefaultShader : IShader
 
 		// Determine if this triangle has normals by just comparing if they're all equal
 		// to each other (false) or not (true).
-		hasNormals |= v0.normal != v1.normal;
-		hasNormals |= v1.normal != v2.normal;
-		hasNormals |= v0.normal != v2.normal;
+		//hasNormals = false;
+		//hasNormals &= v0.normal != v1.normal;
+		//hasNormals &= v1.normal != v2.normal;
+		//hasNormals &= v0.normal != v2.normal;
 		if (hasNormals)
 		{
 			// Average each of the vertices' normals to get the triangle normal
@@ -167,11 +175,6 @@ struct DefaultShader : IShader
 			triangleCameraNormal.y = tmp.y;
 			triangleCameraNormal.z = tmp.z;
 		}
-
-		// Determine if this triangle has normals by just comparing if they're all equal
-		// to each other (false) or not (true).
-		hasTexCoords |= v0.texCoord != v1.texCoord;
-		hasTexCoords |= v1.texCoord != v2.texCoord;
 
 		return true;
 	}

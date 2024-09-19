@@ -11,7 +11,8 @@
 #include "Tile.h"
 #include "Viewport.h"
 
-constexpr int32 g_defaultTileSize = 128;
+constexpr int32 g_defaultTileSize  = 128;
+constexpr int32 g_defaultTileCount = 4;
 
 /**
  * This class manages the viewport, output color and depth buffers, and the current shader used to render.
@@ -42,12 +43,15 @@ public:
 	RenderSettings m_settings;
 
 	Renderer(uint32 inWidth, uint32 inHeight);
-	void resize(uint32 inWidth, uint32 inHeight) const;
+	void resize(uint32 inWidth, uint32 inHeight);
 
 	/**
-	 * @brief Divides the screen size into tiles of a fixed size.
+	 * @brief Divides the screen size into tiles of a fixed size. Size defaults to `g_defaultTileSize`.
 	 */
 	void createTiles();
+	bool projectTriangle(Triangle* triangle) const;
+	void binTriangles(Mesh* mesh) const;
+	void drawBinnedTriangle(const Triangle* triangle, const Tile* tile) const;
 
 	[[nodiscard]] int32 getWidth() const
 	{

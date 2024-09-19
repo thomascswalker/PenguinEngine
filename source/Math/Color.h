@@ -1,14 +1,16 @@
 ﻿#pragma once
 
 #include <format>
+#include <random>
+
 #include "MathFwd.h"
 
 struct Color;
 struct LinearColor;
 
-inline int32 g_redMask = 0xFF000000;
+inline int32 g_redMask   = 0xFF000000;
 inline int32 g_greenMask = 0xFF0000;
-inline int32 g_blueMask = 0xFF00;
+inline int32 g_blueMask  = 0xFF00;
 inline int32 g_alphaMask = 0xFF;
 
 struct Color
@@ -22,11 +24,13 @@ struct Color
 			uint8 b;
 			uint8 a;
 		};
-		uint8 rgba[4] = { 0, 0, 0, 0 };
+
+		uint8 rgba[4] = {0, 0, 0, 0};
 	};
 
 protected:
 	Color() {}
+
 	Color(const uint8 inR, const uint8 inG, const uint8 inB, const uint8 inA = 255)
 	{
 		r = inR;
@@ -83,7 +87,26 @@ public:
 
 	static Color fromRgba(uint8 r, uint8 g, uint8 b, uint8 a = 255)
 	{
-		return { r, g, b, a };
+		return {r, g, b, a};
+	}
+
+	static Color random(const uint8 min, const uint8 max)
+	{
+		std::random_device rd;
+		std::mt19937 generator(rd());
+		std::uniform_int_distribution<> distr(min, max); // define the range
+
+		Color out;
+		for (uint8 i = 0; i < 4; i++)
+		{
+			out.rgba[i] = distr(generator);
+		}
+		return out;
+	}
+
+	static Color random()
+	{
+		return random(0, 255);
 	}
 
 	static Color fromUInt32(const int32 value)
@@ -92,7 +115,7 @@ public:
 		uint8 r = UINT8_MAX & value >> 16;
 		uint8 g = UINT8_MAX & value >> 8;
 		uint8 b = UINT8_MAX & value;
-		return { r, g, b, a };
+		return {r, g, b, a};
 	}
 
 	[[nodiscard]] int32 toInt32() const

@@ -85,10 +85,10 @@ enum class EKey : uint8
 
 enum class EModifierKey : uint8
 {
-	None = 0x00,
+	None  = 0x00,
 	Shift = 0x01,
-	Ctrl = 0x02,
-	Alt = 0x04
+	Ctrl  = 0x02,
+	Alt   = 0x04
 };
 
 DEFINE_BITMASK_OPERATORS(EModifierKey)
@@ -110,7 +110,10 @@ enum class EMenuAction : uint16
 	Shaded,
 	Depth,
 	Normals,
-	VertexNormals
+	VertexNormals,
+
+	// Options
+	TileRendering
 };
 
 DECLARE_MULTICAST_DELEGATE(OnMouseMoved, const vec2f&);
@@ -134,8 +137,8 @@ public:
 	// Events
 
 protected:
-	bool m_mouseLeftDown = false;
-	bool m_mouseRightDown = false;
+	bool m_mouseLeftDown   = false;
+	bool m_mouseRightDown  = false;
 	bool m_mouseMiddleDown = false;
 
 	vec2f m_clickPosition;
@@ -144,7 +147,7 @@ protected:
 	vec2f m_deltaCursorPosition;
 
 	std::map<EKey, bool> m_keyStateMap;
-	EModifierKey		 m_modifierKeys = EModifierKey::None;
+	EModifierKey m_modifierKeys = EModifierKey::None;
 
 	IInputHandler()
 	{
@@ -159,16 +162,16 @@ protected:
 
 public:
 	// Events
-	OnMouseMoved		  m_onMouseMoved;
-	OnMouseLeftDown		  m_onMouseLeftDown;
-	OnMouseRightDown	  m_onMouseRightDown;
-	OnMouseMiddleDown	  m_onMouseMiddleDown;
-	OnMouseLeftUp		  m_onMouseLeftUp;
-	OnMouseRightUp		  m_onMouseRightUp;
-	OnMouseMiddleUp		  m_onMouseMiddleUp;
+	OnMouseMoved m_onMouseMoved;
+	OnMouseLeftDown m_onMouseLeftDown;
+	OnMouseRightDown m_onMouseRightDown;
+	OnMouseMiddleDown m_onMouseMiddleDown;
+	OnMouseLeftUp m_onMouseLeftUp;
+	OnMouseRightUp m_onMouseRightUp;
+	OnMouseMiddleUp m_onMouseMiddleUp;
 	OnMouseMiddleScrolled m_onMouseMiddleScrolled;
-	OnKeyPressed		  m_keyPressed;
-	OnMenuActionPressed	  m_menuActionPressed;
+	OnKeyPressed m_keyPressed;
+	OnMenuActionPressed m_menuActionPressed;
 
 	// Mouse
 	virtual bool onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition)
@@ -283,7 +286,7 @@ class Win32InputHandler : public IInputHandler
 {
 protected:
 	static Win32InputHandler* m_instance;
-	Win32InputHandler() = default;
+	Win32InputHandler()  = default;
 	~Win32InputHandler() = default;
 
 public:
@@ -293,21 +296,17 @@ public:
 	{
 		switch (buttonType)
 		{
-			case EMouseButtonType::Left:
-				m_mouseLeftDown = true;
-				m_onMouseLeftDown.broadcast(cursorPosition);
-				break;
-			case EMouseButtonType::Right:
-				m_mouseRightDown = true;
-				m_onMouseRightDown.broadcast(cursorPosition);
-				break;
-			case EMouseButtonType::Middle:
-				m_mouseMiddleDown = true;
-				m_onMouseMiddleDown.broadcast(cursorPosition);
-				break;
-			case EMouseButtonType::Invalid:
-			default:
-				return false;
+		case EMouseButtonType::Left: m_mouseLeftDown = true;
+			m_onMouseLeftDown.broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Right: m_mouseRightDown = true;
+			m_onMouseRightDown.broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Middle: m_mouseMiddleDown = true;
+			m_onMouseMiddleDown.broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Invalid:
+		default: return false;
 		}
 
 		m_clickPosition = cursorPosition;
@@ -319,21 +318,17 @@ public:
 	{
 		switch (buttonType)
 		{
-			case EMouseButtonType::Left:
-				m_mouseLeftDown = false;
-				m_onMouseLeftUp.broadcast(cursorPosition);
-				break;
-			case EMouseButtonType::Right:
-				m_mouseRightDown = false;
-				m_onMouseRightUp.broadcast(cursorPosition);
-				break;
-			case EMouseButtonType::Middle:
-				m_mouseMiddleDown = false;
-				m_onMouseMiddleUp.broadcast(cursorPosition);
-				break;
-			case EMouseButtonType::Invalid:
-			default:
-				return false;
+		case EMouseButtonType::Left: m_mouseLeftDown = false;
+			m_onMouseLeftUp.broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Right: m_mouseRightDown = false;
+			m_onMouseRightUp.broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Middle: m_mouseMiddleDown = false;
+			m_onMouseMiddleUp.broadcast(cursorPosition);
+			break;
+		case EMouseButtonType::Invalid:
+		default: return false;
 		}
 		m_clickPosition = 0;
 
@@ -356,7 +351,7 @@ public:
 			return false;
 		}
 		m_previousCursorPosition = m_currentCursorPosition;
-		m_currentCursorPosition = cursorPosition;
+		m_currentCursorPosition  = cursorPosition;
 		m_onMouseMoved.broadcast(m_currentCursorPosition);
 		m_deltaCursorPosition = m_currentCursorPosition - m_previousCursorPosition;
 		return true;
@@ -366,15 +361,11 @@ public:
 	{
 		switch (buttonType)
 		{
-			case EMouseButtonType::Left:
-				return m_mouseLeftDown;
-			case EMouseButtonType::Right:
-				return m_mouseRightDown;
-			case EMouseButtonType::Middle:
-				return m_mouseMiddleDown;
-			case EMouseButtonType::Invalid:
-			default:
-				return false;
+		case EMouseButtonType::Left: return m_mouseLeftDown;
+		case EMouseButtonType::Right: return m_mouseRightDown;
+		case EMouseButtonType::Middle: return m_mouseMiddleDown;
+		case EMouseButtonType::Invalid:
+		default: return false;
 		}
 	}
 
@@ -405,12 +396,9 @@ public:
 	{
 		switch (actionId)
 		{
-			case EMenuAction::LoadModel:
-				break;
-			case EMenuAction::LoadTexture:
-				break;
-			case EMenuAction::Quit:
-				break;
+		case EMenuAction::LoadModel: break;
+		case EMenuAction::LoadTexture: break;
+		case EMenuAction::Quit: break;
 		}
 	}
 };
