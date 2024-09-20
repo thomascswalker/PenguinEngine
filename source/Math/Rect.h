@@ -7,34 +7,39 @@ struct rect_t
 {
 	struct
 	{
-		T x = 0;
-		T y = 0;
-		T width = 0;
+		T x      = 0;
+		T y      = 0;
+		T width  = 0;
 		T height = 0;
 	};
 
-	rect_t()
-	{
-	}
+	rect_t() {}
 
 	rect_t(const vec2_t<T>& inMin, const vec2_t<T>& inMax)
 	{
-		x = inMin.x;
-		y = inMin.y;
-		width = inMax.x - inMin.x;
+		x      = inMin.x;
+		y      = inMin.y;
+		width  = inMax.x - inMin.x;
 		height = inMax.y - inMin.y;
 	}
 
 	rect_t(T inX, T inY, T inWidth, T inHeight)
 	{
-		x = inX;
-		y = inY;
-		width = inWidth;
+		x      = inX;
+		y      = inY;
+		width  = inWidth;
 		height = inHeight;
 	}
 
-	vec2_t<T> min() const { return vec2_t(x, y); }
-	vec2_t<T> max() const { return vec2_t(x + width, y + height); }
+	vec2_t<T> min() const
+	{
+		return vec2_t(x, y);
+	}
+
+	vec2_t<T> max() const
+	{
+		return vec2_t(x + width, y + height);
+	}
 
 	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1)
 	{
@@ -70,9 +75,9 @@ struct rect_t
 
 	void clamp(const rect_t& other)
 	{
-		x = std::max(x, other.x);
-		y = std::max(y, other.y);
-		width = std::min(width, other.width);
+		x      = std::max(x, other.x);
+		y      = std::max(y, other.y);
+		width  = std::min(width, other.width);
 		height = std::min(height, other.height);
 	}
 
@@ -90,5 +95,15 @@ struct rect_t
 		y += value;
 		width -= value;
 		height += value;
+	}
+
+	[[nodiscard]] bool contains(const vec2f& point) const
+	{
+		return point.x >= x && point.y >= y && point.x <= x + width && point.y <= y + height;
+	}
+
+	[[nodiscard]] bool overlaps(const rectf& other) const
+	{
+		return other.x >= x || other.y >= y || other.x + width <= x + width || other.y + height <= y + height;
 	}
 };

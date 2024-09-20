@@ -8,7 +8,7 @@ struct line_t
 	vec2_t<T> a;
 	vec2_t<T> b;
 
-	line_t() {}
+	line_t() = default;
 
 	line_t(const vec2_t<T>& inA, const vec2_t<T>& inB) : a(inA), b(inB) {}
 

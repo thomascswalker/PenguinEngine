@@ -18,6 +18,7 @@ struct RenderSettings
 {
 private:
 	ERenderFlag m_renderFlags = Wireframe;
+	bool m_tileRendering      = false;
 
 public:
 	RenderSettings()
@@ -25,7 +26,7 @@ public:
 		m_renderFlags = Shaded | Depth;
 	}
 
-	constexpr bool getRenderFlag(const ERenderFlag flag) const
+	[[nodiscard]] constexpr bool getRenderFlag(const ERenderFlag flag) const
 	{
 		return (m_renderFlags & flag) == flag;
 	}
@@ -42,5 +43,21 @@ public:
 		const bool state = getRenderFlag(flag); // Flip the state
 		setRenderFlag(flag, !state);
 		return !state;
+	}
+
+	[[nodiscard]] bool getTileRendering() const
+	{
+		return m_tileRendering;
+	}
+
+	void setTileRendering(const bool newState)
+	{
+		m_tileRendering = newState;
+	}
+
+	bool toggleTileRendering()
+	{
+		m_tileRendering = !m_tileRendering;
+		return m_tileRendering;
 	}
 };

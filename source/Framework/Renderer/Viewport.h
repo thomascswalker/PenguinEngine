@@ -13,18 +13,44 @@ public:
 	Viewport(uint32 inWidth, uint32 inHeight);
 	void resize(uint32 inWidth, uint32 inHeight) const;
 
-	uint32 getWidth() const { return m_camera->m_width; }
-	uint32 getHeight() const { return m_camera->m_height; }
-	vec2f getSize() const;
-	float getAspect() const { return static_cast<float>(m_camera->m_width) / static_cast<float>(m_camera->m_height); }
-	Camera* getCamera() const { return m_camera.get(); }
+	[[nodiscard]] uint32 getWidth() const
+	{
+		return m_camera->m_width;
+	}
+
+	[[nodiscard]] uint32 getHeight() const
+	{
+		return m_camera->m_height;
+	}
+
+	[[nodiscard]] vec2f getSize() const;
+
+	[[nodiscard]] float getAspect() const
+	{
+		return static_cast<float>(m_camera->m_width) / static_cast<float>(m_camera->m_height);
+	}
+
+	[[nodiscard]] Camera* getCamera() const
+	{
+		return m_camera.get();
+	}
 
 	void resetView() const;
-	bool projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPosition) const;
-	bool projectScreenToWorld(const vec2f& screenPosition, float depth, vec3f& worldPosition) const;
 
 	void formatDebugText();
-	std::string getDebugText() const { return m_debugText; }
-	bool getShowDebugText() const { return m_showDebugText; }
-	void toggleShowDebugText() { m_showDebugText = !m_showDebugText; }
+
+	[[nodiscard]] std::string getDebugText() const
+	{
+		return m_debugText;
+	}
+
+	[[nodiscard]] bool getShowDebugText() const
+	{
+		return m_showDebugText;
+	}
+
+	void toggleShowDebugText()
+	{
+		m_showDebugText = !m_showDebugText;
+	}
 };

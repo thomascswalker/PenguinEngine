@@ -1,4 +1,6 @@
-﻿#include <windowsx.h>
+﻿#pragma warning(disable : 4244)
+
+#include <windowsx.h>
 #include <codecvt>
 
 #include "Framework/Application.h"
@@ -10,61 +12,54 @@
 
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
-	LRESULT		   result = 0;
-	Engine*		   engine = Engine::getInstance();
-	Renderer*	   renderer = engine->getRenderer();
+	LRESULT result              = 0;
+	Engine* engine              = Engine::getInstance();
+	Renderer* renderer          = engine->getRenderer();
 	IInputHandler* inputHandler = IInputHandler::getInstance();
 
 	switch (msg)
 	{
-		case WM_CREATE:
+	case WM_CREATE:
 		{
 			SetTimer(hwnd, g_windowsTimerId, 1, nullptr);
 			ShowCursor(TRUE);
 			return 0;
 		}
-		case WM_DESTROY:
+	case WM_DESTROY:
 		{
 			DeleteObject(m_displayBitmap);
 			engine->shutdown();
 			PostQuitMessage(0);
 			return 0;
 		}
-		case WM_LBUTTONDOWN:
-		case WM_LBUTTONUP:
-		case WM_RBUTTONDOWN:
-		case WM_RBUTTONUP:
-		case WM_MBUTTONUP:
-		case WM_MBUTTONDOWN:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONUP:
+	case WM_MBUTTONDOWN:
 		{
-			bool			 mouseUp = false;
+			bool mouseUp = false;
 			EMouseButtonType buttonType;
 
 			switch (msg)
 			{
-				case WM_LBUTTONDOWN:
-					buttonType = EMouseButtonType::Left;
-					break;
-				case WM_LBUTTONUP:
-					buttonType = EMouseButtonType::Left;
-					mouseUp = true;
-					break;
-				case WM_RBUTTONDOWN:
-					buttonType = EMouseButtonType::Right;
-					break;
-				case WM_RBUTTONUP:
-					buttonType = EMouseButtonType::Right;
-					mouseUp = true;
-					break;
-				case WM_MBUTTONUP:
-					buttonType = EMouseButtonType::Middle;
-					mouseUp = true;
-					break;
-				case WM_MBUTTONDOWN:
-					buttonType = EMouseButtonType::Middle;
-					break;
-				default:
-					return 1;
+			case WM_LBUTTONDOWN: buttonType = EMouseButtonType::Left;
+				break;
+			case WM_LBUTTONUP: buttonType = EMouseButtonType::Left;
+				mouseUp = true;
+				break;
+			case WM_RBUTTONDOWN: buttonType = EMouseButtonType::Right;
+				break;
+			case WM_RBUTTONUP: buttonType = EMouseButtonType::Right;
+				mouseUp = true;
+				break;
+			case WM_MBUTTONUP: buttonType = EMouseButtonType::Middle;
+				mouseUp = true;
+				break;
+			case WM_MBUTTONDOWN: buttonType = EMouseButtonType::Middle;
+				break;
+			default: return 1;
 			}
 
 			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
@@ -79,23 +74,23 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			return 0;
 		}
 
-		// Mouse movement
-		case WM_MOUSEMOVE:
-		case WM_INPUT:
+	// Mouse movement
+	case WM_MOUSEMOVE:
+	case WM_INPUT:
 		{
 			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
 			inputHandler->onMouseMove(cursorPosition);
 			return 0;
 		}
-		case WM_MOUSEWHEEL:
+	case WM_MOUSEWHEEL:
 		{
 			const float deltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
 			inputHandler->onMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
 			return 0;
 		}
-		// Keyboard input
-		case WM_SYSKEYDOWN:
-		case WM_KEYDOWN:
+	// Keyboard input
+	case WM_SYSKEYDOWN:
+	case WM_KEYDOWN:
 		{
 			const auto key = static_cast<int32>(wParam);
 			if (!g_win32KeyMap.contains(key))
@@ -105,8 +100,8 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			inputHandler->onKeyDown(g_win32KeyMap.at(key), 0, false);
 			return 0;
 		}
-		case WM_SYSKEYUP:
-		case WM_KEYUP:
+	case WM_SYSKEYUP:
+	case WM_KEYUP:
 		{
 			const auto key = static_cast<int32>(wParam);
 			if (!g_win32KeyMap.contains(key))
@@ -116,7 +111,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			inputHandler->onKeyUp(g_win32KeyMap.at(key), 0, false);
 			return 0;
 		}
-		case WM_PAINT:
+	case WM_PAINT:
 		{
 			if (!renderer)
 			{
@@ -127,16 +122,16 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			// Get the current window compressedSize from the buffer
 			// const std::shared_ptr<Channel> channel = renderer->getColorChannel();
-			const int32 width = renderer->getWidth();
+			const int32 width  = renderer->getWidth();
 			const int32 height = renderer->getHeight();
 
 			// Create a bitmap with the current renderer buffer memory the compressedSize of the window
 			InvalidateRect(hwnd, nullptr, TRUE);
 			PAINTSTRUCT paint;
-			const HDC	deviceContext = BeginPaint(hwnd, &paint);
-			const HDC	renderContext = CreateCompatibleDC(deviceContext);
+			const HDC deviceContext = BeginPaint(hwnd, &paint);
+			const HDC renderContext = CreateCompatibleDC(deviceContext);
 
-			void* colorBuffer = renderer->getColorBitmap()->getRawMemory();
+			void* colorBuffer = renderer->getFrameData();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
@@ -158,10 +153,10 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 				SetTextColor(deviceContext, RGB(255, 255, 0));
 				SetBkColor(deviceContext, TRANSPARENT);
 				DrawText(
-					deviceContext,													// DC
+					deviceContext,                                                  // DC
 					std::wstring(outputString.begin(), outputString.end()).c_str(), // Message
 					-1,
-					&clientRect,	 // Client rectangle (the window)
+					&clientRect,     // Client rectangle (the window)
 					DT_TOP | DT_LEFT // Drawing options
 				);
 			}
@@ -175,20 +170,20 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			break;
 		}
-		case WM_SIZE:
+	case WM_SIZE:
 		{
 			if (!renderer)
 			{
 				LOG_WARNING("Renderer is not initialized in Win32Platform::windowProc::WM_SIZE")
 				break;
 			}
-			const int32 width = LOWORD(lParam);
+			const int32 width  = LOWORD(lParam);
 			const int32 height = HIWORD(lParam);
 
 			// Update the renderer compressedSize
 			renderer->resize(width, height);
 			LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
-			m_bitmapInfo.bmiHeader.biWidth = width;
+			m_bitmapInfo.bmiHeader.biWidth  = width;
 			m_bitmapInfo.bmiHeader.biHeight = height;
 
 			// Create a new empty bitmap with the updated width and height
@@ -196,34 +191,34 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			return 0;
 		}
-		case WM_GETMINMAXINFO:
+	case WM_GETMINMAXINFO:
 		{
-			auto minMaxInfo = (MINMAXINFO*)lParam;
+			auto minMaxInfo              = (MINMAXINFO*)lParam;
 			minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
 			minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
 			minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
 			minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
 			return 0;
 		}
-		case WM_EXITSIZEMOVE:
-		case WM_ERASEBKGND:
+	case WM_EXITSIZEMOVE:
+	case WM_ERASEBKGND:
 		{
 			return 1;
 		}
-		// Timer called every ms to update
-		case WM_TIMER:
+	// Timer called every ms to update
+	case WM_TIMER:
 		{
 			InvalidateRect(hwnd, nullptr, FALSE);
 			UpdateWindow(hwnd);
 			break;
 		}
-		case WM_COMMAND:
+	case WM_COMMAND:
 		{
 			const auto actionId = static_cast<EMenuAction>(LOWORD(wParam));
 			inputHandler->m_menuActionPressed.broadcast(actionId);
 			break;
 		}
-		default:
+	default:
 		{
 			result = DefWindowProcW(hwnd, msg, wParam, lParam);
 			break;
@@ -243,8 +238,8 @@ bool Win32Platform::Register()
 	// Register the window class.
 	WNDCLASS windowClass = {};
 
-	windowClass.lpfnWndProc = windowProc;
-	windowClass.hInstance = m_hInstance;
+	windowClass.lpfnWndProc   = windowProc;
+	windowClass.hInstance     = m_hInstance;
 	windowClass.lpszClassName = m_className;
 
 	// Registering the window class
@@ -299,11 +294,11 @@ int32 Win32Platform::create()
 	engine->startup(clientRect.right, clientRect.bottom);
 
 	// Fill the default bitmap info
-	m_bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	m_bitmapInfo.bmiHeader.biWidth = engine->getRenderer()->getWidth();
-	m_bitmapInfo.bmiHeader.biHeight = engine->getRenderer()->getHeight();
-	m_bitmapInfo.bmiHeader.biPlanes = 1;
-	m_bitmapInfo.bmiHeader.biBitCount = 32;
+	m_bitmapInfo.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+	m_bitmapInfo.bmiHeader.biWidth       = engine->getRenderer()->getWidth();
+	m_bitmapInfo.bmiHeader.biHeight      = engine->getRenderer()->getHeight();
+	m_bitmapInfo.bmiHeader.biPlanes      = 1;
+	m_bitmapInfo.bmiHeader.biBitCount    = 32;
 	m_bitmapInfo.bmiHeader.biCompression = BI_RGB;
 
 	// Create an empty bitmap which we'll use to display on the window
@@ -389,7 +384,7 @@ int32 Win32Platform::end()
 
 int32 Win32Platform::swapBuffers()
 {
-	const Engine*	engine = Engine::getInstance();
+	const Engine* engine     = Engine::getInstance();
 	const Renderer* renderer = engine->getRenderer();
 
 	return 0;
@@ -406,9 +401,9 @@ rectf Win32Platform::getSize()
 
 	if (GetWindowRect(m_hwnd, &outRect))
 	{
-		float width = static_cast<float>(outRect.right - outRect.left);
+		float width  = static_cast<float>(outRect.right - outRect.left);
 		float height = static_cast<float>(outRect.bottom - outRect.top);
-		return { 0, 0, width, height };
+		return {0, 0, width, height};
 	}
 
 	LOG_ERROR("Unable to get window compressedSize (Win32Platform::GetSize).")
@@ -417,9 +412,9 @@ rectf Win32Platform::getSize()
 
 bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& filter)
 {
-	OPENFILENAME ofn = { 0 };
-	TCHAR		 szFile[MAX_PATH] = { 0 };
-	szFile[0] = '\0';
+	OPENFILENAME ofn       = {0};
+	TCHAR szFile[MAX_PATH] = {0};
+	szFile[0]              = '\0';
 
 	std::string fmtFilter = filter;
 	fmtFilter.push_back('\0');
@@ -428,23 +423,23 @@ bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& f
 	std::wstring wFilter = Strings::toWString(fmtFilter);
 
 	SecureZeroMemory(&ofn, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = m_hwnd;
-	ofn.lpstrFile = szFile;
-	ofn.nMaxFile = sizeof(szFile);
-	ofn.lpstrFilter = wFilter.c_str();
-	ofn.nFilterIndex = 1;
-	ofn.lpstrFileTitle = nullptr;
-	ofn.lpstrTitle = TEXT("Load a file.");
+	ofn.lStructSize     = sizeof(ofn);
+	ofn.hwndOwner       = m_hwnd;
+	ofn.lpstrFile       = szFile;
+	ofn.nMaxFile        = sizeof(szFile);
+	ofn.lpstrFilter     = wFilter.c_str();
+	ofn.nFilterIndex    = 1;
+	ofn.lpstrFileTitle  = nullptr;
+	ofn.lpstrTitle      = TEXT("Load a file.");
 	ofn.lpstrInitialDir = nullptr;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+	ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
 	if (!GetOpenFileName(&ofn))
 	{
 		return false;
 	}
 	int32 fileSize = WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, nullptr, 0, nullptr, nullptr);
-	auto  tmp = new int8[fileSize];
+	auto tmp       = new int8[fileSize];
 	WideCharToMultiByte(CP_UTF8, 0, ofn.lpstrFile, -1, tmp, fileSize, nullptr, nullptr);
 	outFileName = std::string(tmp);
 
@@ -453,8 +448,8 @@ bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& f
 
 void Win32Platform::constructMenuBar()
 {
-	m_mainMenu = CreateMenu();
-	m_fileMenu = CreateMenu();
+	m_mainMenu    = CreateMenu();
+	m_fileMenu    = CreateMenu();
 	m_displayMenu = CreateMenu();
 
 	// File menu
@@ -470,6 +465,8 @@ void Win32Platform::constructMenuBar()
 	AppendMenuW(m_displayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Shaded), L"&Shaded");
 	AppendMenuW(m_displayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Depth), L"&Depth");
 	AppendMenuW(m_displayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Normals), L"&Normals");
+	AppendMenuW(m_displayMenu, MF_SEPARATOR, 0, nullptr);
+	AppendMenuW(m_displayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::TileRendering), L"&Tile Rendering");
 
 	// Add the main menu bar to the window
 	SetMenu(m_hwnd, m_mainMenu);
@@ -482,10 +479,9 @@ void Win32Platform::setMenuItemChecked(EMenuAction actionId, const bool checkSta
 
 void Win32Platform::messageBox(const std::string& title, const std::string& message)
 {
-
 	MessageBoxW(
-		nullptr,									  // Handle
-		(LPCWSTR)Strings::toWString(title).c_str(),	  // Title
-		(LPCWSTR)Strings::toWString(message).c_str(), // Text
-		MB_ICONINFORMATION);						  // Type
+		nullptr,                             // Handle
+		Strings::toWString(title).c_str(),   // Title
+		Strings::toWString(message).c_str(), // Text
+		MB_ICONINFORMATION);                 // Type
 }

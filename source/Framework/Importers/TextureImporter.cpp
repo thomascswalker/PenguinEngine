@@ -83,7 +83,6 @@ int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 
 	// Compute the uncompressed size of the image.
 	// (PixelCount in each row + an extra pixel for the filter type)
-	uint32 tmp              = chunk->compressedBuffer.size();
 	uint32 inCompressedSize = metadata->width * metadata->height * metadata->outChannelCount + metadata->height;
 	if (inCompressedSize >= UINT32_MAX)
 	{
@@ -186,10 +185,10 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 	PngMetadata* metadata = &png->metadata;
 
 	auto colorType        = (int32)metadata->colorType;
-	int32 totalSize       = buffer->size();
+	int32 totalSize       = (int32)buffer->size();
 	int32 depth           = metadata->bitDepth;
-	int32 width           = metadata->width;
-	int32 height          = metadata->height;
+	int32 width           = (int32)metadata->width;
+	int32 height          = (int32)metadata->height;
 	int32 inChannelCount  = metadata->inChannelCount;
 	int32 outChannelCount = metadata->outChannelCount;
 
@@ -221,7 +220,7 @@ int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_
 	// non-interlaced PNGs, but issue #276 reported a PNG in the wild that had
 	// extra data at the end (all zeros), so just check for raw_len < img_len
 	// always.
-	if (totalSize < inTotalByteCount)
+	if (totalSize < (int32)inTotalByteCount)
 	{
 		LOG_ERROR("Not enough pixels; corrupt PNG.");
 		return TextureImporterError::DataError;
@@ -530,7 +529,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	int32 tmpSize      = bpr * png.metadata.height;
 	Buffer<uint8> tmp(tmpSize);
 
-	for (int32 row = 0; row < png.metadata.height; row++)
+	for (int32 row = 0; row < (int32)png.metadata.height; row++)
 	{
 		size_t offset = row * bpr;
 		memcpy(tmp.getPtr() + offset, data.getPtr() + offset, bpr);

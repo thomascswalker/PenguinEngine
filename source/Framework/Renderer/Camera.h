@@ -4,20 +4,20 @@
 #include "Framework/Engine/Object.h"
 #include "Math/Spherical.h"
 
-constexpr int32 g_windowWidthClip = 16;
-constexpr int32 g_windowHeightClip = 59;
-constexpr int32 g_defaultViewportWidth = 640 + g_windowWidthClip;
+constexpr int32 g_windowWidthClip       = 16;
+constexpr int32 g_windowHeightClip      = 59;
+constexpr int32 g_defaultViewportWidth  = 640 + g_windowWidthClip;
 constexpr int32 g_defaultViewportHeight = 480 + g_windowHeightClip;
-constexpr int32 g_minWindowWidth = 320;
-constexpr int32 g_minWindowHeight = 240;
-constexpr int32 g_maxWindowWidth = 1280;
-constexpr int32 g_maxWindowHeight = 720;
+constexpr int32 g_minWindowWidth        = 320;
+constexpr int32 g_minWindowHeight       = 240;
+constexpr int32 g_maxWindowWidth        = 1280;
+constexpr int32 g_maxWindowHeight       = 720;
 
-constexpr float g_defaultFov = 54.3f;
+constexpr float g_defaultFov  = 54.3f;
 constexpr float g_defaultMinz = 0.1f;
 constexpr float g_defaultMaxz = 100.0f;
 
-constexpr float g_defaultMinZoom = 10.0f;
+constexpr float g_defaultMinZoom      = 10.0f;
 const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
 
 enum EViewportType
@@ -26,15 +26,15 @@ enum EViewportType
 	Othographic
 };
 
-struct PViewData
+struct ViewData
 {
-	int32 m_width = g_defaultViewportWidth;
-	int32 m_height = g_defaultViewportHeight;
-	float m_fov = g_defaultFov;
-	float m_minZ = 1.0f;
-	float m_maxZ = 10.0f;
-	float m_minFov = 20.0f;
-	float m_maxFov = 120.0f;
+	int32 m_width   = g_defaultViewportWidth;
+	int32 m_height  = g_defaultViewportHeight;
+	float m_fov     = g_defaultFov;
+	float m_minZ    = 1.0f;
+	float m_maxZ    = 10.0f;
+	float m_minFov  = 20.0f;
+	float m_maxFov  = 120.0f;
 	float m_minZoom = 2.0f;
 	float m_maxZoom = 100.0f;
 
@@ -57,13 +57,13 @@ struct PViewData
 class Camera : public Object
 {
 public:
-	int32 m_width = g_defaultViewportWidth;
-	int32 m_height = g_defaultViewportHeight;
-	float m_fov = g_defaultFov;
-	float m_minZ = 1.0f;
-	float m_maxZ = 10.0f;
-	float m_minFov = 20.0f;
-	float m_maxFov = 120.0f;
+	int32 m_width   = g_defaultViewportWidth;
+	int32 m_height  = g_defaultViewportHeight;
+	float m_fov     = g_defaultFov;
+	float m_minZ    = 1.0f;
+	float m_maxZ    = 10.0f;
+	float m_minFov  = 20.0f;
+	float m_maxFov  = 120.0f;
 	float m_minZoom = 2.0f;
 	float m_maxZoom = 100.0f;
 
@@ -116,23 +116,23 @@ public:
 	void deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPosition,
 	                            vec3f& outWorldDirection) const;
 
-	PViewData getViewData() const
+	ViewData getViewData() const
 	{
-		PViewData data;
+		ViewData data;
 
-		data.m_width = m_width;
-		data.m_height = m_height;
-		data.m_fov = m_fov;
-		data.m_minZ = m_minZ;
-		data.m_maxZ = m_maxZ;
-		data.m_target = m_target;
-		data.m_spherical = m_spherical;
-		data.m_projectionMatrix = m_projectionMatrix;
-		data.m_viewMatrix = m_viewMatrix;
-		data.m_viewProjectionMatrix = m_viewProjectionMatrix;
+		data.m_width                   = m_width;
+		data.m_height                  = m_height;
+		data.m_fov                     = m_fov;
+		data.m_minZ                    = m_minZ;
+		data.m_maxZ                    = m_maxZ;
+		data.m_target                  = m_target;
+		data.m_spherical               = m_spherical;
+		data.m_projectionMatrix        = m_projectionMatrix;
+		data.m_viewMatrix              = m_viewMatrix;
+		data.m_viewProjectionMatrix    = m_viewProjectionMatrix;
 		data.m_invViewProjectionMatrix = m_invViewProjectionMatrix;
-		data.m_direction = getForwardVector();
-		data.m_translation = getTranslation();
+		data.m_direction               = getForwardVector();
+		data.m_translation             = getTranslation();
 
 		return data;
 	}
@@ -140,7 +140,7 @@ public:
 
 namespace Math
 {
-	static bool projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPosition, const PViewData& viewData)
+	static bool projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPosition, const ViewData& viewData)
 	{
 		// Clip 
 		const vec4f result = viewData.m_viewProjectionMatrix * vec4f(worldPosition, 1.0f);
@@ -170,7 +170,7 @@ namespace Math
 		return false;
 	}
 
-	static bool deprojectScreenToWorld(const vec2f& screenPosition, const PViewData& viewData)
+	static bool deprojectScreenToWorld(const vec2f& screenPosition, const ViewData& viewData)
 	{
 		return true;
 	}

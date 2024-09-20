@@ -84,7 +84,7 @@ public:
 		  , m_pitch(inSize.x)
 	{
 		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
-		assert(targetSize == inData->getSize());
+		assert(targetSize == inData->size());
 		m_buffer.resize(inData->size());
 		memcpy(m_buffer.getPtr(), inData->getPtr(), inData->size());
 	}
@@ -329,35 +329,42 @@ public:
 
 		switch (newOrder)
 		{
-		case ETextureByteOrder::RGBA: while (index < size)
+		case ETextureByteOrder::RGBA:
 			{
-				uint8 b = ptr[index];
-				uint8 g = ptr[index + 1];
-				uint8 r = ptr[index + 2];
-				uint8 a = ptr[index + 3];
+				while (index < size)
+				{
+					uint8 b = ptr[index];
+					uint8 g = ptr[index + 1];
+					uint8 r = ptr[index + 2];
+					uint8 a = ptr[index + 3];
 
-				ptr[index]     = r;
-				ptr[index + 1] = g;
-				ptr[index + 2] = b;
-				ptr[index + 3] = a;
+					ptr[index]     = r;
+					ptr[index + 1] = g;
+					ptr[index + 2] = b;
+					ptr[index + 3] = a;
 
-				index += 4;
+					index += 4;
+				}
+				break;
 			}
-		case ETextureByteOrder::BRGA: while (index < size - 4)
+		case ETextureByteOrder::BRGA:
 			{
-				uint8 r = ptr[index];
-				uint8 g = ptr[index + 1];
-				uint8 b = ptr[index + 2];
-				uint8 a = ptr[index + 3];
+				while (index < size - 4)
+				{
+					uint8 r = ptr[index];
+					uint8 g = ptr[index + 1];
+					uint8 b = ptr[index + 2];
+					uint8 a = ptr[index + 3];
 
-				ptr[index]     = b;
-				ptr[index + 1] = g;
-				ptr[index + 2] = r;
-				ptr[index + 3] = a;
+					ptr[index]     = b;
+					ptr[index + 1] = g;
+					ptr[index + 2] = r;
+					ptr[index + 3] = a;
 
-				index += 4;
+					index += 4;
+				}
+				break;
 			}
-			break;
 		default: break;
 		}
 

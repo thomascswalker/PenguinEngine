@@ -191,6 +191,11 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		{
 			break;
 		}
+	case EMenuAction::TileRendering:
+		{
+			platform->setMenuItemChecked(EMenuAction::TileRendering, m_renderer->m_settings.toggleTileRendering());
+			break;
+		}
 	}
 }
 
@@ -224,7 +229,6 @@ void Engine::loadTexture()
 		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::Rgba);
 		texture->flipVertical();
 		g_textures.append(texture);
-		m_renderer->getShader()->texture = TextureManager::getTexture(0);
 		LOG_INFO("Loaded texture {}.", fileName)
 	}
 }
