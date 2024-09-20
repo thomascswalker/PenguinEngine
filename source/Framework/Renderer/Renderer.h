@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include <map>
 #include <memory>
+#include <thread>
 
 #include "Framework/Engine/Mesh.h"
 #include "Grid.h"
@@ -11,8 +11,8 @@
 #include "Tile.h"
 #include "Viewport.h"
 
-constexpr int32 g_defaultTileSize  = 128;
-constexpr int32 g_defaultTileCount = 4;
+constexpr int32 g_defaultTileSize = 128;
+inline int32 g_defaultTileCount   = (int32)std::thread::hardware_concurrency();
 
 /**
  * This class manages the viewport, output color and depth buffers, and the current shader used to render.
@@ -35,7 +35,7 @@ class Renderer
 	std::shared_ptr<Texture> m_depthTexture;
 
 	Array<Triangle> m_screenTriangles;
-	Array<Tile> m_tiles;
+	std::vector<Tile> m_tiles;
 	int32 m_threadCount;
 
 public:
@@ -50,8 +50,7 @@ public:
 	 */
 	void createTiles();
 	bool projectTriangle(Triangle* triangle) const;
-	void binTriangles(Mesh* mesh) const;
-	void drawBinnedTriangle(const Triangle* triangle, const Tile* tile) const;
+	void binTriangles(Mesh* mesh);
 
 	[[nodiscard]] int32 getWidth() const
 	{
@@ -95,6 +94,7 @@ public:
 	void drawLine(const vec3f& inA, const vec3f& inB, const Color& color) const;
 	void drawLine(const line3d& line, const Color& color) const;
 	void drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) const;
+	void drawTriangle(const Triangle* triangle, const Tile* tile) const;
 
 	/**
 	 * @brief Draws the specified \p mesh to the color buffer.
@@ -110,18 +110,22 @@ public:
 	 */
 	void drawGrid() const;
 
+	void drawTile(int32 index);
+
+	[[nodiscard]] int32 getRemainingTileCount() const;
+
 	/**
 	 * @brief Draws the current scene, including all meshes and the grid.
-	 * 
+	 *
 	 * 1. Recomputes the view-projection matrix.
-	 * 
+	 *
 	 * 2. Clears the color and depth buffers.
-	 * 
+	 *
 	 * 3. Draws the grid.
-	 * 
+	 *
 	 * 4. Draws each mesh in `g_meshes`.
 	 */
-	void draw() const;
+	void draw();
 
 	/**
 	 * @brief Renders the current frame with a standard scanline method.

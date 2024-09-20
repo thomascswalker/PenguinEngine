@@ -1,4 +1,5 @@
 ﻿#pragma once
+#pragma warning(disable : 4244)
 
 #include <string>
 #include <vector>
@@ -27,7 +28,7 @@ namespace Strings
 
 		// Loop through each character in the input string
 		size_t stringSize = inString.size();
-		for (int32 index = 0; index < stringSize; index++)
+		for (size_t index = 0; index < stringSize; index++)
 		{
 			// If the current character (or string equal to the size of the delimiter) is equal to the delimiter, and
 			// the temporary string is not empty, add the temporary string to the output string array, clear the
@@ -86,6 +87,6 @@ namespace Strings
 	 */
 	inline std::wstring toWString(const std::string& str)
 	{
-		return { str.begin(), str.end() };
+		return {str.begin(), str.end()};
 	}
 } // namespace Strings

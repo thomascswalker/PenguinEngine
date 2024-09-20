@@ -1,5 +1,6 @@
 ﻿// ReSharper disable CppInconsistentNaming
 #pragma once
+#pragma warning(disable : 26495)
 
 #include <vector>
 #include <memory>
@@ -75,19 +76,19 @@ namespace _DelegatesInternal
 namespace Delegates
 {
 	using AllocateCallback = void* (*)(size_t size);
-	using FreeCallback = void(*)(void* pPtr);
+	using FreeCallback     = void(*)(void* pPtr);
 
 	inline void SetAllocationCallbacks(const AllocateCallback allocateCallback, const FreeCallback freeCallback)
 	{
 		_DelegatesInternal::alloc = allocateCallback;
-		_DelegatesInternal::free = freeCallback;
+		_DelegatesInternal::free  = freeCallback;
 	}
 }
 
 class IDelegateBase
 {
 public:
-	IDelegateBase() = default;
+	IDelegateBase()                   = default;
 	virtual ~IDelegateBase() noexcept = default;
 
 	virtual const void* getOwner() const
@@ -285,8 +286,8 @@ public:
 	explicit DelegateHandle(bool /*generateId*/) noexcept
 		: m_Id(getNewId()) {}
 
-	~DelegateHandle() noexcept = default;
-	DelegateHandle(const DelegateHandle& other) = default;
+	~DelegateHandle() noexcept                             = default;
+	DelegateHandle(const DelegateHandle& other)            = default;
 	DelegateHandle& operator=(const DelegateHandle& other) = default;
 
 	DelegateHandle(DelegateHandle&& other) noexcept
@@ -404,7 +405,7 @@ public:
 	InlineAllocator& operator=(InlineAllocator&& other) noexcept
 	{
 		free();
-		m_size = other.m_size;
+		m_size       = other.m_size;
 		other.m_size = 0;
 		if (m_size > MaxStackSize)
 		{
@@ -787,7 +788,7 @@ public:
 	MulticastDelegate& operator=(MulticastDelegate&& other) noexcept
 	{
 		m_events = std::move(other.m_events);
-		m_locks = std::move(other.m_locks);
+		m_locks  = std::move(other.m_locks);
 		return *this;
 	}
 

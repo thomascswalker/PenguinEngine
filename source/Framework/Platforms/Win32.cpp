@@ -1,4 +1,6 @@
-﻿#include <windowsx.h>
+﻿#pragma warning(disable : 4244)
+
+#include <windowsx.h>
 #include <codecvt>
 
 #include "Framework/Application.h"

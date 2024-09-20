@@ -163,8 +163,8 @@ struct PngMetadata
 
 struct PngTexture
 {
-	PngMetadata metadata;
-	Buffer<uint8> data;
+	PngMetadata metadata{};
+	Buffer<uint8> data{};
 };
 
 class TextureImporter

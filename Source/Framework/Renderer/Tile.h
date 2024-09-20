@@ -3,6 +3,13 @@
 
 #include "Math/Color.h"
 
+enum class ETileRenderState : uint8
+{
+	NotStarted,
+	InProgress,
+	Complete
+};
+
 class Tile
 {
 	using TriangleArray = std::vector<Triangle*>;
@@ -13,12 +20,18 @@ class Tile
 	rectf m_bounds;            // 2D bounds of this tile
 	TriangleArray m_triangles; // The triangles which overlap this tile.
 	LineArray m_lines;
+	ETileRenderState m_state = ETileRenderState::NotStarted;
 
 public:
 	Tile(const vec2f& min, const vec2f& max, const int32 id)
 		: m_color(Color::random(128, 255)), m_id(id)
 	{
 		setBounds(min, max);
+	}
+
+	[[nodiscard]] rectf getBounds() const
+	{
+		return m_bounds;
 	}
 
 	void setBounds(const vec2f& min, const vec2f& max)
@@ -38,7 +51,7 @@ public:
 		m_triangles.push_back(triangle);
 	}
 
-	Triangle* getTriangle(const int32 index) const
+	[[nodiscard]] Triangle* getTriangle(const int32 index) const
 	{
 		return m_triangles[index];
 	}
@@ -48,19 +61,24 @@ public:
 		return &m_triangles;
 	}
 
-	LineArray getLines() const
+	[[nodiscard]] LineArray getLines() const
 	{
 		return m_lines;
 	}
 
-	Color getColor() const
+	[[nodiscard]] Color getColor() const
 	{
 		return m_color;
 	}
 
-	[[nodiscard]] rectf getBounds() const
+	[[nodiscard]] ETileRenderState getRenderState() const
 	{
-		return m_bounds;
+		return m_state;
+	}
+
+	void setRenderState(const ETileRenderState newState)
+	{
+		m_state = newState;
 	}
 
 	[[nodiscard]] bool inside(const vec2f& point) const

@@ -1,6 +1,7 @@
 ﻿// ReSharper disable CppClangTidyBugproneNarrowingConversions
 // ReSharper disable CppClangTidyClangDiagnosticFloatConversion
 // ReSharper disable CppClangTidyClangDiagnosticImplicitIntFloatConversion
+#pragma warning(disable : 4244)
 
 #include <thread>
 
@@ -51,7 +52,7 @@ void Renderer::createTiles()
 	{
 		for (int32 y = 0; y < g_defaultTileCount; y++)
 		{
-			m_tiles.append(Tile(
+			m_tiles.emplace_back(Tile(
 				vec2f(tileSizeX * x, tileSizeY * y),                         // Min
 				vec2f(tileSizeX * x + tileSizeX, tileSizeY * y + tileSizeY), // Max
 				id));                                                        // Id
@@ -100,10 +101,10 @@ bool Renderer::projectTriangle(Triangle* triangle) const
 	return true;
 }
 
-void Renderer::binTriangles(Mesh* mesh) const
+void Renderer::binTriangles(Mesh* mesh)
 {
 	// Clear all triangles in tiles
-	for (auto& tile : m_tiles)
+	for (Tile& tile : m_tiles)
 	{
 		tile.getTriangles()->clear();
 	}
@@ -134,7 +135,7 @@ void Renderer::binTriangles(Mesh* mesh) const
 	}
 }
 
-void Renderer::drawBinnedTriangle(const Triangle* triangle, const Tile* tile) const
+void Renderer::drawTriangle(const Triangle* triangle, const Tile* tile) const
 {
 	const vec3f* s0 = &triangle->v0.screenPos;
 	const vec3f* s1 = &triangle->v1.screenPos;
@@ -224,7 +225,20 @@ void Renderer::drawBinnedTriangle(const Triangle* triangle, const Tile* tile) co
 	}
 }
 
-void Renderer::draw() const
+void Renderer::drawTile(const int32 index)
+{
+	auto shader = m_currentShader.get();
+	Tile* tile  = &m_tiles[index];
+	tile->setRenderState(ETileRenderState::InProgress);
+	for (Triangle* triangle : *tile->getTriangles())
+	{
+		shader->computeVertexShader(triangle->v0, triangle->v1, triangle->v2);
+		drawTriangle(triangle, tile);
+	}
+	tile->setRenderState(ETileRenderState::Complete);
+}
+
+void Renderer::draw()
 {
 	// Recalculate the view-projection matrix of the camera
 	m_viewport->getCamera()->computeViewProjectionMatrix();
@@ -242,6 +256,7 @@ void Renderer::draw() const
 	// Draw each mesh
 	bool tiling             = m_settings.getTileRendering();
 	m_currentShader->tiling = tiling;
+	auto shaderPtr          = m_currentShader.get();
 	for (auto& mesh : g_meshes)
 	{
 		m_currentShader->init(camera->getViewData());
@@ -252,13 +267,23 @@ void Renderer::draw() const
 		{
 			binTriangles(mesh.get());
 
-			for (Tile& tile : m_tiles)
+			int32 i         = 0;
+			int32 remaining = getRemainingTileCount();
+			while (remaining > 0)
 			{
-				for (Triangle* triangle : *tile.getTriangles())
+				std::vector<std::thread> threads;
+				for (int j = 0; j < g_defaultTileCount; j++)
 				{
-					m_currentShader->computeVertexShader(triangle->v0, triangle->v1, triangle->v2);
-					drawBinnedTriangle(triangle, &tile);
+					auto t0 = std::thread(&Renderer::drawTile, this, i++);
+					threads.push_back(std::move(t0));
 				}
+
+				for (auto& t : threads)
+				{
+					t.join();
+				}
+
+				remaining = getRemainingTileCount();
 			}
 		}
 		else
@@ -562,6 +587,10 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
+			if (y < 0)
+			{
+				continue;
+			}
 			m_colorTexture->setPixelFromColor(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
@@ -575,6 +604,10 @@ void Renderer::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) 
 	{
 		for (int32 x = a.x; x < b.x; ++x)
 		{
+			if (y < 0)
+			{
+				continue;
+			}
 			m_colorTexture->setPixelFromColor(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)

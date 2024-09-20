@@ -26,7 +26,7 @@ namespace Compression
 
 	static int32 uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
 	{
-		uint32 uncompressedSize = uncompressedBuffer->size();
+		uint32 uncompressedSize = (uint32)uncompressedBuffer->size();
 		uint8* uncompressedData = PlatformMemory::malloc<uint8>(uncompressedSize);
 
 		z_stream stream;
