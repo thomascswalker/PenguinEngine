@@ -238,6 +238,19 @@ void Renderer::drawTile(const int32 index)
 	tile->setRenderState(ETileRenderState::Complete);
 }
 
+int32 Renderer::getRemainingTileCount() const
+{
+	int32 remaining = 0;
+	for (const auto& tile : m_tiles)
+	{
+		if (tile.getRenderState() != ETileRenderState::Complete)
+		{
+			remaining++;
+		}
+	}
+	return remaining;
+}
+
 void Renderer::draw()
 {
 	// Recalculate the view-projection matrix of the camera
@@ -284,6 +297,12 @@ void Renderer::draw()
 				}
 
 				remaining = getRemainingTileCount();
+			}
+
+			// Reset tile state
+			for (auto& tile : m_tiles)
+			{
+				tile.setRenderState(ETileRenderState::NotStarted);
 			}
 		}
 		else

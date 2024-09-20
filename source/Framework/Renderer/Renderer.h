@@ -12,7 +12,7 @@
 #include "Viewport.h"
 
 constexpr int32 g_defaultTileSize = 128;
-inline int32 g_defaultTileCount   = (int32)std::thread::hardware_concurrency();
+inline int32 g_defaultTileCount   = true ? 2 : (int32)std::thread::hardware_concurrency();
 
 /**
  * This class manages the viewport, output color and depth buffers, and the current shader used to render.
