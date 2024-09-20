@@ -156,7 +156,7 @@ public:
 	{
 		m_size = width * height * g_bitsPerPixel;
 #ifdef _DEBUG
-		assert(size < UINT32_MAX);
+		assert(m_size < UINT32_MAX);
 #endif
 		if (m_data != nullptr)
 		{

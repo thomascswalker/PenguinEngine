@@ -38,15 +38,13 @@ struct IShader
 	Color baseColor = Color::white();
 	Color outColor  = Color::white();
 
-	PViewData viewData;
-
-	bool tiling = false;
+	ViewData viewData;
 
 	/**
 	 * @brief Initializes this shader with the specified view data.
 	 * @param inViewData The view data from the current camera in the viewport.
 	 */
-	void init(const PViewData& inViewData)
+	void init(const ViewData& inViewData)
 	{
 		viewData             = inViewData;
 		mvp                  = inViewData.m_viewProjectionMatrix;
@@ -109,31 +107,26 @@ struct DefaultShader : IShader
 		v1 = inV1;
 		v2 = inV2;
 
-		// If we're not tiling, the triangle hasn't been projected yet. We need to project it and validate
-		// that some or all of it is on screen.
-		if (!tiling)
+		// Project the world-space points to screen-space
+		bool triangleOnScreen = false;
+		triangleOnScreen |= Math::projectWorldToScreen(v0.position, s0, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v1.position, s1, viewData);
+		triangleOnScreen |= Math::projectWorldToScreen(v2.position, s2, viewData);
+
+		// If the triangle is completely off screen, exit
+		if (!triangleOnScreen)
 		{
-			// Project the world-space points to screen-space
-			bool triangleOnScreen = false;
-			triangleOnScreen |= Math::projectWorldToScreen(v0.position, s0, viewData);
-			triangleOnScreen |= Math::projectWorldToScreen(v1.position, s1, viewData);
-			triangleOnScreen |= Math::projectWorldToScreen(v2.position, s2, viewData);
+			return false;
+		}
 
-			// If the triangle is completely off screen, exit
-			if (!triangleOnScreen)
-			{
-				return false;
-			}
-
-			// Reverse the order to CCW if the order is CW
-			switch (Math::getVertexOrder(s0, s1, s2))
-			{
-			case EWindingOrder::CW: // Triangle is back-facing, exit
-			case EWindingOrder::CL: // Triangle has zero area, exit
-				return false;
-			case EWindingOrder::CCW: // Triangle is front-facing, continue
-				break;
-			}
+		// Reverse the order to CCW if the order is CW
+		switch (Math::getVertexOrder(s0, s1, s2))
+		{
+		case EWindingOrder::CW: // Triangle is back-facing, exit
+		case EWindingOrder::CL: // Triangle has zero area, exit
+			return false;
+		case EWindingOrder::CCW: // Triangle is front-facing, continue
+			break;
 		}
 
 		// Get the bounding box of the 2d triangle clipped to the viewport
@@ -148,10 +141,6 @@ struct DefaultShader : IShader
 
 		// Determine if this triangle has normals by just comparing if they're all equal
 		// to each other (false) or not (true).
-		//hasNormals = false;
-		//hasNormals &= v0.normal != v1.normal;
-		//hasNormals &= v1.normal != v2.normal;
-		//hasNormals &= v0.normal != v2.normal;
 		if (hasNormals)
 		{
 			// Average each of the vertices' normals to get the triangle normal
@@ -182,14 +171,13 @@ struct DefaultShader : IShader
 
 	void computePixelShader(float u, float v) override
 	{
-		vec3f weightedWorldNormal(1.0f);
 		float weightedFacingRatio = 1.0f;
 
 		if (hasNormals)
 		{
 			// Calculate the weighted normal of the current point on this triangle. This uses the UVW
 			// barycentric coordinates to weight each vertex normal of the triangle.
-			weightedWorldNormal = v0.normal * bary.x + v1.normal * bary.y + v2.normal * bary.z;
+			vec3f weightedWorldNormal = v0.normal * bary.x + v1.normal * bary.y + v2.normal * bary.z;
 
 			// Calculate the dot product of the triangle normal and inverse camera direction
 

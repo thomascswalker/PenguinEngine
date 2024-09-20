@@ -30,7 +30,7 @@
 template <int32 N>
 struct TChannel;
 using ColorChannel = TChannel<4>;
-using DataChannel = TChannel<1>;
+using DataChannel  = TChannel<1>;
 
 // Rect
 template <typename T>
@@ -150,4 +150,4 @@ enum class EChannelType : uint8
 
 // Cameras
 
-struct PViewData;
+struct ViewData;
