@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Framework/Core/Logging.h"
+#include "Core/Logging.h"
 #include "Rotator.h"
 #include "Vector.h"
 

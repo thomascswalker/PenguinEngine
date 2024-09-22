@@ -3,7 +3,7 @@
 #include <format>
 #include <cassert>
 
-#include "Framework/Core/Logging.h"
+#include "Core/Logging.h"
 #include "Math.h"
 
 #define EDGE_FUNCTION(X0, Y0, X1, Y1, X2, Y2) (((X1) - (X0)) * ((Y2) - (Y0)) - ((Y1) - (Y0)) * ((X2) - (X0)))

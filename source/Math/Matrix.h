@@ -6,7 +6,7 @@
 #include "Plane.h"
 #include "Rotator.h"
 #include "Vector.h"
-#include "Framework/Core/Logging.h"
+#include "Core/Logging.h"
 
 // m[RowIndex][ColumnIndex]
 template <typename T>
