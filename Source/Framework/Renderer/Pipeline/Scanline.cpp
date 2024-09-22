@@ -2,23 +2,34 @@
 
 #include "Math/Clipping.h"
 
-void ScanlineRenderPipeline::startup()
+void ScanlineRenderPipeline::init()
 {
-	m_currentShader = std::make_shared<DefaultShader>();
-	m_colorTexture  = std::make_shared<Texture>();
-	m_depthTexture  = std::make_shared<Texture>();
-	m_threadCount   = (int32)std::thread::hardware_concurrency();
+	int32 width  = g_defaultViewportWidth;
+	int32 height = g_defaultViewportHeight;
+
+	m_frameBuffer = std::make_shared<Texture>(vec2i{width, height});
+	m_depthBuffer = std::make_shared<Texture>(vec2i{width, height});
+
+	m_vertexShader = std::make_shared<ScanlineVertexShader>();
+	m_pixelShader  = std::make_shared<ScanlinePixelShader>();
+
+	m_threadCount = (int32)std::thread::hardware_concurrency();
+
+	m_viewData         = std::make_shared<ViewData>();
+	m_shaderData       = std::make_shared<ScanlineShaderData>();
+	m_viewData->width  = width;
+	m_viewData->height = height;
 }
 
-void ScanlineRenderPipeline::preDraw()
+void ScanlineRenderPipeline::beginDraw()
 {
 	// Reset all buffers to their default values (namely z to Inf)
-	m_colorTexture->fill(Color::black());
-	m_depthTexture->fill(10000.0f);
+	m_frameBuffer->fill(Color::black());
+	m_depthBuffer->fill(10000.0f);
 
 	if (TextureManager::count() > 0)
 	{
-		m_currentShader->texture = TextureManager::getTexture(0);
+		m_shaderData->texture = TextureManager::getTexture(0);
 	}
 }
 
@@ -26,8 +37,8 @@ void ScanlineRenderPipeline::draw()
 {
 	for (const auto& mesh : g_meshes)
 	{
-		m_currentShader->hasNormals   = mesh->hasNormals();
-		m_currentShader->hasTexCoords = mesh->hasTexCoords();
+		m_shaderData->hasNormals   = mesh->hasNormals();
+		m_shaderData->hasTexCoords = mesh->hasTexCoords();
 
 		for (const auto& tri : *mesh->getTriangles())
 		{
@@ -36,7 +47,7 @@ void ScanlineRenderPipeline::draw()
 	}
 }
 
-void ScanlineRenderPipeline::postDraw() {}
+void ScanlineRenderPipeline::endDraw() {}
 
 void ScanlineRenderPipeline::drawGrid(Grid* grid)
 {
@@ -45,6 +56,7 @@ void ScanlineRenderPipeline::drawGrid(Grid* grid)
 		return;
 	}
 
+	Color color = m_renderSettings->getGridColor();
 	for (const line3d& line : grid->getLines())
 	{
 		// Project the world-space points to screen-space
@@ -59,18 +71,18 @@ void ScanlineRenderPipeline::drawGrid(Grid* grid)
 			return;
 		}
 
-		drawLine(s0, s1, Color::gray());
+		drawLine(s0, s1, color);
 	}
 }
 
 void ScanlineRenderPipeline::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2)
 {
-	// Update the current shader to use the camera's most recent parameters
-	m_currentShader->init(*m_viewData);
-
 	// Compute the vertex shader given the input vertices.
-	m_currentShader->preComputeVertexShader();
-	if (!m_currentShader->computeVertexShader(v0, v1, v2))
+	m_shaderData->v0 = v0;
+	m_shaderData->v1 = v1;
+	m_shaderData->v2 = v2;
+
+	if (!m_vertexShader->process(m_viewData.get(), m_shaderData.get()))
 	{
 		return;
 	}
@@ -78,17 +90,16 @@ void ScanlineRenderPipeline::drawTriangle(const Vertex& v0, const Vertex& v1, co
 	// Render shaded
 	if (m_renderSettings->getRenderFlag(Shaded))
 	{
-		// m_currentShader->viewMatrix = camera->m_viewMatrix;
 		drawScanline();
 	}
 
 	// Render wireframe
-	vec3f s0 = m_currentShader->s0;
-	vec3f s1 = m_currentShader->s1;
-	vec3f s2 = m_currentShader->s2;
+	vec3f s0 = m_shaderData->s0;
+	vec3f s1 = m_shaderData->s1;
+	vec3f s2 = m_shaderData->s2;
 	if (m_renderSettings->getRenderFlag(Wireframe))
 	{
-		Color wireColor = Color::red();
+		Color wireColor = m_renderSettings->getWireColor();
 		drawLine({s0.x, s0.y}, {s1.x, s1.y}, wireColor);
 		drawLine({s1.x, s1.y}, {s2.x, s2.y}, wireColor);
 		drawLine({s2.x, s2.y}, {s0.x, s0.y}, wireColor);
@@ -98,13 +109,13 @@ void ScanlineRenderPipeline::drawTriangle(const Vertex& v0, const Vertex& v1, co
 	if (m_renderSettings->getRenderFlag(Normals))
 	{
 		// Get the center of the triangle
-		vec3f triangleCenter = (m_currentShader->v0.position
-				+ m_currentShader->v1.position
-				+ m_currentShader->v2.position)
+		vec3f triangleCenter = (m_shaderData->v0.position
+				+ m_shaderData->v1.position
+				+ m_shaderData->v2.position)
 			/ 3.0f;
 
 		// Get the computed triangle normal (average of the three normals)
-		vec3f triangleNormal = m_currentShader->triangleWorldNormal;
+		vec3f triangleNormal = m_shaderData->triangleWorldNormal;
 
 		vec3f normalStartScreen;
 		vec3f normalEndScreen;
@@ -127,14 +138,14 @@ void ScanlineRenderPipeline::drawTriangle(const Vertex& v0, const Vertex& v1, co
 
 void ScanlineRenderPipeline::drawScanline() const
 {
-	const vec3f s0 = m_currentShader->s0;
-	const vec3f s1 = m_currentShader->s1;
-	const vec3f s2 = m_currentShader->s2;
+	const vec3f s0 = m_shaderData->s0;
+	const vec3f s1 = m_shaderData->s1;
+	const vec3f s2 = m_shaderData->s2;
 
 	// Compute the bounds of just this triangle on the screen
-	const int32 width  = m_width;
-	const int32 height = m_height;
-	const rectf bounds = m_currentShader->screenBounds;
+	const int32 width  = m_viewData->width;
+	const int32 height = m_viewData->height;
+	const rectf bounds = m_shaderData->screenBounds;
 
 	const vec2f boundsMin = bounds.min();
 	const vec2f boundsMax = bounds.max();
@@ -177,10 +188,10 @@ void ScanlineRenderPipeline::drawScanline() const
 			w2 *= oneOverArea;
 
 			vec3f bary;
-			bary.x                = w0;
-			bary.y                = w1;
-			bary.z                = w2;
-			m_currentShader->bary = bary;
+			bary.x             = w0;
+			bary.y             = w1;
+			bary.z             = w2;
+			m_shaderData->bary = bary;
 
 			if (renderDepth)
 			{
@@ -189,28 +200,34 @@ void ScanlineRenderPipeline::drawScanline() const
 
 				// Compare the new depth to the current depth at this pixel. If the new depth is further than
 				// the current depth, continue.
-				float oldZ = m_depthTexture->getPixelAsFloat(x, y);
+				float oldZ = m_depthBuffer->getPixelAsFloat(x, y);
 				if (z > oldZ)
 				{
 					continue;
 				}
 				// If the new depth is closer than the current depth, set the current depth
 				// at this pixel to the new depth we just got.
-				m_depthTexture->setPixelFromFloat(x, y, z);
+				m_depthBuffer->setPixelFromFloat(x, y, z);
 			}
 
-			m_currentShader->pixelWorldPosition = m_currentShader->v0.position * bary.x + m_currentShader->v1.
-				position * bary.y + m_currentShader->v2.position * bary.z;
+			m_shaderData->pixelWorldPosition = m_shaderData->v0.position * bary.x + m_shaderData->v1.position * bary.y +
+				m_shaderData->v2.position * bary.z;
 
 			// Compute the UV coordinates of the current pixel
-			m_currentShader->computeUv();
+			if (m_shaderData->hasTexCoords)
+			{
+				// Use the barycentric coordinates to interpolate between all three vertex UV coordinates
+				m_shaderData->uv = m_shaderData->v0.texCoord * bary.x + m_shaderData->v1.texCoord * bary.y +
+					m_shaderData->v2.texCoord * bary.z;
+			}
 
 			// Compute the final color for this pixel
-			m_currentShader->preComputePixelShader();
-			m_currentShader->computePixelShader(point.x, point.y);
+			m_shaderData->x = (int32)point.x;
+			m_shaderData->y = (int32)point.y;
+			m_pixelShader->process(m_viewData.get(), m_shaderData.get());
 
 			// Set the current pixel in memory to the computed color
-			m_colorTexture->setPixelFromColor(x, y, m_currentShader->outColor);
+			m_frameBuffer->setPixelFromColor(x, y, m_shaderData->outColor);
 		}
 	}
 }
@@ -222,7 +239,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 
 	// Clip the screen points within the viewport. If the line points are outside the viewport entirely
 	// then just return.
-	if (!clipLine(&a, &b, vec2i{m_width, m_height}))
+	if (!clipLine(&a, &b, vec2i{m_viewData->width, m_viewData->height}))
 	{
 		return;
 	}
@@ -261,7 +278,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 			{
 				continue;
 			}
-			m_colorTexture->setPixelFromColor(y, x, color);
+			m_frameBuffer->setPixelFromColor(y, x, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -278,7 +295,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 			{
 				continue;
 			}
-			m_colorTexture->setPixelFromColor(x, y, color);
+			m_frameBuffer->setPixelFromColor(x, y, color);
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -291,23 +308,27 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 
 void ScanlineRenderPipeline::resize(int32 width, int32 height)
 {
-	m_width  = width;
-	m_height = height;
-	m_colorTexture->resize({width, height});
-	m_depthTexture->resize({width, height});
+	if (width != m_viewData->width || height != m_viewData->height)
+	{
+		LOG_ERROR("Size mismatch with ScanlineRenderPipeline::resize() and m_viewData. Skipping resize.")
+		return;
+	}
+
+	m_frameBuffer->resize({width, height});
+	m_depthBuffer->resize({width, height});
 }
 
 uint8* ScanlineRenderPipeline::getFrameData()
 {
-	return m_colorTexture->getMemory<uint8>();
+	return m_frameBuffer->getMemory<uint8>();
 }
 
 void ScanlineRenderPipeline::setViewData(ViewData* newViewData)
 {
-	m_viewData = newViewData;
+	m_viewData = std::make_shared<ViewData>(*newViewData);
 }
 
 void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
 {
-	m_renderSettings = newRenderSettings;
+	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
 }

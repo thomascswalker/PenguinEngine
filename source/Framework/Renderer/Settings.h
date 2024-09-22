@@ -20,6 +20,9 @@ private:
 	ERenderFlag m_renderFlags = Wireframe;
 	bool m_tileRendering      = false;
 
+	Color m_wireColor = Color::blue();
+	Color m_gridColor = Color::gray();
+
 public:
 	RenderSettings()
 	{
@@ -59,5 +62,15 @@ public:
 	{
 		m_tileRendering = !m_tileRendering;
 		return m_tileRendering;
+	}
+
+	Color getWireColor() const
+	{
+		return m_wireColor;
+	}
+
+	Color getGridColor() const
+	{
+		return m_gridColor;
 	}
 };

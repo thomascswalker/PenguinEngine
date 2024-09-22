@@ -6,16 +6,16 @@
 
 class Mesh;
 /* Global container for all mesh objects. */
-inline Array<std::shared_ptr<Mesh>> g_meshes;
+inline std::vector<std::shared_ptr<Mesh>> g_meshes;
 
 namespace MeshManager
 {
-	inline int32 count()
+	inline size_t count()
 	{
 		return g_meshes.size();
 	}
 
-	inline Mesh* getMesh(int32 index)
+	inline Mesh* getMesh(const int32 index)
 	{
 		return g_meshes[index].get();
 	}

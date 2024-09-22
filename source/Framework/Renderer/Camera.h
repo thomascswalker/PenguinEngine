@@ -28,35 +28,36 @@ enum EViewportType
 
 struct ViewData
 {
-	int32 m_width   = g_defaultViewportWidth;
-	int32 m_height  = g_defaultViewportHeight;
-	float m_fov     = g_defaultFov;
-	float m_minZ    = 1.0f;
-	float m_maxZ    = 10.0f;
-	float m_minFov  = 20.0f;
-	float m_maxFov  = 120.0f;
-	float m_minZoom = 2.0f;
-	float m_maxZoom = 100.0f;
+	int32 width   = g_defaultViewportWidth;
+	int32 height  = g_defaultViewportHeight;
+	float fov     = g_defaultFov;
+	float minZ    = 1.0f;
+	float maxZ    = 10.0f;
+	float minFov  = 20.0f;
+	float maxFov  = 120.0f;
+	float minZoom = 2.0f;
+	float maxZoom = 100.0f;
 
-	vec3f m_target = vec3f::zeroVector(); // Origin
-	sphericalf m_spherical;
-	sphericalf m_sphericalDelta;
-	float m_minPolarAngle = 0.0f;
-	float m_maxPolarAngle = PI;
-	vec3f m_panOffset;
+	vec3f target = vec3f::zeroVector(); // Origin
+	sphericalf spherical;
+	sphericalf sphericalDelta;
+	float minPolarAngle = 0.0f;
+	float maxPolarAngle = PI;
+	vec3f panOffset;
 
-	mat4f m_projectionMatrix;
-	mat4f m_viewMatrix;
-	mat4f m_viewProjectionMatrix;
-	mat4f m_invViewProjectionMatrix;
+	mat4f projectionMatrix;
+	mat4f viewMatrix;
+	mat4f viewProjectionMatrix;
+	mat4f invViewProjectionMatrix;
 
-	vec3f m_direction;
-	vec3f m_translation;
+	vec3f cameraDirection;
+	vec3f cameraTranslation;
 };
 
 class Camera : public Object
 {
 public:
+	ViewData m_viewData;
 	int32 m_width   = g_defaultViewportWidth;
 	int32 m_height  = g_defaultViewportHeight;
 	float m_fov     = g_defaultFov;
@@ -116,25 +117,22 @@ public:
 	void deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPosition,
 	                            vec3f& outWorldDirection) const;
 
-	ViewData getViewData() const
+	ViewData* getViewData()
 	{
-		ViewData data;
-
-		data.m_width                   = m_width;
-		data.m_height                  = m_height;
-		data.m_fov                     = m_fov;
-		data.m_minZ                    = m_minZ;
-		data.m_maxZ                    = m_maxZ;
-		data.m_target                  = m_target;
-		data.m_spherical               = m_spherical;
-		data.m_projectionMatrix        = m_projectionMatrix;
-		data.m_viewMatrix              = m_viewMatrix;
-		data.m_viewProjectionMatrix    = m_viewProjectionMatrix;
-		data.m_invViewProjectionMatrix = m_invViewProjectionMatrix;
-		data.m_direction               = getForwardVector();
-		data.m_translation             = getTranslation();
-
-		return data;
+		m_viewData.width                   = m_width;
+		m_viewData.height                  = m_height;
+		m_viewData.fov                     = m_fov;
+		m_viewData.minZ                    = m_minZ;
+		m_viewData.maxZ                    = m_maxZ;
+		m_viewData.target                  = m_target;
+		m_viewData.spherical               = m_spherical;
+		m_viewData.projectionMatrix        = m_projectionMatrix;
+		m_viewData.viewMatrix              = m_viewMatrix;
+		m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
+		m_viewData.invViewProjectionMatrix = m_invViewProjectionMatrix;
+		m_viewData.cameraDirection         = getForwardVector();
+		m_viewData.cameraTranslation       = getTranslation();
+		return &m_viewData;
 	}
 };
 
@@ -143,7 +141,7 @@ namespace Math
 	static bool projectWorldToScreen(const vec3f& worldPosition, vec3f& screenPosition, const ViewData& viewData)
 	{
 		// Clip 
-		const vec4f result = viewData.m_viewProjectionMatrix * vec4f(worldPosition, 1.0f);
+		const vec4f result = viewData.viewProjectionMatrix * vec4f(worldPosition, 1.0f);
 		if (result.w > 0.0f)
 		{
 			// Apply perspective correction
@@ -161,8 +159,8 @@ namespace Math
 
 			// Apply the current render width and height
 			screenPosition = vec3f{
-				normalizedPosition.x * static_cast<float>(viewData.m_width),
-				normalizedPosition.y * static_cast<float>(viewData.m_height),
+				normalizedPosition.x * static_cast<float>(viewData.width),
+				normalizedPosition.y * static_cast<float>(viewData.height),
 				(clipPosition.z + 0.5f) * 0.5f
 			};
 			return true;

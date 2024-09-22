@@ -6,15 +6,16 @@
 class IRenderPipeline
 {
 public:
-	IRenderPipeline()          = default;
+	IRenderPipeline() = default;
+	IRenderPipeline(int32 width, int32 height) {}
 	virtual ~IRenderPipeline() = default;
 
 	/** Main pipeline functions. **/
 
-	virtual void startup() = 0;
-	virtual void preDraw() = 0;
+	virtual void init() = 0;
+	virtual void beginDraw() = 0;
 	virtual void draw() = 0;
-	virtual void postDraw() = 0;
+	virtual void endDraw() = 0;
 	virtual void shutdown() = 0;
 	virtual void resize(int32 width, int32 height) = 0;
 
@@ -29,3 +30,6 @@ public:
 	virtual void setViewData(ViewData* newViewData) = 0;
 	virtual void setRenderSettings(RenderSettings* newRenderSettings) = 0;
 };
+
+class ScanlineRenderPipeline;
+class D3D11RenderPipeline;

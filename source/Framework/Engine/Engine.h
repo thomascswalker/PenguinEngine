@@ -3,11 +3,11 @@
 #include "Mesh.h"
 #include "Timer.h"
 #include "Framework/Input/InputHandler.h"
-#include "Framework/Renderer/Renderer.h"
+#include "Framework/Renderer/Viewport.h"
 
 class Engine
 {
-	std::shared_ptr<Renderer> m_renderer;
+	std::shared_ptr<Viewport> m_viewport;
 	bool m_isRunning = false;
 
 	TimePoint m_startTime;
@@ -15,9 +15,6 @@ class Engine
 
 	float m_cameraSpeed           = .01f;
 	float m_cameraSpeedMultiplier = 1.0f;
-
-	std::vector<float*> m_vertices;
-	std::vector<uint32*> m_indexes;
 
 public:
 	static Engine* m_instance;
@@ -42,19 +39,14 @@ public:
 	 */
 	void tick();
 
-	[[nodiscard]] Renderer* getRenderer() const
-	{
-		return m_renderer.get();
-	}
-
 	[[nodiscard]] Viewport* getViewport() const
 	{
-		return getRenderer()->getViewport();
+		return m_viewport.get();
 	}
 
 	[[nodiscard]] Camera* getViewportCamera() const
 	{
-		return getViewport()->getCamera();
+		return m_viewport->getCamera();
 	}
 
 	[[nodiscard]] bool isRunning() const

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <vector>
 
 #include "Framework/Core/Array.h"
 #include "Framework/Core/Buffer.h"
@@ -10,7 +11,7 @@
 
 class Texture;
 /* Global container for all texture objects. */
-inline Array<std::shared_ptr<Texture>> g_textures;
+inline std::vector<std::shared_ptr<Texture>> g_textures;
 
 namespace TextureManager
 {
@@ -71,7 +72,7 @@ public:
 		m_buffer.resize(memSize);
 	}
 
-	explicit Texture(const vec2i inSize)
+	Texture(const vec2i inSize)
 		: m_size(inSize)
 		  , m_pitch(inSize.x)
 	{
@@ -228,7 +229,6 @@ public:
 
 	/**
 	 * @brief Returns a pointer to the beginning of a row of pixels.
-	 * @tparam T The data type of the pixels (e.g. int32, float).
 	 * @param y The row to return.
 	 * @return A type T pointer to the row of pixels.
 	 */
@@ -240,7 +240,7 @@ public:
 	template <typename T>
 	[[nodiscard]] T getPixel(const int32 x, const int32 y)
 	{
-		T* line = scanline<T>(y);
+		T* line = (T*)scanline(y);
 		return line[x];
 	}
 

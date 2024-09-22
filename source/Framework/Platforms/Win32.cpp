@@ -9,12 +9,13 @@
 #include "Framework/Engine/Engine.h"
 #include "Framework/Importers/TextureImporter.h"
 #include "Framework/Input/InputHandler.h"
+#include "Framework/Renderer/Pipeline/D3D11.h"
 
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
 	LRESULT result              = 0;
 	Engine* engine              = Engine::getInstance();
-	Renderer* renderer          = engine->getRenderer();
+	Viewport* viewport          = engine->getViewport();
 	IInputHandler* inputHandler = IInputHandler::getInstance();
 
 	switch (msg)
@@ -62,7 +63,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			default: return 1;
 			}
 
-			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
+			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(viewport->getHeight() - lParam));
 			if (mouseUp)
 			{
 				inputHandler->onMouseUp(buttonType, cursorPosition);
@@ -78,7 +79,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 	case WM_MOUSEMOVE:
 	case WM_INPUT:
 		{
-			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(renderer->getHeight() - lParam));
+			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(viewport->getHeight() - lParam));
 			inputHandler->onMouseMove(cursorPosition);
 			return 0;
 		}
@@ -113,7 +114,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 		}
 	case WM_PAINT:
 		{
-			if (!renderer)
+			if (!viewport)
 			{
 				Logging::warning("Renderer.");
 				LOG_WARNING("Renderer is not initialized in AppWindowProc::WM_PAINT")
@@ -122,8 +123,8 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 
 			// Get the current window compressedSize from the buffer
 			// const std::shared_ptr<Channel> channel = renderer->getColorChannel();
-			const int32 width  = renderer->getWidth();
-			const int32 height = renderer->getHeight();
+			const int32 width  = viewport->getWidth();
+			const int32 height = viewport->getHeight();
 
 			// Create a bitmap with the current renderer buffer memory the compressedSize of the window
 			InvalidateRect(hwnd, nullptr, TRUE);
@@ -131,7 +132,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
 
-			void* colorBuffer = renderer->getFrameData();
+			void* colorBuffer = viewport->getRenderPipeline()->getFrameData();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
@@ -141,7 +142,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			}
 
 			// Display debug text
-			if (renderer->getViewport()->getShowDebugText())
+			if (viewport->getShowDebugText())
 			{
 				// Draw text indicating the current FPS
 				RECT clientRect;
@@ -149,7 +150,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 				clientRect.top += 10;
 				clientRect.left += 10;
 
-				std::string outputString = renderer->getViewport()->getDebugText();
+				std::string outputString = viewport->getDebugText();
 				SetTextColor(deviceContext, RGB(255, 255, 0));
 				SetBkColor(deviceContext, TRANSPARENT);
 				DrawText(
@@ -172,7 +173,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 		}
 	case WM_SIZE:
 		{
-			if (!renderer)
+			if (!viewport)
 			{
 				LOG_WARNING("Renderer is not initialized in Win32Platform::windowProc::WM_SIZE")
 				break;
@@ -181,8 +182,9 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const int32 height = HIWORD(lParam);
 
 			// Update the renderer compressedSize
-			renderer->resize(width, height);
+			viewport->resize(width, height);
 			LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
+
 			m_bitmapInfo.bmiHeader.biWidth  = width;
 			m_bitmapInfo.bmiHeader.biHeight = height;
 
@@ -295,8 +297,8 @@ int32 Win32Platform::create()
 
 	// Fill the default bitmap info
 	m_bitmapInfo.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
-	m_bitmapInfo.bmiHeader.biWidth       = engine->getRenderer()->getWidth();
-	m_bitmapInfo.bmiHeader.biHeight      = engine->getRenderer()->getHeight();
+	m_bitmapInfo.bmiHeader.biWidth       = g_defaultViewportWidth;
+	m_bitmapInfo.bmiHeader.biHeight      = g_defaultViewportHeight;
 	m_bitmapInfo.bmiHeader.biPlanes      = 1;
 	m_bitmapInfo.bmiHeader.biBitCount    = 32;
 	m_bitmapInfo.bmiHeader.biCompression = BI_RGB;
@@ -359,11 +361,10 @@ int32 Win32Platform::loop()
 		engine->tick();
 
 		// Draw the frame
-		if (Renderer* renderer = engine->getRenderer())
+		if (Viewport* viewport = engine->getViewport())
 		{
 			// Draw the actual frame
-			renderer->draw();
-			swapBuffers();
+			viewport->draw();
 
 			// Return
 			return Success;
@@ -384,9 +385,6 @@ int32 Win32Platform::end()
 
 int32 Win32Platform::swapBuffers()
 {
-	const Engine* engine     = Engine::getInstance();
-	const Renderer* renderer = engine->getRenderer();
-
 	return 0;
 }
 

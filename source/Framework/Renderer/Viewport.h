@@ -1,56 +1,52 @@
 ﻿#pragma once
 
 #include "Camera.h"
+#include "Grid.h"
+#include "Settings.h"
+
+#include "Framework/Core/Buffer.h"
+
 #include "Math/MathCommon.h"
+
+#include "Pipeline/RenderPipeline.h"
 
 class Viewport
 {
-	std::shared_ptr<Camera> m_camera;
-	bool m_showDebugText = true;
-	std::string m_debugText;
+	std::shared_ptr<Viewport> m_viewport;
+	std::unique_ptr<Grid> m_grid;
+	std::shared_ptr<IRenderPipeline> m_renderPipeline;
 
 public:
-	Viewport(uint32 inWidth, uint32 inHeight);
-	void resize(uint32 inWidth, uint32 inHeight) const;
+	/* Render settings. */
+	RenderSettings m_settings;
+	std::shared_ptr<Camera> m_camera;
 
-	[[nodiscard]] uint32 getWidth() const
-	{
-		return m_camera->m_width;
-	}
+	std::string m_debugText;
+	bool m_showDebugText = true;
 
-	[[nodiscard]] uint32 getHeight() const
-	{
-		return m_camera->m_height;
-	}
+public:
+	Viewport(int32 inWidth, int32 inHeight);
+	~Viewport();
 
+	/** Misc **/
+
+	void resize(int32 inWidth, int32 inHeight) const;
+	[[nodiscard]] int32 getWidth() const;
+	[[nodiscard]] int32 getHeight() const;
 	[[nodiscard]] vec2f getSize() const;
-
-	[[nodiscard]] float getAspect() const
-	{
-		return static_cast<float>(m_camera->m_width) / static_cast<float>(m_camera->m_height);
-	}
-
-	[[nodiscard]] Camera* getCamera() const
-	{
-		return m_camera.get();
-	}
-
+	[[nodiscard]] float getAspect() const;
+	[[nodiscard]] Camera* getCamera() const;
 	void resetView() const;
 
+	/** Render pipeline **/
+
+	void draw();
+	IRenderPipeline* getRenderPipeline() const;
+
+	/** Debug **/
+
 	void formatDebugText();
-
-	[[nodiscard]] std::string getDebugText() const
-	{
-		return m_debugText;
-	}
-
-	[[nodiscard]] bool getShowDebugText() const
-	{
-		return m_showDebugText;
-	}
-
-	void toggleShowDebugText()
-	{
-		m_showDebugText = !m_showDebugText;
-	}
+	[[nodiscard]] std::string getDebugText() const;
+	[[nodiscard]] bool getShowDebugText() const;
+	void toggleShowDebugText();
 };

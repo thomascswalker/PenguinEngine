@@ -14,6 +14,18 @@
 #undef max
 #endif
 
+#ifdef _DEBUG
+	#define ASSERT(condition, message)                                           \
+		if (!(condition))                                                        \
+		{                                                                        \
+			std::cerr << "Assertion `" #condition "` failed in " << __FILE__     \
+					  << " line " << __LINE__ << ": " << (message) << std::endl; \
+			std::terminate();                                                    \
+		}
+#else
+#define ASSERT(x, y)
+#endif
+
 namespace Logging
 {
 	enum class ELogLevel
@@ -36,8 +48,8 @@ namespace Logging
 		static int m_column;
 		static std::string m_source;
 
-		Logger(Logger& other) = delete;
-		~Logger() = default;
+		Logger(Logger& other)               = delete;
+		~Logger()                           = default;
 		void operator=(const Logger& other) = delete;
 
 		static Logger* getInstance();
@@ -46,25 +58,19 @@ namespace Logging
 		void log(std::format_string<Types...> fmt, ELogLevel inLevel, Types&&... args)
 		{
 			std::string msg = std::format(fmt, std::forward<Types>(args)...);
-			m_messages.push_back({msg, inLevel});
-
 			std::string outMsg;
-			auto now = std::chrono::system_clock::now();
+			auto now           = std::chrono::system_clock::now();
 			const auto fmtTime = std::format("{0:%F %T}", now);
 			outMsg += "[" + fmtTime + "] ";
 			switch (inLevel)
 			{
-			case ELogLevel::Debug:
-				outMsg += "[DEBUG] " + msg + '\n';
+			case ELogLevel::Debug: outMsg += "[DEBUG] " + msg + '\n';
 				break;
-			case ELogLevel::Info:
-				outMsg += "[INFO] " + msg + '\n';
+			case ELogLevel::Info: outMsg += "[INFO] " + msg + '\n';
 				break;
-			case ELogLevel::Warning:
-				outMsg += "[WARNING] " + msg + '\n';
+			case ELogLevel::Warning: outMsg += "[WARNING] " + msg + '\n';
 				break;
-			case ELogLevel::Error:
-				outMsg += "[ERROR] " + msg + '\n';
+			case ELogLevel::Error: outMsg += "[ERROR] " + msg + '\n';
 				break;
 			}
 #if _WIN32
@@ -73,15 +79,18 @@ namespace Logging
 			const auto wStrMsg = std::wstring(outMsg.begin(), outMsg.end());
 			OutputDebugStringW(wStrMsg.c_str());
 #else
-            // Otherwise just use standard out.
-            std::cout << OutMsg << '\n';
+			// Otherwise just use standard out.
+			std::cout << OutMsg << '\n';
 #endif
 		}
 
 		int getCount(ELogLevel inLevel);
 		std::vector<std::string> getMessages(ELogLevel inLevel);
 
-		void clear() { m_messages.clear(); }
+		void clear()
+		{
+			m_messages.clear();
+		}
 	};
 
 	template <typename... Types>
@@ -109,7 +118,6 @@ namespace Logging
 		Logger::getInstance()->log(fmt, ELogLevel::Error, std::forward<Types>(args)...);
 	}
 } // namespace Logging
-
 
 #define LOG_DEBUG(x, ...) Logging::debug(x, __VA_ARGS__);
 #define LOG_INFO(x, ...) Logging::info(x, __VA_ARGS__);

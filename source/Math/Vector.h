@@ -863,7 +863,7 @@ namespace Math
 	 * @param v0 The first vertex of the triangle.
 	 * @param v1 The second vertex of the triangle.
 	 * @param v2 The third vertex of the triangle.
-	 * @param uvw The output parameter that will store the calculated barycentric coordinates.
+	 * @param bary The output parameter that will store the calculated barycentric coordinates.
 	 * @return True if the point is inside the triangle, false otherwise.
 	 */
 	template <typename T>

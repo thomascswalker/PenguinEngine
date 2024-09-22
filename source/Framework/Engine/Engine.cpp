@@ -23,7 +23,7 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 {
 	LOG_INFO("Starting up engine.")
 
-	m_renderer  = std::make_shared<Renderer>(inWidth, inHeight);
+	m_viewport  = std::make_shared<Viewport>(inWidth, inHeight);
 	m_isRunning = true;
 
 	// Track starting time
@@ -111,22 +111,22 @@ void Engine::onKeyPressed(const EKey keyCode) const
 		}
 	case EKey::F1:
 		{
-			m_renderer->m_settings.toggleRenderFlag(Wireframe);
+			m_viewport->m_settings.toggleRenderFlag(Wireframe);
 			break;
 		}
 	case EKey::F2:
 		{
-			m_renderer->m_settings.toggleRenderFlag(Shaded);
+			m_viewport->m_settings.toggleRenderFlag(Shaded);
 			break;
 		}
 	case EKey::F3:
 		{
-			m_renderer->m_settings.toggleRenderFlag(Depth);
+			m_viewport->m_settings.toggleRenderFlag(Depth);
 			break;
 		}
 	case EKey::F4:
 		{
-			m_renderer->m_settings.toggleRenderFlag(Normals);
+			m_viewport->m_settings.toggleRenderFlag(Normals);
 			break;
 		}
 	default: break;
@@ -169,22 +169,22 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		}
 	case EMenuAction::Wireframe:
 		{
-			platform->setMenuItemChecked(EMenuAction::Wireframe, m_renderer->m_settings.toggleRenderFlag(Wireframe));
+			platform->setMenuItemChecked(EMenuAction::Wireframe, m_viewport->m_settings.toggleRenderFlag(Wireframe));
 			break;
 		}
 	case EMenuAction::Shaded:
 		{
-			platform->setMenuItemChecked(EMenuAction::Shaded, m_renderer->m_settings.toggleRenderFlag(Shaded));
+			platform->setMenuItemChecked(EMenuAction::Shaded, m_viewport->m_settings.toggleRenderFlag(Shaded));
 			break;
 		}
 	case EMenuAction::Depth:
 		{
-			platform->setMenuItemChecked(EMenuAction::Depth, m_renderer->m_settings.toggleRenderFlag(Depth));
+			platform->setMenuItemChecked(EMenuAction::Depth, m_viewport->m_settings.toggleRenderFlag(Depth));
 			break;
 		}
 	case EMenuAction::Normals:
 		{
-			platform->setMenuItemChecked(EMenuAction::Normals, m_renderer->m_settings.toggleRenderFlag(Normals));
+			platform->setMenuItemChecked(EMenuAction::Normals, m_viewport->m_settings.toggleRenderFlag(Normals));
 			break;
 		}
 	case EMenuAction::VertexNormals:
@@ -193,7 +193,7 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		}
 	case EMenuAction::TileRendering:
 		{
-			platform->setMenuItemChecked(EMenuAction::TileRendering, m_renderer->m_settings.toggleTileRendering());
+			platform->setMenuItemChecked(EMenuAction::TileRendering, m_viewport->m_settings.toggleTileRendering());
 			break;
 		}
 	}
@@ -211,7 +211,7 @@ void Engine::loadMesh()
 		const auto mesh = std::make_shared<Mesh>();
 		ObjImporter::import(fileName, mesh.get());
 		mesh->processTriangles();
-		g_meshes.append(mesh);
+		g_meshes.emplace_back(mesh);
 		LOG_INFO("Loaded model {}.", fileName)
 	}
 }
@@ -228,7 +228,7 @@ void Engine::loadTexture()
 		const auto texture = std::make_shared<Texture>();
 		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::Rgba);
 		texture->flipVertical();
-		g_textures.append(texture);
+		g_textures.emplace_back(texture);
 		LOG_INFO("Loaded texture {}.", fileName)
 	}
 }
