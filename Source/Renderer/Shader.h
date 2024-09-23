@@ -21,6 +21,8 @@ protected:
 	size_t m_byteCodeSize;
 
 public:
+	virtual ~Shader() = default;
+
 	Shader(const EShaderType resourceType)
 		: m_resourceType(resourceType), m_byteCode(nullptr), m_byteCodeSize(0) {}
 

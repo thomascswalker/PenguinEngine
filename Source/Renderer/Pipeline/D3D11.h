@@ -35,27 +35,78 @@ inline const char* formatHResult(const HRESULT err)
 	return errMsgP;
 }
 
+class D3D11VertexShader : public VertexShader
+{
+public:
+	ID3D11VertexShader* m_shaderPtr = nullptr;
+
+	~D3D11VertexShader() override
+	{
+		if (m_shaderPtr)
+		{
+			m_shaderPtr->Release();
+		}
+	}
+
+	ID3D11VertexShader* getPipelineShader() const
+	{
+		return m_shaderPtr;
+	}
+};
+
+class D3D11PixelShader : public PixelShader
+{
+public:
+	ID3D11PixelShader* m_shaderPtr = nullptr;
+
+	~D3D11PixelShader() override
+	{
+		if (m_shaderPtr)
+		{
+			m_shaderPtr->Release();
+		}
+	}
+
+	ID3D11PixelShader* getPipelineShader() const
+	{
+		return m_shaderPtr;
+	}
+};
+
 // https://gist.github.com/d7samurai/261c69490cce0620d0bfc93003cd1052
 class D3D11RenderPipeline : public IRenderPipeline
 {
-private:
 	bool m_initialized = false;
 	HWND m_hwnd        = nullptr;
 
 	int32 m_width  = 0;
 	int32 m_height = 0;
 
-	D3D_FEATURE_LEVEL m_featureLevel                  = D3D_FEATURE_LEVEL_11_0;
-	ComPtr<IDXGISwapChain> m_swapChain                = nullptr;
-	ComPtr<ID3D11Device> m_device                     = nullptr;
-	ComPtr<ID3D11DeviceContext> m_deviceContext       = nullptr;
-	ID3D11Texture2D* m_frameBuffer                    = nullptr;
-	ComPtr<ID3D11RenderTargetView> m_renderTargetView = nullptr;
-	ID3D11InputLayout* m_inputLayout                  = nullptr;
+	/** Boilerplate D3D11 **/
 
+	D3D_FEATURE_LEVEL m_featureLevel            = D3D_FEATURE_LEVEL_11_0;
+	ComPtr<IDXGISwapChain> m_swapChain          = nullptr;
+	ComPtr<ID3D11Device> m_device               = nullptr;
+	ComPtr<ID3D11DeviceContext> m_deviceContext = nullptr;
+	ID3D11Texture2D* m_frameBuffer              = nullptr;
+	ID3D11RenderTargetView* m_renderTargetView  = nullptr;
+
+	/** Vertex Buffer **/
+
+	ID3D11Buffer* m_vertexBufferPtr          = nullptr;
+	float* m_vertexDataArray                 = nullptr;
+	UINT m_vertexStride                      = 3 * sizeof(float);
+	UINT m_vertexOffset                      = 0;
+	UINT m_vertexCount                       = 3;
+	D3D11_BUFFER_DESC m_vertexBufferDesc     = {};
+	D3D11_SUBRESOURCE_DATA m_subResourceData = {nullptr};
+
+	/** Shaders **/
+
+	ID3D11InputLayout* m_inputLayout = nullptr;
 	std::map<const char*, Shader*> m_shaders;
-	std::shared_ptr<VertexShader> m_vertexShader = nullptr;
-	std::shared_ptr<PixelShader> m_pixelShader   = nullptr;
+	D3D11VertexShader* m_vertexShader = nullptr;
+	D3D11PixelShader* m_pixelShader   = nullptr;
 
 public:
 	~D3D11RenderPipeline() override = default;
@@ -119,6 +170,7 @@ public:
 		swapChainDesc.OutputWindow                       = m_hwnd;
 		swapChainDesc.SampleDesc.Count                   = 1;
 		swapChainDesc.SampleDesc.Quality                 = 0;
+		swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
 		swapChainDesc.Windowed                           = TRUE;
 
 		result = dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, &m_swapChain);
@@ -175,21 +227,42 @@ public:
 
 		// Create input layout
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
-			{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
-		Shader* vertexShader = getVertexShader();
-		result               = m_device->CreateInputLayout(
+		result = m_device->CreateInputLayout(
 			inputElementDesc,
 			ARRAYSIZE(inputElementDesc),
-			vertexShader->getByteCode(),
-			vertexShader->getByteCodeSize(),
+			m_vertexShader->getByteCode(),
+			m_vertexShader->getByteCodeSize(),
 			&m_inputLayout);
 
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating input layout ({}).", formatHResult(result));
+			return false;
+		}
+
+		float vertexData[] = {
+			-0.0f, 0.5f, 0.5f,  // point at top
+			0.5f, 0.5f, 0.5f,   // point at bottom-right
+			-0.5f, -0.5f, 0.5f, // point at bottom-left
+		};
+
+		auto vertexDataSize = m_vertexStride * m_vertexCount;
+		m_vertexDataArray   = (float*)PlatformMemory::malloc(vertexDataSize);
+		std::memcpy(m_vertexDataArray, vertexData, vertexDataSize);
+
+		m_vertexBufferDesc.ByteWidth = vertexDataSize;
+		m_vertexBufferDesc.Usage     = D3D11_USAGE_IMMUTABLE;
+		m_vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+		m_subResourceData.pSysMem = m_vertexDataArray;
+
+		m_vertexBufferPtr = nullptr;
+		result            = m_device->CreateBuffer(&m_vertexBufferDesc, &m_subResourceData, &m_vertexBufferPtr);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
 			return false;
 		}
 
@@ -203,15 +276,45 @@ public:
 			LOG_ERROR("D3D11RenderPipeline::beginDraw(): Pipeline is not initialized.")
 			assert(false);
 		}
-		m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), DirectX::Colors::MidnightBlue);
-		HRESULT result = m_swapChain->Present(0, 0);
-		if (FAILED(result))
+		m_deviceContext->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Black);
+
+		// Create the viewport
+		RECT winRect;
+		GetClientRect(m_hwnd, &winRect);
+		D3D11_VIEWPORT viewport = {
+			0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f
+		};
+		m_deviceContext->RSSetViewports(1, &viewport);
+
+		// Set the render target
+		m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr);
+
+		// Associate the vertex buffer with the device context
+		m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_deviceContext->IASetInputLayout(m_inputLayout);
+		m_deviceContext->IASetVertexBuffers(0, 1, &m_vertexBufferPtr, &m_vertexStride, &m_vertexOffset);
+
+		// Set the vertex and pixel shaders on the device context
+		if (m_vertexShader->m_shaderPtr)
 		{
-			LOG_ERROR("D3D11RenderPipeline::init(): Failed to present swap chain.")
+			m_deviceContext->VSSetShader(m_vertexShader->m_shaderPtr, nullptr, 0);
+		}
+		if (m_pixelShader->m_shaderPtr)
+		{
+			m_deviceContext->PSSetShader(m_pixelShader->m_shaderPtr, nullptr, 0);
 		}
 	}
 
-	void draw() override {}
+	void draw() override
+	{
+		m_deviceContext->Draw(m_vertexCount, 0);
+		HRESULT result = m_swapChain->Present(1, 0);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed to present swap chain.")
+			assert(false);
+		}
+	}
 
 	void endDraw() override {}
 
@@ -252,25 +355,26 @@ public:
 
 	HRESULT createShader(const char* name, const std::string& fileName, EShaderType shaderType)
 	{
+		Shader* shader = nullptr;
 		std::string profile;
 		switch (shaderType)
 		{
 		case EShaderType::VertexShader:
 			{
-				m_shaders[name] = new VertexShader();
-				profile         = "vs_5_0";
+				m_vertexShader = new D3D11VertexShader();
+				shader         = m_vertexShader;
+				profile        = "vs_5_0";
 				break;
 			}
 		case EShaderType::PixelShader:
 			{
-				m_shaders[name] = new PixelShader();
-				profile         = "ps_5_0";
+				m_pixelShader = new D3D11PixelShader();
+				shader        = m_pixelShader;
+				profile       = "ps_5_0";
 				break;
 			}
-		default: break;
+		default: return 1;
 		}
-
-		Shader* shader = m_shaders[name];
 
 		// TODO: Currently D3DCompileFromFile cannot find relative files, so we have to build the path from the current file.
 
@@ -293,6 +397,22 @@ public:
 			return result;
 		}
 		shader->setByteCode(blob->GetBufferPointer(), blob->GetBufferSize());
+
+		switch (shaderType)
+		{
+		case EShaderType::VertexShader:
+			{
+				m_device->CreateVertexShader(m_vertexShader->getByteCode(), m_vertexShader->getByteCodeSize(), nullptr,
+				                             &m_vertexShader->m_shaderPtr);
+				break;
+			}
+		case EShaderType::PixelShader:
+			{
+				m_device->CreatePixelShader(m_pixelShader->getByteCode(), m_pixelShader->getByteCodeSize(), nullptr,
+				                            &m_pixelShader->m_shaderPtr);
+				break;
+			}
+		}
 
 		return S_OK;
 	}
@@ -341,17 +461,5 @@ public:
 		*blob = shaderBlob;
 
 		return result;
-	}
-
-	Shader* getVertexShader()
-	{
-		for (const auto& [k, v] : m_shaders)
-		{
-			if (v->getResourceType() == EShaderType::VertexShader)
-			{
-				return v;
-			}
-		}
-		return nullptr;
 	}
 };
