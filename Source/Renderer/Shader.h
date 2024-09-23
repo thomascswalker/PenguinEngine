@@ -1,10 +1,12 @@
 ﻿#pragma once
 #pragma warning(disable : 4244)
 
-#include "Renderer/Texture.h"
-#include "Engine/Mesh.h"
+#include <string>
 
-enum class EResourceType : uint8
+#include "Core/Buffer.h"
+#include "Core/Types.h"
+
+enum class EShaderType : uint8
 {
 	VertexShader,
 	PixelShader
@@ -13,16 +15,45 @@ enum class EResourceType : uint8
 class Shader
 {
 protected:
-	EResourceType m_resourceType;
-	Buffer<uint8> m_byteCode;
+	EShaderType m_resourceType;
+	std::string m_fileName;
+	char* m_byteCode;
+	size_t m_byteCodeSize;
 
 public:
-	Shader(const EResourceType resourceType)
-		: m_resourceType(resourceType) {}
+	Shader(const EShaderType resourceType)
+		: m_resourceType(resourceType), m_byteCode(nullptr), m_byteCodeSize(0) {}
 
-	[[nodiscard]] EResourceType getResourceType() const
+	[[nodiscard]] EShaderType getResourceType() const
 	{
 		return m_resourceType;
+	}
+
+	[[nodiscard]] std::string getFileName() const
+	{
+		return m_fileName;
+	}
+
+	void setFileName(const std::string& fileName)
+	{
+		m_fileName = fileName;
+	}
+
+	[[nodiscard]] char* getByteCode() const
+	{
+		return m_byteCode;
+	}
+
+	void setByteCode(const void* byteCode, const size_t byteCodeSize)
+	{
+		m_byteCode = PlatformMemory::malloc<char>(byteCodeSize);
+		std::memcpy(m_byteCode, byteCode, byteCodeSize);
+		m_byteCodeSize = byteCodeSize;
+	}
+
+	[[nodiscard]] size_t getByteCodeSize() const
+	{
+		return m_byteCodeSize;
 	}
 };
 
@@ -30,12 +61,12 @@ class VertexShader : public Shader
 {
 public:
 	VertexShader()
-		: Shader(EResourceType::VertexShader) {}
+		: Shader(EShaderType::VertexShader) {}
 };
 
 class PixelShader : public Shader
 {
 public :
 	PixelShader()
-		: Shader(EResourceType::PixelShader) {}
+		: Shader(EShaderType::PixelShader) {}
 };

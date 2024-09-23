@@ -122,6 +122,12 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 				break;
 			}
 
+			// If we have a D3D11 render pipeline, skip the paint step as this is handled by D3D11.
+			if (dynamic_cast<D3D11RenderPipeline*>(viewport->getRenderPipeline()) != nullptr)
+			{
+				return 0;
+			}
+
 			// Get the current window compressedSize from the buffer
 			// const std::shared_ptr<Channel> channel = renderer->getColorChannel();
 			const int32 width  = viewport->getWidth();

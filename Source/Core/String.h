@@ -89,4 +89,9 @@ namespace Strings
 	{
 		return {str.begin(), str.end()};
 	}
+
+	inline std::string toString(const std::wstring& wstr)
+	{
+		return {wstr.begin(), wstr.end()};
+	}
 } // namespace Strings
