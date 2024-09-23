@@ -214,6 +214,7 @@ void Engine::loadMesh()
 		g_meshes.emplace_back(mesh);
 		LOG_INFO("Loaded model {}.", fileName)
 	}
+	m_viewport->updateSceneGeometry();
 }
 
 void Engine::loadTexture()

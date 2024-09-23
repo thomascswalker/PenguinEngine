@@ -91,15 +91,21 @@ class D3D11RenderPipeline : public IRenderPipeline
 	ID3D11Texture2D* m_frameBuffer              = nullptr;
 	ID3D11RenderTargetView* m_renderTargetView  = nullptr;
 
-	/** Vertex Buffer **/
+	/** Vertex & Index Buffer **/
 
-	ID3D11Buffer* m_vertexBufferPtr          = nullptr;
-	float* m_vertexDataArray                 = nullptr;
-	UINT m_vertexStride                      = 3 * sizeof(float);
-	UINT m_vertexOffset                      = 0;
-	UINT m_vertexCount                       = 3;
-	D3D11_BUFFER_DESC m_vertexBufferDesc     = {};
-	D3D11_SUBRESOURCE_DATA m_subResourceData = {nullptr};
+	ID3D11Buffer* m_vertexBuffer = nullptr;
+	float* m_vertexDataArray     = nullptr;
+	size_t m_vertexDataSize      = 0;
+	uint32 m_vertexStride        = 3 * sizeof(float); // XYZ * 4 = 12
+	uint32 m_vertexOffset        = 0;
+	uint32 m_vertexCount         = 0;
+
+	ID3D11Buffer* m_indexBuffer = nullptr;
+	uint32* m_indexDataArray    = nullptr;
+	size_t m_indexDataSize      = 0;
+	uint32 m_indexStride        = 3 * sizeof(int32);
+	uint32 m_indexOffset        = 0;
+	uint32 m_indexCount         = 0;
 
 	/** Shaders **/
 
@@ -242,29 +248,20 @@ public:
 			return false;
 		}
 
-		float vertexData[] = {
-			-0.0f, 0.5f, 0.5f,  // point at top
-			0.5f, 0.5f, 0.5f,   // point at bottom-right
-			-0.5f, -0.5f, 0.5f, // point at bottom-left
-		};
+		//m_vertexDataArray            = nullptr; //(float*)PlatformMemory::malloc(0);
+		//m_vertexBufferDesc.ByteWidth = m_vertexDataSize;
+		//m_vertexBufferDesc.Usage     = D3D11_USAGE_IMMUTABLE;
+		//m_vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 
-		auto vertexDataSize = m_vertexStride * m_vertexCount;
-		m_vertexDataArray   = (float*)PlatformMemory::malloc(vertexDataSize);
-		std::memcpy(m_vertexDataArray, vertexData, vertexDataSize);
+		//m_subResourceData.pSysMem = m_vertexDataArray;
 
-		m_vertexBufferDesc.ByteWidth = vertexDataSize;
-		m_vertexBufferDesc.Usage     = D3D11_USAGE_IMMUTABLE;
-		m_vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-
-		m_subResourceData.pSysMem = m_vertexDataArray;
-
-		m_vertexBufferPtr = nullptr;
-		result            = m_device->CreateBuffer(&m_vertexBufferDesc, &m_subResourceData, &m_vertexBufferPtr);
-		if (FAILED(result))
-		{
-			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
-			return false;
-		}
+		//m_vertexBuffer = nullptr;
+		//result            = m_device->CreateBuffer(&m_vertexBufferDesc, &m_subResourceData, &m_vertexBuffer);
+		//if (FAILED(result))
+		//{
+		//	LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
+		//	return false;
+		//}
 
 		return true;
 	}
@@ -292,7 +289,8 @@ public:
 		// Associate the vertex buffer with the device context
 		m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_deviceContext->IASetInputLayout(m_inputLayout);
-		m_deviceContext->IASetVertexBuffers(0, 1, &m_vertexBufferPtr, &m_vertexStride, &m_vertexOffset);
+		m_deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &m_vertexStride, &m_vertexOffset);
+		m_deviceContext->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 		// Set the vertex and pixel shaders on the device context
 		if (m_vertexShader->m_shaderPtr)
@@ -307,7 +305,7 @@ public:
 
 	void draw() override
 	{
-		m_deviceContext->Draw(m_vertexCount, 0);
+		m_deviceContext->DrawIndexed(m_indexCount, 0, 0);
 		HRESULT result = m_swapChain->Present(1, 0);
 		if (FAILED(result))
 		{
@@ -461,5 +459,49 @@ public:
 		*blob = shaderBlob;
 
 		return result;
+	}
+
+	void setVertexData(float* data, size_t size, int32 count) override
+	{
+		m_vertexDataArray = (float*)PlatformMemory::malloc(size);
+		std::memcpy(m_vertexDataArray, data, size);
+		m_vertexDataSize = size;
+		m_vertexCount    = count;
+
+		D3D11_BUFFER_DESC vertexBufferDesc           = {};
+		D3D11_SUBRESOURCE_DATA vertexSubResourceData = {nullptr};
+		vertexBufferDesc.ByteWidth                   = m_vertexDataSize;
+		vertexBufferDesc.Usage                       = D3D11_USAGE_IMMUTABLE;
+		vertexBufferDesc.BindFlags                   = D3D11_BIND_VERTEX_BUFFER;
+		vertexSubResourceData.pSysMem                = m_vertexDataArray;
+
+		m_vertexBuffer = nullptr;
+		HRESULT result = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubResourceData, &m_vertexBuffer);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
+		}
+	}
+
+	void setIndexData(int32* data, size_t size, int32 count) override
+	{
+		m_indexDataArray = (uint32*)PlatformMemory::malloc(size);
+		std::memcpy(m_indexDataArray, data, size);
+		m_indexDataSize = size;
+		m_indexCount    = count;
+
+		D3D11_BUFFER_DESC bufferDesc           = {};
+		D3D11_SUBRESOURCE_DATA subResourceData = {nullptr};
+		bufferDesc.ByteWidth                   = m_indexDataSize;
+		bufferDesc.Usage                       = D3D11_USAGE_IMMUTABLE;
+		bufferDesc.BindFlags                   = D3D11_BIND_INDEX_BUFFER;
+		subResourceData.pSysMem                = m_indexDataArray;
+
+		m_indexBuffer  = nullptr;
+		HRESULT result = m_device->CreateBuffer(&bufferDesc, &subResourceData, &m_indexBuffer);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create index buffer ({}).", formatHResult(result));
+		}
 	}
 };

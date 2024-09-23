@@ -22,7 +22,6 @@ public:
 	std::string m_debugText;
 	bool m_showDebugText = true;
 
-public:
 	Viewport(int32 inWidth, int32 inHeight);
 	~Viewport();
 
@@ -42,6 +41,7 @@ public:
 	bool createRenderPipeline();
 	bool initRenderPipeline(void* windowHandle) const;
 	IRenderPipeline* getRenderPipeline() const;
+	void updateSceneGeometry() const;
 
 	/** Debug **/
 

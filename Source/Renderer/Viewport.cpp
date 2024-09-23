@@ -87,6 +87,8 @@ void Viewport::draw()
 		// Transfer render settings
 		m_renderPipeline->setRenderSettings(&m_settings);
 
+		//m_renderPipeline->setVertexData(vertexData, 9 * sizeof(float), 3);
+
 		// Draw all geometry
 		m_renderPipeline->beginDraw();
 
@@ -118,13 +120,48 @@ bool Viewport::initRenderPipeline(void* windowHandle) const
 	{
 		return false;
 	}
+
 	m_renderPipeline->setViewData(m_camera->getViewData());
+
 	return true;
 }
 
 IRenderPipeline* Viewport::getRenderPipeline() const
 {
 	return m_renderPipeline.get();
+}
+
+void Viewport::updateSceneGeometry() const
+{
+	std::vector<float> vertArray;
+	std::vector<int32> indexArray;
+
+	for (const auto& mesh : g_meshes)
+	{
+		std::vector<Triangle>* tris = mesh->getTriangles();
+		for (auto& tri : *tris)
+		{
+			Vertex* v0 = &tri.v0;
+			vertArray.push_back(v0->position.x);
+			vertArray.push_back(v0->position.y);
+			vertArray.push_back(v0->position.z);
+			Vertex* v1 = &tri.v1;
+			vertArray.push_back(v1->position.x);
+			vertArray.push_back(v1->position.y);
+			vertArray.push_back(v1->position.z);
+			Vertex* v2 = &tri.v2;
+			vertArray.push_back(v2->position.x);
+			vertArray.push_back(v2->position.y);
+			vertArray.push_back(v2->position.z);
+
+			indexArray.push_back(tri.positionIndexes[0]);
+			indexArray.push_back(tri.positionIndexes[1]);
+			indexArray.push_back(tri.positionIndexes[2]);
+		}
+	}
+
+	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertArray.size());
+	m_renderPipeline->setIndexData(indexArray.data(), indexArray.size() * sizeof(int32), indexArray.size());
 }
 
 void Viewport::formatDebugText()

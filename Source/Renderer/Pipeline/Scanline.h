@@ -199,4 +199,5 @@ public:
 	uint8* getFrameData() override;
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
+	void setVertexData(float* data, size_t size, int32 count) override {}
 };
