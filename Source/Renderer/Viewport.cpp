@@ -81,13 +81,8 @@ void Viewport::draw()
 
 	if (m_renderPipeline != nullptr)
 	{
-		// Transfer camera and viewport data
-		m_renderPipeline->setViewData(m_camera->getViewData());
-
 		// Transfer render settings
 		m_renderPipeline->setRenderSettings(&m_settings);
-
-		//m_renderPipeline->setVertexData(vertexData, 9 * sizeof(float), 3);
 
 		// Draw all geometry
 		m_renderPipeline->beginDraw();
@@ -110,7 +105,7 @@ void Viewport::draw()
 bool Viewport::createRenderPipeline()
 {
 	// Construct the render pipeline
-	m_renderPipeline = std::make_shared<D3D11RenderPipeline>();
+	m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
 	return true;
 }
 
@@ -162,6 +157,12 @@ void Viewport::updateSceneGeometry() const
 
 	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertArray.size());
 	m_renderPipeline->setIndexData(indexArray.data(), indexArray.size() * sizeof(int32), indexArray.size());
+}
+
+void Viewport::updateSceneCamera() const
+{
+	// Transfer camera and viewport data
+	m_renderPipeline->setViewData(m_camera->getViewData());
 }
 
 void Viewport::formatDebugText()

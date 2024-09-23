@@ -35,6 +35,11 @@ inline const char* formatHResult(const HRESULT err)
 	return errMsgP;
 }
 
+struct MVPMatrix
+{
+	DirectX::XMMATRIX mvp;
+};
+
 class D3D11VertexShader : public VertexShader
 {
 public:
@@ -113,6 +118,10 @@ class D3D11RenderPipeline : public IRenderPipeline
 	std::map<const char*, Shader*> m_shaders;
 	D3D11VertexShader* m_vertexShader = nullptr;
 	D3D11PixelShader* m_pixelShader   = nullptr;
+
+	/** Camera **/
+	ComPtr<ID3D11Buffer> m_cameraBuffer = nullptr;
+	float* m_cameraMvp                  = nullptr;
 
 public:
 	~D3D11RenderPipeline() override = default;
@@ -248,20 +257,26 @@ public:
 			return false;
 		}
 
-		//m_vertexDataArray            = nullptr; //(float*)PlatformMemory::malloc(0);
-		//m_vertexBufferDesc.ByteWidth = m_vertexDataSize;
-		//m_vertexBufferDesc.Usage     = D3D11_USAGE_IMMUTABLE;
-		//m_vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
+		D3D11_BUFFER_DESC cameraBufferDesc;
+		cameraBufferDesc.Usage               = D3D11_USAGE_DEFAULT;
+		cameraBufferDesc.ByteWidth           = 16 * sizeof(float);
+		cameraBufferDesc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+		cameraBufferDesc.CPUAccessFlags      = 0;
+		cameraBufferDesc.MiscFlags           = 0;
+		cameraBufferDesc.StructureByteStride = 0;
 
-		//m_subResourceData.pSysMem = m_vertexDataArray;
+		result = m_device->CreateBuffer(&cameraBufferDesc, nullptr, &m_cameraBuffer);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating the camera constant buffer ({}).",
+			          formatHResult(result));
+			return false;
+		}
+		m_deviceContext->VSSetConstantBuffers(0, 1, m_cameraBuffer.GetAddressOf());
 
-		//m_vertexBuffer = nullptr;
-		//result            = m_device->CreateBuffer(&m_vertexBufferDesc, &m_subResourceData, &m_vertexBuffer);
-		//if (FAILED(result))
-		//{
-		//	LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
-		//	return false;
-		//}
+		// Always 4x4 float matrix
+		m_cameraMvp = PlatformMemory::malloc<float>(16 * sizeof(float));
 
 		return true;
 	}
@@ -282,6 +297,20 @@ public:
 			0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f
 		};
 		m_deviceContext->RSSetViewports(1, &viewport);
+
+		// Set culling
+		ID3D11RasterizerState* rasterState;
+		D3D11_RASTERIZER_DESC rasterDesc{};
+		rasterDesc.CullMode = D3D11_CULL_NONE;
+		rasterDesc.FillMode = D3D11_FILL_SOLID;
+		HRESULT result      = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::beginDraw(): Failed creating rasterizer state ({}).",
+			          formatHResult(result));
+			return;
+		}
+		m_deviceContext->RSSetState(rasterState);
 
 		// Set the render target
 		m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr);
@@ -343,7 +372,15 @@ public:
 		return nullptr;
 	}
 
-	void setViewData(ViewData* newViewData) override {}
+	void setViewData(ViewData* newViewData) override
+	{
+		// auto transposed      = newViewData->viewProjectionMatrix.getTranspose();
+		const float* mvpData = (float*)&newViewData->viewProjectionMatrix.m;
+		MVPMatrix mvp;
+		mvp.mvp = DirectX::XMMATRIX(mvpData);
+		m_deviceContext->UpdateSubresource(m_cameraBuffer.Get(), 0, nullptr, &mvp, 0, 0);
+	}
+
 	void setRenderSettings(RenderSettings* newRenderSettings) override {}
 
 	void setHwnd(const HWND hwnd)
@@ -353,7 +390,7 @@ public:
 
 	HRESULT createShader(const char* name, const std::string& fileName, EShaderType shaderType)
 	{
-		Shader* shader = nullptr;
+		Shader* shader;
 		std::string profile;
 		switch (shaderType)
 		{
@@ -400,16 +437,22 @@ public:
 		{
 		case EShaderType::VertexShader:
 			{
-				m_device->CreateVertexShader(m_vertexShader->getByteCode(), m_vertexShader->getByteCodeSize(), nullptr,
-				                             &m_vertexShader->m_shaderPtr);
+				result = m_device->CreateVertexShader(m_vertexShader->getByteCode(), m_vertexShader->getByteCodeSize(),
+				                                      nullptr, &m_vertexShader->m_shaderPtr);
 				break;
 			}
 		case EShaderType::PixelShader:
 			{
-				m_device->CreatePixelShader(m_pixelShader->getByteCode(), m_pixelShader->getByteCodeSize(), nullptr,
-				                            &m_pixelShader->m_shaderPtr);
+				result = m_device->CreatePixelShader(m_pixelShader->getByteCode(), m_pixelShader->getByteCodeSize(),
+				                                     nullptr, &m_pixelShader->m_shaderPtr);
 				break;
 			}
+		}
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed compiling shader ({}).", formatHResult(result));
+			shader = nullptr;
+			return result;
 		}
 
 		return S_OK;

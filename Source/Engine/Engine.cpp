@@ -86,6 +86,8 @@ void Engine::tick()
 		{
 			camera->zoom(deltaMouseCursor.y);
 		}
+
+		m_viewport->updateSceneCamera();
 	}
 
 	// Tick every object

@@ -386,14 +386,14 @@ struct mat4_t
 		const vec3_t xAxis = getAxis(EAxis::X);
 		const vec3_t yAxis = getAxis(EAxis::Y);
 		const vec3_t zAxis = getAxis(EAxis::Z);
-		const T radToDeg = 180.0f / (PI * 2.0f);
+		const T radToDeg   = 180.0f / (PI * 2.0f);
 
-		T pitch = std::atan2f(xAxis.z, std::sqrtf(Math::square(xAxis.x) + Math::square(xAxis.y))) * radToDeg;
-		T yaw = std::atan2f(xAxis.y, xAxis.x) * radToDeg;
+		T pitch       = std::atan2f(xAxis.z, std::sqrtf(Math::square(xAxis.x) + Math::square(xAxis.y))) * radToDeg;
+		T yaw         = std::atan2f(xAxis.y, xAxis.x) * radToDeg;
 		rot_t rotator = rot_t(pitch, yaw, T(0));
 
 		const vec3_t syAxis = mat4_rot_t<T>(rotator).getAxis(EAxis::Y);
-		rotator.roll = std::atan2f(Math::dot(zAxis, syAxis), Math::dot(yAxis, syAxis)) * radToDeg;
+		rotator.roll        = std::atan2f(Math::dot(zAxis, syAxis), Math::dot(yAxis, syAxis)) * radToDeg;
 
 		return rotator;
 	}
@@ -444,6 +444,29 @@ struct mat4_t
 	T get(int32 x, int32 y) const
 	{
 		return m[x][y];
+	}
+
+	mat4_t getTranspose() const
+	{
+		mat4_t out;
+		out.m[0][0] = m[0][0];
+		out.m[0][1] = m[1][0];
+		out.m[0][2] = m[2][0];
+		out.m[0][3] = m[3][0];
+		out.m[1][0] = m[0][1];
+		out.m[1][1] = m[1][1];
+		out.m[1][2] = m[2][1];
+		out.m[1][3] = m[3][1];
+		out.m[2][0] = m[0][2];
+		out.m[2][1] = m[1][2];
+		out.m[2][2] = m[2][2];
+		out.m[2][3] = m[3][2];
+		out.m[3][0] = m[0][3];
+		out.m[3][1] = m[1][3];
+		out.m[3][2] = m[2][3];
+		out.m[3][3] = m[3][3];
+
+		return out;
 	}
 
 	vec4_t<T> getRow(int32 row) const;
@@ -594,7 +617,7 @@ struct mat4_t
 template <typename T>
 constexpr mat4_t<T> operator*(const mat4_t<T>& m0, const mat4_t<T>& m1)
 {
-	using float4X4 = float[4][4];
+	using float4X4    = float[4][4];
 	const float4X4& A = *((const float4X4*)m0.m);
 	const float4X4& B = *((const float4X4*)m1.m);
 	float4X4 temp;
@@ -630,8 +653,8 @@ struct mat4_persp_t : mat4_t<T>
 	{
 		this->setZero();
 		const T tanHalfFov = std::tanf(fov / 2.0f);
-		this->m[0][0] = T(1) / (aspect * tanHalfFov);
-		this->m[1][1] = T(1) / tanHalfFov;
+		this->m[0][0]      = T(1) / (aspect * tanHalfFov);
+		this->m[1][1]      = T(1) / tanHalfFov;
 
 		this->m[2][2] = -(maxZ + minZ) / (maxZ - minZ);
 		this->m[3][2] = -T(1);
@@ -702,8 +725,8 @@ struct mat4_rot_t : mat4_t<T>
 	{
 		// Convert from degrees to radians
 		pitch = Math::degreesToRadians(pitch);
-		yaw = Math::degreesToRadians(yaw);
-		roll = Math::degreesToRadians(roll);
+		yaw   = Math::degreesToRadians(yaw);
+		roll  = Math::degreesToRadians(roll);
 
 		T cp = std::cosf(pitch);
 		T sp = std::sinf(pitch);
@@ -745,9 +768,9 @@ struct mat4_rottrans_t : mat4_t<T>
 {
 	mat4_rottrans_t(const rot_t<T>& rotation, const vec3_t<T>& translation) : mat4_t<T>()
 	{
-		mat4_t<T> rotationMatrix = mat4_rot_t<T>(rotation);
+		mat4_t<T> rotationMatrix    = mat4_rot_t<T>(rotation);
 		mat4_t<T> translationMatrix = mat4_trans_t<T>(translation);
-		*this = rotationMatrix * translationMatrix;
+		*this                       = rotationMatrix * translationMatrix;
 
 #if _DEBUG
 		this->checkNaN();

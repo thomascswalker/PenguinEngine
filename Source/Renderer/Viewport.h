@@ -42,6 +42,7 @@ public:
 	bool initRenderPipeline(void* windowHandle) const;
 	IRenderPipeline* getRenderPipeline() const;
 	void updateSceneGeometry() const;
+	void updateSceneCamera() const;
 
 	/** Debug **/
 

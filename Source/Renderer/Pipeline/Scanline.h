@@ -200,4 +200,5 @@ public:
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
 	void setVertexData(float* data, size_t size, int32 count) override {}
+	void setIndexData(int32* data, size_t size, int32 count) override {}
 };
