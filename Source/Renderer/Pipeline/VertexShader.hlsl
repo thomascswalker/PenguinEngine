@@ -18,7 +18,6 @@ struct VSOutput
 VSOutput main(VSInput input)
 {
     VSOutput output = (VSOutput)0;
-    // matrix new_mvp = matrix(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
 	output.position = float4(input.position, 1.0f);
 	output.position = mul(output.position, mvp);
     return output;
