@@ -289,7 +289,7 @@ void D3D11RenderPipeline::beginDraw()
 	}
 	m_deviceContext->RSSetState(rasterState);
 
-	// At the end, set the render targets to the main framebuffer and the depthbuffer
+	// At the end, set the render targets to the main frame buffer and the depth buffer
 	m_deviceContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr); // m_depthBuffer
 
 	// Associate the vertex and index buffers with the device context

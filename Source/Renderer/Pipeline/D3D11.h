@@ -87,6 +87,8 @@ public:
 };
 
 // https://gist.github.com/d7samurai/261c69490cce0620d0bfc93003cd1052
+/** https://walbourn.github.io/anatomy-of-direct3d-11-create-device/ **/
+/** https://antongerdelan.net/opengl/d3d11.html **/
 class D3D11RenderPipeline : public IRenderPipeline
 {
 	bool m_initialized = false;
@@ -149,8 +151,6 @@ public:
 	bool createDepthBuffer();
 	bool createConstantBuffer();
 
-	/** https://walbourn.github.io/anatomy-of-direct3d-11-create-device/ **/
-	/** https://antongerdelan.net/opengl/d3d11.html **/
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
 	void draw() override;
