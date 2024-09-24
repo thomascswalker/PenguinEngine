@@ -157,11 +157,13 @@ void Viewport::updateSceneGeometry() const
 			vertArray.push_back(v2->normal.x);
 			vertArray.push_back(v2->normal.y);
 			vertArray.push_back(v2->normal.z);
+
+			vertexCount += 3;
 		}
-		vertexCount += mesh->getPositions()->size();
+		//vertexCount += mesh->getPositions()->size();
 	}
 
-	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertArray.size() / 2);
+	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertexCount);
 }
 
 void Viewport::updateSceneCamera() const

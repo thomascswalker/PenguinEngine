@@ -26,6 +26,8 @@
 
 using Microsoft::WRL::ComPtr;
 
+#define CHECK_RESULT(func) if (!func) { return false; }
+
 inline const char* formatHResult(const HRESULT err)
 {
 	auto comErr    = _com_error(err);
@@ -95,6 +97,8 @@ class D3D11RenderPipeline : public IRenderPipeline
 	/** Boilerplate D3D11 **/
 
 	D3D_FEATURE_LEVEL m_featureLevel             = D3D_FEATURE_LEVEL_11_0;
+	ComPtr<IDXGIFactory1> m_dxgiFactory          = nullptr;
+	ComPtr<IDXGIDevice> m_dxgiDevice             = nullptr;
 	ComPtr<IDXGISwapChain> m_swapChain           = nullptr;
 	ComPtr<ID3D11Device> m_device                = nullptr;
 	ComPtr<ID3D11DeviceContext> m_deviceContext  = nullptr;
@@ -134,14 +138,8 @@ class D3D11RenderPipeline : public IRenderPipeline
 public:
 	~D3D11RenderPipeline() override = default;
 
-	/** https://walbourn.github.io/anatomy-of-direct3d-11-create-device/ **/
-	/** https://antongerdelan.net/opengl/d3d11.html **/
-	bool init(void* windowHandle) override
+	bool createDevice()
 	{
-		m_hwnd = (HWND)windowHandle;
-		ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
-
-		// Create the device
 		DWORD createDeviceFlags = 0;
 #ifdef _DEBUG
 		createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -154,34 +152,11 @@ public:
 			return false;
 		}
 
-		// Obtain DXGI Factory from the device, since we used nullptr for the pAdapter argument of D3D11CreateDevice
-		ComPtr<IDXGIFactory1> dxgiFactory = nullptr;
-		ComPtr<IDXGIDevice> dxgiDevice    = nullptr;
+		return true;
+	}
 
-		result = m_device.As(&dxgiDevice);
-		if (SUCCEEDED(result))
-		{
-			IDXGIAdapter* adapter = nullptr;
-			result                = dxgiDevice->GetAdapter(&adapter);
-			if (SUCCEEDED(result))
-			{
-				result = adapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
-				if (FAILED(result))
-				{
-					LOG_ERROR("D3D11RenderPipeline::init(): Failed to get adapter parent.")
-					return false;
-				}
-				adapter->Release();
-			}
-			dxgiDevice->Release();
-		}
-		else
-		{
-			LOG_ERROR("D3D11RenderPipeline::init(): Failed to obtain DXGI Factory.")
-			return false;
-		}
-
-		// Create the swap chain
+	bool createSwapChain()
+	{
 		DXGI_SWAP_CHAIN_DESC swapChainDesc               = {};
 		swapChainDesc.BufferCount                        = 1; // 1 Front and back buffer
 		swapChainDesc.BufferDesc.Width                   = g_defaultViewportWidth;
@@ -196,46 +171,83 @@ public:
 		swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
 		swapChainDesc.Windowed                           = TRUE;
 
-		result = dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, &m_swapChain);
-		if (SUCCEEDED(result))
-		{
-			m_initialized = true;
-		}
-		else
+		HRESULT result = m_dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, &m_swapChain);
+		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create swap chain ({}).", formatHResult(result))
 			return false;
 		}
+		m_initialized = true;
+		return true;
+	}
 
-		result = dxgiFactory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
+	bool createDxgiDevice()
+	{
+		// Obtain DXGI Factory from the device, since we used nullptr for the pAdapter argument of D3D11CreateDevice
+		HRESULT result = m_device.As(&m_dxgiDevice);
+		if (SUCCEEDED(result))
+		{
+			IDXGIAdapter* adapter = nullptr;
+			result                = m_dxgiDevice->GetAdapter(&adapter);
+			if (SUCCEEDED(result))
+			{
+				result = adapter->GetParent(IID_PPV_ARGS(&m_dxgiFactory));
+				if (FAILED(result))
+				{
+					LOG_ERROR("D3D11RenderPipeline::init(): Failed to get adapter parent.")
+					return false;
+				}
+				adapter->Release();
+			}
+			m_dxgiDevice->Release();
+		}
+		else
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed to obtain DXGI Factory.")
+			return false;
+		}
+		return true;
+	}
+
+	bool makeWindowAssociation()
+	{
+		HRESULT result = m_dxgiFactory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create associate HWND {} with DXGI Factory.",
 			          (int32)m_hwnd)
 			return false;
 		}
-		dxgiFactory->Release();
+		m_dxgiFactory->Release();
+		return true;
+	}
 
-		// Create a render target view
-
-		result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_frameBuffer));
+	bool createFrameBuffer()
+	{
+		HRESULT result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_frameBuffer));
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create backbuffer ({}).", formatHResult(result))
 			return false;
 		}
+		return true;
+	}
 
-		result = m_device->CreateRenderTargetView(m_frameBuffer, nullptr, &m_renderTargetView);
+	bool createRenderTargetView()
+	{
+		HRESULT result = m_device->CreateRenderTargetView(m_frameBuffer, nullptr, &m_renderTargetView);
 		m_frameBuffer->Release();
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create render target view ({}).", formatHResult(result))
 			return false;
 		}
+		return true;
+	}
 
-		// Create shaders
-
-		result = createShader("VTX", "VertexShader.hlsl", EShaderType::VertexShader);
+	bool createShaders()
+	{
+		HRESULT result = createShader("VTX", "VertexShader.hlsl", EShaderType::VertexShader);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex shader ({}).", formatHResult(result))
@@ -265,7 +277,11 @@ public:
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating input layout ({}).", formatHResult(result));
 			return false;
 		}
+		return true;
+	}
 
+	bool createDepthBuffer()
+	{
 		// Depth buffer
 		D3D11_TEXTURE2D_DESC depthTextureDesc;
 		ZeroMemory(&depthTextureDesc, sizeof(depthTextureDesc));
@@ -280,7 +296,7 @@ public:
 		depthTextureDesc.CPUAccessFlags   = 0;
 		depthTextureDesc.MiscFlags        = 0;
 
-		result = m_device->CreateTexture2D(&depthTextureDesc, nullptr, &m_depthStencilTexture);
+		HRESULT result = m_device->CreateTexture2D(&depthTextureDesc, nullptr, &m_depthStencilTexture);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil texture ({}).",
@@ -324,6 +340,11 @@ public:
 			return false;
 		}
 
+		return true;
+	}
+
+	bool createConstantBuffer()
+	{
 		// Constant Buffer to pass camera properties to the shaders
 		// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
 		D3D11_BUFFER_DESC constantDataBufferDesc;
@@ -334,7 +355,7 @@ public:
 		constantDataBufferDesc.MiscFlags           = 0;
 		constantDataBufferDesc.StructureByteStride = 0;
 
-		result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, &m_constantDataBuffer);
+		HRESULT result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, &m_constantDataBuffer);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating the camera constant buffer ({}).",
@@ -342,6 +363,25 @@ public:
 			return false;
 		}
 		m_deviceContext->VSSetConstantBuffers(0, 1, &m_constantDataBuffer);
+		return true;
+	}
+
+	/** https://walbourn.github.io/anatomy-of-direct3d-11-create-device/ **/
+	/** https://antongerdelan.net/opengl/d3d11.html **/
+	bool init(void* windowHandle) override
+	{
+		m_hwnd = (HWND)windowHandle;
+		ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
+
+		CHECK_RESULT(createDevice())
+		CHECK_RESULT(createDxgiDevice())
+		CHECK_RESULT(createSwapChain())
+		CHECK_RESULT(makeWindowAssociation())
+		CHECK_RESULT(createFrameBuffer())
+		CHECK_RESULT(createRenderTargetView())
+		CHECK_RESULT(createShaders())
+		CHECK_RESULT(createDepthBuffer())
+		CHECK_RESULT(createConstantBuffer())
 
 		return true;
 	}
