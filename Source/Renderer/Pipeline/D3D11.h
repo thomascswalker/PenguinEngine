@@ -94,12 +94,15 @@ class D3D11RenderPipeline : public IRenderPipeline
 
 	/** Boilerplate D3D11 **/
 
-	D3D_FEATURE_LEVEL m_featureLevel            = D3D_FEATURE_LEVEL_11_0;
-	ComPtr<IDXGISwapChain> m_swapChain          = nullptr;
-	ComPtr<ID3D11Device> m_device               = nullptr;
-	ComPtr<ID3D11DeviceContext> m_deviceContext = nullptr;
-	ID3D11Texture2D* m_frameBuffer              = nullptr;
-	ID3D11RenderTargetView* m_renderTargetView  = nullptr;
+	D3D_FEATURE_LEVEL m_featureLevel             = D3D_FEATURE_LEVEL_11_0;
+	ComPtr<IDXGISwapChain> m_swapChain           = nullptr;
+	ComPtr<ID3D11Device> m_device                = nullptr;
+	ComPtr<ID3D11DeviceContext> m_deviceContext  = nullptr;
+	ID3D11Texture2D* m_frameBuffer               = nullptr;
+	ID3D11DepthStencilView* m_depthBuffer        = nullptr;
+	ID3D11Texture2D* m_depthStencilTexture       = nullptr;
+	ID3D11DepthStencilState* m_depthStencilState = nullptr;
+	ID3D11RenderTargetView* m_renderTargetView   = nullptr;
 
 	/** Vertex & Index Buffer **/
 
@@ -181,8 +184,8 @@ public:
 		// Create the swap chain
 		DXGI_SWAP_CHAIN_DESC swapChainDesc               = {};
 		swapChainDesc.BufferCount                        = 1; // 1 Front and back buffer
-		swapChainDesc.BufferDesc.Width                   = m_width;
-		swapChainDesc.BufferDesc.Height                  = m_height;
+		swapChainDesc.BufferDesc.Width                   = g_defaultViewportWidth;
+		swapChainDesc.BufferDesc.Height                  = g_defaultViewportHeight;
 		swapChainDesc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swapChainDesc.BufferDesc.RefreshRate.Numerator   = 60;
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
@@ -263,6 +266,65 @@ public:
 			return false;
 		}
 
+		// Depth buffer
+		D3D11_TEXTURE2D_DESC depthTextureDesc;
+		ZeroMemory(&depthTextureDesc, sizeof(depthTextureDesc));
+		depthTextureDesc.Width            = g_defaultViewportWidth;
+		depthTextureDesc.Height           = g_defaultViewportHeight;
+		depthTextureDesc.MipLevels        = 1;
+		depthTextureDesc.ArraySize        = 1;
+		depthTextureDesc.SampleDesc.Count = 1;
+		depthTextureDesc.Format           = DXGI_FORMAT_D32_FLOAT;
+		depthTextureDesc.BindFlags        = D3D11_BIND_DEPTH_STENCIL;
+		depthTextureDesc.Usage            = D3D11_USAGE_DEFAULT;
+		depthTextureDesc.CPUAccessFlags   = 0;
+		depthTextureDesc.MiscFlags        = 0;
+
+		result = m_device->CreateTexture2D(&depthTextureDesc, nullptr, &m_depthStencilTexture);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil texture ({}).",
+			          formatHResult(result));
+			return false;
+		}
+
+		D3D11_DEPTH_STENCIL_DESC dsDesc;
+		ZeroMemory(&dsDesc, sizeof(dsDesc));
+
+		// Depth test parameters
+		dsDesc.DepthEnable      = true;
+		dsDesc.DepthWriteMask   = D3D11_DEPTH_WRITE_MASK_ALL;
+		dsDesc.DepthFunc        = D3D11_COMPARISON_LESS;
+		dsDesc.StencilEnable    = false;
+		dsDesc.StencilReadMask  = D3D11_DEFAULT_STENCIL_READ_MASK;
+		dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+
+		result = m_device->CreateDepthStencilState(&dsDesc, &m_depthStencilState);
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil state ({}).", formatHResult(result));
+			return false;
+		}
+		m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
+
+		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
+		depthStencilViewDesc.Format             = DXGI_FORMAT_D32_FLOAT;
+		depthStencilViewDesc.Flags              = 0;
+		depthStencilViewDesc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
+		depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+		// Create the depth stencil view
+		result = m_device->CreateDepthStencilView(m_depthStencilTexture, // Depth stencil texture
+		                                          &depthStencilViewDesc, // Depth stencil desc
+		                                          &m_depthBuffer);       // [out] Depth stencil view
+		if (FAILED(result))
+		{
+			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil view ({}).",
+			          formatHResult(result));
+			return false;
+		}
+
+		// Constant Buffer to pass camera properties to the shaders
 		// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
 		D3D11_BUFFER_DESC constantDataBufferDesc;
 		constantDataBufferDesc.Usage               = D3D11_USAGE_DEFAULT;
@@ -280,9 +342,6 @@ public:
 			return false;
 		}
 		m_deviceContext->VSSetConstantBuffers(0, 1, &m_constantDataBuffer);
-
-		// Always 4x4 float matrix
-		m_cameraMvp = PlatformMemory::malloc<float>(16 * sizeof(float));
 
 		return true;
 	}
@@ -313,17 +372,18 @@ public:
 		rasterDesc.DepthBias             = 0;
 		rasterDesc.DepthBiasClamp        = 0.0f;
 		rasterDesc.FrontCounterClockwise = true;
-		HRESULT result                   = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
+
+		HRESULT result = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::beginDraw(): Failed creating rasterizer state ({}).",
 			          formatHResult(result));
-			return;
+			assert(false);
 		}
 		m_deviceContext->RSSetState(rasterState);
 
-		// Set the render target
-		m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr);
+		// At the end, set the render targets to the main framebuffer and the depthbuffer
+		m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr); // m_depthBuffer
 
 		// Associate the vertex and index buffers with the device context
 		m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -352,7 +412,14 @@ public:
 		}
 	}
 
-	void endDraw() override {}
+	void endDraw() override
+	{
+		// Clear the depth buffer
+		if (m_depthBuffer != nullptr)
+		{
+			m_deviceContext->ClearDepthStencilView(m_depthBuffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		}
+	}
 
 	void shutdown() override
 	{
