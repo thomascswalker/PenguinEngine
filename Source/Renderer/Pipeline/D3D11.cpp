@@ -2,15 +2,17 @@
 
 #include <d3dcompiler.h>
 #include <directxcolors.h>
+#include <filesystem>
 
 bool D3D11RenderPipeline::createDevice()
 {
 	DWORD createDeviceFlags = 0;
 #ifdef _DEBUG
-		createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 	HRESULT result = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, nullptr, 0,
-	                                   D3D11_SDK_VERSION, &m_device, &m_featureLevel, &m_deviceContext);
+	                                   D3D11_SDK_VERSION, m_device.GetAddressOf(), &m_featureLevel,
+	                                   m_deviceContext.GetAddressOf());
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create create device.")
@@ -36,13 +38,13 @@ bool D3D11RenderPipeline::createSwapChain()
 	swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
 	swapChainDesc.Windowed                           = TRUE;
 
-	HRESULT result = m_dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, &m_swapChain);
+	HRESULT result = m_dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, m_swapChain.GetAddressOf());
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create swap chain ({}).", formatHResult(result))
 		return false;
 	}
-	m_initialized = true;
+
 	return true;
 }
 
@@ -89,7 +91,8 @@ bool D3D11RenderPipeline::makeWindowAssociation()
 
 bool D3D11RenderPipeline::createFrameBuffer()
 {
-	HRESULT result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&m_frameBuffer));
+	HRESULT result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
+	                                        reinterpret_cast<void**>(m_frameBuffer.GetAddressOf()));
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create backbuffer ({}).", formatHResult(result))
@@ -100,8 +103,7 @@ bool D3D11RenderPipeline::createFrameBuffer()
 
 bool D3D11RenderPipeline::createRenderTargetView()
 {
-	HRESULT result = m_device->CreateRenderTargetView(m_frameBuffer, nullptr, &m_renderTargetView);
-	m_frameBuffer->Release();
+	HRESULT result = m_device->CreateRenderTargetView(m_frameBuffer.Get(), nullptr, m_renderTargetView.GetAddressOf());
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create render target view ({}).", formatHResult(result))
@@ -186,7 +188,7 @@ bool D3D11RenderPipeline::createDepthBuffer()
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil state ({}).", formatHResult(result));
 		return false;
 	}
-	m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
+	m_deviceContext->OMSetDepthStencilState(m_depthStencilState.Get(), 1);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	depthStencilViewDesc.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -195,9 +197,9 @@ bool D3D11RenderPipeline::createDepthBuffer()
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
 	// Create the depth stencil view
-	result = m_device->CreateDepthStencilView(m_depthStencilTexture, // Depth stencil texture
-	                                          &depthStencilViewDesc, // Depth stencil desc
-	                                          &m_depthBuffer);       // [out] Depth stencil view
+	result = m_device->CreateDepthStencilView(m_depthStencilTexture.Get(), // Depth stencil texture
+	                                          &depthStencilViewDesc,       // Depth stencil desc
+	                                          &m_depthBuffer);             // [out] Depth stencil view
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil view ({}).",
@@ -220,14 +222,14 @@ bool D3D11RenderPipeline::createConstantBuffer()
 	constantDataBufferDesc.MiscFlags           = 0;
 	constantDataBufferDesc.StructureByteStride = 0;
 
-	HRESULT result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, &m_constantDataBuffer);
+	HRESULT result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, m_constantDataBuffer.GetAddressOf());
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating the camera constant buffer ({}).",
 		          formatHResult(result));
 		return false;
 	}
-	m_deviceContext->VSSetConstantBuffers(0, 1, &m_constantDataBuffer);
+	m_deviceContext->VSSetConstantBuffers(0, 1, m_constantDataBuffer.GetAddressOf());
 	return true;
 }
 
@@ -246,6 +248,8 @@ bool D3D11RenderPipeline::init(void* windowHandle)
 	CHECK_RESULT(createDepthBuffer())
 	CHECK_RESULT(createConstantBuffer())
 
+	m_initialized = true;
+
 	return true;
 }
 
@@ -256,7 +260,7 @@ void D3D11RenderPipeline::beginDraw()
 		LOG_ERROR("D3D11RenderPipeline::beginDraw(): Pipeline is not initialized.")
 		assert(false);
 	}
-	m_deviceContext->ClearRenderTargetView(m_renderTargetView, DirectX::Colors::Black);
+	m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), DirectX::Colors::Black);
 
 	// Create the viewport
 	RECT winRect;
@@ -286,12 +290,12 @@ void D3D11RenderPipeline::beginDraw()
 	m_deviceContext->RSSetState(rasterState);
 
 	// At the end, set the render targets to the main framebuffer and the depthbuffer
-	m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr); // m_depthBuffer
+	m_deviceContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr); // m_depthBuffer
 
 	// Associate the vertex and index buffers with the device context
 	m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_deviceContext->IASetInputLayout(m_inputLayout);
-	m_deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &m_vertexStride, &m_vertexOffset);
+	m_deviceContext->IASetInputLayout(m_inputLayout.Get());
+	m_deviceContext->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_vertexStride, &m_vertexOffset);
 
 	// Set the vertex and pixel shaders on the device context
 	if (m_vertexShader->m_shaderPtr)
@@ -320,7 +324,7 @@ void D3D11RenderPipeline::endDraw()
 	// Clear the depth buffer
 	if (m_depthBuffer != nullptr)
 	{
-		m_deviceContext->ClearDepthStencilView(m_depthBuffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		m_deviceContext->ClearDepthStencilView(m_depthBuffer.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	}
 }
 
@@ -360,7 +364,7 @@ void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 	std::memcpy(data.projection, newViewData->projectionMatrix.m, sizeof(mat4f));
 	std::memcpy(data.cameraDirection, newViewData->cameraDirection.xyz, sizeof(vec3f));
 
-	m_deviceContext->UpdateSubresource(m_constantDataBuffer, 0, nullptr, &data, 0, 0);
+	m_deviceContext->UpdateSubresource(m_constantDataBuffer.Get(), 0, nullptr, &data, 0, 0);
 }
 
 void D3D11RenderPipeline::setRenderSettings(RenderSettings* newRenderSettings) {}
@@ -452,7 +456,7 @@ HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR 
 
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
-		flags |= D3DCOMPILE_DEBUG;
+	flags |= D3DCOMPILE_DEBUG;
 #endif
 
 	ID3DBlob* shaderBlob = nullptr;
@@ -502,7 +506,7 @@ void D3D11RenderPipeline::setVertexData(float* data, size_t size, int32 count)
 	vertexSubResourceData.pSysMem                = m_vertexDataArray;
 
 	m_vertexBuffer = nullptr;
-	HRESULT result = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubResourceData, &m_vertexBuffer);
+	HRESULT result = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubResourceData, m_vertexBuffer.GetAddressOf());
 	if (FAILED(result))
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));

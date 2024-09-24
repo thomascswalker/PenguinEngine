@@ -5,16 +5,14 @@
 #pragma comment(lib, "dxgi.lib")		// directx graphics interface
 #pragma comment(lib, "d3dcompiler.lib") // shader compiler
 
-#include <filesystem>
-#include <map>
-
-#include <Windows.h>
-#include <wrl/client.h>
-#include <comdef.h>
 #include <atlstr.h>
-
+#include <comdef.h>
 #include <d3d11_1.h>
 #include <dxgi.h>
+#include <map>
+#include <Windows.h>
+
+#include <wrl/client.h>
 
 #include "RenderPipeline.h"
 
@@ -99,44 +97,44 @@ class D3D11RenderPipeline : public IRenderPipeline
 
 	/** Boilerplate D3D11 **/
 
-	D3D_FEATURE_LEVEL m_featureLevel             = D3D_FEATURE_LEVEL_11_0;
-	ComPtr<IDXGIFactory1> m_dxgiFactory          = nullptr;
-	ComPtr<IDXGIDevice> m_dxgiDevice             = nullptr;
-	ComPtr<IDXGISwapChain> m_swapChain           = nullptr;
-	ComPtr<ID3D11Device> m_device                = nullptr;
-	ComPtr<ID3D11DeviceContext> m_deviceContext  = nullptr;
-	ID3D11Texture2D* m_frameBuffer               = nullptr;
-	ID3D11DepthStencilView* m_depthBuffer        = nullptr;
-	ID3D11Texture2D* m_depthStencilTexture       = nullptr;
-	ID3D11DepthStencilState* m_depthStencilState = nullptr;
-	ID3D11RenderTargetView* m_renderTargetView   = nullptr;
+	D3D_FEATURE_LEVEL m_featureLevel                    = D3D_FEATURE_LEVEL_11_0;
+	ComPtr<IDXGIFactory1> m_dxgiFactory                 = nullptr;
+	ComPtr<IDXGIDevice> m_dxgiDevice                    = nullptr;
+	ComPtr<IDXGISwapChain> m_swapChain                  = nullptr;
+	ComPtr<ID3D11Device> m_device                       = nullptr;
+	ComPtr<ID3D11DeviceContext> m_deviceContext         = nullptr;
+	ComPtr<ID3D11Texture2D> m_frameBuffer               = nullptr;
+	ComPtr<ID3D11DepthStencilView> m_depthBuffer        = nullptr;
+	ComPtr<ID3D11Texture2D> m_depthStencilTexture       = nullptr;
+	ComPtr<ID3D11DepthStencilState> m_depthStencilState = nullptr;
+	ComPtr<ID3D11RenderTargetView> m_renderTargetView   = nullptr;
 
 	/** Vertex & Index Buffer **/
 
-	ID3D11Buffer* m_vertexBuffer = nullptr;
-	float* m_vertexDataArray     = nullptr;
-	size_t m_vertexDataSize      = 0;
-	uint32 m_vertexStride        = 6 * sizeof(float); // (Pos.XYZ + Norm.XYZ) * 4 = 24
-	uint32 m_vertexOffset        = 0;
-	uint32 m_vertexCount         = 0;
+	ComPtr<ID3D11Buffer> m_vertexBuffer = nullptr;
+	float* m_vertexDataArray            = nullptr;
+	size_t m_vertexDataSize             = 0;
+	uint32 m_vertexStride               = 6 * sizeof(float); // (Pos.XYZ + Norm.XYZ) * 4 = 24
+	uint32 m_vertexOffset               = 0;
+	uint32 m_vertexCount                = 0;
 
-	ID3D11Buffer* m_indexBuffer = nullptr;
-	uint32* m_indexDataArray    = nullptr;
-	size_t m_indexDataSize      = 0;
-	uint32 m_indexStride        = 3 * sizeof(int32);
-	uint32 m_indexOffset        = 0;
-	uint32 m_indexCount         = 0;
+	ComPtr<ID3D11Buffer> m_indexBuffer = nullptr;
+	uint32* m_indexDataArray           = nullptr;
+	size_t m_indexDataSize             = 0;
+	uint32 m_indexStride               = 3 * sizeof(int32);
+	uint32 m_indexOffset               = 0;
+	uint32 m_indexCount                = 0;
 
 	/** Shaders **/
 
-	ID3D11InputLayout* m_inputLayout = nullptr;
 	std::map<const char*, Shader*> m_shaders;
-	D3D11VertexShader* m_vertexShader = nullptr;
-	D3D11PixelShader* m_pixelShader   = nullptr;
+	ComPtr<ID3D11InputLayout> m_inputLayout = nullptr;
+	D3D11VertexShader* m_vertexShader       = nullptr;
+	D3D11PixelShader* m_pixelShader         = nullptr;
 
 	/** Camera **/
-	ID3D11Buffer* m_constantDataBuffer = nullptr;
-	float* m_cameraMvp                 = nullptr;
+	ComPtr<ID3D11Buffer> m_constantDataBuffer = nullptr;
+	float* m_cameraMvp                        = nullptr;
 
 public:
 	~D3D11RenderPipeline() override = default;
