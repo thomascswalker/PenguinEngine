@@ -76,9 +76,6 @@ void Viewport::resetView() const
 
 void Viewport::draw()
 {
-	// Recalculate the view-projection matrix of the camera
-	m_camera->computeViewProjectionMatrix();
-
 	if (m_renderPipeline != nullptr)
 	{
 		// Transfer render settings
@@ -130,6 +127,7 @@ void Viewport::updateSceneGeometry() const
 {
 	std::vector<float> vertArray;
 	std::vector<int32> indexArray;
+	int32 vertexCount = 0;
 
 	for (const auto& mesh : g_meshes)
 	{
@@ -140,28 +138,35 @@ void Viewport::updateSceneGeometry() const
 			vertArray.push_back(v0->position.x);
 			vertArray.push_back(v0->position.y);
 			vertArray.push_back(v0->position.z);
+			vertArray.push_back(v0->normal.x);
+			vertArray.push_back(v0->normal.y);
+			vertArray.push_back(v0->normal.z);
+
 			Vertex* v1 = &tri.v1;
 			vertArray.push_back(v1->position.x);
 			vertArray.push_back(v1->position.y);
 			vertArray.push_back(v1->position.z);
+			vertArray.push_back(v1->normal.x);
+			vertArray.push_back(v1->normal.y);
+			vertArray.push_back(v1->normal.z);
+
 			Vertex* v2 = &tri.v2;
 			vertArray.push_back(v2->position.x);
 			vertArray.push_back(v2->position.y);
 			vertArray.push_back(v2->position.z);
-
-			indexArray.push_back(tri.positionIndexes[0]);
-			indexArray.push_back(tri.positionIndexes[1]);
-			indexArray.push_back(tri.positionIndexes[2]);
+			vertArray.push_back(v2->normal.x);
+			vertArray.push_back(v2->normal.y);
+			vertArray.push_back(v2->normal.z);
 		}
+		vertexCount += mesh->getPositions()->size();
 	}
 
-	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertArray.size());
-	m_renderPipeline->setIndexData(indexArray.data(), indexArray.size() * sizeof(int32), indexArray.size());
+	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertArray.size() / 2);
 }
 
 void Viewport::updateSceneCamera() const
 {
-	// Transfer camera and viewport data
+	m_camera->computeViewProjectionMatrix();
 	m_renderPipeline->setViewData(m_camera->getViewData());
 }
 

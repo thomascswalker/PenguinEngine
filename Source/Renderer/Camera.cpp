@@ -5,27 +5,27 @@
 void Camera::computeViewProjectionMatrix()
 {
 	const vec3f translation = m_spherical.toCartesian();
-	const vec3f eye = translation;
-	const vec3f center = m_target;
-	const vec3f up = vec3f::upVector();
+	const vec3f eye         = translation;
+	const vec3f center      = m_target;
+	const vec3f up          = vec3f::upVector();
 
-	m_viewMatrix = mat4f_lookat(eye, center, up);
-	m_projectionMatrix = mat4f_persp(Math::degreesToRadians(m_fov), getAspect(), m_minZ, m_maxZ);
-	m_viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
+	m_viewMatrix              = mat4f_lookat(eye, center, up);
+	m_projectionMatrix        = mat4f_persp(Math::degreesToRadians(m_fov), getAspect(), m_minZ, m_maxZ);
+	m_viewProjectionMatrix    = m_projectionMatrix * m_viewMatrix;
 	m_invViewProjectionMatrix = m_viewProjectionMatrix.getInverse();
 }
 
 void Camera::orbit(const float dx, const float dy)
 {
 	m_sphericalDelta.theta = Math::degreesToRadians(-dx); // Horizontal, not sure why dx needs to be negated
-	m_sphericalDelta.phi = Math::degreesToRadians(dy); // Vertical
+	m_sphericalDelta.phi   = Math::degreesToRadians(dy);  // Vertical
 }
 
 void Camera::pan(const float dx, const float dy)
 {
 	// Compute target distance
 	const vec3f position = getTranslation();
-	const vec3f offset = position - m_target;
+	const vec3f offset   = position - m_target;
 
 	// The length of the Offset vector gives us the distance from the camera to the target.
 	float targetDistance = offset.length();
@@ -50,10 +50,10 @@ void Camera::pan(const float dx, const float dy)
 
 void Camera::zoom(const float value)
 {
-	vec3f translation = getTranslation();
-	m_spherical = sphericalf::fromCartesian(translation.x, translation.y, translation.z);
+	vec3f translation  = getTranslation();
+	m_spherical        = sphericalf::fromCartesian(translation.x, translation.y, translation.z);
 	m_spherical.radius = std::max(m_minZoom, std::min(m_spherical.radius - (value * 0.1f), m_maxZoom));
-	translation = m_spherical.toCartesian();
+	translation        = m_spherical.toCartesian();
 	setTranslation(translation);
 }
 
@@ -66,7 +66,7 @@ void Camera::update(float deltaTime)
 {
 	// Get the offset from the current camera position to the target position
 	const vec3f position = getTranslation();
-	vec3f offset = position - m_target;
+	vec3f offset         = position - m_target;
 
 	// Convert offset to spherical coordinates
 	m_spherical = sphericalf::fromCartesian(offset.x, offset.y, offset.z);
@@ -82,8 +82,8 @@ void Camera::update(float deltaTime)
 	// Set camera rotation pitch/yaw
 	const rotf newRotation(
 		Math::radiansToDegrees(m_spherical.theta), // yaw
-		Math::radiansToDegrees(m_spherical.phi), // pitch
-		0.0f // roll
+		Math::radiansToDegrees(m_spherical.phi),   // pitch
+		0.0f                                       // roll
 	);
 	setRotation(newRotation);
 
@@ -118,7 +118,7 @@ void Camera::deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPos
 
 	//
 	const vec4f homoRayStartWorldSpace = m_invViewProjectionMatrix * rayStartProjectionSpace;
-	const vec4f homoRayEndWorldSpace = m_invViewProjectionMatrix * rayEndProjectionSpace;
+	const vec4f homoRayEndWorldSpace   = m_invViewProjectionMatrix * rayEndProjectionSpace;
 	vec3f rayStartWorldSpace(homoRayStartWorldSpace.x, homoRayStartWorldSpace.y, homoRayStartWorldSpace.z);
 	vec3f rayEndWorldSpace(homoRayEndWorldSpace.x, homoRayEndWorldSpace.y, homoRayEndWorldSpace.z);
 
@@ -132,8 +132,8 @@ void Camera::deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPos
 	}
 
 	vec3f rayDirWorldSpace = rayEndWorldSpace - rayStartWorldSpace;
-	rayDirWorldSpace = rayDirWorldSpace.normalized();
+	rayDirWorldSpace       = rayDirWorldSpace.normalized();
 
-	outWorldPosition = vec3f{rayStartWorldSpace.x, rayStartWorldSpace.y, rayStartWorldSpace.z};
+	outWorldPosition  = vec3f{rayStartWorldSpace.x, rayStartWorldSpace.y, rayStartWorldSpace.z};
 	outWorldDirection = vec3f{rayDirWorldSpace.x, rayDirWorldSpace.y, rayDirWorldSpace.z};
 }

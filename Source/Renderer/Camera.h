@@ -47,6 +47,7 @@ struct ViewData
 
 	mat4f projectionMatrix;
 	mat4f viewMatrix;
+	mat4f modelMatrix;
 	mat4f viewProjectionMatrix;
 	mat4f invViewProjectionMatrix;
 

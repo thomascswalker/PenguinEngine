@@ -35,9 +35,14 @@ inline const char* formatHResult(const HRESULT err)
 	return errMsgP;
 }
 
-struct MVPMatrix
+// 268 bytes (aligned as 272)
+struct ConstantData
 {
-	DirectX::XMMATRIX mvp;
+	float mvp[4][4];          // 64 bytes
+	float model[4][4];        // 64 bytes
+	float view[4][4];         // 64 bytes
+	float projection[4][4];   // 64 bytes
+	float cameraDirection[3]; // 12 bytes
 };
 
 class D3D11VertexShader : public VertexShader
@@ -101,7 +106,7 @@ class D3D11RenderPipeline : public IRenderPipeline
 	ID3D11Buffer* m_vertexBuffer = nullptr;
 	float* m_vertexDataArray     = nullptr;
 	size_t m_vertexDataSize      = 0;
-	uint32 m_vertexStride        = 3 * sizeof(float); // XYZ * 4 = 12
+	uint32 m_vertexStride        = 6 * sizeof(float); // (Pos.XYZ + Norm.XYZ) * 4 = 24
 	uint32 m_vertexOffset        = 0;
 	uint32 m_vertexCount         = 0;
 
@@ -120,8 +125,8 @@ class D3D11RenderPipeline : public IRenderPipeline
 	D3D11PixelShader* m_pixelShader   = nullptr;
 
 	/** Camera **/
-	ComPtr<ID3D11Buffer> m_cameraBuffer = nullptr;
-	float* m_cameraMvp                  = nullptr;
+	ID3D11Buffer* m_constantDataBuffer = nullptr;
+	float* m_cameraMvp                 = nullptr;
 
 public:
 	~D3D11RenderPipeline() override = default;
@@ -243,6 +248,7 @@ public:
 		// Create input layout
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
 			{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 		};
 		result = m_device->CreateInputLayout(
 			inputElementDesc,
@@ -258,22 +264,22 @@ public:
 		}
 
 		// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
-		D3D11_BUFFER_DESC cameraBufferDesc;
-		cameraBufferDesc.Usage               = D3D11_USAGE_DEFAULT;
-		cameraBufferDesc.ByteWidth           = 16 * sizeof(float);
-		cameraBufferDesc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
-		cameraBufferDesc.CPUAccessFlags      = 0;
-		cameraBufferDesc.MiscFlags           = 0;
-		cameraBufferDesc.StructureByteStride = 0;
+		D3D11_BUFFER_DESC constantDataBufferDesc;
+		constantDataBufferDesc.Usage               = D3D11_USAGE_DEFAULT;
+		constantDataBufferDesc.ByteWidth           = 272; // see ConstantBuffer, size 204 but needs to be multiple of 16
+		constantDataBufferDesc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
+		constantDataBufferDesc.CPUAccessFlags      = 0;
+		constantDataBufferDesc.MiscFlags           = 0;
+		constantDataBufferDesc.StructureByteStride = 0;
 
-		result = m_device->CreateBuffer(&cameraBufferDesc, nullptr, &m_cameraBuffer);
+		result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, &m_constantDataBuffer);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed creating the camera constant buffer ({}).",
 			          formatHResult(result));
 			return false;
 		}
-		m_deviceContext->VSSetConstantBuffers(0, 1, m_cameraBuffer.GetAddressOf());
+		m_deviceContext->VSSetConstantBuffers(0, 1, &m_constantDataBuffer);
 
 		// Always 4x4 float matrix
 		m_cameraMvp = PlatformMemory::malloc<float>(16 * sizeof(float));
@@ -301,9 +307,13 @@ public:
 		// Set culling
 		ID3D11RasterizerState* rasterState;
 		D3D11_RASTERIZER_DESC rasterDesc{};
-		rasterDesc.CullMode = D3D11_CULL_NONE;
-		rasterDesc.FillMode = D3D11_FILL_SOLID;
-		HRESULT result      = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
+		rasterDesc.CullMode              = D3D11_CULL_BACK;
+		rasterDesc.FillMode              = D3D11_FILL_SOLID;
+		rasterDesc.DepthClipEnable       = false;
+		rasterDesc.DepthBias             = 0;
+		rasterDesc.DepthBiasClamp        = 0.0f;
+		rasterDesc.FrontCounterClockwise = true;
+		HRESULT result                   = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::beginDraw(): Failed creating rasterizer state ({}).",
@@ -315,11 +325,10 @@ public:
 		// Set the render target
 		m_deviceContext->OMSetRenderTargets(1, &m_renderTargetView, nullptr);
 
-		// Associate the vertex buffer with the device context
+		// Associate the vertex and index buffers with the device context
 		m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_deviceContext->IASetInputLayout(m_inputLayout);
 		m_deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &m_vertexStride, &m_vertexOffset);
-		m_deviceContext->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 		// Set the vertex and pixel shaders on the device context
 		if (m_vertexShader->m_shaderPtr)
@@ -334,7 +343,7 @@ public:
 
 	void draw() override
 	{
-		m_deviceContext->DrawIndexed(m_indexCount, 0, 0);
+		m_deviceContext->Draw(m_vertexCount, 0);
 		HRESULT result = m_swapChain->Present(1, 0);
 		if (FAILED(result))
 		{
@@ -374,11 +383,14 @@ public:
 
 	void setViewData(ViewData* newViewData) override
 	{
-		// auto transposed      = newViewData->viewProjectionMatrix.getTranspose();
-		const float* mvpData = (float*)&newViewData->viewProjectionMatrix.m;
-		MVPMatrix mvp;
-		mvp.mvp = DirectX::XMMATRIX(mvpData);
-		m_deviceContext->UpdateSubresource(m_cameraBuffer.Get(), 0, nullptr, &mvp, 0, 0);
+		ConstantData data;
+		std::memcpy(data.mvp, newViewData->viewProjectionMatrix.m, sizeof(mat4f));
+		std::memcpy(data.model, newViewData->modelMatrix.m, sizeof(mat4f));
+		std::memcpy(data.view, newViewData->viewMatrix.m, sizeof(mat4f));
+		std::memcpy(data.projection, newViewData->projectionMatrix.m, sizeof(mat4f));
+		std::memcpy(data.cameraDirection, newViewData->cameraDirection.xyz, sizeof(vec3f));
+
+		m_deviceContext->UpdateSubresource(m_constantDataBuffer, 0, nullptr, &data, 0, 0);
 	}
 
 	void setRenderSettings(RenderSettings* newRenderSettings) override {}
@@ -514,7 +526,7 @@ public:
 		D3D11_BUFFER_DESC vertexBufferDesc           = {};
 		D3D11_SUBRESOURCE_DATA vertexSubResourceData = {nullptr};
 		vertexBufferDesc.ByteWidth                   = m_vertexDataSize;
-		vertexBufferDesc.Usage                       = D3D11_USAGE_IMMUTABLE;
+		vertexBufferDesc.Usage                       = D3D11_USAGE_DEFAULT;
 		vertexBufferDesc.BindFlags                   = D3D11_BIND_VERTEX_BUFFER;
 		vertexSubResourceData.pSysMem                = m_vertexDataArray;
 
@@ -523,28 +535,6 @@ public:
 		if (FAILED(result))
 		{
 			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
-		}
-	}
-
-	void setIndexData(int32* data, size_t size, int32 count) override
-	{
-		m_indexDataArray = (uint32*)PlatformMemory::malloc(size);
-		std::memcpy(m_indexDataArray, data, size);
-		m_indexDataSize = size;
-		m_indexCount    = count;
-
-		D3D11_BUFFER_DESC bufferDesc           = {};
-		D3D11_SUBRESOURCE_DATA subResourceData = {nullptr};
-		bufferDesc.ByteWidth                   = m_indexDataSize;
-		bufferDesc.Usage                       = D3D11_USAGE_IMMUTABLE;
-		bufferDesc.BindFlags                   = D3D11_BIND_INDEX_BUFFER;
-		subResourceData.pSysMem                = m_indexDataArray;
-
-		m_indexBuffer  = nullptr;
-		HRESULT result = m_device->CreateBuffer(&bufferDesc, &subResourceData, &m_indexBuffer);
-		if (FAILED(result))
-		{
-			LOG_ERROR("D3D11RenderPipeline::init(): Failed to create index buffer ({}).", formatHResult(result));
 		}
 	}
 };

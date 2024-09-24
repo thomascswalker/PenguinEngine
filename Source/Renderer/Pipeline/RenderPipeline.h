@@ -31,7 +31,6 @@ public:
 	virtual void setRenderSettings(RenderSettings* newRenderSettings) = 0;
 
 	virtual void setVertexData(float* data, size_t size, int32 count) = 0;
-	virtual void setIndexData(int32* data, size_t size, int32 count) = 0;
 };
 
 class ScanlineRenderPipeline;
