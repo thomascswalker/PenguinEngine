@@ -4,8 +4,11 @@
 #include <directxcolors.h>
 #include <filesystem>
 
+using namespace DirectX;
+
 bool D3D11RenderPipeline::createDevice()
 {
+	LOG_DEBUG("Creating D3D11 Device.")
 	DWORD createDeviceFlags = 0;
 #ifdef _DEBUG
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -13,17 +16,27 @@ bool D3D11RenderPipeline::createDevice()
 	HRESULT result = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, nullptr, 0,
 	                                   D3D11_SDK_VERSION, m_device.GetAddressOf(), &m_featureLevel,
 	                                   m_deviceContext.GetAddressOf());
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create create device.")
-		return false;
-	}
+	CHECK_HR(result, "Failed to create create device.")
 
 	return true;
 }
 
 bool D3D11RenderPipeline::createSwapChain()
 {
+	LOG_DEBUG("Creating D3D11 Swap Chain.")
+	IDXGIDevice* dxgiDevice   = nullptr;
+	IDXGIFactory* dxgiFactory = nullptr;
+	IDXGIAdapter* dxgiAdapter = nullptr;
+
+	HRESULT result = m_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice);
+	CHECK_HR(result, "Failed to obtain DXGI device");
+
+	result = dxgiDevice->GetAdapter(&dxgiAdapter);
+	CHECK_HR(result, "Failed to obtain DXGI adapter");
+
+	result = dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
+	CHECK_HR(result, "Failed to get adapter parent");
+
 	DXGI_SWAP_CHAIN_DESC swapChainDesc               = {};
 	swapChainDesc.BufferCount                        = 1; // 1 Front and back buffer
 	swapChainDesc.BufferDesc.Width                   = g_defaultViewportWidth;
@@ -33,99 +46,46 @@ bool D3D11RenderPipeline::createSwapChain()
 	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 	swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.OutputWindow                       = m_hwnd;
-	swapChainDesc.SampleDesc.Count                   = 1;
-	swapChainDesc.SampleDesc.Quality                 = 0;
+	swapChainDesc.SampleDesc                         = DXGI_SAMPLE_DESC(m_sampleCount, m_sampleQuality);
 	swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
 	swapChainDesc.Windowed                           = TRUE;
 
-	HRESULT result = m_dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, m_swapChain.GetAddressOf());
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create swap chain ({}).", formatHResult(result))
-		return false;
-	}
+	result = dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, m_swapChain.GetAddressOf());
+	CHECK_HR(result, "Failed to create swap chain");
+
+	dxgiAdapter->Release();
+	dxgiDevice->Release();
+	dxgiFactory->Release();
+
+	CHECK_RESULT(createBackBuffer())
 
 	return true;
 }
 
-bool D3D11RenderPipeline::createDxgiDevice()
+bool D3D11RenderPipeline::createBackBuffer()
 {
-	// Obtain DXGI Factory from the device, since we used nullptr for the pAdapter argument of D3D11CreateDevice
-	HRESULT result = m_device.As(&m_dxgiDevice);
-	if (SUCCEEDED(result))
-	{
-		IDXGIAdapter* adapter = nullptr;
-		result                = m_dxgiDevice->GetAdapter(&adapter);
-		if (SUCCEEDED(result))
-		{
-			result = adapter->GetParent(IID_PPV_ARGS(&m_dxgiFactory));
-			if (FAILED(result))
-			{
-				LOG_ERROR("D3D11RenderPipeline::init(): Failed to get adapter parent.")
-				return false;
-			}
-			adapter->Release();
-		}
-		m_dxgiDevice->Release();
-	}
-	else
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to obtain DXGI Factory.")
-		return false;
-	}
-	return true;
-}
-
-bool D3D11RenderPipeline::makeWindowAssociation()
-{
-	HRESULT result = m_dxgiFactory->MakeWindowAssociation(m_hwnd, DXGI_MWA_NO_ALT_ENTER);
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create associate HWND {} with DXGI Factory.",
-		          (int32)m_hwnd)
-		return false;
-	}
-	m_dxgiFactory->Release();
-	return true;
-}
-
-bool D3D11RenderPipeline::createFrameBuffer()
-{
+	LOG_DEBUG("Creating D3D11 Frame Buffer.")
 	HRESULT result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
-	                                        reinterpret_cast<void**>(m_frameBuffer.GetAddressOf()));
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create backbuffer ({}).", formatHResult(result))
-		return false;
-	}
+	                                        reinterpret_cast<void**>(m_backBuffer.GetAddressOf()));
+	CHECK_HR(result, "Failed to create backbuffer");
 	return true;
 }
 
 bool D3D11RenderPipeline::createRenderTargetView()
 {
-	HRESULT result = m_device->CreateRenderTargetView(m_frameBuffer.Get(), nullptr, m_renderTargetView.GetAddressOf());
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create render target view ({}).", formatHResult(result))
-		return false;
-	}
+	LOG_DEBUG("Creating D3D11 Render Target View.")
+	HRESULT result = m_device->CreateRenderTargetView(m_backBuffer.Get(), nullptr, m_renderTargetView.GetAddressOf());
+	CHECK_HR(result, "Failed to create render target view");
 	return true;
 }
 
 bool D3D11RenderPipeline::createShaders()
 {
+	LOG_DEBUG("Creating D3D11 Vertex and Pixel Shaders.")
 	HRESULT result = createShader("VTX", "VertexShader.hlsl", EShaderType::VertexShader);
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex shader ({}).", formatHResult(result))
-		return false;
-	}
+	CHECK_HR(result, "Failed to create vertex shader");
 	result = createShader("PXL", "PixelShader.hlsl", EShaderType::PixelShader);
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create pixel shader ({}).", formatHResult(result))
-		return false;
-	}
+	CHECK_HR(result, "Failed to create pixel shader");
 
 	// Create input layout
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
@@ -137,81 +97,60 @@ bool D3D11RenderPipeline::createShaders()
 		ARRAYSIZE(inputElementDesc),
 		m_vertexShader->getByteCode(),
 		m_vertexShader->getByteCodeSize(),
-		&m_inputLayout);
+		&m_vertexInputLayout);
+	CHECK_HR(result, "Failed creating vertex input layout");
 
-	if (FAILED(result))
+	// Set the vertex and pixel shaders on the device context
+	if (m_vertexShader->m_shaderPtr)
 	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating input layout ({}).", formatHResult(result));
-		return false;
+		m_deviceContext->VSSetShader(m_vertexShader->m_shaderPtr, nullptr, 0);
 	}
+	if (m_pixelShader->m_shaderPtr)
+	{
+		m_deviceContext->PSSetShader(m_pixelShader->m_shaderPtr, nullptr, 0);
+	}
+
 	return true;
 }
 
 bool D3D11RenderPipeline::createDepthBuffer()
 {
+	LOG_DEBUG("Creating D3D11 Depth Buffer.")
+
 	// Depth buffer
 	D3D11_TEXTURE2D_DESC depthTextureDesc;
-	ZeroMemory(&depthTextureDesc, sizeof(depthTextureDesc));
-	depthTextureDesc.Width            = g_defaultViewportWidth;
-	depthTextureDesc.Height           = g_defaultViewportHeight;
-	depthTextureDesc.MipLevels        = 1;
-	depthTextureDesc.ArraySize        = 1;
-	depthTextureDesc.SampleDesc.Count = 1;
-	depthTextureDesc.Format           = DXGI_FORMAT_D32_FLOAT;
-	depthTextureDesc.BindFlags        = D3D11_BIND_DEPTH_STENCIL;
-	depthTextureDesc.Usage            = D3D11_USAGE_DEFAULT;
-	depthTextureDesc.CPUAccessFlags   = 0;
-	depthTextureDesc.MiscFlags        = 0;
+	depthTextureDesc.Width          = g_defaultViewportWidth;
+	depthTextureDesc.Height         = g_defaultViewportHeight;
+	depthTextureDesc.MipLevels      = m_mipLevels;
+	depthTextureDesc.ArraySize      = 1;
+	depthTextureDesc.SampleDesc     = DXGI_SAMPLE_DESC(m_sampleCount, m_sampleQuality);
+	depthTextureDesc.Format         = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthTextureDesc.BindFlags      = D3D11_BIND_DEPTH_STENCIL;
+	depthTextureDesc.Usage          = D3D11_USAGE_DEFAULT;
+	depthTextureDesc.CPUAccessFlags = 0;
+	depthTextureDesc.MiscFlags      = 0;
 
-	HRESULT result = m_device->CreateTexture2D(&depthTextureDesc, nullptr, &m_depthStencilTexture);
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil texture ({}).",
-		          formatHResult(result));
-		return false;
-	}
+	HRESULT result = m_device->CreateTexture2D(&depthTextureDesc, nullptr, m_depthStencilTexture.GetAddressOf());
+	CHECK_HR(result, "Failed creating depth stencil texture");
 
-	D3D11_DEPTH_STENCIL_DESC dsDesc;
-	ZeroMemory(&dsDesc, sizeof(dsDesc));
-
-	// Depth test parameters
-	dsDesc.DepthEnable      = true;
-	dsDesc.DepthWriteMask   = D3D11_DEPTH_WRITE_MASK_ALL;
-	dsDesc.DepthFunc        = D3D11_COMPARISON_LESS;
-	dsDesc.StencilEnable    = false;
-	dsDesc.StencilReadMask  = D3D11_DEFAULT_STENCIL_READ_MASK;
-	dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-
-	result = m_device->CreateDepthStencilState(&dsDesc, &m_depthStencilState);
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil state ({}).", formatHResult(result));
-		return false;
-	}
-	m_deviceContext->OMSetDepthStencilState(m_depthStencilState.Get(), 1);
-
+	// Create the depth stencil view
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-	depthStencilViewDesc.Format             = DXGI_FORMAT_D32_FLOAT;
+	depthStencilViewDesc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depthStencilViewDesc.Flags              = 0;
 	depthStencilViewDesc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-	// Create the depth stencil view
-	result = m_device->CreateDepthStencilView(m_depthStencilTexture.Get(), // Depth stencil texture
-	                                          &depthStencilViewDesc,       // Depth stencil desc
-	                                          &m_depthBuffer);             // [out] Depth stencil view
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating depth stencil view ({}).",
-		          formatHResult(result));
-		return false;
-	}
-
+	result = m_device->CreateDepthStencilView(m_depthStencilTexture.Get(),        // Depth stencil texture
+	                                          &depthStencilViewDesc,              // Depth stencil desc , 
+	                                          m_depthStencilView.GetAddressOf()); // [out] Depth stencil view
+	CHECK_HR(result, "Failed creating depth stencil view");
 	return true;
 }
 
 bool D3D11RenderPipeline::createConstantBuffer()
 {
+	LOG_DEBUG("Creating D3D11 Constant Buffer.")
+
 	// Constant Buffer to pass camera properties to the shaders
 	// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
 	D3D11_BUFFER_DESC constantDataBufferDesc;
@@ -223,32 +162,70 @@ bool D3D11RenderPipeline::createConstantBuffer()
 	constantDataBufferDesc.StructureByteStride = 0;
 
 	HRESULT result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, m_constantDataBuffer.GetAddressOf());
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed creating the camera constant buffer ({}).",
-		          formatHResult(result));
-		return false;
-	}
+	CHECK_HR(result, "Failed creating the camera constant buffer");
 	m_deviceContext->VSSetConstantBuffers(0, 1, m_constantDataBuffer.GetAddressOf());
 	return true;
 }
 
 bool D3D11RenderPipeline::init(void* windowHandle)
 {
+	LOG_DEBUG("Initializing D3D11 pipeline.")
+
 	m_hwnd = (HWND)windowHandle;
 	ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
 
 	CHECK_RESULT(createDevice())
-	CHECK_RESULT(createDxgiDevice())
 	CHECK_RESULT(createSwapChain())
-	CHECK_RESULT(makeWindowAssociation())
-	CHECK_RESULT(createFrameBuffer())
 	CHECK_RESULT(createRenderTargetView())
 	CHECK_RESULT(createShaders())
 	CHECK_RESULT(createDepthBuffer())
 	CHECK_RESULT(createConstantBuffer())
+	CHECK_RESULT(createViewport())
+	CHECK_RESULT(createRasterizerState())
+
+	// At the end, set the render targets to the main frame buffer and the depth bufferd
+	LOG_DEBUG("Setting Render Targets.")
+	m_deviceContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
 
 	m_initialized = true;
+
+	return true;
+}
+
+bool D3D11RenderPipeline::createRasterizerState() const
+{
+	LOG_DEBUG("Creating D3D11 Raster State.")
+
+	ID3D11RasterizerState* rasterState;
+	D3D11_RASTERIZER_DESC rasterDesc{};
+	rasterDesc.CullMode              = D3D11_CULL_BACK;
+	rasterDesc.FillMode              = D3D11_FILL_SOLID;
+	rasterDesc.FrontCounterClockwise = false;
+	rasterDesc.DepthClipEnable       = true;
+	rasterDesc.DepthBias             = 0;
+	rasterDesc.DepthBiasClamp        = 0.0f;
+	rasterDesc.MultisampleEnable     = false;
+
+	HRESULT result = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
+	CHECK_HR(result, "Failed creating rasterizer state");
+	m_deviceContext->RSSetState(rasterState);
+
+	return true;
+}
+
+bool D3D11RenderPipeline::createViewport() const
+{
+	LOG_DEBUG("Creating D3D11 Viewport.")
+	RECT winRect;
+	GetClientRect(m_hwnd, &winRect);
+	D3D11_VIEWPORT viewport;
+	viewport.TopLeftX = 0.0f;
+	viewport.TopLeftY = 0.0f;
+	viewport.Width    = (FLOAT)(winRect.right - winRect.left);
+	viewport.Height   = (FLOAT)(winRect.bottom - winRect.top);
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	m_deviceContext->RSSetViewports(1, &viewport);
 
 	return true;
 }
@@ -260,52 +237,13 @@ void D3D11RenderPipeline::beginDraw()
 		LOG_ERROR("D3D11RenderPipeline::beginDraw(): Pipeline is not initialized.")
 		assert(false);
 	}
-	m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), DirectX::Colors::Black);
-
-	// Create the viewport
-	RECT winRect;
-	GetClientRect(m_hwnd, &winRect);
-	D3D11_VIEWPORT viewport = {
-		0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f
-	};
-	m_deviceContext->RSSetViewports(1, &viewport);
-
-	// Set culling
-	ID3D11RasterizerState* rasterState;
-	D3D11_RASTERIZER_DESC rasterDesc{};
-	rasterDesc.CullMode              = D3D11_CULL_BACK;
-	rasterDesc.FillMode              = D3D11_FILL_SOLID;
-	rasterDesc.DepthClipEnable       = false;
-	rasterDesc.DepthBias             = 0;
-	rasterDesc.DepthBiasClamp        = 0.0f;
-	rasterDesc.FrontCounterClockwise = true;
-
-	HRESULT result = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::beginDraw(): Failed creating rasterizer state ({}).",
-		          formatHResult(result));
-		assert(false);
-	}
-	m_deviceContext->RSSetState(rasterState);
-
-	// At the end, set the render targets to the main frame buffer and the depth buffer
-	m_deviceContext->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), nullptr); // m_depthBuffer
+	m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), Colors::Black);
+	m_deviceContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	// Associate the vertex and index buffers with the device context
 	m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_deviceContext->IASetInputLayout(m_inputLayout.Get());
+	m_deviceContext->IASetInputLayout(m_vertexInputLayout.Get());
 	m_deviceContext->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_vertexStride, &m_vertexOffset);
-
-	// Set the vertex and pixel shaders on the device context
-	if (m_vertexShader->m_shaderPtr)
-	{
-		m_deviceContext->VSSetShader(m_vertexShader->m_shaderPtr, nullptr, 0);
-	}
-	if (m_pixelShader->m_shaderPtr)
-	{
-		m_deviceContext->PSSetShader(m_pixelShader->m_shaderPtr, nullptr, 0);
-	}
 }
 
 void D3D11RenderPipeline::draw()
@@ -321,22 +259,12 @@ void D3D11RenderPipeline::draw()
 
 void D3D11RenderPipeline::endDraw()
 {
-	// Clear the depth buffer
-	if (m_depthBuffer != nullptr)
-	{
-		m_deviceContext->ClearDepthStencilView(m_depthBuffer.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	}
+	m_deviceContext->OMSetDepthStencilState(nullptr, 0);
 }
 
 void D3D11RenderPipeline::shutdown()
 {
 	m_deviceContext->ClearState();
-
-	m_swapChain->Release();
-	m_deviceContext->Release();
-	m_device->Release();
-	m_frameBuffer->Release();
-	m_inputLayout->Release();
 
 	m_initialized = false;
 }
@@ -357,17 +285,40 @@ uint8* D3D11RenderPipeline::getFrameData()
 
 void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 {
+	XMMATRIX world = XMMatrixIdentity();
+
+	vec3f position  = newViewData->cameraTranslation;
+	vec3f target    = newViewData->target + 0.001f;
+	vec3f direction = (position - target).normalized();
+
+	XMVECTOR eye   = XMVectorSet(position.x, position.y, position.z, 0.0f);
+	XMVECTOR focus = XMVectorSet(target.x, target.y, target.z, 0.0f);
+	XMVECTOR up    = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(eye, focus, up);
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(
+		newViewData->fov * DEG_TO_RAD,
+		(float)m_width / (float)m_height,
+		newViewData->minZ,
+		newViewData->maxZ);
+
+	XMMATRIX mvp = view * proj;
+	mvp          = XMMatrixTranspose(mvp); // HLSL expects column-major
+
 	ConstantData data;
-	std::memcpy(data.mvp, newViewData->viewProjectionMatrix.m, sizeof(mat4f));
-	std::memcpy(data.model, newViewData->modelMatrix.m, sizeof(mat4f));
-	std::memcpy(data.view, newViewData->viewMatrix.m, sizeof(mat4f));
-	std::memcpy(data.projection, newViewData->projectionMatrix.m, sizeof(mat4f));
-	std::memcpy(data.cameraDirection, newViewData->cameraDirection.xyz, sizeof(vec3f));
+	data.mvp             = mvp;
+	data.model           = world;
+	data.view            = view;
+	data.projection      = proj;
+	data.cameraDirection = XMFLOAT3(direction.x, direction.y, direction.z);
 
 	m_deviceContext->UpdateSubresource(m_constantDataBuffer.Get(), 0, nullptr, &data, 0, 0);
 }
 
-void D3D11RenderPipeline::setRenderSettings(RenderSettings* newRenderSettings) {}
+void D3D11RenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
+{
+	m_renderSettings = *newRenderSettings;
+}
 
 void D3D11RenderPipeline::setHwnd(const HWND hwnd)
 {

@@ -17,8 +17,8 @@ void Camera::computeViewProjectionMatrix()
 
 void Camera::orbit(const float dx, const float dy)
 {
-	m_sphericalDelta.theta = Math::degreesToRadians(-dx); // Horizontal, not sure why dx needs to be negated
-	m_sphericalDelta.phi   = Math::degreesToRadians(dy);  // Vertical
+	m_sphericalDelta.theta = Math::degreesToRadians(dx); // Horizontal, not sure why dx needs to be negated
+	m_sphericalDelta.phi   = Math::degreesToRadians(dy); // Vertical
 }
 
 void Camera::pan(const float dx, const float dy)

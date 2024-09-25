@@ -6,7 +6,7 @@ cbuffer constants : register(b0)
     matrix model;
     matrix view;
     matrix projection;
-    float3 cameraDirection;
+    float3 direction;
 };
 
 struct VS_Input
@@ -19,7 +19,7 @@ struct VS_OUTPUT
 {
     float4 position: SV_POSITION;
     float3 normal: NORMAL;
-    float3 cameraDirection: TEXCOORD0;
+    float3 direction: TEXCOORD0;
 };
 
 VS_OUTPUT main(VS_Input input)
@@ -27,14 +27,13 @@ VS_OUTPUT main(VS_Input input)
     VS_OUTPUT output;
 
     // World to screen
-    matrix newMvp = mul(mul(model, view), projection);
-	output.position = mul(float4(input.position, 1.0f), newMvp);
+    output.position = mul(float4(input.position, 1.0f), mvp);
 
     // Tangent to Object normal
-    output.normal = mul(float4(input.normal, 1), model).xyz;
+    output.normal = input.normal;
 
-    // // Camera direction
-    output.cameraDirection = cameraDirection;
+    // Camera direction
+    output.direction = direction;
 
     return output;
 }

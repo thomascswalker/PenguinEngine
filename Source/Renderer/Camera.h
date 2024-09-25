@@ -15,7 +15,7 @@ constexpr int32 g_maxWindowHeight       = 720;
 
 constexpr float g_defaultFov  = 54.3f;
 constexpr float g_defaultMinz = 0.1f;
-constexpr float g_defaultMaxz = 100.0f;
+constexpr float g_defaultMaxz = 1000.0f;
 
 constexpr float g_defaultMinZoom      = 10.0f;
 const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
@@ -31,8 +31,8 @@ struct ViewData
 	int32 width   = g_defaultViewportWidth;
 	int32 height  = g_defaultViewportHeight;
 	float fov     = g_defaultFov;
-	float minZ    = 1.0f;
-	float maxZ    = 10.0f;
+	float minZ    = g_defaultMinz;
+	float maxZ    = g_defaultMaxz;
 	float minFov  = 20.0f;
 	float maxFov  = 120.0f;
 	float minZoom = 2.0f;
@@ -62,8 +62,8 @@ public:
 	int32 m_width   = g_defaultViewportWidth;
 	int32 m_height  = g_defaultViewportHeight;
 	float m_fov     = g_defaultFov;
-	float m_minZ    = 1.0f;
-	float m_maxZ    = 10.0f;
+	float m_minZ    = g_defaultMinz;
+	float m_maxZ    = g_defaultMaxz;
 	float m_minFov  = 20.0f;
 	float m_maxFov  = 120.0f;
 	float m_minZoom = 2.0f;
@@ -131,8 +131,8 @@ public:
 		m_viewData.viewMatrix              = m_viewMatrix;
 		m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
 		m_viewData.invViewProjectionMatrix = m_invViewProjectionMatrix;
-		m_viewData.cameraDirection         = getForwardVector();
-		m_viewData.cameraTranslation       = getTranslation();
+		m_viewData.cameraDirection         = (getTranslation() - m_target).normalized();
+		m_viewData.cameraTranslation       = m_spherical.toCartesian();
 		return &m_viewData;
 	}
 };

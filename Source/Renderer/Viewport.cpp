@@ -138,29 +138,28 @@ void Viewport::updateSceneGeometry() const
 			vertArray.push_back(v0->position.x);
 			vertArray.push_back(v0->position.y);
 			vertArray.push_back(v0->position.z);
-			vertArray.push_back(v0->normal.x);
-			vertArray.push_back(v0->normal.y);
-			vertArray.push_back(v0->normal.z);
+			vertArray.push_back(-v0->normal.x);
+			vertArray.push_back(-v0->normal.y);
+			vertArray.push_back(-v0->normal.z);
 
 			Vertex* v1 = &tri.v1;
 			vertArray.push_back(v1->position.x);
 			vertArray.push_back(v1->position.y);
 			vertArray.push_back(v1->position.z);
-			vertArray.push_back(v1->normal.x);
-			vertArray.push_back(v1->normal.y);
-			vertArray.push_back(v1->normal.z);
+			vertArray.push_back(-v1->normal.x);
+			vertArray.push_back(-v1->normal.y);
+			vertArray.push_back(-v1->normal.z);
 
 			Vertex* v2 = &tri.v2;
 			vertArray.push_back(v2->position.x);
 			vertArray.push_back(v2->position.y);
 			vertArray.push_back(v2->position.z);
-			vertArray.push_back(v2->normal.x);
-			vertArray.push_back(v2->normal.y);
-			vertArray.push_back(v2->normal.z);
+			vertArray.push_back(-v2->normal.x);
+			vertArray.push_back(-v2->normal.y);
+			vertArray.push_back(-v2->normal.z);
 
 			vertexCount += 3;
 		}
-		//vertexCount += mesh->getPositions()->size();
 	}
 
 	m_renderPipeline->setVertexData(vertArray.data(), vertArray.size() * sizeof(float), vertexCount);

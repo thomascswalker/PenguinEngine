@@ -8,6 +8,7 @@
 #include <atlstr.h>
 #include <comdef.h>
 #include <d3d11_1.h>
+#include <DirectXMath.h>
 #include <dxgi.h>
 #include <map>
 #include <Windows.h>
@@ -24,9 +25,16 @@
 using Microsoft::WRL::ComPtr;
 
 #define CHECK_RESULT(func) \
-	if (!(func))             \
+	if (!(func))           \
 	{                      \
 		return false;      \
+	}
+
+#define CHECK_HR(result, msg)                                                                 \
+	if (FAILED(result))                                                                       \
+	{                                                                                         \
+		LOG_ERROR("D3D11RenderPipeline::{}(): {} ({})", __func__, msg, formatHResult(result)) \
+		return false;                                                                         \
 	}
 
 inline const char* formatHResult(const HRESULT err)
@@ -41,11 +49,11 @@ inline const char* formatHResult(const HRESULT err)
 // 268 bytes (aligned as 272)
 struct ConstantData
 {
-	float mvp[4][4];          // 64 bytes
-	float model[4][4];        // 64 bytes
-	float view[4][4];         // 64 bytes
-	float projection[4][4];   // 64 bytes
-	float cameraDirection[3]; // 12 bytes
+	DirectX::XMMATRIX mvp;             // 64 bytes
+	DirectX::XMMATRIX model;           // 64 bytes
+	DirectX::XMMATRIX view;            // 64 bytes
+	DirectX::XMMATRIX projection;      // 64 bytes
+	DirectX::XMFLOAT3 cameraDirection; // 12 bytes
 };
 
 class D3D11VertexShader : public VertexShader
@@ -97,19 +105,26 @@ class D3D11RenderPipeline : public IRenderPipeline
 	int32 m_width  = 0;
 	int32 m_height = 0;
 
+	int32 m_sampleCount   = 1;
+	int32 m_sampleQuality = 0;
+	int32 m_mipLevels     = 1;
+
+	RenderSettings m_renderSettings;
+
 	/** Boilerplate D3D11 **/
 
-	D3D_FEATURE_LEVEL m_featureLevel                    = D3D_FEATURE_LEVEL_11_0;
-	ComPtr<IDXGIFactory1> m_dxgiFactory                 = nullptr;
-	ComPtr<IDXGIDevice> m_dxgiDevice                    = nullptr;
-	ComPtr<IDXGISwapChain> m_swapChain                  = nullptr;
-	ComPtr<ID3D11Device> m_device                       = nullptr;
-	ComPtr<ID3D11DeviceContext> m_deviceContext         = nullptr;
-	ComPtr<ID3D11Texture2D> m_frameBuffer               = nullptr;
-	ComPtr<ID3D11DepthStencilView> m_depthBuffer        = nullptr;
-	ComPtr<ID3D11Texture2D> m_depthStencilTexture       = nullptr;
-	ComPtr<ID3D11DepthStencilState> m_depthStencilState = nullptr;
-	ComPtr<ID3D11RenderTargetView> m_renderTargetView   = nullptr;
+	D3D_FEATURE_LEVEL m_featureLevel            = D3D_FEATURE_LEVEL_11_0;
+	ComPtr<ID3D11Device> m_device               = nullptr;
+	ComPtr<ID3D11DeviceContext> m_deviceContext = nullptr;
+	ComPtr<IDXGISwapChain> m_swapChain          = nullptr;
+
+	/** Buffers **/
+
+	ComPtr<ID3D11RenderTargetView> m_renderTargetView = nullptr;
+
+	ComPtr<ID3D11DepthStencilView> m_depthStencilView = nullptr;
+	ComPtr<ID3D11Texture2D> m_depthStencilTexture     = nullptr;
+	ComPtr<ID3D11Texture2D> m_backBuffer              = nullptr;
 
 	/** Vertex & Index Buffer **/
 
@@ -130,26 +145,26 @@ class D3D11RenderPipeline : public IRenderPipeline
 	/** Shaders **/
 
 	std::map<const char*, Shader*> m_shaders;
-	ComPtr<ID3D11InputLayout> m_inputLayout = nullptr;
-	D3D11VertexShader* m_vertexShader       = nullptr;
-	D3D11PixelShader* m_pixelShader         = nullptr;
+	ComPtr<ID3D11InputLayout> m_vertexInputLayout = nullptr;
+	D3D11VertexShader* m_vertexShader             = nullptr;
+	D3D11PixelShader* m_pixelShader               = nullptr;
 
 	/** Camera **/
+
 	ComPtr<ID3D11Buffer> m_constantDataBuffer = nullptr;
-	float* m_cameraMvp                        = nullptr;
 
 public:
 	~D3D11RenderPipeline() override = default;
 
 	bool createDevice();
 	bool createSwapChain();
-	bool createDxgiDevice();
-	bool makeWindowAssociation();
-	bool createFrameBuffer();
+	bool createBackBuffer();
 	bool createRenderTargetView();
 	bool createShaders();
 	bool createDepthBuffer();
 	bool createConstantBuffer();
+	[[nodiscard]] bool createRasterizerState() const;
+	[[nodiscard]] bool createViewport() const;
 
 	bool init(void* windowHandle) override;
 	void beginDraw() override;

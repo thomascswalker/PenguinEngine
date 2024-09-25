@@ -10,7 +10,6 @@
 
 class Viewport
 {
-	std::shared_ptr<Viewport> m_viewport;
 	std::unique_ptr<Grid> m_grid;
 	std::shared_ptr<IRenderPipeline> m_renderPipeline;
 
