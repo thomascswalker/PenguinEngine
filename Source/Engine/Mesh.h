@@ -31,19 +31,16 @@ enum EPrimitiveType
 
 struct Vertex
 {
-	vec3f position;
-	vec3f normal;
-	vec2f texCoord;
-
-	vec3f screenPos;
+	vec3f position; // 12-bytes
+	vec3f normal;   // 12-bytes
+	vec2f texCoord; // 8-bytes
 
 	Vertex() = default;
 
 	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec2f& inTexCoord)
 		: position(inPosition)
 		  , normal(inNormal)
-		  , texCoord(inTexCoord)
-		  , screenPos(0) {}
+		  , texCoord(inTexCoord) {}
 };
 
 struct Triangle

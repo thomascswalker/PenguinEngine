@@ -131,8 +131,8 @@ public:
 		m_viewData.viewMatrix              = m_viewMatrix;
 		m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
 		m_viewData.invViewProjectionMatrix = m_invViewProjectionMatrix;
-		m_viewData.cameraDirection         = (getTranslation() - m_target).normalized();
-		m_viewData.cameraTranslation       = m_spherical.toCartesian();
+		m_viewData.cameraDirection         = getForwardVector();
+		m_viewData.cameraTranslation       = getTranslation();
 		return &m_viewData;
 	}
 };

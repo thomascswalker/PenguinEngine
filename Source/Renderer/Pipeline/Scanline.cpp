@@ -13,8 +13,6 @@ bool ScanlineRenderPipeline::init(void* windowHandle)
 	m_vertexShader = std::make_shared<ScanlineVertexShader>();
 	m_pixelShader  = std::make_shared<ScanlinePixelShader>();
 
-	m_threadCount = (int32)std::thread::hardware_concurrency();
-
 	m_viewData         = std::make_shared<ViewData>();
 	m_shaderData       = std::make_shared<ScanlineShaderData>();
 	m_viewData->width  = width;
@@ -175,9 +173,9 @@ void ScanlineRenderPipeline::drawScanline() const
 			vec3f point((float)x, (float)y, 0);
 
 			// Use Pineda's edge function to determine if the current pixel is within the triangle.
-			float w0 = Math::edgeFunction(s1.x, s1.y, s2.x, s2.y, point.x, point.y);
-			float w1 = Math::edgeFunction(s2.x, s2.y, s0.x, s0.y, point.x, point.y);
-			float w2 = Math::edgeFunction(s0.x, s0.y, s1.x, s1.y, point.x, point.y);
+			float w0 = EDGE_FUNCTION(s1.x, s1.y, s2.x, s2.y, point.x, point.y);
+			float w1 = EDGE_FUNCTION(s2.x, s2.y, s0.x, s0.y, point.x, point.y);
+			float w2 = EDGE_FUNCTION(s0.x, s0.y, s1.x, s1.y, point.x, point.y);
 
 			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
 			{
@@ -334,3 +332,5 @@ void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings
 {
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
 }
+
+void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count) {}

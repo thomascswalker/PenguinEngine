@@ -21,6 +21,8 @@ public:
 	std::string m_debugText;
 	bool m_showDebugText = true;
 
+	bool m_flipNormals = false;
+
 	Viewport(int32 inWidth, int32 inHeight);
 	~Viewport();
 
@@ -39,7 +41,7 @@ public:
 	void draw();
 	bool createRenderPipeline();
 	bool initRenderPipeline(void* windowHandle) const;
-	IRenderPipeline* getRenderPipeline() const;
+	[[nodiscard]] IRenderPipeline* getRenderPipeline() const;
 	void updateSceneGeometry() const;
 	void updateSceneCamera() const;
 

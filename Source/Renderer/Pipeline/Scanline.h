@@ -11,7 +11,6 @@
 #include "Renderer/Settings.h"
 #include "Renderer/Shader.h"
 #include "Renderer/Texture.h"
-#include "Renderer/Tile.h"
 
 struct ScanlineShaderData
 {
@@ -65,8 +64,7 @@ public:
 		{
 		case EWindingOrder::CW: // Triangle is back-facing, exit
 		case EWindingOrder::CL: // Triangle has zero area, exit
-			break;
-		//return false;
+			return false;
 		case EWindingOrder::CCW: // Triangle is front-facing, continue
 			break;
 		}
@@ -83,8 +81,6 @@ public:
 		};
 		shaderData->screenBounds.clamp(viewportRect);
 
-		// Determine if this triangle has normals by just comparing if they're all equal
-		// to each other (false) or not (true).
 		if (shaderData->hasNormals)
 		{
 			// Average each of the vertices' normals to get the triangle normal
@@ -172,9 +168,6 @@ class ScanlineRenderPipeline : public IRenderPipeline
 	std::shared_ptr<Texture> m_frameBuffer = nullptr;
 	std::shared_ptr<Texture> m_depthBuffer = nullptr;
 
-	std::vector<Tile> m_tiles;
-	int32 m_threadCount = 0;
-
 	std::shared_ptr<ViewData> m_viewData             = nullptr;
 	std::shared_ptr<ScanlineShaderData> m_shaderData = nullptr;
 
@@ -200,5 +193,5 @@ public:
 	uint8* getFrameData() override;
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
-	void setVertexData(float* data, size_t size, int32 count) override {}
+	void setVertexData(float* data, size_t size, int32 count) override;
 };

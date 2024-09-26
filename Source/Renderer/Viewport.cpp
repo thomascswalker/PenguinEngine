@@ -103,6 +103,14 @@ bool Viewport::createRenderPipeline()
 {
 	// Construct the render pipeline
 	m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
+
+	// TODO: For some reason normals need to be flipped in D3D11
+	if (dynamic_cast<D3D11RenderPipeline*>(m_renderPipeline.get()))
+	{
+		m_flipNormals = true;
+	}
+	// TODO
+
 	return true;
 }
 
@@ -134,29 +142,36 @@ void Viewport::updateSceneGeometry() const
 		std::vector<Triangle>* tris = mesh->getTriangles();
 		for (auto& tri : *tris)
 		{
+			// TODO: See createRenderPipeline()
+			if (m_flipNormals)
+			{
+				tri.v0.normal *= -1.0f;
+				tri.v1.normal *= -1.0f;
+				tri.v2.normal *= -1.0f;
+			}
 			Vertex* v0 = &tri.v0;
 			vertArray.push_back(v0->position.x);
 			vertArray.push_back(v0->position.y);
 			vertArray.push_back(v0->position.z);
-			vertArray.push_back(-v0->normal.x);
-			vertArray.push_back(-v0->normal.y);
-			vertArray.push_back(-v0->normal.z);
+			vertArray.push_back(v0->normal.x);
+			vertArray.push_back(v0->normal.y);
+			vertArray.push_back(v0->normal.z);
 
 			Vertex* v1 = &tri.v1;
 			vertArray.push_back(v1->position.x);
 			vertArray.push_back(v1->position.y);
 			vertArray.push_back(v1->position.z);
-			vertArray.push_back(-v1->normal.x);
-			vertArray.push_back(-v1->normal.y);
-			vertArray.push_back(-v1->normal.z);
+			vertArray.push_back(v1->normal.x);
+			vertArray.push_back(v1->normal.y);
+			vertArray.push_back(v1->normal.z);
 
 			Vertex* v2 = &tri.v2;
 			vertArray.push_back(v2->position.x);
 			vertArray.push_back(v2->position.y);
 			vertArray.push_back(v2->position.z);
-			vertArray.push_back(-v2->normal.x);
-			vertArray.push_back(-v2->normal.y);
-			vertArray.push_back(-v2->normal.z);
+			vertArray.push_back(v2->normal.x);
+			vertArray.push_back(v2->normal.y);
+			vertArray.push_back(v2->normal.z);
 
 			vertexCount += 3;
 		}
