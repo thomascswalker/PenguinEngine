@@ -4,6 +4,8 @@
 #include <directxcolors.h>
 #include <filesystem>
 
+#include "D3D11Core.h"
+
 using namespace DirectX;
 
 bool D3D11RenderPipeline::createDevice()
@@ -285,16 +287,17 @@ uint8* D3D11RenderPipeline::getFrameData()
 
 void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 {
-	XMMATRIX world = XMMatrixIdentity();
+	XMMATRIX model = XMMatrixIdentity();
 
 	vec3f position  = newViewData->cameraTranslation;
 	vec3f target    = newViewData->target + 0.001f;
 	vec3f direction = (position - target).normalized();
 
-	XMVECTOR eye   = XMVectorSet(position.x, position.y, position.z, 0.0f);
-	XMVECTOR focus = XMVectorSet(target.x, target.y, target.z, 0.0f);
+	XMVECTOR eye   = toXMVector(position);
+	XMVECTOR focus = toXMVector(target);
 	XMVECTOR up    = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
+	// Recompute MVP
 	XMMATRIX view = XMMatrixLookAtLH(eye, focus, up);
 	XMMATRIX proj = XMMatrixPerspectiveFovLH(
 		newViewData->fov * DEG_TO_RAD,
@@ -302,14 +305,11 @@ void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 		newViewData->minZ,
 		newViewData->maxZ);
 
-	XMMATRIX mvp = view * proj;
-	mvp          = XMMatrixTranspose(mvp); // HLSL expects column-major
-
 	ConstantData data;
-	data.mvp             = mvp;
-	data.model           = world;
-	data.view            = view;
-	data.projection      = proj;
+	data.mvp             = XMMatrixTranspose(view * proj);
+	data.model           = XMMatrixTranspose(model);
+	data.view            = XMMatrixTranspose(view);
+	data.projection      = XMMatrixTranspose(proj);
 	data.cameraDirection = XMFLOAT3(direction.x, direction.y, direction.z);
 
 	m_deviceContext->UpdateSubresource(m_constantDataBuffer.Get(), 0, nullptr, &data, 0, 0);

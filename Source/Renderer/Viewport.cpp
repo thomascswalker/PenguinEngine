@@ -102,7 +102,7 @@ void Viewport::draw()
 bool Viewport::createRenderPipeline()
 {
 	// Construct the render pipeline
-	m_renderPipeline = std::make_shared<D3D11RenderPipeline>();
+	m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
 	return true;
 }
 

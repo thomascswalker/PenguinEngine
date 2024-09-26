@@ -65,7 +65,8 @@ public:
 		{
 		case EWindingOrder::CW: // Triangle is back-facing, exit
 		case EWindingOrder::CL: // Triangle has zero area, exit
-			return false;
+			break;
+		//return false;
 		case EWindingOrder::CCW: // Triangle is front-facing, continue
 			break;
 		}
