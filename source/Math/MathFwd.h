@@ -1,8 +1,13 @@
 ﻿#pragma once
 
 #include <cstdint>
+#include "intrin.h"
 
-#include "Framework/Core/Types.h"
+#include "Core/Types.h"
+
+//#if defined(_INCLUDED_MM2) || defined(_M_X64)
+//#define PENG_SSE
+//#endif
 
 #define NOMINMAX
 

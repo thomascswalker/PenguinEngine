@@ -2,15 +2,15 @@
 
 #define NOMINMAX
 
-#include "Framework/Application.h"
-#include "Framework/Core/Buffer.h"
-#include "Framework/Core/ErrorCodes.h"
-#include "Framework/Core/IO.h"
+#include "Application.h"
+#include "Core/Buffer.h"
+#include "Core/ErrorCodes.h"
+#include "Core/IO.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
 // Windows entry point
-#include "Framework/Platforms/Win32.h"
+#include "Platforms/Windows/Win32.h"
 
 int32 WINAPI wWinMain(_In_ HINSTANCE hInstance,
                       _In_opt_ HINSTANCE hPrevInstance,
@@ -33,7 +33,7 @@ int32 WINAPI wWinMain(_In_ HINSTANCE hInstance,
 	if (exitCode != Success)
 	{
 		const auto errorMsgs = Logging::Logger::getInstance()->getMessages(Logging::ELogLevel::Error);
-		std::string msg = "Application failed with error(s):\n\n";
+		std::string msg      = "Application failed with error(s):\n\n";
 		for (const auto& errorMsg : errorMsgs)
 		{
 			msg += errorMsg + '\n';

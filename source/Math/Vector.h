@@ -1,9 +1,11 @@
-﻿#pragma once
+﻿// ReSharper disable CppInconsistentNaming
+#pragma once
 
 #include <format>
 #include <cassert>
+#include <intrin.h>
 
-#include "Framework/Core/Logging.h"
+#include "Core/Logging.h"
 #include "Math.h"
 
 #define EDGE_FUNCTION(X0, Y0, X1, Y1, X2, Y2) (((X1) - (X0)) * ((Y2) - (Y0)) - ((Y1) - (Y0)) * ((X2) - (X0)))
@@ -116,7 +118,7 @@ struct vec2_t
 		return {x + v.x, y + v.y};
 	}
 
-	vec2_t& operator +=(const vec2_t& v)
+	vec2_t& operator+=(const vec2_t& v)
 	{
 		x += v.x;
 		y += v.y;
@@ -133,7 +135,7 @@ struct vec2_t
 		return {x - v.x, y - v.y};
 	}
 
-	vec2_t& operator -=(const vec2_t& v)
+	vec2_t& operator-=(const vec2_t& v)
 	{
 		x -= v.x;
 		y -= v.y;
@@ -150,7 +152,7 @@ struct vec2_t
 		return {x * v.x, y * v.y};
 	}
 
-	vec2_t& operator *=(const vec2_t& v)
+	vec2_t& operator*=(const vec2_t& v)
 	{
 		x *= v.x;
 		y *= v.y;
@@ -167,7 +169,7 @@ struct vec2_t
 		return {x / v.x, y / v.y};
 	}
 
-	vec2_t& operator /=(const vec2_t& v)
+	vec2_t& operator/=(const vec2_t& v)
 	{
 		x /= v.x;
 		y /= v.y;
@@ -204,17 +206,17 @@ struct vec2_t
 		return x < value && y < value;
 	}
 
-	bool operator ==(T value)
+	bool operator==(T value)
 	{
 		return x == value && y == value;
 	}
 
-	bool operator ==(const vec2_t& other)
+	bool operator==(const vec2_t& other)
 	{
 		return x == other.x && y == other.y;
 	}
 
-	bool operator !=(const vec2_t& other)
+	bool operator!=(const vec2_t& other)
 	{
 		return x != other.x || y != other.y;
 	}
@@ -342,10 +344,10 @@ struct vec3_t
 
 	void checkNaN() const
 	{
-		if (!(Math::isFinite(x) && Math::isFinite(y) && Math::isFinite(z)))
-		{
-			LOG_ERROR("Vector [{}, {}, {}] contains NaN", x, y, z)
-		}
+		//if (!(Math::isFinite(x) && Math::isFinite(y) && Math::isFinite(z)))
+		//{
+		//	LOG_ERROR("Vector [{}, {}, {}] contains NaN", x, y, z)
+		//}
 	}
 
 	template <typename ToType>
@@ -356,6 +358,7 @@ struct vec3_t
 
 	void normalize()
 	{
+#ifndef PENG_SSE
 		const T magnitude = length();
 		if (magnitude < 0.000001f)
 		{
@@ -367,7 +370,25 @@ struct vec3_t
 			y /= magnitude;
 			z /= magnitude;
 		}
+#else
+		// Convert to __m128
+		__m128 vec = toM128();
+		// Compute length via dot product, masking the final two bits as we don't care about the W component
+		// Initialize storage
+		__m128 length = _mm_dp_ps(vec, vec, 0x7F); // 0111_1111
+		// Compute the reciprocal square root of the dot product
+		length = _mm_rsqrt_ps(length);
+		// Multiply the original vector by the dot product
+		vec = _mm_mul_ps(vec, length);
+
+		// Reassign XYZ
+		_MM_EXTRACT_FLOAT(x, vec, 0);
+		_MM_EXTRACT_FLOAT(y, vec, 1);
+		_MM_EXTRACT_FLOAT(z, vec, 2);
+#endif //  _INCLUDED_MM2
+#ifdef _DEBUG
 		checkNaN();
+#endif // _DEBUG
 	}
 
 	vec3_t normalized() const
@@ -379,31 +400,68 @@ struct vec3_t
 
 	constexpr T length() const
 	{
+#ifndef PENG_SSE
 		return std::sqrtf(x * x + y * y + z * z);
+#else
+		__m128 vec     = toM128();
+		__m128 squared = _mm_mul_ps(vec, vec);
+
+		// Sum the components (x^2 + y^2 + z^2)
+		__m128 squaredSum = _mm_hadd_ps(squared, squared);       // X + Y
+		squaredSum        = _mm_hadd_ps(squaredSum, squaredSum); // XY + Z
+
+		// Return the square root to get the vector length
+		return (T)_mm_cvtss_f32(squaredSum);
+#endif
 	}
 
+	/** https://geometrian.com/programming/tutorials/cross-product/index.php **/
 	vec3_t cross(const vec3_t& v) const
 	{
+#ifndef PENG_SSE
 		return vec3_t{
 			y * v.z - z * v.y,
 			x * v.z - z * v.x,
 			x * v.y - y * v.x
 		};
+#else
+		const __m128 a = toM128();
+		const __m128 b = v.toM128();
+
+		__m128 tmp0 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1));
+		__m128 tmp1 = _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2));
+		__m128 tmp2 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2));
+		__m128 tmp3 = _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1));
+
+		__m128 result = _mm_sub_ps(
+			_mm_mul_ps(tmp0, tmp1),
+			_mm_mul_ps(tmp2, tmp3));
+
+		vec3_t out;
+		_MM_EXTRACT_FLOAT(out.x, result, 0);
+		_MM_EXTRACT_FLOAT(out.y, result, 1);
+		_MM_EXTRACT_FLOAT(out.z, result, 2);
+		return out;
+#endif
 	}
 
 	T dot(const vec3_t& v) const
 	{
+#ifndef PENG_SSE
 		T result = 0;
 		for (int32 index = 0; index < 3; index++)
 		{
 			result += xyz[index] * v[index];
 		}
 		return result;
-	}
-
-	T size() const
-	{
-		return std::sqrtf(Math::square(x) + Math::square(y) + Math::square(z));
+#else
+		__m128 a = toM128();
+		__m128 b = v.toM128();
+		// Compute dot product
+		__m128 dotProduct = _mm_dp_ps(a, b, 0x7F); // 0111_1111
+		// Extract the lowest 32-bit float 
+		return (T)_mm_cvtss_f32(dotProduct);
+#endif;
 	}
 
 	vec3_t swizzleXY() const
@@ -426,6 +484,14 @@ struct vec3_t
 		return {z, x, y};
 	}
 
+	__m128 toM128() const
+	{
+		// Convert to float array in reverse order as elements are loaded right to left
+		float _xyzw[4] = {0.0f, z, y, x};
+		// Store the float array
+		return _mm_load_ps(_xyzw);
+	}
+
 	std::string toString() const
 	{
 		return std::format("[{}, {}, {}]", x, y, z);
@@ -437,7 +503,7 @@ struct vec3_t
 		return {x + v.x, y + v.y, z + v.z};
 	}
 
-	vec3_t& operator +=(const vec3_t& v)
+	vec3_t& operator+=(const vec3_t& v)
 	{
 		x += v.x;
 		y += v.y;
@@ -455,7 +521,7 @@ struct vec3_t
 		return {x - v.x, y - v.y, z - v.z};
 	}
 
-	vec3_t& operator -=(const vec3_t& v)
+	vec3_t& operator-=(const vec3_t& v)
 	{
 		x -= v.x;
 		y -= v.y;
@@ -473,7 +539,7 @@ struct vec3_t
 		return {x * v.x, y * v.y, z * v.z};
 	}
 
-	vec3_t& operator *=(const vec3_t& v)
+	vec3_t& operator*=(const vec3_t& v)
 	{
 		x *= v.x;
 		y *= v.y;
@@ -491,7 +557,7 @@ struct vec3_t
 		return {x / v.x, y / v.y, z / v.z};
 	}
 
-	vec3_t& operator /=(const vec3_t& v)
+	vec3_t& operator/=(const vec3_t& v)
 	{
 		x /= v.x;
 		y /= v.y;
@@ -675,7 +741,7 @@ struct vec4_t
 		return {x + v.x, y + v.y, z + v.z, w + v.w};
 	}
 
-	vec4_t& operator +=(const vec4_t& v)
+	vec4_t& operator+=(const vec4_t& v)
 	{
 		x += v.x;
 		y += v.y;
@@ -692,7 +758,7 @@ struct vec4_t
 		return {x - v.x, y - v.y, z - v.z, w - v.w};
 	}
 
-	vec4_t& operator -=(const vec4_t& v)
+	vec4_t& operator-=(const vec4_t& v)
 	{
 		x -= v.x;
 		y -= v.y;
@@ -709,7 +775,7 @@ struct vec4_t
 		return {x * v.x, y * v.y, z * v.z, w * v.w};
 	}
 
-	vec4_t& operator *=(const vec4_t& v)
+	vec4_t& operator*=(const vec4_t& v)
 	{
 		x *= v.x;
 		y *= v.y;
@@ -726,7 +792,7 @@ struct vec4_t
 		return {x / v.x, y / v.y, z / v.z, w / v.w};
 	}
 
-	vec4_t& operator /=(const vec4_t& v)
+	vec4_t& operator/=(const vec4_t& v)
 	{
 		x /= v.x;
 		y /= v.y;
@@ -863,7 +929,7 @@ namespace Math
 	 * @param v0 The first vertex of the triangle.
 	 * @param v1 The second vertex of the triangle.
 	 * @param v2 The third vertex of the triangle.
-	 * @param uvw The output parameter that will store the calculated barycentric coordinates.
+	 * @param bary The output parameter that will store the calculated barycentric coordinates.
 	 * @return True if the point is inside the triangle, false otherwise.
 	 */
 	template <typename T>
@@ -877,11 +943,11 @@ namespace Math
 		const vec3_t<T> pa = p - v0;
 
 		// Calculate the dot products
-		const T d00 = ba.Dot(ba);
-		const T d01 = ba.Dot(ca);
-		const T d11 = ca.Dot(ca);
-		const T d20 = pa.Dot(ba);
-		const T d21 = pa.Dot(ca);
+		const T d00 = ba.dot(ba);
+		const T d01 = ba.dot(ca);
+		const T d11 = ca.dot(ca);
+		const T d20 = pa.dot(ba);
+		const T d21 = pa.dot(ca);
 
 		// Calculate the denominator of the formula
 		const T denom = T(1) / (d00 * d11 - d01 * d01);
@@ -897,11 +963,7 @@ namespace Math
 		bary.z = w;
 
 		// Check if the point is inside the triangle
-		return (
-			bary.x >= T(0) &&
-			bary.y >= T(0) &&
-			bary.z >= T(0)
-		);
+		return bary.x >= T(0) && bary.y >= T(0) && bary.z >= T(0);
 	}
 
 	template <typename T>
@@ -948,7 +1010,7 @@ namespace Math
 	{
 		vec3_t<T> edge0  = v0 - v2;
 		vec3_t<T> edge1  = v1 - v2;
-		vec3_t<T> normal = Math::cross(edge0, edge1);
+		vec3_t<T> normal = edge0.cross(edge1);
 		return normal.normalized();
 	}
-};
+}; // namespace Math

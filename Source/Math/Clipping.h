@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Framework/Renderer/Grid.h"
+#include "Renderer/Grid.h"
 #include "MathFwd.h"
 #include "Vector.h"
 

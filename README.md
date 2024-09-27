@@ -1,6 +1,6 @@
 # Penguin Engine
 
-This is a personal project of mine to create a standalone software renderer without the usage of libraries like OpenGL, SDL2, etc.
+This is a personal project of mine to create a standalone software renderer without the usage of libraries like OpenGL, SDL2, etc. The only third party library currently in use is `zlib`.
 
 Why's it called Penguin? Because that's my favorite animal, that's all!
 
