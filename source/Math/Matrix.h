@@ -355,7 +355,7 @@ struct mat4_t
 		rot_t rotator = rot_t(pitch, yaw, T(0));
 
 		const vec3_t syAxis = mat4_rot_t<T>(rotator).getAxis(EAxis::Y);
-		rotator.roll        = std::atan2f(Math::dot(zAxis, syAxis), Math::dot(yAxis, syAxis)) * radToDeg;
+		rotator.roll        = std::atan2f(zAxis.dot(syAxis), yAxis.dot(syAxis)) * radToDeg;
 
 		return rotator;
 	}
@@ -524,7 +524,7 @@ struct mat4_t
 		for (int32 index = 0; index < 3; index++)
 		{
 			vec4_t<T> rowVector({m[index][0], m[index][1], m[index][2], m[index][3]});
-			result[index] = Math::dot(rowVector, vec4_t<T>(v));
+			//result[index] = rowVector.dot(vec4_t<T>(v)); // TODO: Fix vec4f dot
 		}
 		return result;
 	}
@@ -606,9 +606,6 @@ struct mat4_persp_t : mat4_t<T>
 		this->m[2][2] = -(maxZ + minZ) / (maxZ - minZ);
 		this->m[3][2] = -T(1);
 		this->m[2][3] = -(T(2) * maxZ * minZ) / (maxZ - minZ);
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };
 
@@ -621,10 +618,10 @@ struct mat4_lookat_t : mat4_t<T>
 		const vec3_t<T> forward = (center - eye).normalized();
 
 		// Right vector
-		const vec3_t<T> right = (Math::cross(forward, upVector)).normalized();
+		const vec3_t<T> right = forward.cross(upVector).normalized();
 
 		// Up vector
-		const vec3_t<T> up = Math::cross(right, forward);
+		const vec3_t<T> up = right.cross(forward);
 
 		//  Rx |  Ux | -Fx | -Tx
 		//  Ry |  Uy | -Fy | -Ty
@@ -640,13 +637,9 @@ struct mat4_lookat_t : mat4_t<T>
 		this->m[2][0] = -forward.x;
 		this->m[2][1] = -forward.y;
 		this->m[2][2] = -forward.z;
-		this->m[0][3] = -Math::dot(right, eye);
-		this->m[1][3] = -Math::dot(up, eye);
-		this->m[2][3] = Math::dot(forward, eye);
-
-#if _DEBUG
-		this->checkNaN();
-#endif
+		this->m[0][3] = -up.dot(eye);
+		this->m[1][3] = -right.dot(eye);
+		this->m[2][3] = forward.dot(eye);
 	}
 };
 
@@ -658,10 +651,6 @@ struct mat4_trans_t : mat4_t<T>
 		this->m[3][0] = delta.x;
 		this->m[3][1] = delta.y;
 		this->m[3][2] = delta.z;
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };
 
@@ -694,19 +683,11 @@ struct mat4_rot_t : mat4_t<T>
 		this->m[2][0] = -cpsy * cr + sp * sr;
 		this->m[2][1] = cpsy * sr + sp * cr;
 		this->m[2][2] = cp * cy;
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 
 	mat4_rot_t(const rot_t<T>& rotation) : mat4_t<T>()
 	{
 		*this = mat4_rot_t(rotation.pitch, rotation.yaw, rotation.roll);
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };
 
@@ -718,9 +699,5 @@ struct mat4_rottrans_t : mat4_t<T>
 		mat4_t<T> rotationMatrix    = mat4_rot_t<T>(rotation);
 		mat4_t<T> translationMatrix = mat4_trans_t<T>(translation);
 		*this                       = rotationMatrix * translationMatrix;
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };

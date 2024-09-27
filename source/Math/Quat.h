@@ -16,13 +16,9 @@ struct quat_t
 		T xyzw[4];
 	};
 
-	quat_t() : x(0), y(0), z(0), w(0)
-	{
-	}
+	quat_t() : x(0), y(0), z(0), w(0) {}
 
-	quat_t(T inX, T inY, T inZ, T inW) : x(inX), y(inY), z(inZ), w(inW)
-	{
-	}
+	quat_t(T inX, T inY, T inZ, T inW) : x(inX), y(inY), z(inZ), w(inW) {}
 
 	quat_t(vec3_t<T> axis, T angle)
 	{
@@ -77,9 +73,9 @@ struct quat_t
 
 		if (tr > 0.0f)
 		{
-			T invS = Math::invSqrt(tr + 1.f);
+			T invS  = Math::invSqrt(tr + 1.f);
 			this->w = 0.5f * (1.f / invS);
-			s = 0.5f * invS;
+			s       = 0.5f * invS;
 
 			this->x = ((m.m[1][2] - m.m[2][1]) * s);
 			this->y = ((m.m[2][0] - m.m[0][2]) * s);
@@ -97,8 +93,8 @@ struct quat_t
 				i = 2;
 
 			constexpr int32 nxt[3] = {1, 2, 0};
-			const int32 j = nxt[i];
-			const int32 k = nxt[j];
+			const int32 j          = nxt[i];
+			const int32 k          = nxt[j];
 
 			s = m.m[i][i] - m.m[j][j] - m.m[k][k] + 1.0f;
 
@@ -150,8 +146,8 @@ struct quat_t
 	{
 		quat_t quatVector{other.x, other.y, other.z, other.w};
 		quat_t inverse = getConjugate();
-		quat_t temp = *this;
-		quat_t out = temp * quatVector * inverse;
+		quat_t temp    = *this;
+		quat_t out     = temp * quatVector * inverse;
 		return {out.x, out.y, out.z, out.w};
 	}
 
@@ -169,8 +165,8 @@ struct quat_t
 	vec3_t<T> rotateVector(vec3_t<T> v)
 	{
 		const vec3_t<T> q(x, y, z);
-		const vec3_t<T> tt = Math::cross(q, v) * 2.0f;
-		const vec3_t<T> result = v + (tt * w) + Math::cross(q, tt);
+		const vec3_t<T> tt     = q.cross(v) * 2.0f;
+		const vec3_t<T> result = v + (tt * w) + q.cross(tt);
 		return result;
 	}
 

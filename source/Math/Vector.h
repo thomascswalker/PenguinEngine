@@ -283,15 +283,11 @@ struct vec3_t
 			z /= magnitude;
 		}
 #else
-		// Convert to __m128
-		__m128 vec = toM128();
-		// Compute length via dot product, masking the final two bits as we don't care about the W component
-		// Initialize storage
-		__m128 length = _mm_dp_ps(vec, vec, 0x7F); // 0111_1111
-		// Compute the reciprocal square root of the dot product
-		length = _mm_rsqrt_ps(length);
-		// Multiply the original vector by the dot product
-		vec = _mm_mul_ps(vec, length);
+		// https://fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
+		__m128 vec        = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f); // Convert to __m128
+		__m128 dotProduct = _mm_dp_ps(vec, vec, 0x77); // Compute dot product
+		__m128 invNormal  = _mm_rsqrt_ps(dotProduct); // Get inverse normal
+		vec               = _mm_mul_ps(vec, invNormal); // Multiply original vector by the inverse normal
 
 		// Reassign XYZ
 		_MM_EXTRACT_FLOAT(x, vec, 0);
@@ -312,15 +308,15 @@ struct vec3_t
 #ifndef PENG_SSE
 		return std::sqrtf(x * x + y * y + z * z);
 #else
-		__m128 vec     = toM128();
-		__m128 squared = _mm_mul_ps(vec, vec);
-
-		// Sum the components (x^2 + y^2 + z^2)
-		squared = _mm_hadd_ps(squared, squared); // X + Y
-		squared = _mm_hadd_ps(squared, squared); // XY + Z
-
-		// Return the square root to get the vector length
-		return (T)_mm_sqrt_ps(squared);
+		__m128 vec = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f);
+		// Compute length via dot product, masking the final two bits as we don't care about the W component
+		// Initialize storage
+		__m128 dotProduct = _mm_dp_ps(vec, vec, 0x7F); // 0111_1111
+		// Compute the reciprocal square root of the dot product
+		__m128 invSqrt = _mm_sqrt_ps(dotProduct);
+		// Convert to float
+		float result = _mm_cvtss_f32(invSqrt);
+		return (T)result;
 #endif
 	}
 
@@ -396,7 +392,7 @@ struct vec3_t
 	__m128 toM128() const
 	{
 		// Convert to float array in reverse order as elements are loaded right to left
-		float _xyzw[4] = {0.0f, z, y, x};
+		float _xyzw[4] = {(T)x, (T)y, (T)z, 0.0f};
 		// Store the float array
 		return _mm_load_ps(_xyzw);
 	}
@@ -560,57 +556,6 @@ struct vec4_t
 		return {static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w)};
 	}
 
-	constexpr T length() const
-	{
-#ifndef PENG_SSE
-		return std::sqrtf(x * x + y * y + z * z + w * w);
-#else
-		__m128 vec     = toM128();
-		__m128 squared = _mm_mul_ps(vec, vec);
-
-		// Sum the components (x^2 + y^2 + z^2 + w^2)
-		squared = _mm_hadd_ps(squared, squared); // Now contains (x^2 + y^2, z^2 + w^2)
-		squared = _mm_hadd_ps(squared, squared); // Now contains (x^2 + y^2 + z^2 + w^2)
-
-		// Return the square root to get the vector length
-		return (T)_mm_sqrt_ps(squared);
-#endif
-	}
-
-	void normalize()
-	{
-		T len = length();
-#ifndef PENG_SSE
-		x /= len;
-		y /= len;
-		z /= len;
-		w /= len;
-#else
-		auto vec = toM128();
-		vec      = _mm_div_ps(vec, len);
-		_mm_store_ps(&x, vec);
-#endif
-	}
-
-	[[nodiscard]] vec4_t normalized() const
-	{
-		T len = length();
-#ifndef PENG_SSE
-		return { x / len, y / len, z / len, w / len };
-#else
-		auto vec = toM128();
-		vec      = _mm_div_ps(vec, len);
-		float out[4];
-		_mm_storeu_ps(out, vec);
-		return {out[0], out[1], out[2], out[3]};
-#endif
-	}
-
-	[[nodiscard]] __m128 toM128() const
-	{
-		return _mm_set_ps((float)w, (float)z, (float)y, (float)x);
-	}
-
 	std::string toString() const
 	{
 		return std::format("[{}, {}, {}, {}]", x, y, z, w);
@@ -758,7 +703,7 @@ namespace Math
 	template <typename T>
 	static float edgeValue(const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& p)
 	{
-		return Math::cross(b - a, p - a);
+		return (b - a).cross(p - a);
 	}
 
 	/**
