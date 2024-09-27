@@ -20,7 +20,7 @@ constexpr float g_defaultMaxz = 1000.0f;
 constexpr float g_defaultMinZoom      = 10.0f;
 const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
 
-enum EViewportType
+enum class EViewportType : uint8
 {
 	Perspective,
 	Othographic

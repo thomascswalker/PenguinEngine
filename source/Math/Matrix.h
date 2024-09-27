@@ -19,9 +19,6 @@ struct mat4_t
 	mat4_t()
 	{
 		setIdentity();
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const plane_t<T>& inX, const plane_t<T>& inY, const plane_t<T>& inZ, const plane_t<T>& inW)
@@ -42,9 +39,6 @@ struct mat4_t
 		m[3][1] = inW.y;
 		m[3][2] = inW.z;
 		m[3][3] = inW.w;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const vec3_t<T>& inX, const vec3_t<T>& inY, const vec3_t<T>& inZ, const vec3_t<T>& inW)
@@ -65,9 +59,6 @@ struct mat4_t
 		m[3][1] = inW.y;
 		m[3][2] = inW.z;
 		m[3][3] = 1.0f;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const vec4_t<T>& inX, const vec4_t<T>& inY, const vec4_t<T>& inZ, const vec4_t<T>& inW)
@@ -88,9 +79,6 @@ struct mat4_t
 		m[3][1] = inW.y;
 		m[3][2] = inW.z;
 		m[3][3] = inW.w;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(T m0, T m1, T m2, T m3, T m4, T m5, T m6, T m7, T m8, T m9, T m10, T m11, T m12, T m13, T m14, T m15)
@@ -111,39 +99,16 @@ struct mat4_t
 		m[3][1] = m13;
 		m[3][2] = m14;
 		m[3][3] = m15;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const mat4_t& other)
 	{
 		std::memcpy(m, &other.m, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(mat4_t&& other) noexcept
 	{
 		std::memcpy(m, &other.m, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
-	}
-
-	void checkNaN() const
-	{
-		for (int32 x = 0; x < 4; x++)
-		{
-			for (int32 y = 0; y < 4; y++)
-			{
-				if (!Math::isFinite(m[x][y]))
-				{
-					LOG_ERROR("Matrix cell [{},{}] contains NaN", x, y)
-				}
-			}
-		}
 	}
 
 	mat4_t flip() const
@@ -350,9 +315,6 @@ struct mat4_t
 
 		mat4_t out;
 		std::memcpy(out.m, &result, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
 		return out;
 	}
 
@@ -393,7 +355,7 @@ struct mat4_t
 		rot_t rotator = rot_t(pitch, yaw, T(0));
 
 		const vec3_t syAxis = mat4_rot_t<T>(rotator).getAxis(EAxis::Y);
-		rotator.roll        = std::atan2f(Math::dot(zAxis, syAxis), Math::dot(yAxis, syAxis)) * radToDeg;
+		rotator.roll        = std::atan2f(zAxis.dot(syAxis), yAxis.dot(syAxis)) * radToDeg;
 
 		return rotator;
 	}
@@ -509,9 +471,6 @@ struct mat4_t
 	mat4_t& operator+=(const mat4_t& other)
 	{
 		*this = *this + other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -531,18 +490,12 @@ struct mat4_t
 	mat4_t& operator-=(const mat4_t& other)
 	{
 		*this = *this - other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
 	mat4_t& operator*=(const mat4_t& other)
 	{
 		*this = *this * other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -562,9 +515,6 @@ struct mat4_t
 	mat4_t& operator/=(const mat4_t& other)
 	{
 		*this = *this / other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -574,27 +524,43 @@ struct mat4_t
 		for (int32 index = 0; index < 3; index++)
 		{
 			vec4_t<T> rowVector({m[index][0], m[index][1], m[index][2], m[index][3]});
-			result[index] = Math::dot(rowVector, vec4_t<T>(v));
+			//result[index] = rowVector.dot(vec4_t<T>(v)); // TODO: Fix vec4f dot
 		}
 		return result;
 	}
 
 	vec4_t<T> operator*(const vec4_t<T>& v) const
 	{
+#ifndef PENG_SSE
 		T tempX = v.x * m[0][0] + v.y * m[0][1] + v.z * m[0][2] + v.w * m[0][3];
 		T tempY = v.x * m[1][0] + v.y * m[1][1] + v.z * m[1][2] + v.w * m[1][3];
 		T tempZ = v.x * m[2][0] + v.y * m[2][1] + v.z * m[2][2] + v.w * m[2][3];
 		T tempW = v.x * m[3][0] + v.y * m[3][1] + v.z * m[3][2] + v.w * m[3][3];
 
 		return {tempX, tempY, tempZ, tempW};
+#else
+
+		vec4_t<T> result;
+		__m128 vec = _mm_loadu_ps((float*)v.xyzw);
+		for (int i = 0; i < 4; i++)
+		{
+			// Load the matrix row into an SSE register
+			__m128 row = _mm_loadu_ps((float*)m[i]);
+
+			// Multiply the row by the vector
+			__m128 res = _mm_dp_ps(row, vec, 0xF1); // Dot product of row and vector
+
+			// Store the result
+			float* ptr = (float*)&result[i];
+			_mm_store_ss(ptr, res); // Store the result into the output vector
+		}
+		return result;
+#endif
 	}
 
 	mat4_t& operator=(const mat4_t& Other) // NOLINT
 	{
 		std::memcpy(m, &Other.m, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -659,9 +625,6 @@ struct mat4_persp_t : mat4_t<T>
 		this->m[2][2] = -(maxZ + minZ) / (maxZ - minZ);
 		this->m[3][2] = -T(1);
 		this->m[2][3] = -(T(2) * maxZ * minZ) / (maxZ - minZ);
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };
 
@@ -674,10 +637,10 @@ struct mat4_lookat_t : mat4_t<T>
 		const vec3_t<T> forward = (center - eye).normalized();
 
 		// Right vector
-		const vec3_t<T> right = (Math::cross(forward, upVector)).normalized();
+		const vec3_t<T> right = forward.cross(upVector).normalized();
 
 		// Up vector
-		const vec3_t<T> up = Math::cross(right, forward);
+		const vec3_t<T> up = right.cross(forward);
 
 		//  Rx |  Ux | -Fx | -Tx
 		//  Ry |  Uy | -Fy | -Ty
@@ -693,13 +656,9 @@ struct mat4_lookat_t : mat4_t<T>
 		this->m[2][0] = -forward.x;
 		this->m[2][1] = -forward.y;
 		this->m[2][2] = -forward.z;
-		this->m[0][3] = -Math::dot(right, eye);
-		this->m[1][3] = -Math::dot(up, eye);
-		this->m[2][3] = Math::dot(forward, eye);
-
-#if _DEBUG
-		this->checkNaN();
-#endif
+		this->m[0][3] = -up.dot(eye);
+		this->m[1][3] = -right.dot(eye);
+		this->m[2][3] = forward.dot(eye);
 	}
 };
 
@@ -711,10 +670,6 @@ struct mat4_trans_t : mat4_t<T>
 		this->m[3][0] = delta.x;
 		this->m[3][1] = delta.y;
 		this->m[3][2] = delta.z;
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };
 
@@ -747,19 +702,11 @@ struct mat4_rot_t : mat4_t<T>
 		this->m[2][0] = -cpsy * cr + sp * sr;
 		this->m[2][1] = cpsy * sr + sp * cr;
 		this->m[2][2] = cp * cy;
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 
 	mat4_rot_t(const rot_t<T>& rotation) : mat4_t<T>()
 	{
 		*this = mat4_rot_t(rotation.pitch, rotation.yaw, rotation.roll);
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };
 
@@ -771,9 +718,5 @@ struct mat4_rottrans_t : mat4_t<T>
 		mat4_t<T> rotationMatrix    = mat4_rot_t<T>(rotation);
 		mat4_t<T> translationMatrix = mat4_trans_t<T>(translation);
 		*this                       = rotationMatrix * translationMatrix;
-
-#if _DEBUG
-		this->checkNaN();
-#endif
 	}
 };

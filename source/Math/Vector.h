@@ -29,52 +29,21 @@ struct vec2_t
 
 	// Constructors
 	vec2_t()
-		: x(0)
-		  , y(0)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(0), y(0) {}
 
 	vec2_t(T inX)
-		: x(inX)
-		  , y(inX)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(inX), y(inX) {}
 
 	vec2_t(T inX, T inY)
-		: x(inX)
-		  , y(inY)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(inX), y(inY) {}
 
 	vec2_t(const std::initializer_list<T>& values)
 	{
 		x = *(values.begin());
 		y = *(values.begin() + 1);
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 	}
 
 	// Functions
-	void checkNaN() const
-	{
-		if (!(Math::isFinite(x) && Math::isFinite(y)))
-		{
-			LOG_ERROR("Vector [{}, {}] contains NaN", x, y)
-		}
-	}
-
 	static vec2_t zeroVector()
 	{
 		return vec2_t();
@@ -91,20 +60,22 @@ struct vec2_t
 		return {static_cast<ToType>(x), static_cast<ToType>(y)};
 	}
 
+	T length()
+	{
+		return x * x + y * y;
+	}
+
 	void normalize()
 	{
-		x = 1.0f / x;
-		y = 1.0f / y;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
+		T len = length();
+		x /= len;
+		y /= len;
 	}
 
 	vec2_t normalized() const
 	{
-		return {1.0f / x, 1.0f / y};
+		T len = length();
+		return {x / len, y / len};
 	}
 
 	std::string toString() const
@@ -122,11 +93,6 @@ struct vec2_t
 	{
 		x += v.x;
 		y += v.y;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -139,11 +105,6 @@ struct vec2_t
 	{
 		x -= v.x;
 		y -= v.y;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -156,11 +117,6 @@ struct vec2_t
 	{
 		x *= v.x;
 		y *= v.y;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -173,11 +129,6 @@ struct vec2_t
 	{
 		x /= v.x;
 		y /= v.y;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -252,53 +203,22 @@ struct vec3_t
 
 	// Constructors
 	vec3_t()
-		: x(0)
-		  , y(0)
-		  , z(0)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(0), y(0), z(0) {}
 
 	vec3_t(T inX)
-		: x(inX)
-		  , y(inX)
-		  , z(inX)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(inX), y(inX), z(inX) {}
 
 	vec3_t(T inX, T inY, T inZ)
-		: x(inX)
-		  , y(inY)
-		  , z(inZ)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(inX), y(inY), z(inZ) {}
 
 	vec3_t(const vec2_t<T>& v, T inZ = T(1))
-		: x(v.x)
-		  , y(v.y)
-		  , z(inZ)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(v.x), y(v.y), z(inZ) {}
 
 	vec3_t(const std::initializer_list<T>& values)
 	{
 		x = *(values.begin());
 		y = *(values.begin() + 1);
 		z = *(values.begin() + 2);
-#ifdef _DEBUG
-		checkNaN();
-#endif
 	}
 
 	// Functions
@@ -342,14 +262,6 @@ struct vec3_t
 		return vec3_t(0, 0, -1);
 	}
 
-	void checkNaN() const
-	{
-		//if (!(Math::isFinite(x) && Math::isFinite(y) && Math::isFinite(z)))
-		//{
-		//	LOG_ERROR("Vector [{}, {}, {}] contains NaN", x, y, z)
-		//}
-	}
-
 	template <typename ToType>
 	vec3_t<ToType> toType() const
 	{
@@ -371,24 +283,17 @@ struct vec3_t
 			z /= magnitude;
 		}
 #else
-		// Convert to __m128
-		__m128 vec = toM128();
-		// Compute length via dot product, masking the final two bits as we don't care about the W component
-		// Initialize storage
-		__m128 length = _mm_dp_ps(vec, vec, 0x7F); // 0111_1111
-		// Compute the reciprocal square root of the dot product
-		length = _mm_rsqrt_ps(length);
-		// Multiply the original vector by the dot product
-		vec = _mm_mul_ps(vec, length);
+		// https://fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
+		__m128 vec        = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f); // Convert to __m128
+		__m128 dotProduct = _mm_dp_ps(vec, vec, 0x77); // Compute dot product
+		__m128 invNormal  = _mm_rsqrt_ps(dotProduct); // Get inverse normal
+		vec               = _mm_mul_ps(vec, invNormal); // Multiply original vector by the inverse normal
 
 		// Reassign XYZ
 		_MM_EXTRACT_FLOAT(x, vec, 0);
 		_MM_EXTRACT_FLOAT(y, vec, 1);
 		_MM_EXTRACT_FLOAT(z, vec, 2);
 #endif //  _INCLUDED_MM2
-#ifdef _DEBUG
-		checkNaN();
-#endif // _DEBUG
 	}
 
 	vec3_t normalized() const
@@ -403,15 +308,15 @@ struct vec3_t
 #ifndef PENG_SSE
 		return std::sqrtf(x * x + y * y + z * z);
 #else
-		__m128 vec     = toM128();
-		__m128 squared = _mm_mul_ps(vec, vec);
-
-		// Sum the components (x^2 + y^2 + z^2)
-		__m128 squaredSum = _mm_hadd_ps(squared, squared);       // X + Y
-		squaredSum        = _mm_hadd_ps(squaredSum, squaredSum); // XY + Z
-
-		// Return the square root to get the vector length
-		return (T)_mm_cvtss_f32(squaredSum);
+		__m128 vec = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f);
+		// Compute length via dot product, masking the final two bits as we don't care about the W component
+		// Initialize storage
+		__m128 dotProduct = _mm_dp_ps(vec, vec, 0x7F); // 0111_1111
+		// Compute the reciprocal square root of the dot product
+		__m128 invSqrt = _mm_sqrt_ps(dotProduct);
+		// Convert to float
+		float result = _mm_cvtss_f32(invSqrt);
+		return (T)result;
 #endif
 	}
 
@@ -459,9 +364,9 @@ struct vec3_t
 		__m128 b = v.toM128();
 		// Compute dot product
 		__m128 dotProduct = _mm_dp_ps(a, b, 0x7F); // 0111_1111
-		// Extract the lowest 32-bit float 
+		// Extract the lowest 32-bit float
 		return (T)_mm_cvtss_f32(dotProduct);
-#endif;
+#endif
 	}
 
 	vec3_t swizzleXY() const
@@ -487,7 +392,7 @@ struct vec3_t
 	__m128 toM128() const
 	{
 		// Convert to float array in reverse order as elements are loaded right to left
-		float _xyzw[4] = {0.0f, z, y, x};
+		float _xyzw[4] = {(T)x, (T)y, (T)z, 0.0f};
 		// Store the float array
 		return _mm_load_ps(_xyzw);
 	}
@@ -508,11 +413,6 @@ struct vec3_t
 		x += v.x;
 		y += v.y;
 		z += v.z;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -526,11 +426,6 @@ struct vec3_t
 		x -= v.x;
 		y -= v.y;
 		z -= v.z;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -544,11 +439,6 @@ struct vec3_t
 		x *= v.x;
 		y *= v.y;
 		z *= v.z;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -562,11 +452,6 @@ struct vec3_t
 		x /= v.x;
 		y /= v.y;
 		z /= v.z;
-		{
-#ifdef _DEBUG
-			checkNaN();
-#endif
-		}
 		return *this;
 	}
 
@@ -632,43 +517,16 @@ struct vec4_t
 
 	// Constructors
 	vec4_t()
-		: x(0)
-		  , y(0)
-		  , z(0)
-		  , w(0)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(0), y(0), z(0), w(0) {}
 
 	vec4_t(T inX)
-		: x(inX)
-		  , y(inX)
-		  , z(inX)
-		  , w(inX)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(inX), y(inX), z(inX), w(inX) {}
 
 	vec4_t(T inX, T inY, T inZ, T inW)
-		: x(inX)
-		  , y(inY)
-		  , z(inZ)
-		  , w(inW)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(inX), y(inY), z(inZ), w(inW) {}
 
 	vec4_t(T* values)
-		: x(values[0])
-		  , y(values[1])
-		  , z(values[2])
-		  , w(values[3]) {}
+		: x(values[0]), y(values[1]), z(values[2]), w(values[3]) {}
 
 	vec4_t(const std::initializer_list<T>& values)
 	{
@@ -676,21 +534,10 @@ struct vec4_t
 		y = *(values.begin() + 1);
 		z = *(values.begin() + 2);
 		w = *(values.begin() + 3);
-#ifdef _DEBUG
-		checkNaN();
-#endif
 	}
 
 	vec4_t(const vec3_t<T>& v, T inW = T(1))
-		: x(v.x)
-		  , y(v.y)
-		  , z(v.z)
-		  , w(inW)
-	{
-#ifdef _DEBUG
-		checkNaN();
-#endif
-	}
+		: x(v.x), y(v.y), z(v.z), w(inW) {}
 
 	// Functions
 	static vec4_t zeroVector()
@@ -703,31 +550,10 @@ struct vec4_t
 		return vec4_t(1);
 	}
 
-	void checkNaN() const
-	{
-		if (!(Math::isFinite(x) && Math::isFinite(y) && Math::isFinite(z) && Math::isFinite(w)))
-		{
-			LOG_ERROR("Vector [{}, {}, {}, {}] contains NaN", x, y, z, w)
-		}
-	}
-
 	template <typename ToType>
 	vec4_t<ToType> toType() const
 	{
 		return {static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w)};
-	}
-
-	void normalize()
-	{
-		x = T(1.0) / x;
-		y = T(1.0) / y;
-		z = T(1.0) / z;
-		w = T(1.0) / w;
-	}
-
-	vec4_t normalized() const
-	{
-		return {T(1.0) / x, T(1.0) / y, T(1.0) / z, T(1.0) / w};
 	}
 
 	std::string toString() const
@@ -747,9 +573,6 @@ struct vec4_t
 		y += v.y;
 		z += v.z;
 		w += v.w;
-#ifdef _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -764,9 +587,6 @@ struct vec4_t
 		y -= v.y;
 		z -= v.z;
 		w -= v.w;
-#ifdef _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -781,9 +601,6 @@ struct vec4_t
 		y *= v.y;
 		z *= v.z;
 		w *= v.w;
-#ifdef _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -798,9 +615,6 @@ struct vec4_t
 		y /= v.y;
 		z /= v.z;
 		w /= v.w;
-#ifdef _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -848,36 +662,6 @@ namespace Math
 		return a.x * b.y - a.y * b.x;
 	}
 
-	/**
-	 * @brief Computes the cross product of two 3D vectors.
-	 * @tparam T The type of the vector elements.
-	 * @param a The first vector.
-	 * @param b The second vector.
-	 * @return The cross product of A and B.
-	 */
-	template <typename T>
-	static vec3_t<T> cross(const vec3_t<T>& a, const vec3_t<T>& b)
-	{
-		return vec3_t<T>{
-			a.y * b.z - b.y * a.z,
-			a.z * b.x - b.z * a.x,
-			a.x * b.y - b.x * a.y
-		};
-	}
-
-	template <typename T>
-	static T dot(const vec3_t<T>& a, const vec3_t<T>& b)
-	{
-		vec3_t<T> tmp = a * b;
-		return tmp.x + tmp.y + tmp.z;
-	}
-
-	template <typename T>
-	static T crossDot(const vec3_t<T>& a, const vec3_t<T>& b, const vec3_t<T>& p)
-	{
-		return Math::dot(Math::cross(a, b), p);
-	}
-
 	/* Distance between two points in 3D space */
 	template <typename T>
 	static T distance(const vec3_t<T> v0, const vec3_t<T>& v1)
@@ -919,7 +703,7 @@ namespace Math
 	template <typename T>
 	static float edgeValue(const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& p)
 	{
-		return Math::cross(b - a, p - a);
+		return (b - a).cross(p - a);
 	}
 
 	/**

@@ -22,27 +22,43 @@ protected:
 public:
 	virtual ~Object() = default;
 
-	virtual void update(float deltaTime)
-	{
-	}
+	virtual void update(float deltaTime) {}
 
 	void computeBasisVectors()
 	{
 		const sphericalf tmp = sphericalf::fromRotation(m_transform.rotation);
-		m_forwardVector = -tmp.toCartesian().normalized();
+		m_forwardVector      = -tmp.toCartesian().normalized();
 		// Negative because for some reason it defaults to the inverse
-		m_rightVector = Math::cross(vec3f::upVector(), m_forwardVector).normalized();
-		m_upVector = Math::cross(m_forwardVector, m_rightVector).normalized();
+		m_rightVector = vec3f::upVector().cross(m_forwardVector).normalized();
+		m_upVector    = m_forwardVector.cross(m_rightVector).normalized();
 	}
 
 	// Getters
-	transf getTransform() const { return m_transform; }
-	vec3f getTranslation() const { return m_transform.translation; }
-	rotf getRotation() const { return m_transform.rotation; }
-	vec3f getScale() const { return m_transform.scale; }
+	transf getTransform() const
+	{
+		return m_transform;
+	}
+
+	vec3f getTranslation() const
+	{
+		return m_transform.translation;
+	}
+
+	rotf getRotation() const
+	{
+		return m_transform.rotation;
+	}
+
+	vec3f getScale() const
+	{
+		return m_transform.scale;
+	}
 
 	// Setters
-	void setTranslation(const vec3f& newTranslation) { m_transform.translation = newTranslation; }
+	void setTranslation(const vec3f& newTranslation)
+	{
+		m_transform.translation = newTranslation;
+	}
 
 	void setRotation(const rotf& newRotation)
 	{
@@ -50,7 +66,10 @@ public:
 		computeBasisVectors();
 	}
 
-	void setScale(const vec3f& newScale) { m_transform.scale = newScale; }
+	void setScale(const vec3f& newScale)
+	{
+		m_transform.scale = newScale;
+	}
 
 	// Manipulators
 	void translate(const vec3f& delta)
