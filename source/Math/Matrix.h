@@ -531,12 +531,31 @@ struct mat4_t
 
 	vec4_t<T> operator*(const vec4_t<T>& v) const
 	{
+#ifndef PENG_SSE
 		T tempX = v.x * m[0][0] + v.y * m[0][1] + v.z * m[0][2] + v.w * m[0][3];
 		T tempY = v.x * m[1][0] + v.y * m[1][1] + v.z * m[1][2] + v.w * m[1][3];
 		T tempZ = v.x * m[2][0] + v.y * m[2][1] + v.z * m[2][2] + v.w * m[2][3];
 		T tempW = v.x * m[3][0] + v.y * m[3][1] + v.z * m[3][2] + v.w * m[3][3];
 
 		return {tempX, tempY, tempZ, tempW};
+#else
+
+		vec4_t<T> result;
+		__m128 vec = _mm_loadu_ps((float*)v.xyzw);
+		for (int i = 0; i < 4; i++)
+		{
+			// Load the matrix row into an SSE register
+			__m128 row = _mm_loadu_ps((float*)m[i]);
+
+			// Multiply the row by the vector
+			__m128 res = _mm_dp_ps(row, vec, 0xF1); // Dot product of row and vector
+
+			// Store the result
+			float* ptr = (float*)&result[i];
+			_mm_store_ss(ptr, res); // Store the result into the output vector
+		}
+		return result;
+#endif
 	}
 
 	mat4_t& operator=(const mat4_t& Other) // NOLINT

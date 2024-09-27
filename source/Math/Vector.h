@@ -366,7 +366,7 @@ struct vec3_t
 		__m128 dotProduct = _mm_dp_ps(a, b, 0x7F); // 0111_1111
 		// Extract the lowest 32-bit float
 		return (T)_mm_cvtss_f32(dotProduct);
-#endif;
+#endif
 	}
 
 	vec3_t swizzleXY() const
