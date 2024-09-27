@@ -19,9 +19,6 @@ struct mat4_t
 	mat4_t()
 	{
 		setIdentity();
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const plane_t<T>& inX, const plane_t<T>& inY, const plane_t<T>& inZ, const plane_t<T>& inW)
@@ -42,9 +39,6 @@ struct mat4_t
 		m[3][1] = inW.y;
 		m[3][2] = inW.z;
 		m[3][3] = inW.w;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const vec3_t<T>& inX, const vec3_t<T>& inY, const vec3_t<T>& inZ, const vec3_t<T>& inW)
@@ -65,9 +59,6 @@ struct mat4_t
 		m[3][1] = inW.y;
 		m[3][2] = inW.z;
 		m[3][3] = 1.0f;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const vec4_t<T>& inX, const vec4_t<T>& inY, const vec4_t<T>& inZ, const vec4_t<T>& inW)
@@ -88,9 +79,6 @@ struct mat4_t
 		m[3][1] = inW.y;
 		m[3][2] = inW.z;
 		m[3][3] = inW.w;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(T m0, T m1, T m2, T m3, T m4, T m5, T m6, T m7, T m8, T m9, T m10, T m11, T m12, T m13, T m14, T m15)
@@ -111,39 +99,16 @@ struct mat4_t
 		m[3][1] = m13;
 		m[3][2] = m14;
 		m[3][3] = m15;
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(const mat4_t& other)
 	{
 		std::memcpy(m, &other.m, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
 	}
 
 	mat4_t(mat4_t&& other) noexcept
 	{
 		std::memcpy(m, &other.m, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
-	}
-
-	void checkNaN() const
-	{
-		for (int32 x = 0; x < 4; x++)
-		{
-			for (int32 y = 0; y < 4; y++)
-			{
-				if (!Math::isFinite(m[x][y]))
-				{
-					LOG_ERROR("Matrix cell [{},{}] contains NaN", x, y)
-				}
-			}
-		}
 	}
 
 	mat4_t flip() const
@@ -350,9 +315,6 @@ struct mat4_t
 
 		mat4_t out;
 		std::memcpy(out.m, &result, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
 		return out;
 	}
 
@@ -509,9 +471,6 @@ struct mat4_t
 	mat4_t& operator+=(const mat4_t& other)
 	{
 		*this = *this + other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -531,18 +490,12 @@ struct mat4_t
 	mat4_t& operator-=(const mat4_t& other)
 	{
 		*this = *this - other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
 	mat4_t& operator*=(const mat4_t& other)
 	{
 		*this = *this * other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -562,9 +515,6 @@ struct mat4_t
 	mat4_t& operator/=(const mat4_t& other)
 	{
 		*this = *this / other;
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 
@@ -592,9 +542,6 @@ struct mat4_t
 	mat4_t& operator=(const mat4_t& Other) // NOLINT
 	{
 		std::memcpy(m, &Other.m, 16 * sizeof(T));
-#if _DEBUG
-		checkNaN();
-#endif
 		return *this;
 	}
 

@@ -1,17 +1,18 @@
 ﻿#pragma once
 
 #include <cstdint>
+#include <numbers>
 #include "intrin.h"
 
 #include "Core/Types.h"
 
-//#if defined(_INCLUDED_MM2) || defined(_M_X64)
-//#define PENG_SSE
-//#endif
+#if defined(_INCLUDED_MM2) || defined(_M_X64)
+#define PENG_SSE
+#endif
 
 #define NOMINMAX
 
-#define PI 3.14159265358979323846f
+#define PI std::numbers::pi_v<float>
 #define EPSILON FLT_EPSILON
 #define SINGULARITY_THRESHOLD 0.4999995f
 #define DEG_TO_RAD 0.0174533f
