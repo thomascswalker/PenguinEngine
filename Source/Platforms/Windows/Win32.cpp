@@ -9,15 +9,15 @@
 #include "Core/ErrorCodes.h"
 #include "Engine/Engine.h"
 #include "Importers/TextureImporter.h"
-#include "Input/InputHandler.h"
+#include "Win32InputHandler.h"
 #include "Renderer/Pipeline/D3D11.h"
 
 LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
 {
-	LRESULT result              = 0;
-	Engine* engine              = Engine::getInstance();
-	Viewport* viewport          = engine->getViewport();
-	IInputHandler* inputHandler = IInputHandler::getInstance();
+	LRESULT result                  = 0;
+	Engine* engine                  = Engine::getInstance();
+	Viewport* viewport              = engine->getViewport();
+	Win32InputHandler* inputHandler = Win32InputHandler::getInstance();
 
 	switch (msg)
 	{
@@ -243,7 +243,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 }
 
 // ReSharper disable CppParameterMayBeConst
-bool Win32Platform::Register()
+bool Win32Platform::registerWindow()
 {
 	// Register the window class.
 	WNDCLASS windowClass = {};
@@ -255,7 +255,7 @@ bool Win32Platform::Register()
 	// Registering the window class
 	if (!RegisterClass(&windowClass))
 	{
-		LOG_ERROR("Failed to register class (Win32Platform::Register).")
+		LOG_ERROR("Failed to register class (Win32Platform::registerWindow).")
 		return false;
 	}
 
@@ -276,7 +276,7 @@ bool Win32Platform::Register()
 
 	if (!m_initialized)
 	{
-		LOG_ERROR("Failed to create window (Win32Platform::Register).")
+		LOG_ERROR("Failed to create window (Win32Platform::registerWindow).")
 		return false;
 	}
 
@@ -286,7 +286,7 @@ bool Win32Platform::Register()
 
 int32 Win32Platform::create()
 {
-	m_initialized = Register();
+	m_initialized = registerWindow();
 	if (!m_initialized)
 	{
 		LOG_ERROR("Window failed to initialize (Win32Platform::Create).")
@@ -476,8 +476,6 @@ void Win32Platform::constructMenuBar()
 	AppendMenuW(m_displayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Shaded), L"&Shaded");
 	AppendMenuW(m_displayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Depth), L"&Depth");
 	AppendMenuW(m_displayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Normals), L"&Normals");
-	AppendMenuW(m_displayMenu, MF_SEPARATOR, 0, nullptr);
-	AppendMenuW(m_displayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::TileRendering), L"&Tile Rendering");
 
 	// Add the main menu bar to the window
 	SetMenu(m_hwnd, m_mainMenu);
