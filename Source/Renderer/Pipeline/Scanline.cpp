@@ -2,6 +2,36 @@
 
 #include "Math/Clipping.h"
 
+/** Vertex Shader **/
+
+vec4f ScanlineVertexShader::process(const VertexData& input)
+{
+	return input.mvp * vec4f(input.position, 1.0f);
+}
+
+/** Pixel Shader **/
+
+Color ScanlinePixelShader::process(const PixelData& input)
+{
+	Color out = Color::white();
+	if (input.texture)
+	{
+		// Compute the relative UV coordinates on the texture
+		int32 x = input.uv.x * (input.texture->getWidth() - 1);
+		int32 y = input.uv.y * (input.texture->getHeight() - 1);
+
+		// Set the outColor to the pixel at [x,y] in the texture
+		out = input.texture->getPixelAsColor(x, y);
+	}
+	float facingRatio = (-input.cameraNormal).dot(input.worldNormal);
+	facingRatio       = std::clamp(facingRatio, 0.0f, 1.0f);
+	out *= facingRatio;
+
+	return out;
+}
+
+/** Pipeline **/
+
 bool ScanlineRenderPipeline::init(void* windowHandle)
 {
 	int32 width  = g_defaultViewportWidth;
@@ -14,7 +44,6 @@ bool ScanlineRenderPipeline::init(void* windowHandle)
 	m_pixelShader  = std::make_shared<ScanlinePixelShader>();
 
 	m_viewData         = std::make_shared<ViewData>();
-	m_shaderData       = std::make_shared<ScanlineShaderData>();
 	m_viewData->width  = width;
 	m_viewData->height = height;
 
@@ -29,25 +58,244 @@ void ScanlineRenderPipeline::beginDraw()
 
 	if (TextureManager::count() > 0)
 	{
-		m_shaderData->texture = TextureManager::getTexture(0);
+		m_texturePtr = TextureManager::getTexture(0);
 	}
 }
 
 void ScanlineRenderPipeline::draw()
 {
-	for (const auto& mesh : g_meshes)
+	for (int32 index = 0; index < m_vertexBuffer.size(); index += 3)
 	{
-		m_shaderData->hasNormals   = mesh->hasNormals();
-		m_shaderData->hasTexCoords = mesh->hasTexCoords();
-
-		for (const auto& tri : *mesh->getTriangles())
-		{
-			drawTriangle(tri.v0, tri.v1, tri.v2);
-		}
+		drawTriangle(m_vertexBuffer.data() + index);
 	}
 }
 
 void ScanlineRenderPipeline::endDraw() {}
+
+bool ScanlineRenderPipeline::vertexStage(vec3f* screen) const
+{
+	int32 count = 0;
+	for (int32 i = 0; i < 3; i++)
+	{
+		VertexData input;
+		input.mvp      = m_viewData->viewProjectionMatrix;
+		input.position = m_vertexBufferPtr[i].position;
+
+		vec4f output = ScanlineVertexShader::process(input);
+		if (output.w <= 0.0f)
+		{
+			count++;
+			if (count == 3)
+			{
+				return false;
+			}
+		}
+		screen[i] = Math::clip(output, m_viewData->width, m_viewData->height);
+	}
+	return true;
+}
+
+void ScanlineRenderPipeline::rasterStage()
+{
+	// Clear pixel buffer prior to rasterization
+	m_pixelBuffer.clear();
+
+	Vertex v0 = m_vertexBufferPtr[0];
+	Vertex v1 = m_vertexBufferPtr[1];
+	Vertex v2 = m_vertexBufferPtr[2];
+
+	vec3f s0 = m_screenPoints[0];
+	vec3f s1 = m_screenPoints[1];
+	vec3f s2 = m_screenPoints[2];
+
+	// Compute the bounds of just this triangle on the screen
+	int32 width  = m_viewData->width;
+	int32 height = m_viewData->height;
+
+	rectf bounds = rectf::makeBoundingBox(s0, s1, s2);
+
+	vec2f boundsMin = bounds.min();
+	vec2f boundsMax = bounds.max();
+	int32 minX      = std::max(static_cast<int32>(boundsMin.x), 0);
+	int32 maxX      = std::min(static_cast<int32>(boundsMax.x), width - 1);
+	int32 minY      = std::max(static_cast<int32>(boundsMin.y), 0);
+	int32 maxY      = std::min(static_cast<int32>(boundsMax.y), height - 1);
+
+	// Pre-compute the area of the screen triangle so we're not computing it every pixel
+	float area        = Math::area2D(s0, s1, s2) * 2.0f;
+	float oneOverArea = 1.0f / area;
+
+	float depth0 = Math::getDepth(s0, s0, s1, s2, area);
+	float depth1 = Math::getDepth(s1, s0, s1, s2, area);
+	float depth2 = Math::getDepth(s2, s0, s1, s2, area);
+
+	// Loop through all pixels in the screen bounding box.
+	for (int32 y = minY; y <= maxY; y++)
+	{
+		for (int32 x = minX; x <= maxX; x++)
+		{
+			vec3f point((float)x, (float)y, 0);
+
+			// Use Pineda's edge function to determine if the current pixel is within the triangle.
+			float w0 = EDGE_FUNCTION(s1.x, s1.y, s2.x, s2.y, point.x, point.y);
+			float w1 = EDGE_FUNCTION(s2.x, s2.y, s0.x, s0.y, point.x, point.y);
+			float w2 = EDGE_FUNCTION(s0.x, s0.y, s1.x, s1.y, point.x, point.y);
+
+			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
+			{
+				continue;
+			}
+
+			// From the edge vectors, extrapolate the barycentric coordinates for this pixel.
+			w0 *= oneOverArea;
+			w1 *= oneOverArea;
+			w2 *= oneOverArea;
+
+			vec3f bary;
+			bary.x = w0;
+			bary.y = w1;
+			bary.z = w2;
+
+			// Interpolate depth given the barycentric coordinates
+			float z = bary.x * depth0 + bary.y * depth1 + bary.z * depth2;
+
+			// Compare the new depth to the current depth at this pixel. If the new depth is further than
+			// the current depth, continue.
+			float oldZ = m_depthBuffer->getPixelAsFloat(x, y);
+			if (z > oldZ)
+			{
+				continue;
+			}
+			// If the new depth is closer than the current depth, set the current depth
+			// at this pixel to the new depth we just got.
+			m_depthBuffer->setPixelFromFloat(x, y, z);
+
+			PixelData pixel;
+			pixel.width    = m_viewData->width;
+			pixel.height   = m_viewData->height;
+			pixel.depth    = z;
+			pixel.distance = bary;
+
+			// Compute World Position of the current pixel
+			pixel.position      = point; // local
+			pixel.worldPosition = v0.position * bary.x + v1.position * bary.y + v2.position * bary.z;
+
+			// Compute the UV coordinates of the current pixel
+			pixel.uv = v0.texCoord * bary.x + v1.texCoord * bary.y + v2.texCoord * bary.z;
+
+			// Compute the Normal direction of the current pixel
+			pixel.worldNormal  = v0.normal * bary.x + v1.normal * bary.y + v2.normal * bary.z;
+			pixel.cameraNormal = m_viewData->cameraDirection;
+
+			// Set the texture
+			pixel.texture = m_texturePtr;
+
+			// Add to the fragment buffer
+			m_pixelBuffer.emplace_back(pixel);
+		}
+	}
+}
+
+void ScanlineRenderPipeline::fragmentStage() const
+{
+	// Render each pixel
+	for (const auto& pixel : m_pixelBuffer)
+	{
+		Color color = ScanlinePixelShader::process(pixel);
+
+		m_frameBuffer->setPixelFromColor(pixel.position.x, pixel.position.y, color);
+	}
+}
+
+void ScanlineRenderPipeline::drawTriangle(Vertex* vertex)
+{
+	// Set the vertex buffer pointer to the current vertex.
+	m_vertexBufferPtr = vertex;
+
+	// Run the vertex shader
+	if (!vertexStage(m_screenPoints))
+	{
+		return;
+	}
+
+	if (m_renderSettings->getRenderFlag(Shaded))
+	{
+		switch (Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]))
+		{
+		case EWindingOrder::CW: // Triangle is back-facing, exit
+		case EWindingOrder::CL: // Triangle has zero area, exit
+			return;
+		case EWindingOrder::CCW: // Triangle is front-facing, continue
+			break;
+		}
+
+		// Rasterize the triangle
+		rasterStage();
+
+		// Run the pixel shader
+		fragmentStage();
+	}
+
+	// Draw wireframe
+	if (m_renderSettings->getRenderFlag(Wireframe))
+	{
+		drawWireframe();
+	}
+
+	if (m_renderSettings->getRenderFlag(Normals))
+	{
+		drawNormal();
+	}
+}
+
+void ScanlineRenderPipeline::drawWireframe() const
+{
+	auto s0 = m_screenPoints[0];
+	auto s1 = m_screenPoints[1];
+	auto s2 = m_screenPoints[2];
+
+	std::vector<vec2f> pixels{};
+	computeLinePixels(s0, s1, pixels);
+	computeLinePixels(s1, s2, pixels);
+	computeLinePixels(s2, s0, pixels);
+	for (const auto& p : pixels)
+	{
+		m_frameBuffer->setPixelFromColor(p.x, p.y, m_renderSettings->getWireColor());
+	}
+}
+
+void ScanlineRenderPipeline::drawNormal()
+{
+	auto v0 = m_vertexBufferPtr[0];
+	auto v1 = m_vertexBufferPtr[1];
+	auto v2 = m_vertexBufferPtr[2];
+
+	// Render normal direction
+	if (m_renderSettings->getRenderFlag(Normals))
+	{
+		// Get the center of the triangle
+		vec3f triangleCenter = (v0.position + v1.position + v2.position) / 3.0f;
+
+		// Get the computed triangle normal (average of the three normals)
+		vec3f triangleNormal = (v0.normal + v1.normal + v2.normal) / 3.0f;
+
+		vec3f normalStartScreen;
+		vec3f normalEndScreen;
+
+		// Compute two screen-space points:
+		// 1. The center of the triangle
+		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
+		Math::projectWorldToScreen(triangleCenter, normalStartScreen, *m_viewData);
+		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen, *m_viewData);
+
+		// Draw the line between the two points
+		auto normalColor = Color::yellow();
+		drawLine(
+			normalStartScreen, // Start
+			normalEndScreen,   // End
+			normalColor);      // Color
+	}
+}
 
 void ScanlineRenderPipeline::drawGrid(Grid* grid)
 {
@@ -75,164 +323,17 @@ void ScanlineRenderPipeline::drawGrid(Grid* grid)
 	}
 }
 
-void ScanlineRenderPipeline::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2)
-{
-	// Compute the vertex shader given the input vertices.
-	m_shaderData->v0 = v0;
-	m_shaderData->v1 = v1;
-	m_shaderData->v2 = v2;
-
-	if (!m_vertexShader->process(m_viewData.get(), m_shaderData.get()))
-	{
-		return;
-	}
-
-	// Render shaded
-	if (m_renderSettings->getRenderFlag(Shaded))
-	{
-		drawScanline();
-	}
-
-	// Render wireframe
-	vec3f s0 = m_shaderData->s0;
-	vec3f s1 = m_shaderData->s1;
-	vec3f s2 = m_shaderData->s2;
-	if (m_renderSettings->getRenderFlag(Wireframe))
-	{
-		Color wireColor = m_renderSettings->getWireColor();
-		drawLine({s0.x, s0.y}, {s1.x, s1.y}, wireColor);
-		drawLine({s1.x, s1.y}, {s2.x, s2.y}, wireColor);
-		drawLine({s2.x, s2.y}, {s0.x, s0.y}, wireColor);
-	}
-
-	// Render normal direction
-	if (m_renderSettings->getRenderFlag(Normals))
-	{
-		// Get the center of the triangle
-		vec3f triangleCenter = (m_shaderData->v0.position
-				+ m_shaderData->v1.position
-				+ m_shaderData->v2.position)
-			/ 3.0f;
-
-		// Get the computed triangle normal (average of the three normals)
-		vec3f triangleNormal = m_shaderData->triangleWorldNormal;
-
-		vec3f normalStartScreen;
-		vec3f normalEndScreen;
-
-		// Compute two screen-space points:
-		// 1. The center of the triangle
-		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
-		Math::projectWorldToScreen(triangleCenter, normalStartScreen, *m_viewData);
-		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen,
-		                           *m_viewData);
-
-		// Draw the line between the two points
-		auto normalColor = Color::yellow();
-		drawLine(
-			normalStartScreen, // Start
-			normalEndScreen,   // End
-			normalColor);      // Color
-	}
-}
-
-void ScanlineRenderPipeline::drawScanline() const
-{
-	const vec3f s0 = m_shaderData->s0;
-	const vec3f s1 = m_shaderData->s1;
-	const vec3f s2 = m_shaderData->s2;
-
-	// Compute the bounds of just this triangle on the screen
-	const int32 width  = m_viewData->width;
-	const int32 height = m_viewData->height;
-	const rectf bounds = m_shaderData->screenBounds;
-
-	const vec2f boundsMin = bounds.min();
-	const vec2f boundsMax = bounds.max();
-	const int32 minX      = std::max(static_cast<int32>(boundsMin.x), 0);
-	const int32 maxX      = std::min(static_cast<int32>(boundsMax.x), width - 1);
-	const int32 minY      = std::max(static_cast<int32>(boundsMin.y), 0);
-	const int32 maxY      = std::min(static_cast<int32>(boundsMax.y), height - 1);
-
-	// Pre-compute the area of the screen triangle so we're not computing it every pixel
-	const float area        = Math::area2D(s0, s1, s2) * 2.0f;
-	const float oneOverArea = 1.0f / area;
-
-	// Prior to the loop computing each pixel in the triangle, get the render settings
-	const bool renderDepth = m_renderSettings->getRenderFlag(Depth);
-
-	const float depth0 = Math::getDepth(s0, s0, s1, s2, area);
-	const float depth1 = Math::getDepth(s1, s0, s1, s2, area);
-	const float depth2 = Math::getDepth(s2, s0, s1, s2, area);
-
-	// Loop through all pixels in the screen bounding box.
-	for (int32 y = minY; y <= maxY; y++)
-	{
-		for (int32 x = minX; x <= maxX; x++)
-		{
-			vec3f point((float)x, (float)y, 0);
-
-			// Use Pineda's edge function to determine if the current pixel is within the triangle.
-			float w0 = EDGE_FUNCTION(s1.x, s1.y, s2.x, s2.y, point.x, point.y);
-			float w1 = EDGE_FUNCTION(s2.x, s2.y, s0.x, s0.y, point.x, point.y);
-			float w2 = EDGE_FUNCTION(s0.x, s0.y, s1.x, s1.y, point.x, point.y);
-
-			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
-			{
-				continue;
-			}
-
-			// From the edge vectors, extrapolate the barycentric coordinates for this pixel.
-			w0 *= oneOverArea;
-			w1 *= oneOverArea;
-			w2 *= oneOverArea;
-
-			vec3f bary;
-			bary.x             = w0;
-			bary.y             = w1;
-			bary.z             = w2;
-			m_shaderData->bary = bary;
-
-			if (renderDepth)
-			{
-				// Interpolate depth given the barycentric coordinates
-				float z = bary.x * depth0 + bary.y * depth1 + bary.z * depth2;
-
-				// Compare the new depth to the current depth at this pixel. If the new depth is further than
-				// the current depth, continue.
-				float oldZ = m_depthBuffer->getPixelAsFloat(x, y);
-				if (z > oldZ)
-				{
-					continue;
-				}
-				// If the new depth is closer than the current depth, set the current depth
-				// at this pixel to the new depth we just got.
-				m_depthBuffer->setPixelFromFloat(x, y, z);
-			}
-
-			m_shaderData->pixelWorldPosition = m_shaderData->v0.position * bary.x + m_shaderData->v1.position * bary.y +
-				m_shaderData->v2.position * bary.z;
-
-			// Compute the UV coordinates of the current pixel
-			if (m_shaderData->hasTexCoords)
-			{
-				// Use the barycentric coordinates to interpolate between all three vertex UV coordinates
-				m_shaderData->uv = m_shaderData->v0.texCoord * bary.x + m_shaderData->v1.texCoord * bary.y +
-					m_shaderData->v2.texCoord * bary.z;
-			}
-
-			// Compute the final color for this pixel
-			m_shaderData->x = (int32)point.x;
-			m_shaderData->y = (int32)point.y;
-			m_pixelShader->process(m_viewData.get(), m_shaderData.get());
-
-			// Set the current pixel in memory to the computed color
-			m_frameBuffer->setPixelFromColor(x, y, m_shaderData->outColor);
-		}
-	}
-}
-
 void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const Color& color)
+{
+	std::vector<vec2f> pixels;
+	computeLinePixels(inA, inB, pixels);
+	for (const auto& p : pixels)
+	{
+		m_frameBuffer->setPixelFromColor(p.x, p.y, color);
+	}
+}
+
+void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& inB, std::vector<vec2f>& points) const
 {
 	vec2i a((int32)inA.x, (int32)inA.y);
 	vec2i b((int32)inB.x, (int32)inB.y);
@@ -278,7 +379,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 			{
 				continue;
 			}
-			m_frameBuffer->setPixelFromColor(y, x, color);
+			points.emplace_back(vec2f(y, x));
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -295,7 +396,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 			{
 				continue;
 			}
-			m_frameBuffer->setPixelFromColor(x, y, color);
+			points.emplace_back(vec2f(x, y));
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -333,4 +434,9 @@ void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
 }
 
-void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count) {}
+void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count)
+{
+	assert(sizeof(Vertex) * count == size);
+	m_vertexBuffer.resize(count);
+	std::memcpy(m_vertexBuffer.data(), data, size);
+}

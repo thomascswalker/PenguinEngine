@@ -173,4 +173,27 @@ namespace Math
 	{
 		return true;
 	}
+
+	static vec3f clip(const vec4f& input, int32 width, int32 height)
+	{
+		// Apply perspective correction
+		const vec3f clipPosition{
+			input.x / input.w,
+			input.y / input.w,
+			input.z / input.w
+		};
+
+		// Normalized device coordinates
+		const vec2f normalizedPosition{
+			(clipPosition.x / 2.0f) + 0.5f,
+			(clipPosition.y / 2.0f) + 0.5f,
+		};
+
+		// Apply the current render width and height
+		return vec3f{
+			normalizedPosition.x * static_cast<float>(width),
+			normalizedPosition.y * static_cast<float>(height),
+			(clipPosition.z + 0.5f) * 0.5f
+		};
+	}
 }

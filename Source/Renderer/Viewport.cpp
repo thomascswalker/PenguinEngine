@@ -102,7 +102,14 @@ void Viewport::draw()
 bool Viewport::createRenderPipeline()
 {
 	// Construct the render pipeline
-	m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
+	if (true)
+	{
+		m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
+	}
+	else
+	{
+		m_renderPipeline = std::make_shared<D3D11RenderPipeline>();
+	}
 
 	// TODO: For some reason normals need to be flipped in D3D11
 	if (dynamic_cast<D3D11RenderPipeline*>(m_renderPipeline.get()))
@@ -156,6 +163,8 @@ void Viewport::updateSceneGeometry() const
 			vertArray.push_back(v0->normal.x);
 			vertArray.push_back(v0->normal.y);
 			vertArray.push_back(v0->normal.z);
+			vertArray.push_back(v0->texCoord.x);
+			vertArray.push_back(v0->texCoord.y);
 
 			Vertex* v1 = &tri.v1;
 			vertArray.push_back(v1->position.x);
@@ -164,6 +173,8 @@ void Viewport::updateSceneGeometry() const
 			vertArray.push_back(v1->normal.x);
 			vertArray.push_back(v1->normal.y);
 			vertArray.push_back(v1->normal.z);
+			vertArray.push_back(v1->texCoord.x);
+			vertArray.push_back(v1->texCoord.y);
 
 			Vertex* v2 = &tri.v2;
 			vertArray.push_back(v2->position.x);
@@ -172,6 +183,8 @@ void Viewport::updateSceneGeometry() const
 			vertArray.push_back(v2->normal.x);
 			vertArray.push_back(v2->normal.y);
 			vertArray.push_back(v2->normal.z);
+			vertArray.push_back(v2->texCoord.x);
+			vertArray.push_back(v2->texCoord.y);
 
 			vertexCount += 3;
 		}
@@ -194,8 +207,7 @@ void Viewport::formatDebugText()
 		"FPS: {}\n"
 		"Size: {}\n",
 		engine->getFps(),
-		getSize().toString()
-	);
+		getSize().toString());
 }
 
 std::string Viewport::getDebugText() const
