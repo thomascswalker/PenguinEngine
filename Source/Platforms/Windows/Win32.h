@@ -116,7 +116,7 @@ class Win32Platform : public IPlatform
 	 * @brief Registers the main Win32 window and constructs the window with CreateWindowExW.
 	 * @return True if the window is registered and constructed, false otherwise.
 	 */
-	bool Register();
+	bool registerWindow();
 
 public:
 	// Windows

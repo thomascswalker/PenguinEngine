@@ -75,10 +75,10 @@ public:
 	/**
 	 * @brief Called when the Load Model menu action is pressed. Loads the mesh selected by the file open dialog.
 	 */
-	void loadMesh();
+	void loadMesh() const;
 
 	/**
 	 * @brief Called when the Load Texture menu action is pressed. Loads the texture selected by the file open dialog.
 	 */
-	void loadTexture();
+	void loadTexture() const;
 };

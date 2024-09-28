@@ -30,7 +30,7 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	m_startTime = PTimer::now();
 
 	// Bind input events
-	if (IInputHandler* input = Win32InputHandler::getInstance())
+	if (IInputHandler* input = IInputHandler::getInstance())
 	{
 		LOG_INFO("Setting up input.")
 		// Keyboard
@@ -63,7 +63,7 @@ void Engine::tick()
 	m_startTime             = PTimer::now();
 
 	// Update camera movement
-	if (const IInputHandler* input = Win32InputHandler::getInstance())
+	if (const IInputHandler* input = IInputHandler::getInstance())
 	{
 		// Update camera position
 		Camera* camera               = getViewportCamera();
@@ -193,15 +193,10 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 		{
 			break;
 		}
-	case EMenuAction::TileRendering:
-		{
-			platform->setMenuItemChecked(EMenuAction::TileRendering, m_viewport->m_settings.toggleTileRendering());
-			break;
-		}
 	}
 }
 
-void Engine::loadMesh()
+void Engine::loadMesh() const
 {
 	Application* app    = Application::getInstance();
 	IPlatform* platform = app->getPlatform();
@@ -219,7 +214,7 @@ void Engine::loadMesh()
 	m_viewport->updateSceneGeometry();
 }
 
-void Engine::loadTexture()
+void Engine::loadTexture() const
 {
 	Application* app    = Application::getInstance();
 	IPlatform* platform = app->getPlatform();
