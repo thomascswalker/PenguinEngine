@@ -209,26 +209,42 @@ void ScanlineRenderPipeline::fragmentStage() const
 
 void ScanlineRenderPipeline::drawTriangle(Vertex* vertex)
 {
+	// Set the vertex buffer pointer to the current vertex.
 	m_vertexBufferPtr = vertex;
+
+	// Run the vertex shader
 	if (!vertexStage(m_screenPoints))
 	{
 		return;
 	}
 
-	switch (Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]))
+	if (m_renderSettings->getRenderFlag(Shaded))
 	{
-	case EWindingOrder::CW: // Triangle is back-facing, exit
-	case EWindingOrder::CL: // Triangle has zero area, exit
-		return;
-	case EWindingOrder::CCW: // Triangle is front-facing, continue
-		break;
+		switch (Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]))
+		{
+		case EWindingOrder::CW: // Triangle is back-facing, exit
+		case EWindingOrder::CL: // Triangle has zero area, exit
+			return;
+		case EWindingOrder::CCW: // Triangle is front-facing, continue
+			break;
+		}
+
+		// Rasterize the triangle
+		rasterStage();
+
+		// Run the pixel shader
+		fragmentStage();
 	}
 
-	rasterStage();
-	fragmentStage();
+	// Draw wireframe
 	if (m_renderSettings->getRenderFlag(Wireframe))
 	{
 		drawWireframe();
+	}
+
+	if (m_renderSettings->getRenderFlag(Normals))
+	{
+		drawNormal();
 	}
 }
 
@@ -250,35 +266,35 @@ void ScanlineRenderPipeline::drawWireframe() const
 
 void ScanlineRenderPipeline::drawNormal()
 {
-	//// Render normal direction
-	// if (m_renderSettings->getRenderFlag(Normals))
-	//{
-	//	// Get the center of the triangle
-	//	vec3f triangleCenter = (m_shaderData->v0.position
-	//			+ m_shaderData->v1.position
-	//			+ m_shaderData->v2.position)
-	//		/ 3.0f;
+	auto v0 = m_vertexBufferPtr[0];
+	auto v1 = m_vertexBufferPtr[1];
+	auto v2 = m_vertexBufferPtr[2];
 
-	//	// Get the computed triangle normal (average of the three normals)
-	//	vec3f triangleNormal = m_shaderData->triangleWorldNormal;
+	// Render normal direction
+	if (m_renderSettings->getRenderFlag(Normals))
+	{
+		// Get the center of the triangle
+		vec3f triangleCenter = (v0.position + v1.position + v2.position) / 3.0f;
 
-	//	vec3f normalStartScreen;
-	//	vec3f normalEndScreen;
+		// Get the computed triangle normal (average of the three normals)
+		vec3f triangleNormal = (v0.normal + v1.normal + v2.normal) / 3.0f;
 
-	//	// Compute two screen-space points:
-	//	// 1. The center of the triangle
-	//	// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
-	//	Math::projectWorldToScreen(triangleCenter, normalStartScreen, *m_viewData);
-	//	Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen,
-	//	                           *m_viewData);
+		vec3f normalStartScreen;
+		vec3f normalEndScreen;
 
-	//	// Draw the line between the two points
-	//	auto normalColor = Color::yellow();
-	//	drawLine(
-	//		normalStartScreen, // Start
-	//		normalEndScreen,   // End
-	//		normalColor);      // Color
-	//}
+		// Compute two screen-space points:
+		// 1. The center of the triangle
+		// 2. 1 unit out from the center of the triangle, in the direction the triangle is facing
+		Math::projectWorldToScreen(triangleCenter, normalStartScreen, *m_viewData);
+		Math::projectWorldToScreen(triangleCenter + triangleNormal, normalEndScreen, *m_viewData);
+
+		// Draw the line between the two points
+		auto normalColor = Color::yellow();
+		drawLine(
+			normalStartScreen, // Start
+			normalEndScreen,   // End
+			normalColor);      // Color
+	}
 }
 
 void ScanlineRenderPipeline::drawGrid(Grid* grid)
@@ -313,7 +329,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 	computeLinePixels(inA, inB, pixels);
 	for (const auto& p : pixels)
 	{
-		m_frameBuffer->setPixelFromColor(p.x, p.y, m_renderSettings->getGridColor());
+		m_frameBuffer->setPixelFromColor(p.x, p.y, color);
 	}
 }
 
