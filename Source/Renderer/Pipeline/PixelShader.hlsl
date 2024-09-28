@@ -2,7 +2,8 @@ struct PS_INPUT
 {
     float4 position: SV_POSITION;
     float3 normal: NORMAL;
-    float3 direction: TEXCOORD0;
+    float2 tex: TEXCOORD0;
+    float3 direction: TEXCOORD1;
 };
 
 float4 main(PS_INPUT input) : SV_TARGET

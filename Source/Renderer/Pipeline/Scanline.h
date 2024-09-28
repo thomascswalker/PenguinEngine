@@ -220,6 +220,7 @@ class ScanlineRenderPipeline : public IRenderPipeline
 	std::shared_ptr<ViewData> m_viewData             = nullptr;
 	std::shared_ptr<ScanlineShaderData> m_shaderData = nullptr;
 
+	std::vector<Vertex> m_vertexBuffer;
 	Mesh* m_currentMesh                              = nullptr;
 	Triangle* m_currentTriangle                      = nullptr;
 	std::shared_ptr<RenderSettings> m_renderSettings = nullptr;

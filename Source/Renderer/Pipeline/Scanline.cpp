@@ -40,9 +40,9 @@ void ScanlineRenderPipeline::draw()
 		m_shaderData->hasNormals   = mesh->hasNormals();
 		m_shaderData->hasTexCoords = mesh->hasTexCoords();
 
-		for (const auto& tri : *mesh->getTriangles())
+		for (int32 index = 0; index < m_vertexBuffer.size(); index += 3)
 		{
-			drawTriangle(tri.v0, tri.v1, tri.v2);
+			drawTriangle(m_vertexBuffer[index], m_vertexBuffer[index + 1], m_vertexBuffer[index + 2]);
 		}
 	}
 }
@@ -333,4 +333,9 @@ void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
 }
 
-void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count) {}
+void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count)
+{
+	assert(sizeof(Vertex) * count == size);
+	m_vertexBuffer.resize(count);
+	std::memcpy(m_vertexBuffer.data(), data, size);
+}

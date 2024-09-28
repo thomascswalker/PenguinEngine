@@ -131,7 +131,7 @@ class D3D11RenderPipeline : public IRenderPipeline
 	ComPtr<ID3D11Buffer> m_vertexBuffer = nullptr;
 	float* m_vertexDataArray            = nullptr;
 	size_t m_vertexDataSize             = 0;
-	uint32 m_vertexStride               = 6 * sizeof(float); // (Pos.XYZ + Norm.XYZ) * 4 = 24
+	uint32 m_vertexStride               = 8 * sizeof(float); // (Pos.XYZ + Norm.XYZ + UV.xy) * 4 = 32
 	uint32 m_vertexOffset               = 0;
 	uint32 m_vertexCount                = 0;
 
