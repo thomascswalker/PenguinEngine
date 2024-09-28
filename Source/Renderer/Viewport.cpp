@@ -102,7 +102,7 @@ void Viewport::draw()
 bool Viewport::createRenderPipeline()
 {
 	// Construct the render pipeline
-	if (false)
+	if (true)
 	{
 		m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
 	}

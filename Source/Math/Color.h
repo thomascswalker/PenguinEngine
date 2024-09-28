@@ -28,7 +28,6 @@ struct Color
 		uint8 rgba[4] = {0, 0, 0, 0};
 	};
 
-protected:
 	Color() {}
 
 	Color(const uint8 inR, const uint8 inG, const uint8 inB, const uint8 inA = 255)
@@ -39,7 +38,6 @@ protected:
 		a = inA;
 	}
 
-public:
 	static Color red()
 	{
 		return fromRgba(255, 0, 0);
@@ -126,6 +124,25 @@ public:
 	std::string toString()
 	{
 		return std::format("RGBA[{}, {}, {}, {}]", r, g, b, a);
+	}
+
+	Color operator*(float s) const
+	{
+		Color out = *this;
+		out.r *= s;
+		out.g *= s;
+		out.b *= s;
+		out.a *= s;
+		return out;
+	}
+
+	Color& operator*=(float s)
+	{
+		this->r *= s;
+		this->g *= s;
+		this->b *= s;
+		this->a *= s;
+		return *this;
 	}
 };
 

@@ -39,8 +39,8 @@ namespace Math
 	{
 		// Convert degrees to radians
 		T pitchRad = Math::degreesToRadians(pitch);
-		T yawRad = Math::degreesToRadians(yaw);
-		T rollRad = Math::degreesToRadians(roll);
+		T yawRad   = Math::degreesToRadians(yaw);
+		T rollRad  = Math::degreesToRadians(roll);
 
 		// Construct a quaternion from euler angles
 		quat_t<T> q(pitchRad, yawRad, rollRad);
@@ -60,9 +60,9 @@ namespace Math
 	template <typename T>
 	rot_t<T> toRot(quat_t<T> q)
 	{
-		T roll = std::atan2f(2.0f * q.y * q.w - 2.0f * q.x * q.z, 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z);
+		T roll  = std::atan2f(2.0f * q.y * q.w - 2.0f * q.x * q.z, 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z);
 		T pitch = std::atan2f(2.0f * q.x * q.w - 2.0f * q.y * q.z, 1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z);
-		T yaw = std::asinf(2.0f * q.x * q.y + 2.0f * q.z * q.w);
+		T yaw   = std::asinf(2.0f * q.x * q.y + 2.0f * q.z * q.w);
 
 		rot_t result(pitch, yaw, roll);
 		return result;
@@ -87,12 +87,39 @@ namespace Math
 	{
 		// remove winding and clamp to [-360, 360]
 		const T pitchNoWinding = std::clamp(std::fmodf(rot.pitch, static_cast<T>(360.0)), T(-360), T(360));
-		const T yawNoWinding = std::clamp(std::fmodf(rot.yaw, static_cast<T>(360.0)), T(-360), T(360));
+		const T yawNoWinding   = std::clamp(std::fmodf(rot.yaw, static_cast<T>(360.0)), T(-360), T(360));
 
 		T cp, sp, cy, sy;
 		Math::sinCos(&sp, &cp, Math::degreesToRadians(pitchNoWinding));
 		Math::sinCos(&sy, &cy, Math::degreesToRadians(yawNoWinding));
 
 		return {cp * cy, cp * sy, sp};
+	}
+
+	inline float smoothStep(float a, float b, float x)
+	{
+		// Ensure t is in the range [0, 1]
+		float t = std::clamp((x - a) / (b - a), 0.0f, 1.0f);
+
+		// Apply the smoothstep interpolation formula
+		return t * t * (3 - 2 * t);
+	}
+
+	inline float ddx(float value, float x, float y)
+	{
+		const float h = 0.001f;
+		float xh      = x + h;
+		float xhy     = (xh * xh + y * y);
+		float xy      = x * x + y * y;
+		return xhy - xy / h;
+	}
+
+	inline float ddy(float value, float x, float y)
+	{
+		const float h = 0.001f;
+		float yh      = y + h;
+		float yhx     = (x * x + yh * yh);
+		float xy      = x * x + y * y;
+		return yhx - xy / h;
 	}
 }
