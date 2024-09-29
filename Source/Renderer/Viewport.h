@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#define PENG_HARDWARE_ACCELERATION
+
 #include "Camera.h"
 #include "Grid.h"
 #include "Settings.h"

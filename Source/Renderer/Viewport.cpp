@@ -102,14 +102,11 @@ void Viewport::draw()
 bool Viewport::createRenderPipeline()
 {
 	// Construct the render pipeline
-	if (true)
-	{
-		m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
-	}
-	else
-	{
-		m_renderPipeline = std::make_shared<D3D11RenderPipeline>();
-	}
+#ifdef PENG_HARDWARE_ACCELERATION
+	m_renderPipeline = std::make_shared<D3D11RenderPipeline>();
+#else
+	m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
+#endif
 
 	// TODO: For some reason normals need to be flipped in D3D11
 	if (dynamic_cast<D3D11RenderPipeline*>(m_renderPipeline.get()))
