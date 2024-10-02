@@ -102,8 +102,8 @@ class D3D11RenderPipeline : public IRenderPipeline
 	bool m_initialized = false;
 	HWND m_hwnd        = nullptr;
 
-	int32 m_width  = 0;
-	int32 m_height = 0;
+	int32 m_width  = g_defaultViewportWidth;
+	int32 m_height = g_defaultViewportHeight;
 
 	int32 m_sampleCount   = 1;
 	int32 m_sampleQuality = 0;

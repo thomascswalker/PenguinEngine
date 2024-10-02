@@ -85,7 +85,7 @@ public:
 
 	/** Geometry drawing **/
 
-	bool vertexStage(vec3f* screen) const;
+	bool vertexStage();
 	void rasterStage();
 	void fragmentStage() const;
 

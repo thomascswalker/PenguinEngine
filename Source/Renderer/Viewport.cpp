@@ -67,11 +67,7 @@ Camera* Viewport::getCamera() const
 
 void Viewport::resetView() const
 {
-	m_camera->setTranslation(g_defaultCameraTranslation);
-	m_camera->setRotation(rotf());
-
-	m_camera->m_target = vec3f::zeroVector();
-	m_camera->computeViewProjectionMatrix();
+	m_camera->setDefault();
 }
 
 void Viewport::draw()
@@ -147,12 +143,10 @@ void Viewport::updateSceneGeometry() const
 		for (auto& tri : *tris)
 		{
 			// TODO: See createRenderPipeline()
-			if (m_flipNormals)
-			{
-				tri.v0.normal *= -1.0f;
-				tri.v1.normal *= -1.0f;
-				tri.v2.normal *= -1.0f;
-			}
+			tri.v0.normal *= -1.0f;
+			tri.v1.normal *= -1.0f;
+			tri.v2.normal *= -1.0f;
+
 			Vertex* v0 = &tri.v0;
 			vertArray.push_back(v0->position.x);
 			vertArray.push_back(v0->position.y);

@@ -13,37 +13,37 @@ struct trans_t
 
 	trans_t()
 	{
-		rotation = rot_t<T>(0, 0, 0);
+		rotation    = rot_t<T>(0, 0, 0);
 		translation = vec3_t<T>(0);
-		scale = vec3_t<T>(1);
+		scale       = vec3_t<T>(1);
 	}
 
 	explicit trans_t(const vec3_t<T>& inTranslation)
 	{
-		rotation = rot_t<T>();
+		rotation    = rot_t<T>();
 		translation = inTranslation;
-		scale = vec3_t<T>();
+		scale       = vec3_t<T>();
 	}
 
 	explicit trans_t(rot_t<T>& inRotation)
 	{
-		rotation = inRotation;
+		rotation    = inRotation;
 		translation = vec3_t<T>();
-		scale = vec3_t<T>();
+		scale       = vec3_t<T>();
 	}
 
 	trans_t(quat_t<T>& inRotation, const vec3_t<T>& inTranslation, const vec3_t<T>& inScale = {1.0f, 1.0f, 1.0f})
 	{
-		rotation = inRotation.rotator();
+		rotation    = inRotation.rotator();
 		translation = inTranslation;
-		scale = inScale;
+		scale       = inScale;
 	}
 
 	trans_t(rot_t<T>& inRotation, const vec3_t<T>& inTranslation, const vec3_t<T>& inScale = {1.0f, 1.0f, 1.0f})
 	{
-		rotation = inRotation;
+		rotation    = inRotation;
 		translation = inTranslation;
-		scale = inScale;
+		scale       = inScale;
 	}
 
 	void fromMatrix(mat4_t<T>& inMatrix)
@@ -56,7 +56,7 @@ struct trans_t
 
 		// Extract rotation
 		quat_t<T> inRotation = quat_t(inMatrix);
-		rotation = inRotation.rotator();
+		rotation             = inRotation.rotator();
 
 		// Extract translation
 		translation = inMatrix.getTranslation();
@@ -71,15 +71,15 @@ struct trans_t
 	mat4_t<T> toMatrix() const
 	{
 		// Apply translation
-		mat4_t<T> out = mat4_trans_t<T>(translation);
+		mat4_t<T> out = translationMatrix(translation);
 
 		// Apply rotation
-		mat4_t rotationMatrix = mat4_rot_t<T>(rotation);
+		mat4_t rot = rotationMatrix(rotation);
 		for (int32 x = 0; x < 3; ++x)
 		{
 			for (int32 y = 0; y < 3; ++y)
 			{
-				out.m[y][x] = rotationMatrix.m[y][x];
+				out.m[y][x] = rot.m[y][x];
 			}
 		}
 
@@ -93,7 +93,7 @@ struct trans_t
 
 	vec3_t<T> getAxisNormalized(EAxis inAxis) const
 	{
-		mat4_t<T> m = toMatrix().getInverse();
+		mat4_t<T> m          = toMatrix().getInverse();
 		vec3_t<T> axisVector = m.getAxis(inAxis);
 		axisVector.normalize();
 		return axisVector;
@@ -110,8 +110,8 @@ struct trans_t
 		trans_t out;
 
 		out.translation = translation * other.translation;
-		out.rotation = other.rotation;
-		out.scale = scale * other.scale;
+		out.rotation    = other.rotation;
+		out.scale       = scale * other.scale;
 
 		return out;
 	}

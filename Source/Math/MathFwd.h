@@ -2,17 +2,51 @@
 
 #include <cstdint>
 #include <numbers>
-#include "intrin.h"
+#include <intrin.h>
 
 #include "Core/Types.h"
 
+/** SSE **/
+
 #if defined(_INCLUDED_MM2) || defined(_M_X64)
+
 #define PENG_SSE
+
+struct vecmu32
+{
+	union
+	{
+		uint32 u[4];
+		__m128 v;
+	};
+};
+
+/** 8-bit mask **/
+
+constexpr auto g_maskX = 0b11101111;
+constexpr auto g_maskY = 0b11011111;
+constexpr auto g_maskZ = 0b10111111;
+constexpr auto g_maskW = 0b01111111;
+
+/** 32-bit mask **/
+
+constexpr vecmu32 g_mask1 = {UINT32_MAX, 0, 0, 0};
+constexpr vecmu32 g_mask2 = {UINT32_MAX, UINT32_MAX, 0, 0};
+constexpr vecmu32 g_mask3 = {UINT32_MAX, UINT32_MAX, UINT32_MAX, 0};
+constexpr vecmu32 g_mask4 = {UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX};
+
 #endif
+
+/** Constants **/
 
 #define NOMINMAX
 
-#define PI std::numbers::pi_v<float>
+constexpr float g_pi     = std::numbers::pi_v<float>;
+constexpr float g_2Pi    = 6.283185307f;
+constexpr float g_invPi  = std::numbers::inv_pi_v<float>;
+constexpr float g_inv2Pi = 0.159154943f;
+constexpr float g_piDiv2 = 1.570796327f;
+constexpr float g_piDiv4 = 0.785398163f;
 #define EPSILON FLT_EPSILON
 #define SINGULARITY_THRESHOLD 0.4999995f
 #define DEG_TO_RAD 0.0174533f
@@ -85,26 +119,6 @@ template <typename T>
 struct mat4_t;
 using mat4f = mat4_t<float>;
 
-template <typename T>
-struct mat4_persp_t;
-using mat4f_persp = mat4_persp_t<float>;
-
-template <typename T>
-struct mat4_lookat_t;
-using mat4f_lookat = mat4_lookat_t<float>;
-
-template <typename T>
-struct mat4_rot_t;
-using mat4f_rot = mat4_rot_t<float>;
-
-template <typename T>
-struct mat4_trans_t;
-using mat4f_trans = mat4_trans_t<float>;
-
-template <typename T>
-struct mat4_rottrans_t;
-using mat4f_rottrans = mat4_rottrans_t<float>;
-
 // Rotator
 template <typename T>
 struct rot_t;
@@ -131,11 +145,9 @@ using planef = plane_t<float>;
 // Enums
 enum class EWindingOrder : uint8
 {
-	CW,
-	// Clockwise
-	CCW,
-	// Counter-clockwise
-	CL // Co-linear, in a line
+	Clockwise,        // Clockwise
+	CounterClockwise, // Counter-clockwise
+	CoLinear          // Co-linear, in a line
 };
 
 // TODO: Swap Up and forward directions

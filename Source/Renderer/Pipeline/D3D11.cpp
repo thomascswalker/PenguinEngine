@@ -291,7 +291,7 @@ void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 	XMMATRIX model = XMMatrixIdentity();
 
 	vec3f position  = newViewData->cameraTranslation;
-	vec3f target    = newViewData->target + 0.001f;
+	vec3f target    = newViewData->target + VERY_SMALL_NUMBER;
 	vec3f direction = (position - target).normalized();
 
 	XMVECTOR eye   = toXMVector(position);

@@ -17,7 +17,9 @@ constexpr float g_defaultFov  = 54.3f;
 constexpr float g_defaultMinz = 0.1f;
 constexpr float g_defaultMaxz = 1000.0f;
 
-constexpr float g_defaultMinZoom      = 10.0f;
+constexpr float g_defaultMinZoom      = 1.0f;
+constexpr float g_defaultMaxZoom      = 1000.0f;
+constexpr float g_defaultZoom         = 36.0f;
 const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
 
 enum class EViewportType : uint8
@@ -35,14 +37,14 @@ struct ViewData
 	float maxZ    = g_defaultMaxz;
 	float minFov  = 20.0f;
 	float maxFov  = 120.0f;
-	float minZoom = 2.0f;
-	float maxZoom = 100.0f;
+	float minZoom = g_defaultMinZoom;
+	float maxZoom = g_defaultMaxZoom;
 
 	vec3f target = vec3f::zeroVector(); // Origin
 	sphericalf spherical;
 	sphericalf sphericalDelta;
 	float minPolarAngle = 0.0f;
-	float maxPolarAngle = PI;
+	float maxPolarAngle = g_pi;
 	vec3f panOffset;
 
 	mat4f projectionMatrix;
@@ -66,14 +68,15 @@ public:
 	float m_maxZ    = g_defaultMaxz;
 	float m_minFov  = 20.0f;
 	float m_maxFov  = 120.0f;
-	float m_minZoom = 2.0f;
-	float m_maxZoom = 100.0f;
+	float m_zoom    = g_defaultZoom;
+	float m_minZoom = g_defaultMinZoom;
+	float m_maxZoom = g_defaultMaxZoom;
 
 	vec3f m_target = vec3f::zeroVector(); // Origin
 	sphericalf m_spherical;
 	sphericalf m_sphericalDelta;
 	float m_minPolarAngle = 0.0f;
-	float m_maxPolarAngle = PI;
+	float m_maxPolarAngle = g_pi;
 	vec3f m_panOffset;
 
 	mat4f m_projectionMatrix;
@@ -104,37 +107,18 @@ public:
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
 	void zoom(float value);
+	void update(float deltaTime) override;
 	void setFov(float newFov);
+	float getTargetDistance() const;
 
 	void setLookAt(const vec3f& newLookAt)
 	{
 		m_target = newLookAt;
 	}
 
-	void update(float deltaTime) override;
+	ViewData* getViewData();
 
-	/* General Math */
-	// https://github.com/EpicGames/UnrealEngine/blob/c830445187784f1269f43b56f095493a27d5a636/Engine/Source/Runtime/Engine/Private/SceneView.cpp#L1431
-	void deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPosition,
-	                            vec3f& outWorldDirection) const;
-
-	ViewData* getViewData()
-	{
-		m_viewData.width                   = m_width;
-		m_viewData.height                  = m_height;
-		m_viewData.fov                     = m_fov;
-		m_viewData.minZ                    = m_minZ;
-		m_viewData.maxZ                    = m_maxZ;
-		m_viewData.target                  = m_target;
-		m_viewData.spherical               = m_spherical;
-		m_viewData.projectionMatrix        = m_projectionMatrix;
-		m_viewData.viewMatrix              = m_viewMatrix;
-		m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
-		m_viewData.invViewProjectionMatrix = m_invViewProjectionMatrix;
-		m_viewData.cameraDirection         = getForwardVector();
-		m_viewData.cameraTranslation       = getTranslation();
-		return &m_viewData;
-	}
+	void setDefault();
 };
 
 namespace Math

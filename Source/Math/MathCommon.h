@@ -72,14 +72,13 @@ namespace Math
 	 * Transform the specified vec4_t by the specified mat4_t.
 	 */
 	template <typename T>
-	vec4_t<T> vectorTransformMatrix(const vec4_t<T>& v, const mat4_t<T>& m)
+	vec4_t<T> vectorTransform(const vec4_t<T>& v, const mat4_t<T>& m)
 	{
-		return vec4f{
-			(v.x * m.m[0][0]) + (v.y * m.m[1][0]) + (v.z * m.m[2][0]) + (v.w * m.m[3][0]),
-			(v.x * m.m[0][1]) + (v.y * m.m[1][1]) + (v.z * m.m[2][1]) + (v.w * m.m[3][1]),
-			(v.x * m.m[0][2]) + (v.y * m.m[1][2]) + (v.z * m.m[2][2]) + (v.w * m.m[3][2]),
-			(v.x * m.m[0][3]) + (v.y * m.m[1][3]) + (v.z * m.m[2][3]) + (v.w * m.m[3][3])
-		};
+		float x = m.m[0][0] * v.x + m.m[1][0] * v.y + m.m[2][0] * v.z + m.m[3][0] * v.w;
+		float y = m.m[0][1] * v.x + m.m[1][1] * v.y + m.m[2][1] * v.z + m.m[3][1] * v.w;
+		float z = m.m[0][2] * v.x + m.m[1][2] * v.y + m.m[2][2] * v.z + m.m[3][2] * v.w;
+		float w = m.m[0][3] * v.x + m.m[1][3] * v.y + m.m[2][3] * v.z + m.m[3][3] * v.w;
+		return {x, y, z, w};
 	}
 
 	template <typename T>
