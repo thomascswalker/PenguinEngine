@@ -17,9 +17,17 @@ constexpr float g_defaultFov  = 54.3f;
 constexpr float g_defaultMinz = 0.1f;
 constexpr float g_defaultMaxz = 1000.0f;
 
-constexpr float g_defaultMinZoom      = 1.0f;
-constexpr float g_defaultMaxZoom      = 1000.0f;
-constexpr float g_defaultZoom         = 36.0f;
+constexpr float g_defaultMinZoom = 1.0f;
+constexpr float g_defaultMaxZoom = 1000.0f;
+constexpr float g_defaultZoom    = 36.0f;
+
+constexpr float g_defaultPhi   = 1.02609062f;
+constexpr float g_defaultTheta = -0.813961744f;
+
+constexpr float g_defaultPanSpeed   = 0.001f;
+constexpr float g_defaultOrbitSpeed = 0.001f;
+constexpr float g_defaultZoomSpeed  = 0.01f;
+
 const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
 
 enum class EViewportType : uint8
@@ -41,11 +49,6 @@ struct ViewData
 	float maxZoom = g_defaultMaxZoom;
 
 	vec3f target = vec3f::zeroVector(); // Origin
-	sphericalf spherical;
-	sphericalf sphericalDelta;
-	float minPolarAngle = 0.0f;
-	float maxPolarAngle = g_pi;
-	vec3f panOffset;
 
 	mat4f projectionMatrix;
 	mat4f viewMatrix;
@@ -72,37 +75,28 @@ public:
 	float m_minZoom = g_defaultMinZoom;
 	float m_maxZoom = g_defaultMaxZoom;
 
-	vec3f m_target = vec3f::zeroVector(); // Origin
+	vec3f m_targetTranslation = vec3f::zeroVector(); // Origin
 	sphericalf m_spherical;
-	sphericalf m_sphericalDelta;
+	sphericalf m_deltaRotation;
 	float m_minPolarAngle = 0.0f;
 	float m_maxPolarAngle = g_pi;
-	vec3f m_panOffset;
+	vec3f m_deltaTranslation;
 
 	mat4f m_projectionMatrix;
 	mat4f m_viewMatrix;
 	mat4f m_viewProjectionMatrix;
 	mat4f m_invViewProjectionMatrix;
 
+	float m_panSpeed   = g_defaultPanSpeed;
+	float m_orbitSpeed = g_defaultOrbitSpeed;
+	float m_zoomSpeed  = g_defaultZoomSpeed;
+
 	/**
 	 * Constructor for the Camera class.
-	 * Initializes the camera by calling the Init() function.
 	 */
-	Camera()
-	{
-		init();
-	}
+	Camera();
 
-	void init()
-	{
-		setTranslation(g_defaultCameraTranslation);
-	}
-
-	constexpr float getAspect() const
-	{
-		return static_cast<float>(m_width) / static_cast<float>(m_height);
-	}
-
+	constexpr float getAspect() const;
 	void computeViewProjectionMatrix();
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
@@ -110,14 +104,8 @@ public:
 	void update(float deltaTime) override;
 	void setFov(float newFov);
 	float getTargetDistance() const;
-
-	void setLookAt(const vec3f& newLookAt)
-	{
-		m_target = newLookAt;
-	}
-
+	void setLookAt(const vec3f& newLookAt);
 	ViewData* getViewData();
-
 	void setDefault();
 };
 

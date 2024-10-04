@@ -1,11 +1,22 @@
 ﻿#include "Renderer/Camera.h"
 #include "Engine/Engine.h"
 
+Camera::Camera()
+{
+	setTranslation(g_defaultCameraTranslation);
+	m_spherical = sphericalf(g_defaultCameraTranslation);
+}
+
+constexpr float Camera::getAspect() const
+{
+	return static_cast<float>(m_width) / static_cast<float>(m_height);
+}
+
 // View Camera
 void Camera::computeViewProjectionMatrix()
 {
 	vec3f position = m_transform.translation;
-	vec3f target   = m_target + VERY_SMALL_NUMBER; // In case the target is at [0,0,0]
+	vec3f target   = m_targetTranslation + VERY_SMALL_NUMBER; // In case the target is at [0,0,0]
 	vec3f up       = vec3f::upVector();
 
 	m_viewMatrix              = lookAtLH(position, target, up);
@@ -16,44 +27,32 @@ void Camera::computeViewProjectionMatrix()
 
 void Camera::orbit(const float dx, const float dy)
 {
-	m_sphericalDelta.theta = dx * DEG_TO_RAD; // Horizontal
-	m_sphericalDelta.phi   = dy * DEG_TO_RAD; // Vertical
+	m_deltaRotation.rotateRight(dx * m_orbitSpeed); // Horizontal
+	m_deltaRotation.rotateUp(dy * m_orbitSpeed);    // Vertical
 }
 
 void Camera::pan(const float dx, const float dy)
 {
-	float speed = 0.001f;
-#ifndef PENG_HARDWARE_ACCELERATION
-	m_panOffset += getUpVector() * dx * speed;
-	m_panOffset += getRightVector() * dy * speed;
-#else
-	m_panOffset += getUpVector() * dy * speed;
-	m_panOffset += getRightVector() * dx * speed;
-#endif
+	float speed = m_panSpeed;
+	m_deltaTranslation += getUpVector() * dx * speed;
+	m_deltaTranslation += getRightVector() * dy * speed;
 }
 
 void Camera::zoom(const float value)
 {
-	m_zoom = std::max(m_minZoom, std::min(m_spherical.radius - value, m_maxZoom));
+	m_zoom = std::max(m_minZoom, std::min(m_spherical.radius - value * m_zoomSpeed, m_maxZoom));
 }
 
 void Camera::update(float deltaTime)
 {
-	// Get the offset from the current camera position to the target position
-	const vec3f position = getTranslation();
-	vec3f offset         = position - m_target;
-
-	// Convert offset to spherical coordinates
-	m_spherical        = sphericalf::fromCartesian(offset.x, offset.y, offset.z);
 	m_spherical.radius = m_zoom;
 
 	// Offset spherical coordinates by the current spherical delta
-	m_spherical.theta += m_sphericalDelta.theta;
-	m_spherical.phi += m_sphericalDelta.phi;
+	m_spherical.theta += m_deltaRotation.theta;
+	m_spherical.phi += m_deltaRotation.phi;
 
-	// Restrict phi to min/max polar angle to prevent locking
-	m_spherical.phi = std::max(m_minPolarAngle, std::min(m_maxPolarAngle, m_spherical.phi));
-	m_spherical.makeSafe(0.1f);
+	// Restrict phi to min/max polar angle to prevent gimbal lock
+	m_spherical.makeSafe(SMALL_NUMBER);
 
 	// Set camera rotation pitch/yaw
 	const rotf newRotation(
@@ -63,14 +62,18 @@ void Camera::update(float deltaTime)
 	);
 	setRotation(newRotation);
 
-	// Convert spherical coordinates back to position
-	offset = m_spherical.toCartesian();
-
 	// Offset the target position based on the computed PanOffset (Camera::Pan)
-	m_target += m_panOffset;
+	m_targetTranslation += m_deltaTranslation;
+
+	// Convert spherical coordinates back to position
+	vec3f newTranslation = m_spherical.toCartesian() + m_targetTranslation;
 
 	// Set the camera position to the target position + offset
-	setTranslation(m_target + offset);
+	setTranslation(newTranslation);
+
+	// Reset the delta after rotation and translation have been set
+	m_deltaTranslation.zero();
+	m_deltaRotation.zero();
 }
 
 void Camera::setFov(const float newFov)
@@ -81,11 +84,15 @@ void Camera::setFov(const float newFov)
 float Camera::getTargetDistance() const
 {
 	// Compute target distance
-	const vec3f position = getTranslation();
-	const vec3f offset   = position - m_target;
+	const vec3f offset = getTranslation() - m_targetTranslation;
 
 	// The length of the Offset vector gives us the distance from the camera to the target.
 	return offset.length();
+}
+
+void Camera::setLookAt(const vec3f& newLookAt)
+{
+	m_targetTranslation = newLookAt;
 }
 
 ViewData* Camera::getViewData()
@@ -95,8 +102,7 @@ ViewData* Camera::getViewData()
 	m_viewData.fov                     = m_fov;
 	m_viewData.minZ                    = m_minZ;
 	m_viewData.maxZ                    = m_maxZ;
-	m_viewData.target                  = m_target;
-	m_viewData.spherical               = m_spherical;
+	m_viewData.target                  = m_targetTranslation;
 	m_viewData.projectionMatrix        = m_projectionMatrix;
 	m_viewData.viewMatrix              = m_viewMatrix;
 	m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
@@ -109,9 +115,9 @@ ViewData* Camera::getViewData()
 void Camera::setDefault()
 {
 	m_transform.translation = g_defaultCameraTranslation;
-	m_transform.rotation    = rotf();
+	m_spherical.phi         = g_defaultPhi;
+	m_spherical.theta       = g_defaultTheta;
 	m_zoom                  = g_defaultZoom;
-
-	m_target = vec3f::zeroVector();
+	m_targetTranslation     = vec3f::zeroVector();
 	computeViewProjectionMatrix();
 }

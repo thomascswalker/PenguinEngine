@@ -72,19 +72,19 @@ void Engine::tick()
 		// Orbit
 		if (input->isMouseDown(EMouseButtonType::Left) && input->isAltDown())
 		{
-			camera->orbit(deltaMouseCursor.x, deltaMouseCursor.y);
+			camera->orbit(deltaMouseCursor.x * m_deltaTime, deltaMouseCursor.y * m_deltaTime);
 		}
 
 		// Pan
 		if (input->isMouseDown(EMouseButtonType::Middle) && input->isAltDown())
 		{
-			camera->pan(deltaMouseCursor.x, deltaMouseCursor.y);
+			camera->pan(deltaMouseCursor.x * m_deltaTime, deltaMouseCursor.y * m_deltaTime);
 		}
 
 		// Zoom
 		if (input->isMouseDown(EMouseButtonType::Right) && input->isAltDown())
 		{
-			camera->zoom(deltaMouseCursor.y);
+			camera->zoom(deltaMouseCursor.y * m_deltaTime);
 		}
 
 		m_viewport->updateSceneCamera();
@@ -137,15 +137,15 @@ void Engine::onKeyPressed(const EKey keyCode) const
 
 void Engine::onLeftMouseUp(const vec2f& cursorPosition) const
 {
-	Camera* camera                 = getViewportCamera();
-	camera->m_sphericalDelta.phi   = 0.0f;
-	camera->m_sphericalDelta.theta = 0.0f;
+	Camera* camera                = getViewportCamera();
+	camera->m_deltaRotation.phi   = 0.0f;
+	camera->m_deltaRotation.theta = 0.0f;
 }
 
 void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const
 {
-	Camera* camera      = getViewportCamera();
-	camera->m_panOffset = 0;
+	Camera* camera             = getViewportCamera();
+	camera->m_deltaTranslation = 0;
 }
 
 void Engine::onMenuActionPressed(const EMenuAction actionId)

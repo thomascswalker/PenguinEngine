@@ -42,6 +42,7 @@ constexpr vecmu32 g_mask4 = {UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX};
 #define NOMINMAX
 
 constexpr float g_pi     = std::numbers::pi_v<float>;
+constexpr float g_negPi  = -std::numbers::pi_v<float>;
 constexpr float g_2Pi    = 6.283185307f;
 constexpr float g_invPi  = std::numbers::inv_pi_v<float>;
 constexpr float g_inv2Pi = 0.159154943f;

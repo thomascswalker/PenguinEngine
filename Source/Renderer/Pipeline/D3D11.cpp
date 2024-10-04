@@ -288,26 +288,14 @@ uint8* D3D11RenderPipeline::getFrameData()
 
 void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 {
-	XMMATRIX model = XMMatrixIdentity();
-
-	vec3f position  = newViewData->cameraTranslation;
-	vec3f target    = newViewData->target + VERY_SMALL_NUMBER;
-	vec3f direction = (position - target).normalized();
-
-	XMVECTOR eye   = toXMVector(position);
-	XMVECTOR focus = toXMVector(target);
-	XMVECTOR up    = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-	// Recompute MVP
-	XMMATRIX view = XMMatrixLookAtLH(eye, focus, up);
-	XMMATRIX proj = XMMatrixPerspectiveFovLH(
-		newViewData->fov * DEG_TO_RAD,
-		(float)m_width / (float)m_height,
-		newViewData->minZ,
-		newViewData->maxZ);
+	XMMATRIX mvp       = XMMATRIX(&newViewData->viewProjectionMatrix.m[0][0]);
+	XMMATRIX model     = XMMATRIX(&newViewData->modelMatrix.m[0][0]);
+	XMMATRIX view      = XMMATRIX(&newViewData->viewMatrix.m[0][0]);
+	XMMATRIX proj      = XMMATRIX(&newViewData->projectionMatrix.m[0][0]);
+	XMFLOAT3 direction = XMFLOAT3(&newViewData->cameraDirection[0]);
 
 	ConstantData data;
-	data.mvp             = XMMatrixTranspose(view * proj);
+	data.mvp             = XMMatrixTranspose(mvp);
 	data.model           = XMMatrixTranspose(model);
 	data.view            = XMMatrixTranspose(view);
 	data.projection      = XMMatrixTranspose(proj);

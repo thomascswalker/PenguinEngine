@@ -84,6 +84,12 @@ struct vec2_t
 		return std::format("[{}, {}]", x, y);
 	}
 
+	void zero()
+	{
+		x = 0.0f;
+		y = 0.0f;
+	}
+
 	// Operators
 	vec2_t operator+(const vec2_t& v) const
 	{
@@ -267,6 +273,13 @@ struct vec3_t
 	vec3_t<ToType> toType() const
 	{
 		return vec3_t<ToType>{static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z)};
+	}
+
+	void zero()
+	{
+		x = 0.0f;
+		y = 0.0f;
+		z = 0.0f;
 	}
 
 	void normalize()
@@ -564,6 +577,14 @@ struct vec4_t
 	std::string toString() const
 	{
 		return std::format("[{}, {}, {}, {}]", x, y, z, w);
+	}
+
+	void zero()
+	{
+		x = 0.0f;
+		y = 0.0f;
+		z = 0.0f;
+		w = 0.0f;
 	}
 
 	// Operators

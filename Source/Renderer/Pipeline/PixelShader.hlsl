@@ -9,7 +9,7 @@ struct PS_INPUT
 float4 main(PS_INPUT input) : SV_TARGET
 {
     float4 finalColor = 0;
-    float4 rgb = dot(-input.direction, input.normal);
+    float4 rgb = dot(input.direction, input.normal);
     finalColor = finalColor + rgb;
     return finalColor;
 }
