@@ -8,13 +8,33 @@
 #include "Vector.h"
 #include "Core/Logging.h"
 
+template <typename T>
+mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ);
+template <typename T>
+mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, const vec3_t<T>& upDirection);
+template <typename T>
+mat4_t<T> lookAtLH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection);
+template <typename T>
+mat4_t<T> lookAtRH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection);
+template <typename T>
+mat4_t<T> translationMatrix(const vec3_t<T>& delta);
+template <typename T>
+mat4_t<T> rotationMatrix(T pitch, T yaw, T roll);
+template <typename T>
+mat4_t<T> rotationMatrix(const rot_t<T>& rot);
+template <typename T>
+mat4_t<T> rotationTranslationMatrix(const rot_t<T>& rotation, const vec3_t<T>& translation);
+
 // m[RowIndex][ColumnIndex]
 template <typename T>
 struct mat4_t
 {
 	static_assert(std::is_floating_point_v<T>, "Type is not floating point.");
 
-	alignas(16) T m[4][4];
+	union
+	{
+		T m[4][4];
+	};
 
 	mat4_t()
 	{
@@ -348,13 +368,13 @@ struct mat4_t
 		const vec3_t xAxis = getAxis(EAxis::X);
 		const vec3_t yAxis = getAxis(EAxis::Y);
 		const vec3_t zAxis = getAxis(EAxis::Z);
-		const T radToDeg   = 180.0f / (PI * 2.0f);
+		const T radToDeg   = 180.0f / (g_pi * 2.0f);
 
 		T pitch       = std::atan2f(xAxis.z, std::sqrtf(Math::square(xAxis.x) + Math::square(xAxis.y))) * radToDeg;
 		T yaw         = std::atan2f(xAxis.y, xAxis.x) * radToDeg;
 		rot_t rotator = rot_t(pitch, yaw, T(0));
 
-		const vec3_t syAxis = mat4_rot_t<T>(rotator).getAxis(EAxis::Y);
+		const vec3_t syAxis = rotationMatrix(rotator).getAxis(EAxis::Y);
 		rotator.roll        = std::atan2f(zAxis.dot(syAxis), yAxis.dot(syAxis)) * radToDeg;
 
 		return rotator;
@@ -406,6 +426,28 @@ struct mat4_t
 	T get(int32 x, int32 y) const
 	{
 		return m[x][y];
+	}
+
+	void transpose()
+	{
+		mat4_t tmp;
+		tmp.m[0][0] = m[0][0];
+		tmp.m[0][1] = m[1][0];
+		tmp.m[0][2] = m[2][0];
+		tmp.m[0][3] = m[3][0];
+		tmp.m[1][0] = m[0][1];
+		tmp.m[1][1] = m[1][1];
+		tmp.m[1][2] = m[2][1];
+		tmp.m[1][3] = m[3][1];
+		tmp.m[2][0] = m[0][2];
+		tmp.m[2][1] = m[1][2];
+		tmp.m[2][2] = m[2][2];
+		tmp.m[2][3] = m[3][2];
+		tmp.m[3][0] = m[0][3];
+		tmp.m[3][1] = m[1][3];
+		tmp.m[3][2] = m[2][3];
+		tmp.m[3][3] = m[3][3];
+		*this       = tmp;
 	}
 
 	mat4_t getTranspose() const
@@ -531,30 +573,22 @@ struct mat4_t
 
 	vec4_t<T> operator*(const vec4_t<T>& v) const
 	{
-#ifndef PENG_SSE
-		T tempX = v.x * m[0][0] + v.y * m[0][1] + v.z * m[0][2] + v.w * m[0][3];
-		T tempY = v.x * m[1][0] + v.y * m[1][1] + v.z * m[1][2] + v.w * m[1][3];
-		T tempZ = v.x * m[2][0] + v.y * m[2][1] + v.z * m[2][2] + v.w * m[2][3];
-		T tempW = v.x * m[3][0] + v.y * m[3][1] + v.z * m[3][2] + v.w * m[3][3];
-
-		return {tempX, tempY, tempZ, tempW};
+#ifdef PENG_SSE
+		float x = m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z + m[3][0] * v.w;
+		float y = m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z + m[3][1] * v.w;
+		float z = m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z + m[3][2] * v.w;
+		float w = m[0][3] * v.x + m[1][3] * v.y + m[2][3] * v.z + m[3][3] * v.w;
+		return {x, y, z, w};
 #else
-
-		vec4_t<T> result;
-		__m128 vec = _mm_loadu_ps((float*)v.xyzw);
-		for (int i = 0; i < 4; i++)
-		{
-			// Load the matrix row into an SSE register
-			__m128 row = _mm_loadu_ps((float*)m[i]);
-
-			// Multiply the row by the vector
-			__m128 res = _mm_dp_ps(row, vec, 0xF1); // Dot product of row and vector
-
-			// Store the result
-			float* ptr = (float*)&result[i];
-			_mm_store_ss(ptr, res); // Store the result into the output vector
-		}
-		return result;
+		XMVECTOR vResult = XM_PERMUTE_PS(V, _MM_SHUFFLE(3, 3, 3, 3)); // W
+		vResult = _mm_mul_ps(vResult, M.r[3]);
+		XMVECTOR vTemp = XM_PERMUTE_PS(V, _MM_SHUFFLE(2, 2, 2, 2)); // Z
+		vResult = XM_FMADD_PS(vTemp, M.r[2], vResult);
+		vTemp = XM_PERMUTE_PS(V, _MM_SHUFFLE(1, 1, 1, 1)); // Y
+		vResult = XM_FMADD_PS(vTemp, M.r[1], vResult);
+		vTemp = XM_PERMUTE_PS(V, _MM_SHUFFLE(0, 0, 0, 0)); // X
+		vResult = XM_FMADD_PS(vTemp, M.r[0], vResult);
+		return vResult;
 #endif
 	}
 
@@ -583,140 +617,179 @@ struct mat4_t
 template <typename T>
 constexpr mat4_t<T> operator*(const mat4_t<T>& m0, const mat4_t<T>& m1)
 {
-	using float4X4    = float[4][4];
-	const float4X4& A = *((const float4X4*)m0.m);
-	const float4X4& B = *((const float4X4*)m1.m);
-	float4X4 temp;
-	temp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
-	temp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
-	temp[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2] + A[0][3] * B[3][2];
-	temp[0][3] = A[0][0] * B[0][3] + A[0][1] * B[1][3] + A[0][2] * B[2][3] + A[0][3] * B[3][3];
-
-	temp[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0] + A[1][3] * B[3][0];
-	temp[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1] + A[1][3] * B[3][1];
-	temp[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2] + A[1][3] * B[3][2];
-	temp[1][3] = A[1][0] * B[0][3] + A[1][1] * B[1][3] + A[1][2] * B[2][3] + A[1][3] * B[3][3];
-
-	temp[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0] + A[2][3] * B[3][0];
-	temp[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1] + A[2][3] * B[3][1];
-	temp[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2] + A[2][3] * B[3][2];
-	temp[2][3] = A[2][0] * B[0][3] + A[2][1] * B[1][3] + A[2][2] * B[2][3] + A[2][3] * B[3][3];
-
-	temp[3][0] = A[3][0] * B[0][0] + A[3][1] * B[1][0] + A[3][2] * B[2][0] + A[3][3] * B[3][0];
-	temp[3][1] = A[3][0] * B[0][1] + A[3][1] * B[1][1] + A[3][2] * B[2][1] + A[3][3] * B[3][1];
-	temp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
-	temp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
-
 	mat4_t<T> result;
-	memcpy(&result.m, &temp, 16 * sizeof(float));
+
+	// Cache the invariants in registers
+	float x = m0.m[0][0];
+	float y = m0.m[0][1];
+	float z = m0.m[0][2];
+	float w = m0.m[0][3];
+
+	// Perform the operation on the first row
+	result.m[0][0] = (m1.m[0][0] * x) + (m1.m[1][0] * y) + (m1.m[2][0] * z) + (m1.m[3][0] * w);
+	result.m[0][1] = (m1.m[0][1] * x) + (m1.m[1][1] * y) + (m1.m[2][1] * z) + (m1.m[3][1] * w);
+	result.m[0][2] = (m1.m[0][2] * x) + (m1.m[1][2] * y) + (m1.m[2][2] * z) + (m1.m[3][2] * w);
+	result.m[0][3] = (m1.m[0][3] * x) + (m1.m[1][3] * y) + (m1.m[2][3] * z) + (m1.m[3][3] * w);
+
+	// Repeat for all the other rows
+	x = m0.m[1][0];
+	y = m0.m[1][1];
+	z = m0.m[1][2];
+	w = m0.m[1][3];
+
+	result.m[1][0] = (m1.m[0][0] * x) + (m1.m[1][0] * y) + (m1.m[2][0] * z) + (m1.m[3][0] * w);
+	result.m[1][1] = (m1.m[0][1] * x) + (m1.m[1][1] * y) + (m1.m[2][1] * z) + (m1.m[3][1] * w);
+	result.m[1][2] = (m1.m[0][2] * x) + (m1.m[1][2] * y) + (m1.m[2][2] * z) + (m1.m[3][2] * w);
+	result.m[1][3] = (m1.m[0][3] * x) + (m1.m[1][3] * y) + (m1.m[2][3] * z) + (m1.m[3][3] * w);
+
+	x = m0.m[2][0];
+	y = m0.m[2][1];
+	z = m0.m[2][2];
+	w = m0.m[2][3];
+
+	result.m[2][0] = (m1.m[0][0] * x) + (m1.m[1][0] * y) + (m1.m[2][0] * z) + (m1.m[3][0] * w);
+	result.m[2][1] = (m1.m[0][1] * x) + (m1.m[1][1] * y) + (m1.m[2][1] * z) + (m1.m[3][1] * w);
+	result.m[2][2] = (m1.m[0][2] * x) + (m1.m[1][2] * y) + (m1.m[2][2] * z) + (m1.m[3][2] * w);
+	result.m[2][3] = (m1.m[0][3] * x) + (m1.m[1][3] * y) + (m1.m[2][3] * z) + (m1.m[3][3] * w);
+
+	x = m0.m[3][0];
+	y = m0.m[3][1];
+	z = m0.m[3][2];
+	w = m0.m[3][3];
+
+	result.m[3][0] = (m1.m[0][0] * x) + (m1.m[1][0] * y) + (m1.m[2][0] * z) + (m1.m[3][0] * w);
+	result.m[3][1] = (m1.m[0][1] * x) + (m1.m[1][1] * y) + (m1.m[2][1] * z) + (m1.m[3][1] * w);
+	result.m[3][2] = (m1.m[0][2] * x) + (m1.m[1][2] * y) + (m1.m[2][2] * z) + (m1.m[3][2] * w);
+	result.m[3][3] = (m1.m[0][3] * x) + (m1.m[1][3] * y) + (m1.m[2][3] * z) + (m1.m[3][3] * w);
+
 	return result;
 }
 
 template <typename T>
-struct mat4_persp_t : mat4_t<T>
+mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ)
 {
-	mat4_persp_t(T fov, T aspect, T minZ, T maxZ = MAX_Z) : mat4_t<T>()
-	{
-		this->setZero();
-		const T tanHalfFov = std::tanf(fov / 2.0f);
-		this->m[0][0]      = T(1) / (aspect * tanHalfFov);
-		this->m[1][1]      = T(1) / tanHalfFov;
+	float sinFov;
+	float cosFov;
+	Math::sinCos(&sinFov, &cosFov, 0.5f * fov);
 
-		this->m[2][2] = -(maxZ + minZ) / (maxZ - minZ);
-		this->m[3][2] = -T(1);
-		this->m[2][3] = -(T(2) * maxZ * minZ) / (maxZ - minZ);
-	}
+	float height = cosFov / sinFov;
+	float width  = height / aspect;
+	float range  = maxZ / (maxZ - minZ);
+
+	mat4f out;
+	out.setZero();
+	out.m[0][0] = width;
+	out.m[1][1] = height;
+	out.m[2][2] = range;
+	out.m[2][3] = 1.0f;
+	out.m[3][2] = -range * minZ;
+	return out;
 };
 
 template <typename T>
-struct mat4_lookat_t : mat4_t<T>
+mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, const vec3_t<T>& upDirection)
 {
-	mat4_lookat_t(const vec3_t<T>& eye, const vec3_t<T>& center, const vec3_t<T>& upVector) : mat4_t<T>()
-	{
-		// Forward vector
-		const vec3_t<T> forward = (center - eye).normalized();
+	// Forward vector
+	vec3_t<T> forward = eyeDirection;
+	forward.normalize();
 
-		// Right vector
-		const vec3_t<T> right = forward.cross(upVector).normalized();
+	// Right vector
+	vec3_t<T> right = upDirection.cross(forward);
+	right.normalize();
 
-		// Up vector
-		const vec3_t<T> up = right.cross(forward);
+	// Up vector
+	vec3_t<T> up = forward.cross(right);
 
-		//  Rx |  Ux | -Fx | -Tx
-		//  Ry |  Uy | -Fy | -Ty
-		//  Rz |  Uz | -Fz | -Tz 
-		//  0  |  0  |  0  |  1
-		this->setIdentity();
-		this->m[0][0] = right.x;
-		this->m[0][1] = right.y;
-		this->m[0][2] = right.z;
-		this->m[1][0] = up.x;
-		this->m[1][1] = up.y;
-		this->m[1][2] = up.z;
-		this->m[2][0] = -forward.x;
-		this->m[2][1] = -forward.y;
-		this->m[2][2] = -forward.z;
-		this->m[0][3] = -up.dot(eye);
-		this->m[1][3] = -right.dot(eye);
-		this->m[2][3] = forward.dot(eye);
-	}
-};
+	vec3_t<T> negEyePosition = -eyePosition;
+	T d0                     = up.dot(negEyePosition);
+	T d1                     = right.dot(negEyePosition);
+	T d2                     = forward.dot(negEyePosition);
+
+	//   Rx  |   Ux  |   Fx  |  0
+	//   Ry  |   Uy  |   Fy  |  0
+	//   Rz  |   Uz  |   Fz  |  0
+	//  -Tx  |  -Ty  |  -Tz  |  1
+	mat4_t<T> out;
+	out.m[0][0] = right.x;
+	out.m[1][0] = right.y;
+	out.m[2][0] = right.z;
+	out.m[0][1] = up.x;
+	out.m[1][1] = up.y;
+	out.m[2][1] = up.z;
+	out.m[0][2] = forward.x;
+	out.m[1][2] = forward.y;
+	out.m[2][2] = forward.z;
+	out.m[3][0] = d0;
+	out.m[3][1] = d1;
+	out.m[3][2] = d2;
+
+	return out;
+}
 
 template <typename T>
-struct mat4_trans_t : mat4_t<T>
+mat4_t<T> lookAtLH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection)
 {
-	mat4_trans_t(const vec3_t<T>& delta) : mat4_t<T>()
-	{
-		this->m[3][0] = delta.x;
-		this->m[3][1] = delta.y;
-		this->m[3][2] = delta.z;
-	}
-};
+	auto eyeDirection = atPosition - eyePosition;
+	return lookTo(eyePosition, eyeDirection, upDirection);
+}
 
 template <typename T>
-struct mat4_rot_t : mat4_t<T>
+mat4_t<T> lookAtRH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection)
 {
-	mat4_rot_t(T pitch, T yaw, T roll) : mat4_t<T>()
-	{
-		// Convert from degrees to radians
-		pitch = Math::degreesToRadians(pitch);
-		yaw   = Math::degreesToRadians(yaw);
-		roll  = Math::degreesToRadians(roll);
-
-		T cp = std::cosf(pitch);
-		T sp = std::sinf(pitch);
-		T cy = std::cosf(yaw);
-		T sy = std::sinf(yaw);
-		T cr = std::cosf(roll);
-		T sr = std::sinf(roll);
-
-		T cpsy = cp * sy;
-		T spsy = sp * sy;
-
-		this->m[0][0] = cy * cr;
-		this->m[0][1] = -cy * sr;
-		this->m[0][2] = sy;
-		this->m[1][0] = spsy * cr + cp * sr;
-		this->m[1][1] = -spsy * sr + cp * cr;
-		this->m[1][2] = -sp * cy;
-		this->m[2][0] = -cpsy * cr + sp * sr;
-		this->m[2][1] = cpsy * sr + sp * cr;
-		this->m[2][2] = cp * cy;
-	}
-
-	mat4_rot_t(const rot_t<T>& rotation) : mat4_t<T>()
-	{
-		*this = mat4_rot_t(rotation.pitch, rotation.yaw, rotation.roll);
-	}
-};
+	auto eyeDirection = eyePosition - atPosition;
+	return lookTo(eyePosition, eyeDirection, upDirection);
+}
 
 template <typename T>
-struct mat4_rottrans_t : mat4_t<T>
+mat4_t<T> translationMatrix(const vec3_t<T>& delta)
 {
-	mat4_rottrans_t(const rot_t<T>& rotation, const vec3_t<T>& translation) : mat4_t<T>()
-	{
-		mat4_t<T> rotationMatrix    = mat4_rot_t<T>(rotation);
-		mat4_t<T> translationMatrix = mat4_trans_t<T>(translation);
-		*this                       = rotationMatrix * translationMatrix;
-	}
-};
+	mat4_t<T> out;
+	out.m[3][0] = delta.x;
+	out.m[3][1] = delta.y;
+	out.m[3][2] = delta.z;
+	return out;
+}
+
+template <typename T>
+mat4_t<T> rotationMatrix(T pitch, T yaw, T roll)
+{
+	mat4_t<T> out;
+	// Convert from degrees to radians
+	pitch = Math::degreesToRadians(pitch);
+	yaw   = Math::degreesToRadians(yaw);
+	roll  = Math::degreesToRadians(roll);
+
+	T cp = std::cosf(pitch);
+	T sp = std::sinf(pitch);
+	T cy = std::cosf(yaw);
+	T sy = std::sinf(yaw);
+	T cr = std::cosf(roll);
+	T sr = std::sinf(roll);
+
+	T cpsy = cp * sy;
+	T spsy = sp * sy;
+
+	out.m[0][0] = cy * cr;
+	out.m[0][1] = -cy * sr;
+	out.m[0][2] = sy;
+	out.m[1][0] = spsy * cr + cp * sr;
+	out.m[1][1] = -spsy * sr + cp * cr;
+	out.m[1][2] = -sp * cy;
+	out.m[2][0] = -cpsy * cr + sp * sr;
+	out.m[2][1] = cpsy * sr + sp * cr;
+	out.m[2][2] = cp * cy;
+
+	return out;
+}
+
+template <typename T>
+mat4_t<T> rotationMatrix(const rot_t<T>& rot)
+{
+	return rotationMatrix(rot.pitch, rot.yaw, rot.roll);
+}
+
+template <typename T>
+mat4_t<T> rotationTranslationMatrix(const rot_t<T>& rotation, const vec3_t<T>& translation)
+{
+	return rotationMatrix(rotation) * translationMatrix(translation);
+}

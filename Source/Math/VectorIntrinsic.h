@@ -5,17 +5,6 @@
 
 #include "Vector.h"
 
-struct vecmu32
-{
-	union
-	{
-		uint32 u[4];
-		__m128 v;
-	};
-};
-
-constexpr vecmu32 g_mask3 = {UINT32_MAX, UINT32_MAX, UINT32_MAX, 0};
-
 // ReSharper disable once CppInconsistentNaming
 struct vecm
 {

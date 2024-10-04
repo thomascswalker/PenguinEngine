@@ -6,7 +6,7 @@
 
 vec4f ScanlineVertexShader::process(const VertexData& input)
 {
-	return input.mvp * vec4f(input.position, 1.0f);
+	return Math::vectorTransform(vec4f(input.position, 1.0f), input.mvp);
 }
 
 /** Pixel Shader **/
@@ -72,9 +72,12 @@ void ScanlineRenderPipeline::draw()
 
 void ScanlineRenderPipeline::endDraw() {}
 
-bool ScanlineRenderPipeline::vertexStage(vec3f* screen) const
+bool ScanlineRenderPipeline::vertexStage()
 {
-	int32 count = 0;
+	// Run the vertex shader for each vertex. This is assuming the output is a vec4f which is the
+	// final projected vertex position on the screen. The W component of that vector needs to be
+	// above 0 to be in the view frustum. Otherwise, it's off the screen.
+	bool triangleOnScreen = false;
 	for (int32 i = 0; i < 3; i++)
 	{
 		VertexData input;
@@ -82,16 +85,39 @@ bool ScanlineRenderPipeline::vertexStage(vec3f* screen) const
 		input.position = m_vertexBufferPtr[i].position;
 
 		vec4f output = ScanlineVertexShader::process(input);
-		if (output.w <= 0.0f)
+		if (output.w > 0.0f)
 		{
-			count++;
-			if (count == 3)
-			{
-				return false;
-			}
+			m_screenPoints[i] = Math::clip(output, m_viewData->width, m_viewData->height);
+			triangleOnScreen  = true;
 		}
-		screen[i] = Math::clip(output, m_viewData->width, m_viewData->height);
 	}
+
+	// If none of the vertexes are on the screen, the triangle is off-screen and the vertex stage
+	// has failed.
+	if (!triangleOnScreen)
+	{
+		return false;
+	}
+
+	// Check back-facing
+	auto normal     = (m_vertexBufferPtr[0].normal + m_vertexBufferPtr[1].normal + m_vertexBufferPtr[2].normal) / 3.0f;
+	float dotNormal = (-m_viewData->cameraDirection).dot(normal);
+	if (dotNormal > 0.0f)
+	{
+		return false;
+	}
+
+	// Check the order of the vertexes on the screen. If they are 
+	EWindingOrder order = Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]);
+	switch (order)
+	{
+	case EWindingOrder::Clockwise: // Triangle is back-facing, exit
+	case EWindingOrder::CoLinear:  // Triangle has zero area, exit
+		return false;
+	case EWindingOrder::CounterClockwise: // Triangle is front-facing, continue
+		break;
+	}
+
 	return true;
 }
 
@@ -125,10 +151,6 @@ void ScanlineRenderPipeline::rasterStage()
 	float area        = Math::area2D(s0, s1, s2) * 2.0f;
 	float oneOverArea = 1.0f / area;
 
-	float depth0 = Math::getDepth(s0, s0, s1, s2, area);
-	float depth1 = Math::getDepth(s1, s0, s1, s2, area);
-	float depth2 = Math::getDepth(s2, s0, s1, s2, area);
-
 	// Loop through all pixels in the screen bounding box.
 	for (int32 y = minY; y <= maxY; y++)
 	{
@@ -137,11 +159,11 @@ void ScanlineRenderPipeline::rasterStage()
 			vec3f point((float)x, (float)y, 0);
 
 			// Use Pineda's edge function to determine if the current pixel is within the triangle.
-			float w0 = EDGE_FUNCTION(s1.x, s1.y, s2.x, s2.y, point.x, point.y);
-			float w1 = EDGE_FUNCTION(s2.x, s2.y, s0.x, s0.y, point.x, point.y);
-			float w2 = EDGE_FUNCTION(s0.x, s0.y, s1.x, s1.y, point.x, point.y);
+			float w0 = Math::edgeFunction(s1, s2, point);
+			float w1 = Math::edgeFunction(s2, s0, point);
+			float w2 = Math::edgeFunction(s0, s1, point);
 
-			if (w0 <= 0.0f || w1 <= 0.0f || w2 <= 0.0f)
+			if (w0 > 0.0f || w1 > 0.0f || w2 > 0.0f)
 			{
 				continue;
 			}
@@ -156,19 +178,23 @@ void ScanlineRenderPipeline::rasterStage()
 			bary.y = w1;
 			bary.z = w2;
 
-			// Interpolate depth given the barycentric coordinates
-			float z = bary.x * depth0 + bary.y * depth1 + bary.z * depth2;
-
-			// Compare the new depth to the current depth at this pixel. If the new depth is further than
-			// the current depth, continue.
-			float oldZ = m_depthBuffer->getPixelAsFloat(x, y);
-			if (z > oldZ)
+			float z = 0;
+			if (m_renderSettings->getRenderFlag(Depth))
 			{
-				continue;
+				// Interpolate depth given the barycentric coordinates
+				z = bary.x * -s0.z + bary.y * -s1.z + bary.z * -s2.z;
+
+				// Compare the new depth to the current depth at this pixel. If the new depth is further than
+				// the current depth, continue.
+				float oldZ = m_depthBuffer->getPixelAsFloat(x, y);
+				if (z > oldZ)
+				{
+					continue;
+				}
+				// If the new depth is closer than the current depth, set the current depth
+				// at this pixel to the new depth we just got.
+				m_depthBuffer->setPixelFromFloat(x, y, z);
 			}
-			// If the new depth is closer than the current depth, set the current depth
-			// at this pixel to the new depth we just got.
-			m_depthBuffer->setPixelFromFloat(x, y, z);
 
 			PixelData pixel;
 			pixel.width    = m_viewData->width;
@@ -202,7 +228,6 @@ void ScanlineRenderPipeline::fragmentStage() const
 	for (const auto& pixel : m_pixelBuffer)
 	{
 		Color color = ScanlinePixelShader::process(pixel);
-
 		m_frameBuffer->setPixelFromColor(pixel.position.x, pixel.position.y, color);
 	}
 }
@@ -213,22 +238,13 @@ void ScanlineRenderPipeline::drawTriangle(Vertex* vertex)
 	m_vertexBufferPtr = vertex;
 
 	// Run the vertex shader
-	if (!vertexStage(m_screenPoints))
+	if (!vertexStage())
 	{
 		return;
 	}
 
 	if (m_renderSettings->getRenderFlag(Shaded))
 	{
-		switch (Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]))
-		{
-		case EWindingOrder::CW: // Triangle is back-facing, exit
-		case EWindingOrder::CL: // Triangle has zero area, exit
-			return;
-		case EWindingOrder::CCW: // Triangle is front-facing, continue
-			break;
-		}
-
 		// Rasterize the triangle
 		rasterStage();
 

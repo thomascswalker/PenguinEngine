@@ -3,6 +3,7 @@
 
 #include <format>
 #include <cassert>
+#include <DirectXMath.h>
 #include <intrin.h>
 
 #include "Core/Logging.h"
@@ -81,6 +82,12 @@ struct vec2_t
 	std::string toString() const
 	{
 		return std::format("[{}, {}]", x, y);
+	}
+
+	void zero()
+	{
+		x = 0.0f;
+		y = 0.0f;
 	}
 
 	// Operators
@@ -268,6 +275,13 @@ struct vec3_t
 		return vec3_t<ToType>{static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z)};
 	}
 
+	void zero()
+	{
+		x = 0.0f;
+		y = 0.0f;
+		z = 0.0f;
+	}
+
 	void normalize()
 	{
 #ifndef PENG_SSE
@@ -285,7 +299,7 @@ struct vec3_t
 #else
 		// https://fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
 		__m128 vec        = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f); // Convert to __m128
-		__m128 dotProduct = _mm_dp_ps(vec, vec, 0x77); // Compute dot product
+		__m128 dotProduct = _mm_dp_ps(vec, vec, g_maskW); // Compute dot product
 		__m128 invNormal  = _mm_rsqrt_ps(dotProduct); // Get inverse normal
 		vec               = _mm_mul_ps(vec, invNormal); // Multiply original vector by the inverse normal
 
@@ -330,22 +344,26 @@ struct vec3_t
 			x * v.y - y * v.x
 		};
 #else
-		const __m128 a = toM128();
-		const __m128 b = v.toM128();
-
-		__m128 tmp0 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1));
-		__m128 tmp1 = _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2));
-		__m128 tmp2 = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2));
-		__m128 tmp3 = _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1));
-
-		__m128 result = _mm_sub_ps(
-			_mm_mul_ps(tmp0, tmp1),
-			_mm_mul_ps(tmp2, tmp3));
-
+		__m128 V1 = toM128();
+		__m128 V2 = v.toM128();
+		// y1,z1,x1,w1
+		__m128 vTemp1 = XM_PERMUTE_PS(V1, _MM_SHUFFLE(3, 0, 2, 1));
+		// z2,x2,y2,w2
+		__m128 vTemp2 = XM_PERMUTE_PS(V2, _MM_SHUFFLE(3, 1, 0, 2));
+		// Perform the left operation
+		__m128 vResult = _mm_mul_ps(vTemp1, vTemp2);
+		// z1,x1,y1,w1
+		vTemp1 = XM_PERMUTE_PS(vTemp1, _MM_SHUFFLE(3, 0, 2, 1));
+		// y2,z2,x2,w2
+		vTemp2 = XM_PERMUTE_PS(vTemp2, _MM_SHUFFLE(3, 1, 0, 2));
+		// Perform the right operation
+		vResult = XM_FNMADD_PS(vTemp1, vTemp2, vResult);
+		// Set w to zero
 		vec3_t out;
-		_MM_EXTRACT_FLOAT(out.x, result, 0);
-		_MM_EXTRACT_FLOAT(out.y, result, 1);
-		_MM_EXTRACT_FLOAT(out.z, result, 2);
+		__m128 r = _mm_and_ps(vResult, DirectX::g_XMMask3);
+		_MM_EXTRACT_FLOAT(out.x, r, 0);
+		_MM_EXTRACT_FLOAT(out.y, r, 1);
+		_MM_EXTRACT_FLOAT(out.z, r, 2);
 		return out;
 #endif
 	}
@@ -561,6 +579,14 @@ struct vec4_t
 		return std::format("[{}, {}, {}, {}]", x, y, z, w);
 	}
 
+	void zero()
+	{
+		x = 0.0f;
+		y = 0.0f;
+		z = 0.0f;
+		w = 0.0f;
+	}
+
 	// Operators
 	vec4_t operator+(const vec4_t& v) const
 	{
@@ -753,12 +779,12 @@ namespace Math
 	template <typename T>
 	static EWindingOrder getVertexOrder(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
 	{
-		const float result = (v1.y - v0.y) * (v2.x - v1.x) - (v1.x - v0.x) * (v2.y - v1.y);
+		const float result = (v1.x - v0.x) * (v2.y - v0.y) - (v1.y - v0.y) * (v2.x - v0.x);
 		if (result == T(0))
 		{
-			return EWindingOrder::CL;
+			return EWindingOrder::CoLinear;
 		}
-		return result > T(0) ? EWindingOrder::CW : EWindingOrder::CCW;
+		return result > T(0) ? EWindingOrder::Clockwise : EWindingOrder::CounterClockwise;
 	}
 
 	static constexpr float edgeFunction(const float x0, const float y0, const float x1, const float y1, const float x2,

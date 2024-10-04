@@ -17,7 +17,17 @@ constexpr float g_defaultFov  = 54.3f;
 constexpr float g_defaultMinz = 0.1f;
 constexpr float g_defaultMaxz = 1000.0f;
 
-constexpr float g_defaultMinZoom      = 10.0f;
+constexpr float g_defaultMinZoom = 1.0f;
+constexpr float g_defaultMaxZoom = 1000.0f;
+constexpr float g_defaultZoom    = 36.0f;
+
+constexpr float g_defaultPhi   = 1.02609062f;
+constexpr float g_defaultTheta = -0.813961744f;
+
+constexpr float g_defaultPanSpeed   = 0.001f;
+constexpr float g_defaultOrbitSpeed = 0.001f;
+constexpr float g_defaultZoomSpeed  = 0.01f;
+
 const auto g_defaultCameraTranslation = vec3f(-36, 30, 34);
 
 enum class EViewportType : uint8
@@ -35,15 +45,10 @@ struct ViewData
 	float maxZ    = g_defaultMaxz;
 	float minFov  = 20.0f;
 	float maxFov  = 120.0f;
-	float minZoom = 2.0f;
-	float maxZoom = 100.0f;
+	float minZoom = g_defaultMinZoom;
+	float maxZoom = g_defaultMaxZoom;
 
 	vec3f target = vec3f::zeroVector(); // Origin
-	sphericalf spherical;
-	sphericalf sphericalDelta;
-	float minPolarAngle = 0.0f;
-	float maxPolarAngle = PI;
-	vec3f panOffset;
 
 	mat4f projectionMatrix;
 	mat4f viewMatrix;
@@ -66,75 +71,42 @@ public:
 	float m_maxZ    = g_defaultMaxz;
 	float m_minFov  = 20.0f;
 	float m_maxFov  = 120.0f;
-	float m_minZoom = 2.0f;
-	float m_maxZoom = 100.0f;
+	float m_zoom    = g_defaultZoom;
+	float m_minZoom = g_defaultMinZoom;
+	float m_maxZoom = g_defaultMaxZoom;
 
-	vec3f m_target = vec3f::zeroVector(); // Origin
+	vec3f m_targetTranslation = vec3f::zeroVector(); // Origin
 	sphericalf m_spherical;
-	sphericalf m_sphericalDelta;
+	sphericalf m_deltaRotation;
 	float m_minPolarAngle = 0.0f;
-	float m_maxPolarAngle = PI;
-	vec3f m_panOffset;
+	float m_maxPolarAngle = g_pi;
+	vec3f m_deltaTranslation;
 
 	mat4f m_projectionMatrix;
 	mat4f m_viewMatrix;
 	mat4f m_viewProjectionMatrix;
 	mat4f m_invViewProjectionMatrix;
 
+	float m_panSpeed   = g_defaultPanSpeed;
+	float m_orbitSpeed = g_defaultOrbitSpeed;
+	float m_zoomSpeed  = g_defaultZoomSpeed;
+
 	/**
 	 * Constructor for the Camera class.
-	 * Initializes the camera by calling the Init() function.
 	 */
-	Camera()
-	{
-		init();
-	}
+	Camera();
 
-	void init()
-	{
-		setTranslation(g_defaultCameraTranslation);
-	}
-
-	constexpr float getAspect() const
-	{
-		return static_cast<float>(m_width) / static_cast<float>(m_height);
-	}
-
+	constexpr float getAspect() const;
 	void computeViewProjectionMatrix();
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
 	void zoom(float value);
-	void setFov(float newFov);
-
-	void setLookAt(const vec3f& newLookAt)
-	{
-		m_target = newLookAt;
-	}
-
 	void update(float deltaTime) override;
-
-	/* General Math */
-	// https://github.com/EpicGames/UnrealEngine/blob/c830445187784f1269f43b56f095493a27d5a636/Engine/Source/Runtime/Engine/Private/SceneView.cpp#L1431
-	void deprojectScreenToWorld(const vec2f& screenPoint, vec3f& outWorldPosition,
-	                            vec3f& outWorldDirection) const;
-
-	ViewData* getViewData()
-	{
-		m_viewData.width                   = m_width;
-		m_viewData.height                  = m_height;
-		m_viewData.fov                     = m_fov;
-		m_viewData.minZ                    = m_minZ;
-		m_viewData.maxZ                    = m_maxZ;
-		m_viewData.target                  = m_target;
-		m_viewData.spherical               = m_spherical;
-		m_viewData.projectionMatrix        = m_projectionMatrix;
-		m_viewData.viewMatrix              = m_viewMatrix;
-		m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
-		m_viewData.invViewProjectionMatrix = m_invViewProjectionMatrix;
-		m_viewData.cameraDirection         = getForwardVector();
-		m_viewData.cameraTranslation       = getTranslation();
-		return &m_viewData;
-	}
+	void setFov(float newFov);
+	float getTargetDistance() const;
+	void setLookAt(const vec3f& newLookAt);
+	ViewData* getViewData();
+	void setDefault();
 };
 
 namespace Math
