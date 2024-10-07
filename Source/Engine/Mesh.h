@@ -1,8 +1,9 @@
 ﻿#pragma once
 
+#include <memory>
 #include <vector>
 #include "Object.h"
-#include "Core/Array.h"
+#include "math/Vector.h"
 
 class Mesh;
 /* Global container for all mesh objects. */
@@ -138,4 +139,6 @@ public:
 	// Primitives
 	static std::shared_ptr<Mesh> createPlane(float size);
 	static std::shared_ptr<Mesh> createPlane(float width, float height);
+
+	void update(float deltaTime) override {}
 };

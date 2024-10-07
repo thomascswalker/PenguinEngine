@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Math/MathFwd.h"
-#include "Engine/Object.h"
+#include "Engine/Actor.h"
 #include "Math/Spherical.h"
 
 constexpr int32 g_windowWidthClip       = 16;
@@ -60,7 +60,7 @@ struct ViewData
 	vec3f cameraTranslation;
 };
 
-class Camera : public Object
+class Camera : public Actor
 {
 public:
 	ViewData m_viewData;
@@ -95,15 +95,15 @@ public:
 	 * Constructor for the Camera class.
 	 */
 	Camera();
+	void update(float deltaTime) override;
 
-	constexpr float getAspect() const;
+	[[nodiscard]] constexpr float getAspect() const;
 	void computeViewProjectionMatrix();
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
 	void zoom(float value);
-	void update(float deltaTime) override;
 	void setFov(float newFov);
-	float getTargetDistance() const;
+	[[nodiscard]] float getTargetDistance() const;
 	void setLookAt(const vec3f& newLookAt);
 	ViewData* getViewData();
 	void setDefault();

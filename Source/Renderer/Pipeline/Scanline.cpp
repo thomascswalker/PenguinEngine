@@ -395,7 +395,7 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 			{
 				continue;
 			}
-			points.emplace_back(vec2f(y, x));
+			points.push_back(vec2f(y, x));
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
@@ -412,7 +412,7 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 			{
 				continue;
 			}
-			points.emplace_back(vec2f(x, y));
+			points.push_back(vec2f(x, y));
 			errorCount += deltaError;
 			if (errorCount > deltaX)
 			{
