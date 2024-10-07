@@ -18,7 +18,7 @@ class Viewport
 public:
 	/* Render settings. */
 	RenderSettings m_settings;
-	std::shared_ptr<Camera> m_camera;
+	Camera* m_camera;
 
 	std::string m_debugText;
 	bool m_showDebugText = true;
@@ -44,7 +44,7 @@ public:
 	bool createRenderPipeline();
 	bool initRenderPipeline(void* windowHandle) const;
 	[[nodiscard]] IRenderPipeline* getRenderPipeline() const;
-	void updateSceneGeometry() const;
+	void updateSceneGeometry(const std::vector<IRenderable*>& renderables) const;
 	void updateSceneCamera() const;
 
 	/** Debug **/

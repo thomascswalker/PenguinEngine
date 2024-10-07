@@ -2,12 +2,11 @@
 
 #include <memory>
 #include <vector>
-#include "Object.h"
 #include "math/Vector.h"
 
 class Mesh;
 /* Global container for all mesh objects. */
-inline std::vector<std::shared_ptr<Mesh>> g_meshes;
+inline std::vector<Mesh*> g_meshes;
 
 namespace MeshManager
 {
@@ -18,7 +17,7 @@ namespace MeshManager
 
 	inline Mesh* getMesh(const int32 index)
 	{
-		return g_meshes[index].get();
+		return g_meshes[index];
 	}
 } // namespace MeshManager
 
@@ -63,7 +62,7 @@ struct Triangle
 		  , texCoordIndexes(inTexCoordIndexes) {}
 };
 
-class Mesh : public Object
+class Mesh
 {
 	// Properties
 	std::vector<Triangle> m_triangles;
@@ -139,6 +138,4 @@ public:
 	// Primitives
 	static std::shared_ptr<Mesh> createPlane(float size);
 	static std::shared_ptr<Mesh> createPlane(float width, float height);
-
-	void update(float deltaTime) override {}
 };

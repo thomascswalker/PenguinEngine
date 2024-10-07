@@ -1,6 +1,9 @@
 ﻿#include "Engine/Engine.h"
 
 #include "Application.h"
+#include "ObjectManager.h"
+#include "StaticMeshActor.h"
+
 #include "Engine/Timer.h"
 #include "Importers/MeshImporter.h"
 #include "Importers/TextureImporter.h"
@@ -91,7 +94,11 @@ void Engine::tick()
 	}
 
 	// Tick every object
-	getViewportCamera()->update(m_deltaTime);
+	auto tickables = g_objectManager.getTickables();
+	for (auto tickable : tickables)
+	{
+		tickable->update(m_deltaTime);
+	}
 
 	// Format debug text
 	getViewport()->formatDebugText();
@@ -204,14 +211,24 @@ void Engine::loadMesh() const
 	if (platform->getFileDialog(fileName, "obj"))
 	{
 		// Load model
-		g_meshes.clear();
-		const auto mesh = std::make_shared<Mesh>();
-		ObjImporter::import(fileName, mesh.get());
+		Mesh* mesh = new Mesh();
+		ObjImporter::import(fileName, mesh);
 		mesh->processTriangles();
-		g_meshes.emplace_back(mesh);
+		g_meshes.push_back(std::move(mesh));
 		LOG_INFO("Loaded model {}.", fileName)
+
+		if (StaticMeshActor* staticMeshActor = g_objectManager.createObject<StaticMeshActor>())
+		{
+			staticMeshActor->setMesh(g_meshes.back());
+		}
+		else
+		{
+			LOG_ERROR("Failed to construct StaticMeshActor.")
+		}
+
+		auto renderables = g_objectManager.getRenderables();
+		m_viewport->updateSceneGeometry(renderables);
 	}
-	m_viewport->updateSceneGeometry();
 }
 
 void Engine::loadTexture() const

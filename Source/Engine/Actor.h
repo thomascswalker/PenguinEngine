@@ -11,8 +11,8 @@ enum class ECoordinateSpace
 	World
 };
 
-/** Represents an object in the scene which both has a transform and can tick. **/
-class Actor : public Object
+/** Represents an object in the scene which can tick and has a transform. **/
+class Actor : public Object, public ITickable
 {
 protected:
 	transf m_transform;
@@ -23,9 +23,13 @@ protected:
 	vec3f m_upVector;
 
 public:
-	Actor() {}
+	Actor()
+	{
+		setSignature(ESignature::Tickable);
+	}
+
 	~Actor() override = default;
-	void update(float deltaTime) override {}
+	void update(float deltaTime) override = 0;
 
 	void computeBasisVectors()
 	{
