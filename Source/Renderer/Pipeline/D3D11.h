@@ -19,7 +19,7 @@
 
 #include "Core/String.h"
 
-#include "Renderer/Camera.h"
+#include "Engine/Actors/Camera.h"
 #include "Renderer/Shader.h"
 
 using Microsoft::WRL::ComPtr;
@@ -168,7 +168,7 @@ public:
 
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
-	void draw() override;
+	void draw(IRenderable* renderable) override;
 	void endDraw() override;
 	void shutdown() override;
 	void resize(int32 width, int32 height) override;

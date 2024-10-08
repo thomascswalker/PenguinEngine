@@ -83,8 +83,11 @@ void Viewport::draw()
 		// Called prior to drawing geometry, draws the world grid
 		m_renderPipeline->drawGrid(m_grid.get());
 
-		// Draws all mesh geometry to the framebuffer
-		m_renderPipeline->draw();
+		// Draw each renderable object
+		for (IRenderable* renderable : g_objectManager.getRenderables())
+		{
+			m_renderPipeline->draw(renderable);
+		}
 
 		// Called after drawing geometry
 		m_renderPipeline->endDraw();
@@ -129,56 +132,6 @@ bool Viewport::initRenderPipeline(void* windowHandle) const
 IRenderPipeline* Viewport::getRenderPipeline() const
 {
 	return m_renderPipeline.get();
-}
-
-void Viewport::updateSceneGeometry(const std::vector<IRenderable*>& renderables) const
-{
-	std::vector<float> vertexArray;
-	std::vector<int32> indexArray;
-	int32 vertexCount = 0;
-
-	for (const auto& renderable : renderables)
-	{
-		Mesh* mesh                  = renderable->getMesh();
-		transf transform            = renderable->getTransform();
-		std::vector<Triangle>* tris = mesh->getTriangles();
-		for (auto& tri : *tris)
-		{
-			Vertex* v0 = &tri.v0;
-			vertexArray.push_back(v0->position.x);
-			vertexArray.push_back(v0->position.y);
-			vertexArray.push_back(v0->position.z);
-			vertexArray.push_back(v0->normal.x);
-			vertexArray.push_back(v0->normal.y);
-			vertexArray.push_back(v0->normal.z);
-			vertexArray.push_back(v0->texCoord.x);
-			vertexArray.push_back(v0->texCoord.y);
-
-			Vertex* v1 = &tri.v1;
-			vertexArray.push_back(v1->position.x);
-			vertexArray.push_back(v1->position.y);
-			vertexArray.push_back(v1->position.z);
-			vertexArray.push_back(v1->normal.x);
-			vertexArray.push_back(v1->normal.y);
-			vertexArray.push_back(v1->normal.z);
-			vertexArray.push_back(v1->texCoord.x);
-			vertexArray.push_back(v1->texCoord.y);
-
-			Vertex* v2 = &tri.v2;
-			vertexArray.push_back(v2->position.x);
-			vertexArray.push_back(v2->position.y);
-			vertexArray.push_back(v2->position.z);
-			vertexArray.push_back(v2->normal.x);
-			vertexArray.push_back(v2->normal.y);
-			vertexArray.push_back(v2->normal.z);
-			vertexArray.push_back(v2->texCoord.x);
-			vertexArray.push_back(v2->texCoord.y);
-
-			vertexCount += 3;
-		}
-	}
-
-	m_renderPipeline->setVertexData(vertexArray.data(), vertexArray.size() * sizeof(float), vertexCount);
 }
 
 void Viewport::updateSceneCamera() const

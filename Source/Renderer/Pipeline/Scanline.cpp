@@ -62,8 +62,23 @@ void ScanlineRenderPipeline::beginDraw()
 	}
 }
 
-void ScanlineRenderPipeline::draw()
+void ScanlineRenderPipeline::draw(IRenderable* renderable)
 {
+	// Set the current model matrix to the current renderable's transform, converted to a matrix
+	m_viewData->modelMatrix               = renderable->getTransform().toMatrix();
+	m_viewData->modelViewProjectionMatrix = m_viewData->modelMatrix * m_viewData->viewProjectionMatrix;
+
+	// Convert the current renderable's geometry into a vertex buffer
+	m_vertexBuffer.clear();
+	std::vector<Triangle>* triangles = renderable->getMesh()->getTriangles();
+	for (Triangle& tri : *triangles)
+	{
+		m_vertexBuffer.emplace_back(tri.v0);
+		m_vertexBuffer.emplace_back(tri.v1);
+		m_vertexBuffer.emplace_back(tri.v2);
+	}
+
+	// Draw each triangle in the vertex buffer
 	for (int32 index = 0; index < m_vertexBuffer.size(); index += 3)
 	{
 		drawTriangle(m_vertexBuffer.data() + index);
@@ -81,13 +96,13 @@ bool ScanlineRenderPipeline::vertexStage()
 	for (int32 i = 0; i < 3; i++)
 	{
 		VertexData input;
-		input.mvp      = m_viewData->viewProjectionMatrix;
+		input.mvp      = m_viewData->modelViewProjectionMatrix;
 		input.position = m_vertexBufferPtr[i].position;
 
 		vec4f output = ScanlineVertexShader::process(input);
 		if (output.w > 0.0f)
 		{
-			m_screenPoints[i] = Math::clip(output, m_viewData->width, m_viewData->height);
+			m_screenPoints[i] = Clipping::clip(output, m_viewData->width, m_viewData->height);
 			triangleOnScreen  = true;
 		}
 	}
@@ -100,14 +115,18 @@ bool ScanlineRenderPipeline::vertexStage()
 	}
 
 	// Check back-facing
-	auto normal     = (m_vertexBufferPtr[0].normal + m_vertexBufferPtr[1].normal + m_vertexBufferPtr[2].normal) / 3.0f;
+	auto model = m_viewData->modelMatrix;
+	m_vertexBufferPtr[0].normal = model * m_vertexBufferPtr[0].normal;
+	m_vertexBufferPtr[1].normal = model * m_vertexBufferPtr[1].normal;
+	m_vertexBufferPtr[2].normal = model * m_vertexBufferPtr[2].normal;
+	auto normal = (m_vertexBufferPtr[0].normal + m_vertexBufferPtr[1].normal + m_vertexBufferPtr[2].normal) / 3.0f;
 	float dotNormal = (-m_viewData->cameraDirection).dot(normal);
 	if (dotNormal > 0.0f)
 	{
 		return false;
 	}
 
-	// Check the order of the vertexes on the screen. If they are 
+	// Check the order of the vertexes on the screen. If they are
 	EWindingOrder order = Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]);
 	switch (order)
 	{
@@ -356,7 +375,7 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 
 	// Clip the screen points within the viewport. If the line points are outside the viewport entirely
 	// then just return.
-	if (!clipLine(&a, &b, vec2i{m_viewData->width, m_viewData->height}))
+	if (!Clipping::clipLine(&a, &b, vec2i{m_viewData->width, m_viewData->height}))
 	{
 		return;
 	}

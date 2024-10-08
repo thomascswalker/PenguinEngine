@@ -2,7 +2,7 @@
 
 //#define PENG_HARDWARE_ACCELERATION
 
-#include "Camera.h"
+#include "Engine/Actors/Camera.h"
 #include "Grid.h"
 #include "Settings.h"
 #include "Core/Buffer.h"
@@ -44,7 +44,6 @@ public:
 	bool createRenderPipeline();
 	bool initRenderPipeline(void* windowHandle) const;
 	[[nodiscard]] IRenderPipeline* getRenderPipeline() const;
-	void updateSceneGeometry(const std::vector<IRenderable*>& renderables) const;
 	void updateSceneCamera() const;
 
 	/** Debug **/

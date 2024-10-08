@@ -4,8 +4,8 @@
 
 #include "RenderPipeline.h"
 
+#include "Engine/Actors/Camera.h"
 #include "Engine/Mesh.h"
-#include "Renderer/Camera.h"
 #include "Renderer/Grid.h"
 #include "Renderer/Settings.h"
 #include "Renderer/Shader.h"
@@ -58,6 +58,8 @@ class ScanlineRenderPipeline : public IRenderPipeline
 
 	std::shared_ptr<ViewData> m_viewData = nullptr;
 
+	/** Current model matrix **/
+	mat4f m_modelMatrix;
 	/** Vector of all vertexes in all meshes. **/
 	std::vector<Vertex> m_vertexBuffer;
 	/** Pointer to the first Vertex in the current triangle. **/
@@ -78,7 +80,7 @@ public:
 
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
-	void draw() override;
+	void draw(IRenderable* renderable) override;
 	void endDraw() override;
 	void shutdown() override {}
 	void resize(int32 width, int32 height) override;

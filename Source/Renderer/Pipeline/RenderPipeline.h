@@ -1,5 +1,7 @@
 #pragma once
+
 #include "Core/Types.h"
+#include "Engine/Object.h"
 #include "Renderer/Grid.h"
 #include "Renderer/Settings.h"
 
@@ -14,7 +16,7 @@ public:
 
 	virtual bool init(void* windowHandle) = 0;
 	virtual void beginDraw() = 0;
-	virtual void draw() = 0;
+	virtual void draw(IRenderable* renderable) = 0;
 	virtual void endDraw() = 0;
 	virtual void shutdown() = 0;
 	virtual void resize(int32 width, int32 height) = 0;

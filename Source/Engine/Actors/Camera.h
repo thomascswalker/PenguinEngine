@@ -1,7 +1,7 @@
 ﻿#pragma once
 
+#include "Engine/Actors/Actor.h"
 #include "Math/MathFwd.h"
-#include "Engine/Actor.h"
 #include "Math/Spherical.h"
 
 constexpr int32 g_windowWidthClip       = 16;
@@ -55,6 +55,7 @@ struct ViewData
 	mat4f modelMatrix;
 	mat4f viewProjectionMatrix;
 	mat4f invViewProjectionMatrix;
+	mat4f modelViewProjectionMatrix;
 
 	vec3f cameraDirection;
 	vec3f cameraTranslation;
@@ -144,28 +145,5 @@ namespace Math
 	static bool deprojectScreenToWorld(const vec2f& screenPosition, const ViewData& viewData)
 	{
 		return true;
-	}
-
-	static vec3f clip(const vec4f& input, int32 width, int32 height)
-	{
-		// Apply perspective correction
-		const vec3f clipPosition{
-			input.x / input.w,
-			input.y / input.w,
-			input.z / input.w
-		};
-
-		// Normalized device coordinates
-		const vec2f normalizedPosition{
-			(clipPosition.x / 2.0f) + 0.5f,
-			(clipPosition.y / 2.0f) + 0.5f,
-		};
-
-		// Apply the current render width and height
-		return vec3f{
-			normalizedPosition.x * static_cast<float>(width),
-			normalizedPosition.y * static_cast<float>(height),
-			(clipPosition.z + 0.5f) * 0.5f
-		};
 	}
 }

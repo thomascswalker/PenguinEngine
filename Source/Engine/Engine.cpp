@@ -2,7 +2,7 @@
 
 #include "Application.h"
 #include "ObjectManager.h"
-#include "StaticMeshActor.h"
+#include "Actors/StaticMeshActor.h"
 
 #include "Engine/Timer.h"
 #include "Importers/MeshImporter.h"
@@ -211,7 +211,7 @@ void Engine::loadMesh() const
 	if (platform->getFileDialog(fileName, "obj"))
 	{
 		// Load model
-		Mesh* mesh = new Mesh();
+		auto mesh = new Mesh();
 		ObjImporter::import(fileName, mesh);
 		mesh->processTriangles();
 		g_meshes.push_back(std::move(mesh));
@@ -225,9 +225,6 @@ void Engine::loadMesh() const
 		{
 			LOG_ERROR("Failed to construct StaticMeshActor.")
 		}
-
-		auto renderables = g_objectManager.getRenderables();
-		m_viewport->updateSceneGeometry(renderables);
 	}
 }
 
