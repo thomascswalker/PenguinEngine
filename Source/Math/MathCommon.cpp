@@ -1,5 +1,4 @@
 ﻿#include "MathCommon.h"
-#include "Renderer/Camera.h"
 
 // Matrices
 

@@ -1,4 +1,5 @@
-﻿#include "Renderer/Camera.h"
+﻿#include "Camera.h"
+
 #include "Engine/Engine.h"
 
 Camera::Camera()

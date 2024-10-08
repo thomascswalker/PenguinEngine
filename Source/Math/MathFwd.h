@@ -151,14 +151,17 @@ enum class EWindingOrder : uint8
 	CoLinear          // Co-linear, in a line
 };
 
-// TODO: Swap Up and forward directions
 enum class EAxis : uint8
 {
-	X,
-	// Right
-	Y,
-	// Up
-	Z // Foward
+	X, // Right
+	Y, // Up
+	Z  // Foward
+};
+
+enum class ECoordinateSpace
+{
+	Local,
+	World
 };
 
 enum class EChannelType : uint8

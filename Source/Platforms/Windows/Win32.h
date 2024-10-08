@@ -3,8 +3,7 @@
 #include <windows.h>
 
 #include "Platforms/Generic/PlatformInterface.h"
-
-#include "Renderer/Camera.h"
+#include "Engine/Actors/Camera.h"
 
 /* Timer ID for the main window to process WM_TIMER messages. */
 constexpr int32 g_windowsTimerId = 1001;

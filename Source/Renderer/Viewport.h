@@ -2,7 +2,7 @@
 
 //#define PENG_HARDWARE_ACCELERATION
 
-#include "Camera.h"
+#include "Engine/Actors/Camera.h"
 #include "Grid.h"
 #include "Settings.h"
 #include "Core/Buffer.h"
@@ -18,7 +18,7 @@ class Viewport
 public:
 	/* Render settings. */
 	RenderSettings m_settings;
-	std::shared_ptr<Camera> m_camera;
+	Camera* m_camera;
 
 	std::string m_debugText;
 	bool m_showDebugText = true;
@@ -44,7 +44,6 @@ public:
 	bool createRenderPipeline();
 	bool initRenderPipeline(void* windowHandle) const;
 	[[nodiscard]] IRenderPipeline* getRenderPipeline() const;
-	void updateSceneGeometry() const;
 	void updateSceneCamera() const;
 
 	/** Debug **/

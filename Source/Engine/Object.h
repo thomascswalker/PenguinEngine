@@ -1,118 +1,71 @@
 ﻿#pragma once
 
-#include "Math/MathCommon.h"
-#include "Math/Spherical.h"
+#include <array>
+#include <queue>
 
-enum class ECoordinateSpace
+#include "Mesh.h"
+
+#include "Core/Bitmask.h"
+
+using ObjectId = uint32;
+
+enum class ESignature : uint8
 {
-	Local,
-	World
+	None       = 0,
+	Tickable   = 1,
+	Renderable = 2,
 };
 
+DEFINE_BITMASK_OPERATORS(ESignature)
+
+class IRenderable
+{
+public:
+	virtual Mesh* getMesh() = 0;
+	virtual transf getTransform() = 0;
+};
+
+class ITickable
+{
+public:
+	virtual void update(float deltaTime) = 0;
+};
+
+/** Represents an object in the scene which cannot tick and has no transform. **/
 class Object
 {
 protected:
-	transf m_transform;
-
-	// Basis vectors
-	vec3f m_forwardVector;
-	vec3f m_rightVector;
-	vec3f m_upVector;
+	/** Unique ID for this object. */
+	ObjectId m_objectId = 0;
+	/** Signature of core engine features. */
+	ESignature m_signature = ESignature::None;
 
 public:
+	Object()          = default;
 	virtual ~Object() = default;
 
-	virtual void update(float deltaTime) {}
-
-	void computeBasisVectors()
+	[[nodiscard]] ObjectId getObjectId() const
 	{
-		const sphericalf tmp = sphericalf::fromRotation(m_transform.rotation);
-		m_forwardVector      = -tmp.toCartesian().normalized();
-		// Negative because for some reason it defaults to the inverse
-		m_rightVector = vec3f::upVector().cross(m_forwardVector).normalized();
-		m_upVector    = m_forwardVector.cross(m_rightVector).normalized();
+		return m_objectId;
 	}
 
-	// Getters
-	transf getTransform() const
+	void setObjectId(const ObjectId objectId)
 	{
-		return m_transform;
+		m_objectId = objectId;
 	}
 
-	vec3f getTranslation() const
+	[[nodiscard]] ESignature getSignature() const
 	{
-		return m_transform.translation;
+		return m_signature;
 	}
 
-	rotf getRotation() const
+	[[nodiscard]] bool hasSignature(const ESignature signature) const
 	{
-		return m_transform.rotation;
+		return (m_signature & signature) == signature;
 	}
 
-	vec3f getScale() const
+	void setSignature(const ESignature signature)
 	{
-		return m_transform.scale;
-	}
-
-	// Setters
-	void setTranslation(const vec3f& newTranslation)
-	{
-		m_transform.translation = newTranslation;
-	}
-
-	void setRotation(const rotf& newRotation)
-	{
-		m_transform.rotation = newRotation;
-		computeBasisVectors();
-	}
-
-	void setScale(const vec3f& newScale)
-	{
-		m_transform.scale = newScale;
-	}
-
-	// Manipulators
-	void translate(const vec3f& delta)
-	{
-		m_transform.translation += delta;
-	}
-
-	void rotate(const float pitch, const float yaw, const float roll)
-	{
-		m_transform.rotation += rotf(pitch, yaw, roll);
-		m_transform.rotation.normalize();
-		computeBasisVectors();
-	}
-
-	// Axes
-
-	vec3f getForwardVector() const
-	{
-		return m_forwardVector;
-	}
-
-	vec3f getBackwardVector() const
-	{
-		return -m_forwardVector;
-	}
-
-	vec3f getRightVector() const
-	{
-		return m_rightVector;
-	}
-
-	vec3f getLeftVector() const
-	{
-		return -m_rightVector;
-	}
-
-	vec3f getUpVector() const
-	{
-		return m_upVector;
-	}
-
-	vec3f getDownVector() const
-	{
-		return -m_upVector;
+		m_signature = signature;
 	}
 };

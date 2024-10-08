@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Mesh.h"
 #include "Timer.h"
 #include "Input/InputHandler.h"
 #include "Renderer/Viewport.h"

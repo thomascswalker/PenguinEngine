@@ -562,13 +562,10 @@ struct mat4_t
 
 	vec3_t<T> operator*(const vec3_t<T>& v) const
 	{
-		vec3_t<T> result;
-		for (int32 index = 0; index < 3; index++)
-		{
-			vec4_t<T> rowVector({m[index][0], m[index][1], m[index][2], m[index][3]});
-			//result[index] = rowVector.dot(vec4_t<T>(v)); // TODO: Fix vec4f dot
-		}
-		return result;
+		float x = m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z;
+		float y = m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z;
+		float z = m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z;
+		return {x, y, z};
 	}
 
 	vec4_t<T> operator*(const vec4_t<T>& v) const

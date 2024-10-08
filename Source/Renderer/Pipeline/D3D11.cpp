@@ -249,7 +249,7 @@ void D3D11RenderPipeline::beginDraw()
 	m_deviceContext->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_vertexStride, &m_vertexOffset);
 }
 
-void D3D11RenderPipeline::draw()
+void D3D11RenderPipeline::draw(IRenderable* renderable)
 {
 	m_deviceContext->Draw(m_vertexCount, 0);
 	HRESULT result = m_swapChain->Present(1, 0);

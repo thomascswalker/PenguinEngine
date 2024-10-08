@@ -1,7 +1,7 @@
 ﻿#pragma once
 
+#include "Engine/Actors/Actor.h"
 #include "Math/MathFwd.h"
-#include "Engine/Object.h"
 #include "Math/Spherical.h"
 
 constexpr int32 g_windowWidthClip       = 16;
@@ -55,12 +55,13 @@ struct ViewData
 	mat4f modelMatrix;
 	mat4f viewProjectionMatrix;
 	mat4f invViewProjectionMatrix;
+	mat4f modelViewProjectionMatrix;
 
 	vec3f cameraDirection;
 	vec3f cameraTranslation;
 };
 
-class Camera : public Object
+class Camera : public Actor
 {
 public:
 	ViewData m_viewData;
@@ -95,15 +96,15 @@ public:
 	 * Constructor for the Camera class.
 	 */
 	Camera();
+	void update(float deltaTime) override;
 
-	constexpr float getAspect() const;
+	[[nodiscard]] constexpr float getAspect() const;
 	void computeViewProjectionMatrix();
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
 	void zoom(float value);
-	void update(float deltaTime) override;
 	void setFov(float newFov);
-	float getTargetDistance() const;
+	[[nodiscard]] float getTargetDistance() const;
 	void setLookAt(const vec3f& newLookAt);
 	ViewData* getViewData();
 	void setDefault();
@@ -144,28 +145,5 @@ namespace Math
 	static bool deprojectScreenToWorld(const vec2f& screenPosition, const ViewData& viewData)
 	{
 		return true;
-	}
-
-	static vec3f clip(const vec4f& input, int32 width, int32 height)
-	{
-		// Apply perspective correction
-		const vec3f clipPosition{
-			input.x / input.w,
-			input.y / input.w,
-			input.z / input.w
-		};
-
-		// Normalized device coordinates
-		const vec2f normalizedPosition{
-			(clipPosition.x / 2.0f) + 0.5f,
-			(clipPosition.y / 2.0f) + 0.5f,
-		};
-
-		// Apply the current render width and height
-		return vec3f{
-			normalizedPosition.x * static_cast<float>(width),
-			normalizedPosition.y * static_cast<float>(height),
-			(clipPosition.z + 0.5f) * 0.5f
-		};
 	}
 }
