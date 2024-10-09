@@ -219,7 +219,10 @@ void Engine::loadMesh() const
 
 		if (StaticMeshActor* staticMeshActor = g_objectManager.createObject<StaticMeshActor>())
 		{
+			// Set the mesh in the actor
 			staticMeshActor->setMesh(g_meshes.back());
+			// Bind the mesh to the render pipeline
+			m_viewport->getRenderPipeline()->bindMesh(staticMeshActor);
 		}
 		else
 		{

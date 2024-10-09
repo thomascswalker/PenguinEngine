@@ -22,7 +22,7 @@ class IRenderable
 {
 public:
 	virtual Mesh* getMesh() = 0;
-	virtual transf getTransform() = 0;
+	virtual transf* getTransform() = 0;
 };
 
 class ITickable

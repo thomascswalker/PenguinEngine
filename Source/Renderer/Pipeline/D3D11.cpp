@@ -249,7 +249,7 @@ void D3D11RenderPipeline::beginDraw()
 	m_deviceContext->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_vertexStride, &m_vertexOffset);
 }
 
-void D3D11RenderPipeline::draw(IRenderable* renderable)
+void D3D11RenderPipeline::draw()
 {
 	m_deviceContext->Draw(m_vertexCount, 0);
 	HRESULT result = m_swapChain->Present(1, 0);
@@ -257,6 +257,39 @@ void D3D11RenderPipeline::draw(IRenderable* renderable)
 	{
 		LOG_ERROR("D3D11RenderPipeline::init(): Failed to present swap chain.")
 		assert(false);
+	}
+}
+
+void D3D11RenderPipeline::bindMesh(IRenderable* renderable)
+{
+	std::vector<Triangle>* triangles = renderable->getMesh()->getTriangles();
+	uint32 triangleCount             = triangles->size();
+	std::vector<Vertex> vertexes;
+	for (Triangle& tri : *triangles)
+	{
+		vertexes.emplace_back(tri.v0);
+		vertexes.emplace_back(tri.v1);
+		vertexes.emplace_back(tri.v2);
+	}
+	m_vertexCount = triangleCount * 3;
+	size_t size   = m_vertexCount * sizeof(Vertex);
+
+	m_vertexDataArray = (float*)PlatformMemory::malloc(size);
+	std::memcpy(m_vertexDataArray, vertexes.data(), size);
+	m_vertexDataSize = size;
+
+	D3D11_BUFFER_DESC vertexBufferDesc           = {};
+	D3D11_SUBRESOURCE_DATA vertexSubResourceData = {nullptr};
+	vertexBufferDesc.ByteWidth                   = m_vertexDataSize;
+	vertexBufferDesc.Usage                       = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.BindFlags                   = D3D11_BIND_VERTEX_BUFFER;
+	vertexSubResourceData.pSysMem                = m_vertexDataArray;
+
+	m_vertexBuffer = nullptr;
+	HRESULT result = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubResourceData, m_vertexBuffer.GetAddressOf());
+	if (FAILED(result))
+	{
+		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
 	}
 }
 
@@ -429,26 +462,4 @@ HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR 
 	*blob = shaderBlob;
 
 	return result;
-}
-
-void D3D11RenderPipeline::setVertexData(float* data, size_t size, int32 count)
-{
-	m_vertexDataArray = (float*)PlatformMemory::malloc(size);
-	std::memcpy(m_vertexDataArray, data, size);
-	m_vertexDataSize = size;
-	m_vertexCount    = count;
-
-	D3D11_BUFFER_DESC vertexBufferDesc           = {};
-	D3D11_SUBRESOURCE_DATA vertexSubResourceData = {nullptr};
-	vertexBufferDesc.ByteWidth                   = m_vertexDataSize;
-	vertexBufferDesc.Usage                       = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.BindFlags                   = D3D11_BIND_VERTEX_BUFFER;
-	vertexSubResourceData.pSysMem                = m_vertexDataArray;
-
-	m_vertexBuffer = nullptr;
-	HRESULT result = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubResourceData, m_vertexBuffer.GetAddressOf());
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
-	}
 }

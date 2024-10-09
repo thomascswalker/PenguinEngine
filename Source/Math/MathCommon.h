@@ -69,6 +69,18 @@ namespace Math
 	}
 
 	/*
+ * Transform the specified vec4_t by the specified mat4_t.
+ */
+	template <typename T>
+	vec3_t<T> vectorTransform(const vec3_t<T>& v, const mat4_t<T>& m)
+	{
+		float x = m.m[0][0] * v.x + m.m[1][0] * v.y + m.m[2][0] * v.z;
+		float y = m.m[0][1] * v.x + m.m[1][1] * v.y + m.m[2][1] * v.z;
+		float z = m.m[0][2] * v.x + m.m[1][2] * v.y + m.m[2][2] * v.z;
+		return {x, y, z};
+	}
+
+	/*
 	 * Transform the specified vec4_t by the specified mat4_t.
 	 */
 	template <typename T>

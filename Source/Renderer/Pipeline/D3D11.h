@@ -168,7 +168,8 @@ public:
 
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
-	void draw(IRenderable* renderable) override;
+	void draw() override;
+	void bindMesh(IRenderable* renderable) override;
 	void endDraw() override;
 	void shutdown() override;
 	void resize(int32 width, int32 height) override;
@@ -181,5 +182,4 @@ public:
 
 	HRESULT createShader(const char* name, const std::string& fileName, EShaderType shaderType);
 	static HRESULT compileShader(LPCWSTR fileName, LPCSTR entryPoint, LPCSTR profile, ID3DBlob** blob);
-	void setVertexData(float* data, size_t size, int32 count) override;
 };

@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <vector>
-#include "math/Vector.h"
+
+#include "Math/Vector.h"
+#include "Math/Transform.h"
 
 class Mesh;
 /* Global container for all mesh objects. */
@@ -135,7 +137,25 @@ public:
 		m_texCoords = texCoords;
 	}
 
+	/** Returns the size of this mesh's geometry in bytes. **/
+	[[nodiscard]] size_t memorySize() const
+	{
+		return m_triangles.size() * sizeof(Vertex) * 3;
+	}
+
 	// Primitives
 	static std::shared_ptr<Mesh> createPlane(float size);
 	static std::shared_ptr<Mesh> createPlane(float width, float height);
+};
+
+struct MeshDescription
+{
+	/** Pointer to the transform of this mesh. **/
+	transf* transform = nullptr;
+	/** Vertex count. **/
+	uint32 vertexCount = 0;
+	/** Index count. **/
+	uint32 indexCount = 0;
+	/** Index offset in m_vertexBuffer. **/
+	uint32 offset = 0;
 };

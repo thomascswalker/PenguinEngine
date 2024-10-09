@@ -4,9 +4,14 @@
 
 /** Vertex Shader **/
 
-vec4f ScanlineVertexShader::process(const VertexData& input)
+VertexOutput ScanlineVertexShader::process(const VertexInput& input)
 {
-	return Math::vectorTransform(vec4f(input.position, 1.0f), input.mvp);
+	VertexOutput out;
+	// Project world position to screen
+	out.position = Math::vectorTransform(vec4f(input.position, 1.0f), input.mvp);
+	// Transform object normal to world normal
+	out.normal = Math::vectorTransform(input.normal, input.model);
+	return out;
 }
 
 /** Pixel Shader **/
@@ -62,27 +67,46 @@ void ScanlineRenderPipeline::beginDraw()
 	}
 }
 
-void ScanlineRenderPipeline::draw(IRenderable* renderable)
+void ScanlineRenderPipeline::draw()
 {
-	// Set the current model matrix to the current renderable's transform, converted to a matrix
-	m_viewData->modelMatrix               = renderable->getTransform().toMatrix();
-	m_viewData->modelViewProjectionMatrix = m_viewData->modelMatrix * m_viewData->viewProjectionMatrix;
+	for (const MeshDescription& desc : m_meshDescriptions)
+	{
+		auto offset                           = desc.offset;
+		auto size                             = desc.vertexCount;
+		m_viewData->modelMatrix               = desc.transform->toMatrix();
+		m_viewData->modelViewProjectionMatrix = m_viewData->modelMatrix * m_viewData->viewProjectionMatrix;
 
+		// Draw each triangle in the vertex buffer
+		for (int32 index = offset; index < offset + size; index += 3)
+		{
+			drawTriangle(m_vertexBuffer.data() + index);
+		}
+	}
+}
+
+void ScanlineRenderPipeline::bindMesh(IRenderable* renderable)
+{
 	// Convert the current renderable's geometry into a vertex buffer
-	m_vertexBuffer.clear();
-	std::vector<Triangle>* triangles = renderable->getMesh()->getTriangles();
+	MeshDescription meshDesc{};
+
+	meshDesc.offset = m_vertexBuffer.size();
+
+	// Set the transform pointer
+	Mesh* mesh         = renderable->getMesh();
+	meshDesc.transform = renderable->getTransform();
+
+	// Add each vertex to the vertex buffer and increment the vertex count by 3
+	std::vector<Triangle>* triangles = mesh->getTriangles();
 	for (Triangle& tri : *triangles)
 	{
 		m_vertexBuffer.emplace_back(tri.v0);
 		m_vertexBuffer.emplace_back(tri.v1);
 		m_vertexBuffer.emplace_back(tri.v2);
+		meshDesc.vertexCount += 3;
 	}
 
-	// Draw each triangle in the vertex buffer
-	for (int32 index = 0; index < m_vertexBuffer.size(); index += 3)
-	{
-		drawTriangle(m_vertexBuffer.data() + index);
-	}
+	// Add to mesh descriptions
+	m_meshDescriptions.emplace_back(meshDesc);
 }
 
 void ScanlineRenderPipeline::endDraw() {}
@@ -93,17 +117,21 @@ bool ScanlineRenderPipeline::vertexStage()
 	// final projected vertex position on the screen. The W component of that vector needs to be
 	// above 0 to be in the view frustum. Otherwise, it's off the screen.
 	bool triangleOnScreen = false;
+
+	VertexInput input;
+	input.mvp   = m_viewData->modelViewProjectionMatrix;
+	input.model = m_viewData->modelMatrix;
 	for (int32 i = 0; i < 3; i++)
 	{
-		VertexData input;
-		input.mvp      = m_viewData->modelViewProjectionMatrix;
 		input.position = m_vertexBufferPtr[i].position;
+		input.normal   = m_vertexBufferPtr[i].normal;
 
-		vec4f output = ScanlineVertexShader::process(input);
-		if (output.w > 0.0f)
+		auto output = ScanlineVertexShader::process(input);
+		if (output.position.w > 0.0f)
 		{
-			m_screenPoints[i] = Clipping::clip(output, m_viewData->width, m_viewData->height);
-			triangleOnScreen  = true;
+			m_screenPoints[i]  = Clipping::clip(output.position, m_viewData->width, m_viewData->height);
+			m_screenNormals[i] = output.normal;
+			triangleOnScreen   = true;
 		}
 	}
 
@@ -115,11 +143,7 @@ bool ScanlineRenderPipeline::vertexStage()
 	}
 
 	// Check back-facing
-	auto model = m_viewData->modelMatrix;
-	m_vertexBufferPtr[0].normal = model * m_vertexBufferPtr[0].normal;
-	m_vertexBufferPtr[1].normal = model * m_vertexBufferPtr[1].normal;
-	m_vertexBufferPtr[2].normal = model * m_vertexBufferPtr[2].normal;
-	auto normal = (m_vertexBufferPtr[0].normal + m_vertexBufferPtr[1].normal + m_vertexBufferPtr[2].normal) / 3.0f;
+	auto normal     = (m_screenNormals[0] + m_screenNormals[1] + m_screenNormals[2]) / 3.0f;
 	float dotNormal = (-m_viewData->cameraDirection).dot(normal);
 	if (dotNormal > 0.0f)
 	{
@@ -229,7 +253,7 @@ void ScanlineRenderPipeline::rasterStage()
 			pixel.uv = v0.texCoord * bary.x + v1.texCoord * bary.y + v2.texCoord * bary.z;
 
 			// Compute the Normal direction of the current pixel
-			pixel.worldNormal  = v0.normal * bary.x + v1.normal * bary.y + v2.normal * bary.z;
+			pixel.worldNormal = m_screenNormals[0] * bary.x + m_screenNormals[1] * bary.y + m_screenNormals[2] * bary.z;
 			pixel.cameraNormal = m_viewData->cameraDirection;
 
 			// Set the texture
@@ -467,11 +491,4 @@ void ScanlineRenderPipeline::setViewData(ViewData* newViewData)
 void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
 {
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
-}
-
-void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count)
-{
-	assert(sizeof(Vertex) * count == size);
-	m_vertexBuffer.resize(count);
-	std::memcpy(m_vertexBuffer.data(), data, size);
 }

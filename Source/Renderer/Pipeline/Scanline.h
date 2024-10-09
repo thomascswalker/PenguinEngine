@@ -11,10 +11,18 @@
 #include "Renderer/Shader.h"
 #include "Renderer/Texture.h"
 
-struct VertexData
+struct VertexInput
 {
 	vec3f position;
+	vec3f normal;
 	mat4f mvp;
+	mat4f model;
+};
+
+struct VertexOutput
+{
+	vec4f position;
+	vec3f normal;
 };
 
 struct PixelData
@@ -37,7 +45,7 @@ class ScanlineVertexShader : public VertexShader
 public:
 	ScanlineVertexShader() = default;
 
-	static vec4f process(const VertexData& input);
+	static VertexOutput process(const VertexInput& input);
 };
 
 class ScanlinePixelShader : public PixelShader
@@ -62,12 +70,15 @@ class ScanlineRenderPipeline : public IRenderPipeline
 	mat4f m_modelMatrix;
 	/** Vector of all vertexes in all meshes. **/
 	std::vector<Vertex> m_vertexBuffer;
+	/** Vector of mesh descriptions of meshes which are currently bound. **/
+	std::vector<MeshDescription> m_meshDescriptions;
 	/** Pointer to the first Vertex in the current triangle. **/
 	Vertex* m_vertexBufferPtr;
 	/** Pointer to the current texture. */
 	Texture* m_texturePtr;
 	/** 3-element array of the current screen points. */
 	vec3f m_screenPoints[3];
+	vec3f m_screenNormals[3];
 	/** Vector of all pixel fragments in the current triangle. **/
 	std::vector<PixelData> m_pixelBuffer;
 	/** Pointer to the current mesh. **/
@@ -80,7 +91,8 @@ public:
 
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
-	void draw(IRenderable* renderable) override;
+	void draw() override;
+	void bindMesh(IRenderable* renderable) override;
 	void endDraw() override;
 	void shutdown() override {}
 	void resize(int32 width, int32 height) override;
@@ -103,5 +115,4 @@ public:
 	uint8* getFrameData() override;
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
-	void setVertexData(float* data, size_t size, int32 count) override;
 };

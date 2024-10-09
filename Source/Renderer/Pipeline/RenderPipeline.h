@@ -16,7 +16,8 @@ public:
 
 	virtual bool init(void* windowHandle) = 0;
 	virtual void beginDraw() = 0;
-	virtual void draw(IRenderable* renderable) = 0;
+	virtual void draw() = 0;
+	virtual void bindMesh(IRenderable* renderable) = 0;
 	virtual void endDraw() = 0;
 	virtual void shutdown() = 0;
 	virtual void resize(int32 width, int32 height) = 0;
@@ -31,8 +32,6 @@ public:
 	virtual uint8* getFrameData() = 0;
 	virtual void setViewData(ViewData* newViewData) = 0;
 	virtual void setRenderSettings(RenderSettings* newRenderSettings) = 0;
-
-	virtual void setVertexData(float* data, size_t size, int32 count) = 0;
 };
 
 class ScanlineRenderPipeline;

@@ -84,10 +84,7 @@ void Viewport::draw()
 		m_renderPipeline->drawGrid(m_grid.get());
 
 		// Draw each renderable object
-		for (IRenderable* renderable : g_objectManager.getRenderables())
-		{
-			m_renderPipeline->draw(renderable);
-		}
+		m_renderPipeline->draw();
 
 		// Called after drawing geometry
 		m_renderPipeline->endDraw();
