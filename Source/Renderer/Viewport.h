@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-//#define PENG_HARDWARE_ACCELERATION
+#define PENG_HARDWARE_ACCELERATION
 
 #include "Engine/Actors/Camera.h"
 #include "Grid.h"
@@ -44,7 +44,6 @@ public:
 	bool createRenderPipeline();
 	bool initRenderPipeline(void* windowHandle) const;
 	[[nodiscard]] IRenderPipeline* getRenderPipeline() const;
-	void updateSceneCamera() const;
 
 	/** Debug **/
 

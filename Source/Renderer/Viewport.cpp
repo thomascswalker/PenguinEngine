@@ -77,6 +77,9 @@ void Viewport::draw()
 		// Transfer render settings
 		m_renderPipeline->setRenderSettings(&m_settings);
 
+		// Update camera data
+		m_renderPipeline->setViewData(m_camera->getViewData());
+
 		// Draw all geometry
 		m_renderPipeline->beginDraw();
 
@@ -129,12 +132,6 @@ bool Viewport::initRenderPipeline(void* windowHandle) const
 IRenderPipeline* Viewport::getRenderPipeline() const
 {
 	return m_renderPipeline.get();
-}
-
-void Viewport::updateSceneCamera() const
-{
-	m_camera->computeViewProjectionMatrix();
-	m_renderPipeline->setViewData(m_camera->getViewData());
 }
 
 void Viewport::formatDebugText()

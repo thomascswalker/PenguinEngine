@@ -16,9 +16,12 @@ bool D3D11RenderPipeline::createDevice()
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 	HRESULT result = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, nullptr, 0,
-	                                   D3D11_SDK_VERSION, m_device.GetAddressOf(), &m_featureLevel,
-	                                   m_deviceContext.GetAddressOf());
+		D3D11_SDK_VERSION, m_device.GetAddressOf(), &m_featureLevel,
+		m_deviceContext.GetAddressOf());
 	CHECK_HR(result, "Failed to create create device.")
+
+	g_device = m_device.Get();
+	g_deviceContext = m_deviceContext.Get();
 
 	return true;
 }
@@ -26,7 +29,7 @@ bool D3D11RenderPipeline::createDevice()
 bool D3D11RenderPipeline::createSwapChain()
 {
 	LOG_DEBUG("Creating D3D11 Swap Chain.")
-	IDXGIDevice* dxgiDevice   = nullptr;
+	IDXGIDevice*  dxgiDevice = nullptr;
 	IDXGIFactory* dxgiFactory = nullptr;
 	IDXGIAdapter* dxgiAdapter = nullptr;
 
@@ -39,18 +42,18 @@ bool D3D11RenderPipeline::createSwapChain()
 	result = dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory));
 	CHECK_HR(result, "Failed to get adapter parent");
 
-	DXGI_SWAP_CHAIN_DESC swapChainDesc               = {};
-	swapChainDesc.BufferCount                        = 1; // 1 Front and back buffer
-	swapChainDesc.BufferDesc.Width                   = g_defaultViewportWidth;
-	swapChainDesc.BufferDesc.Height                  = g_defaultViewportHeight;
-	swapChainDesc.BufferDesc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferDesc.RefreshRate.Numerator   = 60;
+	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+	swapChainDesc.BufferCount = 1; // 1 Front and back buffer
+	swapChainDesc.BufferDesc.Width = g_defaultViewportWidth;
+	swapChainDesc.BufferDesc.Height = g_defaultViewportHeight;
+	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
 	swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-	swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.OutputWindow                       = m_hwnd;
-	swapChainDesc.SampleDesc                         = DXGI_SAMPLE_DESC(m_sampleCount, m_sampleQuality);
-	swapChainDesc.SwapEffect                         = DXGI_SWAP_EFFECT_DISCARD;
-	swapChainDesc.Windowed                           = TRUE;
+	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChainDesc.OutputWindow = m_hwnd;
+	swapChainDesc.SampleDesc = DXGI_SAMPLE_DESC(m_sampleCount, m_sampleQuality);
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	swapChainDesc.Windowed = TRUE;
 
 	result = dxgiFactory->CreateSwapChain(m_device.Get(), &swapChainDesc, m_swapChain.GetAddressOf());
 	CHECK_HR(result, "Failed to create swap chain");
@@ -68,7 +71,7 @@ bool D3D11RenderPipeline::createBackBuffer()
 {
 	LOG_DEBUG("Creating D3D11 Frame Buffer.")
 	HRESULT result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
-	                                        reinterpret_cast<void**>(m_backBuffer.GetAddressOf()));
+		reinterpret_cast<void**>(m_backBuffer.GetAddressOf()));
 	CHECK_HR(result, "Failed to create backbuffer");
 	return true;
 }
@@ -89,20 +92,6 @@ bool D3D11RenderPipeline::createShaders()
 	result = createShader("PXL", "PixelShader.hlsl", EShaderType::PixelShader);
 	CHECK_HR(result, "Failed to create pixel shader");
 
-	// Create input layout
-	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
-		{"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
-	};
-	result = m_device->CreateInputLayout(
-		inputElementDesc,
-		ARRAYSIZE(inputElementDesc),
-		m_vertexShader->getByteCode(),
-		m_vertexShader->getByteCodeSize(),
-		&m_vertexInputLayout);
-	CHECK_HR(result, "Failed creating vertex input layout");
-
 	// Set the vertex and pixel shaders on the device context
 	if (m_vertexShader->m_shaderPtr)
 	{
@@ -122,51 +111,83 @@ bool D3D11RenderPipeline::createDepthBuffer()
 
 	// Depth buffer
 	D3D11_TEXTURE2D_DESC depthTextureDesc;
-	depthTextureDesc.Width          = g_defaultViewportWidth;
-	depthTextureDesc.Height         = g_defaultViewportHeight;
-	depthTextureDesc.MipLevels      = m_mipLevels;
-	depthTextureDesc.ArraySize      = 1;
-	depthTextureDesc.SampleDesc     = DXGI_SAMPLE_DESC(m_sampleCount, m_sampleQuality);
-	depthTextureDesc.Format         = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthTextureDesc.BindFlags      = D3D11_BIND_DEPTH_STENCIL;
-	depthTextureDesc.Usage          = D3D11_USAGE_DEFAULT;
+	depthTextureDesc.Width = g_defaultViewportWidth;
+	depthTextureDesc.Height = g_defaultViewportHeight;
+	depthTextureDesc.MipLevels = m_mipLevels;
+	depthTextureDesc.ArraySize = 1;
+	depthTextureDesc.SampleDesc = DXGI_SAMPLE_DESC(m_sampleCount, m_sampleQuality);
+	depthTextureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthTextureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthTextureDesc.Usage = D3D11_USAGE_DEFAULT;
 	depthTextureDesc.CPUAccessFlags = 0;
-	depthTextureDesc.MiscFlags      = 0;
+	depthTextureDesc.MiscFlags = 0;
 
 	HRESULT result = m_device->CreateTexture2D(&depthTextureDesc, nullptr, m_depthStencilTexture.GetAddressOf());
 	CHECK_HR(result, "Failed creating depth stencil texture");
 
 	// Create the depth stencil view
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-	depthStencilViewDesc.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthStencilViewDesc.Flags              = 0;
-	depthStencilViewDesc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.Flags = 0;
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
-	result = m_device->CreateDepthStencilView(m_depthStencilTexture.Get(),        // Depth stencil texture
-	                                          &depthStencilViewDesc,              // Depth stencil desc , 
-	                                          m_depthStencilView.GetAddressOf()); // [out] Depth stencil view
+	result = m_device->CreateDepthStencilView(m_depthStencilTexture.Get(), // Depth stencil texture
+		&depthStencilViewDesc,											   // Depth stencil desc ,
+		m_depthStencilView.GetAddressOf());								   // [out] Depth stencil view
 	CHECK_HR(result, "Failed creating depth stencil view");
 	return true;
 }
 
-bool D3D11RenderPipeline::createConstantBuffer()
+bool D3D11RenderPipeline::createInputLayout()
 {
-	LOG_DEBUG("Creating D3D11 Constant Buffer.")
+	// Create input layout
+	D3D11_INPUT_ELEMENT_DESC inputElementDesc[3]{};
 
-	// Constant Buffer to pass camera properties to the shaders
-	// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
-	D3D11_BUFFER_DESC constantDataBufferDesc;
-	constantDataBufferDesc.Usage               = D3D11_USAGE_DEFAULT;
-	constantDataBufferDesc.ByteWidth           = 272; // see ConstantBuffer, size 204 but needs to be multiple of 16
-	constantDataBufferDesc.BindFlags           = D3D11_BIND_CONSTANT_BUFFER;
-	constantDataBufferDesc.CPUAccessFlags      = 0;
-	constantDataBufferDesc.MiscFlags           = 0;
-	constantDataBufferDesc.StructureByteStride = 0;
+	inputElementDesc[0].SemanticName = "SV_POSITION";
+	inputElementDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputElementDesc[0].AlignedByteOffset = 0;
+	inputElementDesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 
-	HRESULT result = m_device->CreateBuffer(&constantDataBufferDesc, nullptr, m_constantDataBuffer.GetAddressOf());
-	CHECK_HR(result, "Failed creating the camera constant buffer");
-	m_deviceContext->VSSetConstantBuffers(0, 1, m_constantDataBuffer.GetAddressOf());
+	inputElementDesc[1].SemanticName = "NORMAL";
+	inputElementDesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputElementDesc[1].AlignedByteOffset = 3 * sizeof(float);
+	inputElementDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+
+	inputElementDesc[2].SemanticName = "TEXCOORD";
+	inputElementDesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputElementDesc[2].AlignedByteOffset = 6 * sizeof(float);
+	inputElementDesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+
+	HRESULT result = g_device->CreateInputLayout(
+		inputElementDesc,
+		ARRAYSIZE(inputElementDesc),
+		m_vertexShader->getByteCode(),
+		m_vertexShader->getByteCodeSize(),
+		&m_vertexInputLayout);
+	CHECK_HR(result, "Failed creating vertex input layout.");
+	return true;
+}
+
+// https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
+bool D3D11RenderPipeline::createConstantBuffers()
+{
+	LOG_DEBUG("Creating D3D11 Constant Buffers.")
+
+	// Store buffer sizes in an array
+	uint32 bufferSizes[g_constantBufferCount];
+	bufferSizes[ConstantBufferId::Camera] = sizeof(CBCamera);
+	bufferSizes[ConstantBufferId::Model] = sizeof(CBModel);
+
+	// Create each buffer
+	for (int32 i = 0; i < g_constantBufferCount; i++)
+	{
+		D3D11_BUFFER_DESC desc{};
+		desc.ByteWidth = bufferSizes[i];
+		desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		HRESULT result = m_device->CreateBuffer(&desc, nullptr, &m_constantBuffers[i]);
+		CHECK_HR(result, "Failed creating the camera constant buffer.");
+	}
 	return true;
 }
 
@@ -175,14 +196,15 @@ bool D3D11RenderPipeline::init(void* windowHandle)
 	LOG_DEBUG("Initializing D3D11 pipeline.")
 
 	m_hwnd = (HWND)windowHandle;
-	ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
+	//ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
 
 	CHECK_RESULT(createDevice())
 	CHECK_RESULT(createSwapChain())
 	CHECK_RESULT(createRenderTargetView())
 	CHECK_RESULT(createShaders())
 	CHECK_RESULT(createDepthBuffer())
-	CHECK_RESULT(createConstantBuffer())
+	CHECK_RESULT(createInputLayout())
+	CHECK_RESULT(createConstantBuffers())
 	CHECK_RESULT(createViewport())
 	CHECK_RESULT(createRasterizerState())
 
@@ -200,14 +222,14 @@ bool D3D11RenderPipeline::createRasterizerState() const
 	LOG_DEBUG("Creating D3D11 Raster State.")
 
 	ID3D11RasterizerState* rasterState;
-	D3D11_RASTERIZER_DESC rasterDesc{};
-	rasterDesc.CullMode              = D3D11_CULL_BACK;
-	rasterDesc.FillMode              = D3D11_FILL_SOLID;
+	D3D11_RASTERIZER_DESC  rasterDesc{};
+	rasterDesc.CullMode = D3D11_CULL_BACK;
+	rasterDesc.FillMode = D3D11_FILL_SOLID;
 	rasterDesc.FrontCounterClockwise = false;
-	rasterDesc.DepthClipEnable       = true;
-	rasterDesc.DepthBias             = 0;
-	rasterDesc.DepthBiasClamp        = 0.0f;
-	rasterDesc.MultisampleEnable     = false;
+	rasterDesc.DepthClipEnable = true;
+	rasterDesc.DepthBias = 0;
+	rasterDesc.DepthBiasClamp = 0.0f;
+	rasterDesc.MultisampleEnable = false;
 
 	HRESULT result = m_device->CreateRasterizerState(&rasterDesc, &rasterState);
 	CHECK_HR(result, "Failed creating rasterizer state");
@@ -224,8 +246,8 @@ bool D3D11RenderPipeline::createViewport() const
 	D3D11_VIEWPORT viewport;
 	viewport.TopLeftX = 0.0f;
 	viewport.TopLeftY = 0.0f;
-	viewport.Width    = (FLOAT)(winRect.right - winRect.left);
-	viewport.Height   = (FLOAT)(winRect.bottom - winRect.top);
+	viewport.Width = (FLOAT)(winRect.right - winRect.left);
+	viewport.Height = (FLOAT)(winRect.bottom - winRect.top);
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 	m_deviceContext->RSSetViewports(1, &viewport);
@@ -237,60 +259,76 @@ void D3D11RenderPipeline::beginDraw()
 {
 	if (!m_initialized)
 	{
-		LOG_ERROR("D3D11RenderPipeline::beginDraw(): Pipeline is not initialized.")
-		assert(false);
+		auto msg = "D3D11RenderPipeline::beginDraw(): Pipeline is not initialized.";
+		ASSERT(false, msg);
+		return;
 	}
 	m_deviceContext->ClearRenderTargetView(m_renderTargetView.Get(), Colors::Black);
 	m_deviceContext->ClearDepthStencilView(m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	// Associate the vertex and index buffers with the device context
 	m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_deviceContext->IASetInputLayout(m_vertexInputLayout.Get());
-	m_deviceContext->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_vertexStride, &m_vertexOffset);
+	m_deviceContext->IASetInputLayout(m_vertexInputLayout);
 }
 
 void D3D11RenderPipeline::draw()
 {
-	m_deviceContext->Draw(m_vertexCount, 0);
+	for (auto& buffer : m_vertexBuffers)
+	{
+		drawMesh(&buffer);
+	}
+
 	HRESULT result = m_swapChain->Present(1, 0);
 	if (FAILED(result))
 	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to present swap chain.")
-		assert(false);
+		auto msg = "D3D11RenderPipeline::init(): Failed to present swap chain.";
+		ASSERT(false, msg);
 	}
 }
 
-void D3D11RenderPipeline::bindMesh(IRenderable* renderable)
+void D3D11RenderPipeline::drawMesh(Buffer11* buffer)
 {
-	std::vector<Triangle>* triangles = renderable->getMesh()->getTriangles();
-	uint32 triangleCount             = triangles->size();
-	std::vector<Vertex> vertexes;
-	for (Triangle& tri : *triangles)
-	{
-		vertexes.emplace_back(tri.v0);
-		vertexes.emplace_back(tri.v1);
-		vertexes.emplace_back(tri.v2);
-	}
-	m_vertexCount = triangleCount * 3;
-	size_t size   = m_vertexCount * sizeof(Vertex);
+	// Buffers
+	ID3D11Buffer* vertexBufferData = buffer->getVertexBuffer();
+	ID3D11Buffer* constantBufferData = m_constantBuffers[ConstantBufferId::Model];
 
-	m_vertexDataArray = (float*)PlatformMemory::malloc(size);
-	std::memcpy(m_vertexDataArray, vertexes.data(), size);
-	m_vertexDataSize = size;
+	// Update model constant buffer
+	auto		  xform = *buffer->getMeshDescription()->transform;
+	mat4f model = xform.toMatrix();
+	CBModel		  data{};
+	data.model = XMMATRIX(&model.m[0][0]);
+	m_deviceContext->UpdateSubresource(constantBufferData, 0, nullptr, &data, 0, 0);
 
-	D3D11_BUFFER_DESC vertexBufferDesc           = {};
-	D3D11_SUBRESOURCE_DATA vertexSubResourceData = {nullptr};
-	vertexBufferDesc.ByteWidth                   = m_vertexDataSize;
-	vertexBufferDesc.Usage                       = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.BindFlags                   = D3D11_BIND_VERTEX_BUFFER;
-	vertexSubResourceData.pSysMem                = m_vertexDataArray;
+	// Get mesh info
+	auto		  desc = buffer->getMeshDescription();
+	uint32		  vertexBufferStride = desc->stride;
+	uint32		  vertexBufferOffset = 0;
 
-	m_vertexBuffer = nullptr;
-	HRESULT result = m_device->CreateBuffer(&vertexBufferDesc, &vertexSubResourceData, m_vertexBuffer.GetAddressOf());
-	if (FAILED(result))
-	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed to create vertex buffer ({}).", formatHResult(result));
-	}
+	// Set the current vertex buffer to this mesh's buffer
+	m_deviceContext->IASetVertexBuffers(0, 1, &vertexBufferData, &vertexBufferStride, &vertexBufferOffset);
+
+	// Set the constant buffer for this mesh
+	m_deviceContext->VSSetConstantBuffers(ConstantBufferId::Camera, 1, &m_constantBuffers[ConstantBufferId::Camera]);
+	m_deviceContext->VSSetConstantBuffers(ConstantBufferId::Model, 1, &m_constantBuffers[ConstantBufferId::Model]);
+
+	// Draw the mesh to the screen
+	m_deviceContext->Draw(desc->byteSize, 0);
+}
+
+void D3D11RenderPipeline::addRenderable(IRenderable* renderable)
+{
+	Buffer11 buffer;
+	auto	 vertexData = renderable->getMesh()->getVertexData();
+	buffer.createVertexBuffer(*vertexData);
+
+	MeshDescription meshDesc;
+	meshDesc.stride = sizeof(Vertex);
+	meshDesc.data = vertexData->data();
+	meshDesc.byteSize = vertexData->size();
+	meshDesc.transform = renderable->getTransform();
+	buffer.setMeshDescription(meshDesc);
+
+	m_vertexBuffers.emplace_back(buffer);
 }
 
 void D3D11RenderPipeline::endDraw()
@@ -307,7 +345,7 @@ void D3D11RenderPipeline::shutdown()
 
 void D3D11RenderPipeline::resize(int32 width, int32 height)
 {
-	m_width  = width;
+	m_width = width;
 	m_height = height;
 }
 
@@ -321,20 +359,21 @@ uint8* D3D11RenderPipeline::getFrameData()
 
 void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 {
-	XMMATRIX mvp       = XMMATRIX(&newViewData->viewProjectionMatrix.m[0][0]);
-	XMMATRIX model     = XMMATRIX(&newViewData->modelMatrix.m[0][0]);
-	XMMATRIX view      = XMMATRIX(&newViewData->viewMatrix.m[0][0]);
-	XMMATRIX proj      = XMMATRIX(&newViewData->projectionMatrix.m[0][0]);
-	XMFLOAT3 direction = XMFLOAT3(&newViewData->cameraDirection[0]);
+	// Store new view data
+	m_viewData = newViewData;
 
-	ConstantData data;
-	data.mvp             = XMMatrixTranspose(mvp);
-	data.model           = XMMatrixTranspose(model);
-	data.view            = XMMatrixTranspose(view);
-	data.projection      = XMMatrixTranspose(proj);
-	data.cameraDirection = XMFLOAT3(direction.x, direction.y, direction.z);
+	// Convert from native to DX types
+	XMMATRIX viewProjection = XMMATRIX(&m_viewData->viewProjectionMatrix.m[0][0]);
+	XMFLOAT3 direction = XMFLOAT3(&m_viewData->cameraDirection.xyz[0]);
 
-	m_deviceContext->UpdateSubresource(m_constantDataBuffer.Get(), 0, nullptr, &data, 0, 0);
+	// Create constant buffer
+	CBCamera data{};
+	data.viewProjection = XMMatrixTranspose(viewProjection);
+	data.cameraDirection = XMFLOAT4(direction.x, direction.y, direction.z, 0);
+
+	// Update the buffer data
+	ID3D11Buffer* cameraBuffer = m_constantBuffers[ConstantBufferId::Camera];
+	m_deviceContext->UpdateSubresource(cameraBuffer, 0, nullptr, &data, 0, 0);
 }
 
 void D3D11RenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
@@ -349,37 +388,38 @@ void D3D11RenderPipeline::setHwnd(const HWND hwnd)
 
 HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& fileName, EShaderType shaderType)
 {
-	Shader* shader;
+	Shader*		shader;
 	std::string profile;
 	switch (shaderType)
 	{
-	case EShaderType::VertexShader:
+		case EShaderType::VertexShader:
 		{
-			m_vertexShader = new D3D11VertexShader();
-			shader         = m_vertexShader;
-			profile        = "vs_5_0";
+			m_vertexShader = new VertexShader11();
+			shader = m_vertexShader;
+			profile = "vs_5_0";
 			break;
 		}
-	case EShaderType::PixelShader:
+		case EShaderType::PixelShader:
 		{
-			m_pixelShader = new D3D11PixelShader();
-			shader        = m_pixelShader;
-			profile       = "ps_5_0";
+			m_pixelShader = new PixelShader11();
+			shader = m_pixelShader;
+			profile = "ps_5_0";
 			break;
 		}
-	default: return 1;
+		default:
+			return 1;
 	}
 
 	// TODO: Currently D3DCompileFromFile cannot find relative files, so we have to build the path from the current file.
 
-	auto currentFile    = std::filesystem::path(__FILE__);
-	auto currentPath    = currentFile.remove_filename();
+	auto currentFile = std::filesystem::path(__FILE__);
+	auto currentPath = currentFile.remove_filename();
 	auto shaderFileName = currentPath;
 	shaderFileName.append(fileName);
 	shader->setFileName(Strings::toString(shaderFileName.c_str()));
 
 	ID3DBlob* blob = nullptr;
-	HRESULT result = compileShader(shaderFileName.c_str(), "main", profile.c_str(), &blob);
+	HRESULT	  result = compileShader(shaderFileName.c_str(), "main", profile.c_str(), &blob);
 	if (FAILED(result))
 	{
 		if (blob)
@@ -394,16 +434,16 @@ HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& f
 
 	switch (shaderType)
 	{
-	case EShaderType::VertexShader:
+		case EShaderType::VertexShader:
 		{
 			result = m_device->CreateVertexShader(m_vertexShader->getByteCode(), m_vertexShader->getByteCodeSize(),
-			                                      nullptr, &m_vertexShader->m_shaderPtr);
+				nullptr, &m_vertexShader->m_shaderPtr);
 			break;
 		}
-	case EShaderType::PixelShader:
+		case EShaderType::PixelShader:
 		{
 			result = m_device->CreatePixelShader(m_pixelShader->getByteCode(), m_pixelShader->getByteCodeSize(),
-			                                     nullptr, &m_pixelShader->m_shaderPtr);
+				nullptr, &m_pixelShader->m_shaderPtr);
 			break;
 		}
 	}
@@ -418,7 +458,7 @@ HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& f
 }
 
 HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR entryPoint, const LPCSTR profile,
-                                           ID3DBlob** blob)
+	ID3DBlob** blob)
 {
 	if (!fileName || !entryPoint || !blob)
 	{
@@ -433,10 +473,10 @@ HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR 
 #endif
 
 	ID3DBlob* shaderBlob = nullptr;
-	ID3DBlob* errorBlob  = nullptr;
-	HRESULT result       = D3DCompileFromFile(fileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-	                                    entryPoint, profile,
-	                                    flags, 0, &shaderBlob, &errorBlob);
+	ID3DBlob* errorBlob = nullptr;
+	HRESULT	  result = D3DCompileFromFile(fileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		  entryPoint, profile,
+		  flags, 0, &shaderBlob, &errorBlob);
 	if (FAILED(result))
 	{
 		if (errorBlob)
@@ -448,7 +488,7 @@ HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR 
 		else
 		{
 			LOG_ERROR("D3D11RenderPipeline::compileShader(): Shader file not found ({}).",
-			          Strings::toString(fileName).c_str())
+				Strings::toString(fileName).c_str())
 		}
 
 		if (shaderBlob)
@@ -462,4 +502,38 @@ HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR 
 	*blob = shaderBlob;
 
 	return result;
+}
+
+inline void Buffer11::createVertexBuffer(std::vector<float>& vertexData)
+{
+	auto msg = "Buffer11::createVertexBuffer(): ID3D11Device is not instantiated.";
+	ASSERT(g_device != nullptr, msg);
+
+	D3D11_BUFFER_DESC	   bufferDesc{};
+	D3D11_SUBRESOURCE_DATA subResourceData{};
+	bufferDesc.ByteWidth = vertexData.size() * sizeof(float);
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	subResourceData.pSysMem = vertexData.data();
+
+	HRESULT result = g_device->CreateBuffer(&bufferDesc, &subResourceData, m_vertexBuffer.GetAddressOf());
+	if (FAILED(result))
+	{
+		LOG_ERROR("D3D11Buffer::createVertexBuffer(): Failed to create vertex buffer ({}).", formatHResult(result));
+	}
+}
+
+void Buffer11::createConstantBuffer()
+{
+	auto msg = "Buffer11::createVertexBuffer(): ID3D11Device is not instantiated.";
+	ASSERT(g_device != nullptr, msg);
+
+	D3D11_BUFFER_DESC bufferDesc{};
+	bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	HRESULT result = g_device->CreateBuffer(&bufferDesc, nullptr, m_constantBuffer.GetAddressOf());
+	if (FAILED(result))
+	{
+		LOG_ERROR("D3D11Buffer::createConstantBuffer(): Failed to create constant buffer ({}).", formatHResult(result));
+	}
 }

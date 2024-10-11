@@ -170,7 +170,7 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	return true;
 }
 
-int32 TextureImporter::pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_t offset)
+int32 TextureImporter::pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, size_t offset)
 {
 	// Raw pointer to the final PNG data which is pushed to the Texture object
 	// This is offset by the size of the previous IDAT chunk, in case there's multiple chunks.
@@ -443,7 +443,7 @@ int32 TextureImporter::pngStripFilterByte(uint8* in, uint8* out, int32 inSize)
 }
 
 // stbi__create_png_image
-int32 TextureImporter::pngUnfilterInterlaced(Buffer<uint8>* buffer, PngTexture* png, size_t offset)
+int32 TextureImporter::pngUnfilterInterlaced(RawBuffer<uint8>* buffer, PngTexture* png, size_t offset)
 {
 	return 0;
 }
@@ -524,10 +524,10 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 		}
 	}
 
-	Buffer<uint8> data = png.data;
+	RawBuffer<uint8> data = png.data;
 	int32 bpr          = (png.metadata.width * g_bytesPerPixel) + 1;
 	int32 tmpSize      = bpr * png.metadata.height;
-	Buffer<uint8> tmp(tmpSize);
+	RawBuffer<uint8> tmp(tmpSize);
 
 	for (int32 row = 0; row < (int32)png.metadata.height; row++)
 	{

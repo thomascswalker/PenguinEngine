@@ -38,7 +38,7 @@ enum class ETextureByteOrder
 class Texture
 {
 	/** The memory pointer this texture uses to store pixels. */
-	Buffer<uint8> m_buffer;
+	RawBuffer<uint8> m_buffer;
 	/** The 2-dimensional compressedSize of this texture. */
 	vec2i m_size;
 	/** The size of a single row of pixels. */
@@ -80,7 +80,7 @@ public:
 		m_buffer.resize(memSize);
 	}
 
-	Texture(Buffer<uint8>* inData, vec2i inSize)
+	Texture(RawBuffer<uint8>* inData, vec2i inSize)
 		: m_size(inSize)
 		  , m_pitch(inSize.x)
 	{
@@ -153,7 +153,7 @@ public:
 		return m_buffer.getPtr();
 	}
 
-	void setMemory(Buffer<uint8>* newMemory, const size_t inSize = 0)
+	void setMemory(RawBuffer<uint8>* newMemory, const size_t inSize = 0)
 	{
 		if (newMemory->getPtr() == nullptr)
 		{

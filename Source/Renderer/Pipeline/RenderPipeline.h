@@ -17,7 +17,7 @@ public:
 	virtual bool init(void* windowHandle) = 0;
 	virtual void beginDraw() = 0;
 	virtual void draw() = 0;
-	virtual void bindMesh(IRenderable* renderable) = 0;
+	virtual void addRenderable(IRenderable* renderable) = 0;
 	virtual void endDraw() = 0;
 	virtual void shutdown() = 0;
 	virtual void resize(int32 width, int32 height) = 0;

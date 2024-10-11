@@ -89,8 +89,6 @@ void Engine::tick()
 		{
 			camera->zoom(deltaMouseCursor.y * m_deltaTime);
 		}
-
-		m_viewport->updateSceneCamera();
 	}
 
 	// Tick every object
@@ -222,7 +220,7 @@ void Engine::loadMesh() const
 			// Set the mesh in the actor
 			staticMeshActor->setMesh(g_meshes.back());
 			// Bind the mesh to the render pipeline
-			m_viewport->getRenderPipeline()->bindMesh(staticMeshActor);
+			m_viewport->getRenderPipeline()->addRenderable(staticMeshActor);
 		}
 		else
 		{

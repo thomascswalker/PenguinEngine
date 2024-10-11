@@ -23,44 +23,50 @@ void Mesh::processTriangles()
 			triangle.v2.texCoord = m_texCoords[triangle.texCoordIndexes[2]];
 		}
 	}
+	m_vertexBuffer = toVertexData();
 }
 
-std::shared_ptr<Mesh> Mesh::createPlane(const float size)
+std::vector<float> Mesh::toVertexData()
 {
-	return createPlane(size, size);
-}
+	int32			   vertexSize = (int32)sizeof(Vertex);
+	auto			   size = m_triangles.size() * 3 * vertexSize;
+	std::vector<float> data(size);
+	size_t			   offset = 0;
 
-std::shared_ptr<Mesh> Mesh::createPlane(float width, float height)
-{
-	std::vector<vec3f> positions;
-	positions.emplace_back(-width, 0.0f, height);
-	positions.emplace_back(width, 0.0f, height);
-	positions.emplace_back(-width, 0.0f, -height);
-	positions.emplace_back(width, 0.0f, -height);
+	float* dataPtr = data.data();
+	// Triangle
+	for (Triangle& tri : m_triangles)
+	{
+		// Vertex 0
+		data[offset++] = tri.v0.position.x;
+		data[offset++] = tri.v0.position.y;
+		data[offset++] = tri.v0.position.z;
+		data[offset++] = tri.v0.normal.x;
+		data[offset++] = tri.v0.normal.y;
+		data[offset++] = tri.v0.normal.z;
+		data[offset++] = tri.v0.texCoord.x;
+		data[offset++] = tri.v0.texCoord.y;
 
-	std::vector<vec3f> normals;
-	normals.emplace_back(0.0f, 1.0f, 0.0f); // Only one normal because our plane is flat
+		// Vertex 1
+		data[offset++] = tri.v1.position.x;
+		data[offset++] = tri.v1.position.y;
+		data[offset++] = tri.v1.position.z;
+		data[offset++] = tri.v1.normal.x;
+		data[offset++] = tri.v1.normal.y;
+		data[offset++] = tri.v1.normal.z;
+		data[offset++] = tri.v1.texCoord.x;
+		data[offset++] = tri.v1.texCoord.y;
 
-	std::vector<vec2f> texCoords;
-	texCoords.emplace_back(0.0f, 0.0f);
-	texCoords.emplace_back(1.0f, 0.0f);
-	texCoords.emplace_back(0.0f, 0.0f);
-	texCoords.emplace_back(1.0f, 0.0f);
-	texCoords.emplace_back(0.0f, 0.0f);
-	texCoords.emplace_back(1.0f, 0.0f);
-	texCoords.emplace_back(0.0f, 1.0f);
-	texCoords.emplace_back(1.0f, 1.0f);
+		// Vertex 2
+		data[offset++] = tri.v2.position.x;
+		data[offset++] = tri.v2.position.y;
+		data[offset++] = tri.v2.position.z;
+		data[offset++] = tri.v2.normal.x;
+		data[offset++] = tri.v2.normal.y;
+		data[offset++] = tri.v2.normal.z;
+		data[offset++] = tri.v2.texCoord.x;
+		data[offset++] = tri.v2.texCoord.y;
+	}
 
-	std::vector<Triangle> triangles;
-	triangles.emplace_back(
-		std::vector{2, 0, 3}, // Position indexes
-		std::vector{0, 0, 0}, // Normal indexes
-		std::vector{6, 4, 7}  // TexCoord indexes
-	);
-	triangles.emplace_back(
-		std::vector{1, 3, 0}, // Position indexes
-		std::vector{0, 0, 0}, // Normal indexes
-		std::vector{5, 7, 4}  // TexCoord indexes
-	);
-	return std::make_shared<Mesh>(triangles, positions, normals, texCoords);
+	return data;
 }

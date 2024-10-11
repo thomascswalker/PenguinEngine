@@ -75,6 +75,9 @@ void Camera::update(float deltaTime)
 	// Reset the delta after rotation and translation have been set
 	m_deltaTranslation.zero();
 	m_deltaRotation.zero();
+
+	// Update VP matrix
+	computeViewProjectionMatrix();
 }
 
 void Camera::setFov(const float newFov)

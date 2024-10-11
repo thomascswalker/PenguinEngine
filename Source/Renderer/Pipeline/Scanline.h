@@ -15,7 +15,7 @@ struct VertexInput
 {
 	vec3f position;
 	vec3f normal;
-	mat4f mvp;
+	mat4f viewProjection;
 	mat4f model;
 };
 
@@ -69,7 +69,7 @@ class ScanlineRenderPipeline : public IRenderPipeline
 	/** Current model matrix **/
 	mat4f m_modelMatrix;
 	/** Vector of all vertexes in all meshes. **/
-	std::vector<Vertex> m_vertexBuffer;
+	std::vector<float> m_vertexBuffer;
 	/** Vector of mesh descriptions of meshes which are currently bound. **/
 	std::vector<MeshDescription> m_meshDescriptions;
 	/** Pointer to the first Vertex in the current triangle. **/
@@ -92,7 +92,7 @@ public:
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
 	void draw() override;
-	void bindMesh(IRenderable* renderable) override;
+	void addRenderable(IRenderable* renderable) override;
 	void endDraw() override;
 	void shutdown() override {}
 	void resize(int32 width, int32 height) override;

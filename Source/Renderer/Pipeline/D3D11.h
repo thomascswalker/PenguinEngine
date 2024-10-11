@@ -15,14 +15,19 @@
 
 #include <wrl/client.h>
 
+#include "Engine/Buffer.h"
 #include "RenderPipeline.h"
-
 #include "Core/String.h"
-
 #include "Engine/Actors/Camera.h"
 #include "Renderer/Shader.h"
 
 using Microsoft::WRL::ComPtr;
+using namespace DirectX;
+
+// Global reference to D3D11 Device
+inline ID3D11Device* g_device = nullptr;
+// Global reference to D3D11 Device Context
+inline ID3D11DeviceContext* g_deviceContext = nullptr;
 
 #define CHECK_RESULT(func) \
 	if (!(func))           \
@@ -39,29 +44,42 @@ using Microsoft::WRL::ComPtr;
 
 inline const char* formatHResult(const HRESULT err)
 {
-	auto comErr    = _com_error(err);
-	LPCTSTR errMsg = comErr.ErrorMessage();
-	CStringA errMsgA(errMsg);
+	auto		comErr = _com_error(err);
+	LPCTSTR		errMsg = comErr.ErrorMessage();
+	CStringA	errMsgA(errMsg);
 	const char* errMsgP = errMsgA;
 	return errMsgP;
 }
 
-// 268 bytes (aligned as 272)
-struct ConstantData
+/** Constant Buffers **/
+
+constexpr uint32 g_constantBufferCount = 2;
+
+namespace ConstantBufferId
 {
-	DirectX::XMMATRIX mvp;             // 64 bytes
-	DirectX::XMMATRIX model;           // 64 bytes
-	DirectX::XMMATRIX view;            // 64 bytes
-	DirectX::XMMATRIX projection;      // 64 bytes
-	DirectX::XMFLOAT3 cameraDirection; // 12 bytes
+	constexpr uint32 Camera = 0;
+	constexpr uint32 Model = 1;
+}; // namespace ConstantBufferId
+
+struct CBCamera
+{
+	XMMATRIX viewProjection;
+	XMFLOAT4 cameraDirection;
 };
 
-class D3D11VertexShader : public VertexShader
+struct CBModel
+{
+	XMMATRIX model;
+};
+
+/** Shaders **/
+
+class VertexShader11 : public VertexShader
 {
 public:
 	ID3D11VertexShader* m_shaderPtr = nullptr;
 
-	~D3D11VertexShader() override
+	~VertexShader11() override
 	{
 		if (m_shaderPtr)
 		{
@@ -75,12 +93,12 @@ public:
 	}
 };
 
-class D3D11PixelShader : public PixelShader
+class PixelShader11 : public PixelShader
 {
 public:
 	ID3D11PixelShader* m_shaderPtr = nullptr;
 
-	~D3D11PixelShader() override
+	~PixelShader11() override
 	{
 		if (m_shaderPtr)
 		{
@@ -94,64 +112,70 @@ public:
 	}
 };
 
+/** Buffers **/
+
+class Buffer11 : public GenericBuffer
+{
+	MeshDescription		 m_meshDescription;
+	ComPtr<ID3D11Buffer> m_vertexBuffer = nullptr;
+	ComPtr<ID3D11Buffer> m_constantBuffer = nullptr;
+
+public:
+	void createVertexBuffer(std::vector<float>& data) override;
+	void createConstantBuffer() override;
+	void setMeshDescription(const MeshDescription& meshDescription) { m_meshDescription = meshDescription; }
+
+	MeshDescription* getMeshDescription() { return &m_meshDescription; }
+	ID3D11Buffer*	 getVertexBuffer() const { return m_vertexBuffer.Get(); }
+	ID3D11Buffer*	 getConstantBuffer() const { return m_constantBuffer.Get(); }
+};
+
 // https://gist.github.com/d7samurai/261c69490cce0620d0bfc93003cd1052
 /** https://walbourn.github.io/anatomy-of-direct3d-11-create-device/ **/
 /** https://antongerdelan.net/opengl/d3d11.html **/
 class D3D11RenderPipeline : public IRenderPipeline
 {
 	bool m_initialized = false;
-	HWND m_hwnd        = nullptr;
+	HWND m_hwnd = nullptr;
 
-	int32 m_width  = g_defaultViewportWidth;
+	int32 m_width = g_defaultViewportWidth;
 	int32 m_height = g_defaultViewportHeight;
 
-	int32 m_sampleCount   = 1;
+	int32 m_sampleCount = 1;
 	int32 m_sampleQuality = 0;
-	int32 m_mipLevels     = 1;
+	int32 m_mipLevels = 1;
 
 	RenderSettings m_renderSettings;
 
 	/** Boilerplate D3D11 **/
 
-	D3D_FEATURE_LEVEL m_featureLevel            = D3D_FEATURE_LEVEL_11_0;
-	ComPtr<ID3D11Device> m_device               = nullptr;
+	D3D_FEATURE_LEVEL			m_featureLevel = D3D_FEATURE_LEVEL_11_0;
+	ComPtr<ID3D11Device>		m_device = nullptr;
 	ComPtr<ID3D11DeviceContext> m_deviceContext = nullptr;
-	ComPtr<IDXGISwapChain> m_swapChain          = nullptr;
+	ComPtr<IDXGISwapChain>		m_swapChain = nullptr;
 
 	/** Buffers **/
 
 	ComPtr<ID3D11RenderTargetView> m_renderTargetView = nullptr;
-
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView = nullptr;
-	ComPtr<ID3D11Texture2D> m_depthStencilTexture     = nullptr;
-	ComPtr<ID3D11Texture2D> m_backBuffer              = nullptr;
+	ComPtr<ID3D11Texture2D>		   m_depthStencilTexture = nullptr;
+	ComPtr<ID3D11Texture2D>		   m_backBuffer = nullptr;
 
 	/** Vertex & Index Buffer **/
 
-	ComPtr<ID3D11Buffer> m_vertexBuffer = nullptr;
-	float* m_vertexDataArray            = nullptr;
-	size_t m_vertexDataSize             = 0;
-	uint32 m_vertexStride               = 8 * sizeof(float); // (Pos.XYZ + Norm.XYZ + UV.xy) * 4 = 32
-	uint32 m_vertexOffset               = 0;
-	uint32 m_vertexCount                = 0;
-
-	ComPtr<ID3D11Buffer> m_indexBuffer = nullptr;
-	uint32* m_indexDataArray           = nullptr;
-	size_t m_indexDataSize             = 0;
-	uint32 m_indexStride               = 3 * sizeof(int32);
-	uint32 m_indexOffset               = 0;
-	uint32 m_indexCount                = 0;
+	ID3D11Buffer*				 m_constantBuffers[g_constantBufferCount];
+	std::vector<Buffer11>		 m_vertexBuffers;
 
 	/** Shaders **/
 
 	std::map<const char*, Shader*> m_shaders;
-	ComPtr<ID3D11InputLayout> m_vertexInputLayout = nullptr;
-	D3D11VertexShader* m_vertexShader             = nullptr;
-	D3D11PixelShader* m_pixelShader               = nullptr;
+	ID3D11InputLayout*			   m_vertexInputLayout = nullptr;
+	VertexShader11*				   m_vertexShader = nullptr;
+	PixelShader11*				   m_pixelShader = nullptr;
 
 	/** Camera **/
 
-	ComPtr<ID3D11Buffer> m_constantDataBuffer = nullptr;
+	ViewData* m_viewData = nullptr;
 
 public:
 	~D3D11RenderPipeline() override = default;
@@ -162,24 +186,27 @@ public:
 	bool createRenderTargetView();
 	bool createShaders();
 	bool createDepthBuffer();
-	bool createConstantBuffer();
+	bool createInputLayout();
+	bool createConstantBuffers();
+
 	[[nodiscard]] bool createRasterizerState() const;
 	[[nodiscard]] bool createViewport() const;
 
-	bool init(void* windowHandle) override;
-	void beginDraw() override;
-	void draw() override;
-	void bindMesh(IRenderable* renderable) override;
-	void endDraw() override;
-	void shutdown() override;
-	void resize(int32 width, int32 height) override;
-	void drawGrid(Grid* grid) override;
-	void drawLine(const vec3f& inA, const vec3f& inB, const Color& color) override;
+	bool   init(void* windowHandle) override;
+	void   beginDraw() override;
+	void   draw() override;
+	void   drawMesh(Buffer11* buffer);
+	void   addRenderable(IRenderable* renderable) override;
+	void   endDraw() override;
+	void   shutdown() override;
+	void   resize(int32 width, int32 height) override;
+	void   drawGrid(Grid* grid) override;
+	void   drawLine(const vec3f& inA, const vec3f& inB, const Color& color) override;
 	uint8* getFrameData() override;
-	void setViewData(ViewData* newViewData) override;
-	void setRenderSettings(RenderSettings* newRenderSettings) override;
-	void setHwnd(HWND hwnd);
+	void   setViewData(ViewData* newViewData) override;
+	void   setRenderSettings(RenderSettings* newRenderSettings) override;
+	void   setHwnd(HWND hwnd);
 
-	HRESULT createShader(const char* name, const std::string& fileName, EShaderType shaderType);
+	HRESULT		   createShader(const char* name, const std::string& fileName, EShaderType shaderType);
 	static HRESULT compileShader(LPCWSTR fileName, LPCSTR entryPoint, LPCSTR profile, ID3DBlob** blob);
 };
