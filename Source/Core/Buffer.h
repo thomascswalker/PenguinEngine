@@ -35,21 +35,21 @@ T swapByteOrder(T value)
  * with PlatformMemory functions.
  */
 template <typename T>
-class Buffer
+class RawBuffer
 {
 	T* m_data     = nullptr;
 	size_t m_size = 0;
 
 public:
-	Buffer() = default;
+	RawBuffer() = default;
 
-	explicit Buffer(const size_t inSize)
+	explicit RawBuffer(const size_t inSize)
 		: m_size(inSize)
 	{
 		m_data = PlatformMemory::malloc<T>(inSize);
 	}
 
-	explicit Buffer(T* inData, const size_t inSize)
+	explicit RawBuffer(T* inData, const size_t inSize)
 		: m_data(inData)
 		  , m_size(inSize)
 	{
@@ -58,7 +58,7 @@ public:
 	}
 
 	// Copy constructor
-	Buffer(const Buffer& other)
+	RawBuffer(const RawBuffer& other)
 		: m_size(other.m_size)
 	{
 		if (other.m_data)
@@ -74,7 +74,7 @@ public:
 	}
 
 	// Move constructor
-	Buffer(Buffer&& other) noexcept
+	RawBuffer(RawBuffer&& other) noexcept
 	{
 		m_data       = other.m_data;
 		m_size       = other.m_size;
@@ -83,7 +83,7 @@ public:
 	}
 
 	// Assignment operator
-	Buffer& operator=(const Buffer& other)
+	RawBuffer& operator=(const RawBuffer& other)
 	{
 		if (!(*this == other))
 		{
@@ -104,7 +104,7 @@ public:
 		return *this;
 	}
 
-	Buffer& operator=(Buffer&& other) noexcept
+	RawBuffer& operator=(RawBuffer&& other) noexcept
 	{
 		if (!(*this == other))
 		{
@@ -226,7 +226,7 @@ public:
 		return m_data[index];
 	}
 
-	bool operator==(const Buffer& other) const
+	bool operator==(const RawBuffer& other) const
 	{
 		if (m_size != other.m_size)
 		{
@@ -244,7 +244,7 @@ public:
 
 struct StreamBuffer : std::streambuf
 {
-	explicit StreamBuffer(Buffer<uint8>& buffer)
+	explicit StreamBuffer(RawBuffer<uint8>& buffer)
 	{
 		auto begin = (int8*)buffer.getPtr();
 		this->setg(begin, begin, begin + buffer.size());
@@ -314,7 +314,7 @@ public:
 		: m_size(inSize)
 		  , m_endian(endian)
 	{
-		Buffer buffer((uint8*)inString.data(), inSize);
+		RawBuffer buffer((uint8*)inString.data(), inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
 		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
@@ -324,12 +324,12 @@ public:
 		: m_size(inSize)
 		  , m_endian(endian)
 	{
-		Buffer buffer(inBuffer, inSize);
+		RawBuffer buffer(inBuffer, inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
 		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
-	explicit ByteReader(Buffer<uint8>& inBuffer,
+	explicit ByteReader(RawBuffer<uint8>& inBuffer,
 	                    const std::endian endian = std::endian::native)
 		: m_size(inBuffer.size())
 		  , m_endian(endian)

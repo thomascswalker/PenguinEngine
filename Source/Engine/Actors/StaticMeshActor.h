@@ -37,8 +37,8 @@ public:
 		rotate(rate / 2, rate, 0);
 	}
 
-	transf getTransform() override
+	transf* getTransform() override
 	{
-		return m_transform;
+		return &m_transform;
 	}
 };

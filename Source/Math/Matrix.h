@@ -34,6 +34,7 @@ struct mat4_t
 	union
 	{
 		T m[4][4];
+		float* f;
 	};
 
 	mat4_t()
@@ -274,15 +275,7 @@ struct mat4_t
 		T det24 = a14 * a23 * a31 * a42;
 
 		return (
-			det1 + det2 + det3 +
-			det4 + det5 + det6 +
-			det7 + det8 + det9 +
-			det10 + det11 + det12 -
-			det13 - det14 - det15 -
-			det16 - det17 - det18 -
-			det19 - det20 - det21 -
-			det22 - det23 - det24
-		);
+			det1 + det2 + det3 + det4 + det5 + det6 + det7 + det8 + det9 + det10 + det11 + det12 - det13 - det14 - det15 - det16 - det17 - det18 - det19 - det20 - det21 - det22 - det23 - det24);
 	}
 
 	// http://www.cg.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/teche0023.html
@@ -342,15 +335,15 @@ struct mat4_t
 	{
 		switch (inAxis)
 		{
-		case EAxis::X:
+			case EAxis::X:
 			{
 				return vec3_t(m[0][0], m[1][0], m[2][0]);
 			}
-		case EAxis::Y:
+			case EAxis::Y:
 			{
 				return vec3_t(m[0][1], m[1][1], m[2][1]);
 			}
-		case EAxis::Z:
+			case EAxis::Z:
 			{
 				return vec3_t(m[0][2], m[1][2], m[2][2]);
 			}
@@ -368,14 +361,14 @@ struct mat4_t
 		const vec3_t xAxis = getAxis(EAxis::X);
 		const vec3_t yAxis = getAxis(EAxis::Y);
 		const vec3_t zAxis = getAxis(EAxis::Z);
-		const T radToDeg   = 180.0f / (g_pi * 2.0f);
+		const T		 radToDeg = 180.0f / (g_pi * 2.0f);
 
-		T pitch       = std::atan2f(xAxis.z, std::sqrtf(Math::square(xAxis.x) + Math::square(xAxis.y))) * radToDeg;
-		T yaw         = std::atan2f(xAxis.y, xAxis.x) * radToDeg;
+		T	  pitch = std::atan2f(xAxis.z, std::sqrtf(Math::square(xAxis.x) + Math::square(xAxis.y))) * radToDeg;
+		T	  yaw = std::atan2f(xAxis.y, xAxis.x) * radToDeg;
 		rot_t rotator = rot_t(pitch, yaw, T(0));
 
 		const vec3_t syAxis = rotationMatrix(rotator).getAxis(EAxis::Y);
-		rotator.roll        = std::atan2f(zAxis.dot(syAxis), yAxis.dot(syAxis)) * radToDeg;
+		rotator.roll = std::atan2f(zAxis.dot(syAxis), yAxis.dot(syAxis)) * radToDeg;
 
 		return rotator;
 	}
@@ -395,8 +388,7 @@ struct mat4_t
 			plane_t<T>(1, 0, 0, 0),
 			plane_t<T>(0, c, -s, 0),
 			plane_t<T>(0, s, c, 0),
-			plane_t<T>(0, 0, 0, 1)
-		);
+			plane_t<T>(0, 0, 0, 1));
 	}
 
 	static mat4_t makeFromY(T angle)
@@ -407,8 +399,7 @@ struct mat4_t
 			plane_t<T>(c, 0, s, 0),
 			plane_t<T>(0, 1, 0, 0),
 			plane_t<T>(-s, 0, c, 0),
-			plane_t<T>(0, 0, 0, 1)
-		);
+			plane_t<T>(0, 0, 0, 1));
 	}
 
 	static mat4_t makeFromZ(T angle)
@@ -419,8 +410,7 @@ struct mat4_t
 			plane_t<T>(c, -s, 0, 0),
 			plane_t<T>(s, c, 0, 0),
 			plane_t<T>(0, 0, 1, 0),
-			plane_t<T>(0, 0, 0, 1)
-		);
+			plane_t<T>(0, 0, 0, 1));
 	}
 
 	T get(int32 x, int32 y) const
@@ -447,7 +437,7 @@ struct mat4_t
 		tmp.m[3][1] = m[1][3];
 		tmp.m[3][2] = m[2][3];
 		tmp.m[3][3] = m[3][3];
-		*this       = tmp;
+		*this = tmp;
 	}
 
 	mat4_t getTranspose() const
@@ -477,7 +467,7 @@ struct mat4_t
 
 	vec4_t<T> getColumn(int32 column) const
 	{
-		return {m[0][column], m[1][column], m[2][column], m[3][column]};
+		return { m[0][column], m[1][column], m[2][column], m[3][column] };
 	}
 
 	void set(int32 x, int32 y, T value)
@@ -495,6 +485,11 @@ struct mat4_t
 		output += std::format("[{} {} {} {}]\n", m[3][0], m[3][1], m[3][2], m[3][3]);
 
 		return output;
+	}
+
+	float* asFloatArray()
+	{
+		return f;
 	}
 
 	mat4_t operator+(const mat4_t& other) const
@@ -565,7 +560,7 @@ struct mat4_t
 		float x = m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z;
 		float y = m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z;
 		float z = m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z;
-		return {x, y, z};
+		return { x, y, z };
 	}
 
 	vec4_t<T> operator*(const vec4_t<T>& v) const
@@ -575,7 +570,7 @@ struct mat4_t
 		float y = m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z + m[3][1] * v.w;
 		float z = m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z + m[3][2] * v.w;
 		float w = m[0][3] * v.x + m[1][3] * v.y + m[2][3] * v.z + m[3][3] * v.w;
-		return {x, y, z, w};
+		return { x, y, z, w };
 #else
 		XMVECTOR vResult = XM_PERMUTE_PS(V, _MM_SHUFFLE(3, 3, 3, 3)); // W
 		vResult = _mm_mul_ps(vResult, M.r[3]);
@@ -593,21 +588,6 @@ struct mat4_t
 	{
 		std::memcpy(m, &Other.m, 16 * sizeof(T));
 		return *this;
-	}
-
-	bool equals(const mat4_t& other)
-	{
-		for (int32 x = 0; x < 4; x++)
-		{
-			for (int32 y = 0; y < 4; y++)
-			{
-				if (m[x][y] != other.m[x][y])
-				{
-					return false;
-				}
-			}
-		}
-		return true;
 	}
 };
 
@@ -670,8 +650,8 @@ mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ)
 	Math::sinCos(&sinFov, &cosFov, 0.5f * fov);
 
 	float height = cosFov / sinFov;
-	float width  = height / aspect;
-	float range  = maxZ / (maxZ - minZ);
+	float width = height / aspect;
+	float range = maxZ / (maxZ - minZ);
 
 	mat4f out;
 	out.setZero();
@@ -698,9 +678,9 @@ mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, co
 	vec3_t<T> up = forward.cross(right);
 
 	vec3_t<T> negEyePosition = -eyePosition;
-	T d0                     = up.dot(negEyePosition);
-	T d1                     = right.dot(negEyePosition);
-	T d2                     = forward.dot(negEyePosition);
+	T		  d0 = up.dot(negEyePosition);
+	T		  d1 = right.dot(negEyePosition);
+	T		  d2 = forward.dot(negEyePosition);
 
 	//   Rx  |   Ux  |   Fx  |  0
 	//   Ry  |   Uy  |   Fy  |  0
@@ -753,8 +733,8 @@ mat4_t<T> rotationMatrix(T pitch, T yaw, T roll)
 	mat4_t<T> out;
 	// Convert from degrees to radians
 	pitch = Math::degreesToRadians(pitch);
-	yaw   = Math::degreesToRadians(yaw);
-	roll  = Math::degreesToRadians(roll);
+	yaw = Math::degreesToRadians(yaw);
+	roll = Math::degreesToRadians(roll);
 
 	T cp = std::cosf(pitch);
 	T sp = std::sinf(pitch);

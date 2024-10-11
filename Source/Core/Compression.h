@@ -24,7 +24,7 @@ namespace Compression
 		PlatformMemory::free(p);
 	}
 
-	static int32 uncompressZlib(Buffer<uint8>* uncompressedBuffer, Buffer<uint8>* compressedBuffer)
+	static int32 uncompressZlib(RawBuffer<uint8>* uncompressedBuffer, RawBuffer<uint8>* compressedBuffer)
 	{
 		uint32 uncompressedSize = (uint32)uncompressedBuffer->size();
 		uint8* uncompressedData = PlatformMemory::malloc<uint8>(uncompressedSize);

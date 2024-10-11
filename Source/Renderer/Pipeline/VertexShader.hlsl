@@ -1,12 +1,16 @@
 // https://graphicsprogramming.github.io/learnd3d11/1-introduction/1-1-getting-started/1-1-3-hello-triangle/#vertex-shader
 
-cbuffer constants : register(b0) 
+// Camera
+cbuffer CameraBuffer : register(b0) 
 {
-    matrix mvp;
+    matrix viewProjection;
+    float4 cameraDirection;
+};
+
+// Model
+cbuffer ModelBuffer : register(b1)
+{
     matrix model;
-    matrix view;
-    matrix projection;
-    float3 direction;
 };
 
 struct VS_Input
@@ -29,13 +33,14 @@ VS_OUTPUT main(VS_Input input)
     VS_OUTPUT output;
 
     // World to screen
+    matrix mvp = mul(model, viewProjection);
     output.position = mul(float4(input.position, 1.0f), mvp);
 
     // Tangent to Object normal
-    output.normal = input.normal;
+    output.normal = mul(float4(input.normal, 1.0f), model).xyz;
 
     // Camera direction
-    output.direction = direction;
+    output.direction = cameraDirection;
 
     return output;
 }

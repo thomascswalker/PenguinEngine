@@ -4,9 +4,14 @@
 
 /** Vertex Shader **/
 
-vec4f ScanlineVertexShader::process(const VertexData& input)
+VertexOutput ScanlineVertexShader::process(const VertexInput& input)
 {
-	return Math::vectorTransform(vec4f(input.position, 1.0f), input.mvp);
+	VertexOutput out;
+	// Project world position to screen
+	out.position = Math::vectorTransform(vec4f(input.position, 1.0f), input.viewProjection);
+	// Transform object normal to world normal
+	out.normal = Math::vectorTransform(input.normal, input.model);
+	return out;
 }
 
 /** Pixel Shader **/
@@ -24,7 +29,7 @@ Color ScanlinePixelShader::process(const PixelData& input)
 		out = input.texture->getPixelAsColor(x, y);
 	}
 	float facingRatio = (-input.cameraNormal).dot(input.worldNormal);
-	facingRatio       = std::clamp(facingRatio, 0.0f, 1.0f);
+	facingRatio = std::clamp(facingRatio, 0.0f, 1.0f);
 	out *= facingRatio;
 
 	return out;
@@ -34,17 +39,17 @@ Color ScanlinePixelShader::process(const PixelData& input)
 
 bool ScanlineRenderPipeline::init(void* windowHandle)
 {
-	int32 width  = g_defaultViewportWidth;
+	int32 width = g_defaultViewportWidth;
 	int32 height = g_defaultViewportHeight;
 
-	m_frameBuffer = std::make_shared<Texture>(vec2i{width, height});
-	m_depthBuffer = std::make_shared<Texture>(vec2i{width, height});
+	m_frameBuffer = std::make_shared<Texture>(vec2i{ width, height });
+	m_depthBuffer = std::make_shared<Texture>(vec2i{ width, height });
 
 	m_vertexShader = std::make_shared<ScanlineVertexShader>();
-	m_pixelShader  = std::make_shared<ScanlinePixelShader>();
+	m_pixelShader = std::make_shared<ScanlinePixelShader>();
 
-	m_viewData         = std::make_shared<ViewData>();
-	m_viewData->width  = width;
+	m_viewData = std::make_shared<ViewData>();
+	m_viewData->width = width;
 	m_viewData->height = height;
 
 	return true;
@@ -62,27 +67,41 @@ void ScanlineRenderPipeline::beginDraw()
 	}
 }
 
-void ScanlineRenderPipeline::draw(IRenderable* renderable)
+void ScanlineRenderPipeline::draw()
 {
-	// Set the current model matrix to the current renderable's transform, converted to a matrix
-	m_viewData->modelMatrix               = renderable->getTransform().toMatrix();
-	m_viewData->modelViewProjectionMatrix = m_viewData->modelMatrix * m_viewData->viewProjectionMatrix;
+	for (const MeshDescription& desc : m_meshDescriptions)
+	{
+		m_vertexBuffer.clear();
+		size_t dataSize = desc.byteSize;
+		m_vertexBuffer.resize(dataSize);
+		std::memcpy(m_vertexBuffer.data(), desc.data, dataSize);
+		m_viewData->modelMatrix = desc.transform->toMatrix();
+		m_viewData->modelViewProjectionMatrix = m_viewData->modelMatrix * m_viewData->viewProjectionMatrix;
 
+		// Draw each triangle in the vertex buffer
+		for (int32 index = 0; index < desc.vertexCount; index += 3)
+		{
+			Vertex* vertex = (Vertex*)m_vertexBuffer.data() + index;
+			drawTriangle(vertex);
+		}
+	}
+}
+
+void ScanlineRenderPipeline::addRenderable(IRenderable* renderable)
+{
 	// Convert the current renderable's geometry into a vertex buffer
-	m_vertexBuffer.clear();
-	std::vector<Triangle>* triangles = renderable->getMesh()->getTriangles();
-	for (Triangle& tri : *triangles)
-	{
-		m_vertexBuffer.emplace_back(tri.v0);
-		m_vertexBuffer.emplace_back(tri.v1);
-		m_vertexBuffer.emplace_back(tri.v2);
-	}
+	Mesh* mesh = renderable->getMesh();
+	auto vertexData = mesh->getVertexData();
 
-	// Draw each triangle in the vertex buffer
-	for (int32 index = 0; index < m_vertexBuffer.size(); index += 3)
-	{
-		drawTriangle(m_vertexBuffer.data() + index);
-	}
+	MeshDescription desc{};
+	desc.data = vertexData->data();
+	desc.byteSize = vertexData->size();
+	desc.stride = sizeof(Vertex);
+	desc.vertexCount = vertexData->size() / sizeof(Vertex);
+	desc.transform = renderable->getTransform();
+
+	// Add to mesh descriptions
+	m_meshDescriptions.emplace_back(desc);
 }
 
 void ScanlineRenderPipeline::endDraw() {}
@@ -93,17 +112,21 @@ bool ScanlineRenderPipeline::vertexStage()
 	// final projected vertex position on the screen. The W component of that vector needs to be
 	// above 0 to be in the view frustum. Otherwise, it's off the screen.
 	bool triangleOnScreen = false;
+
+	VertexInput input;
+	input.viewProjection = m_viewData->modelViewProjectionMatrix;
+	input.model = m_viewData->modelMatrix;
 	for (int32 i = 0; i < 3; i++)
 	{
-		VertexData input;
-		input.mvp      = m_viewData->modelViewProjectionMatrix;
 		input.position = m_vertexBufferPtr[i].position;
+		input.normal = m_vertexBufferPtr[i].normal;
 
-		vec4f output = ScanlineVertexShader::process(input);
-		if (output.w > 0.0f)
+		auto output = ScanlineVertexShader::process(input);
+		if (output.position.w > 0.0f)
 		{
-			m_screenPoints[i] = Clipping::clip(output, m_viewData->width, m_viewData->height);
-			triangleOnScreen  = true;
+			m_screenPoints[i] = Clipping::clip(output.position, m_viewData->width, m_viewData->height);
+			m_screenNormals[i] = output.normal;
+			triangleOnScreen = true;
 		}
 	}
 
@@ -115,11 +138,7 @@ bool ScanlineRenderPipeline::vertexStage()
 	}
 
 	// Check back-facing
-	auto model = m_viewData->modelMatrix;
-	m_vertexBufferPtr[0].normal = model * m_vertexBufferPtr[0].normal;
-	m_vertexBufferPtr[1].normal = model * m_vertexBufferPtr[1].normal;
-	m_vertexBufferPtr[2].normal = model * m_vertexBufferPtr[2].normal;
-	auto normal = (m_vertexBufferPtr[0].normal + m_vertexBufferPtr[1].normal + m_vertexBufferPtr[2].normal) / 3.0f;
+	auto  normal = (m_screenNormals[0] + m_screenNormals[1] + m_screenNormals[2]) / 3.0f;
 	float dotNormal = (-m_viewData->cameraDirection).dot(normal);
 	if (dotNormal > 0.0f)
 	{
@@ -130,11 +149,11 @@ bool ScanlineRenderPipeline::vertexStage()
 	EWindingOrder order = Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]);
 	switch (order)
 	{
-	case EWindingOrder::Clockwise: // Triangle is back-facing, exit
-	case EWindingOrder::CoLinear:  // Triangle has zero area, exit
-		return false;
-	case EWindingOrder::CounterClockwise: // Triangle is front-facing, continue
-		break;
+		case EWindingOrder::Clockwise: // Triangle is back-facing, exit
+		case EWindingOrder::CoLinear:  // Triangle has zero area, exit
+			return false;
+		case EWindingOrder::CounterClockwise: // Triangle is front-facing, continue
+			break;
 	}
 
 	return true;
@@ -154,20 +173,20 @@ void ScanlineRenderPipeline::rasterStage()
 	vec3f s2 = m_screenPoints[2];
 
 	// Compute the bounds of just this triangle on the screen
-	int32 width  = m_viewData->width;
+	int32 width = m_viewData->width;
 	int32 height = m_viewData->height;
 
 	rectf bounds = rectf::makeBoundingBox(s0, s1, s2);
 
 	vec2f boundsMin = bounds.min();
 	vec2f boundsMax = bounds.max();
-	int32 minX      = std::max(static_cast<int32>(boundsMin.x), 0);
-	int32 maxX      = std::min(static_cast<int32>(boundsMax.x), width - 1);
-	int32 minY      = std::max(static_cast<int32>(boundsMin.y), 0);
-	int32 maxY      = std::min(static_cast<int32>(boundsMax.y), height - 1);
+	int32 minX = std::max(static_cast<int32>(boundsMin.x), 0);
+	int32 maxX = std::min(static_cast<int32>(boundsMax.x), width - 1);
+	int32 minY = std::max(static_cast<int32>(boundsMin.y), 0);
+	int32 maxY = std::min(static_cast<int32>(boundsMax.y), height - 1);
 
 	// Pre-compute the area of the screen triangle so we're not computing it every pixel
-	float area        = Math::area2D(s0, s1, s2) * 2.0f;
+	float area = Math::area2D(s0, s1, s2) * 2.0f;
 	float oneOverArea = 1.0f / area;
 
 	// Loop through all pixels in the screen bounding box.
@@ -216,20 +235,20 @@ void ScanlineRenderPipeline::rasterStage()
 			}
 
 			PixelData pixel;
-			pixel.width    = m_viewData->width;
-			pixel.height   = m_viewData->height;
-			pixel.depth    = z;
+			pixel.width = m_viewData->width;
+			pixel.height = m_viewData->height;
+			pixel.depth = z;
 			pixel.distance = bary;
 
 			// Compute World Position of the current pixel
-			pixel.position      = point; // local
+			pixel.position = point; // local
 			pixel.worldPosition = v0.position * bary.x + v1.position * bary.y + v2.position * bary.z;
 
 			// Compute the UV coordinates of the current pixel
 			pixel.uv = v0.texCoord * bary.x + v1.texCoord * bary.y + v2.texCoord * bary.z;
 
 			// Compute the Normal direction of the current pixel
-			pixel.worldNormal  = v0.normal * bary.x + v1.normal * bary.y + v2.normal * bary.z;
+			pixel.worldNormal = m_screenNormals[0] * bary.x + m_screenNormals[1] * bary.y + m_screenNormals[2] * bary.z;
 			pixel.cameraNormal = m_viewData->cameraDirection;
 
 			// Set the texture
@@ -328,7 +347,7 @@ void ScanlineRenderPipeline::drawNormal()
 		drawLine(
 			normalStartScreen, // Start
 			normalEndScreen,   // End
-			normalColor);      // Color
+			normalColor);	   // Color
 	}
 }
 
@@ -344,7 +363,7 @@ void ScanlineRenderPipeline::drawGrid(Grid* grid)
 	{
 		// Project the world-space points to screen-space
 		vec3f s0, s1;
-		bool lineOnScreen = false;
+		bool  lineOnScreen = false;
 		lineOnScreen |= Math::projectWorldToScreen(line.a, s0, *m_viewData);
 		lineOnScreen |= Math::projectWorldToScreen(line.b, s1, *m_viewData);
 
@@ -375,7 +394,7 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 
 	// Clip the screen points within the viewport. If the line points are outside the viewport entirely
 	// then just return.
-	if (!Clipping::clipLine(&a, &b, vec2i{m_viewData->width, m_viewData->height}))
+	if (!Clipping::clipLine(&a, &b, vec2i{ m_viewData->width, m_viewData->height }))
 	{
 		return;
 	}
@@ -388,8 +407,8 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 	bool isSteep = false;
 	if (std::abs(a.x - b.x) < std::abs(a.y - b.y))
 	{
-		a       = vec2i(a.y, a.x);
-		b       = vec2i(b.y, b.x);
+		a = vec2i(a.y, a.x);
+		b = vec2i(b.y, b.x);
 		isSteep = true;
 	}
 
@@ -398,10 +417,10 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 		std::swap(a, b);
 	}
 
-	const int32 deltaX     = b.x - a.x;
-	const int32 deltaY     = b.y - a.y;
+	const int32 deltaX = b.x - a.x;
+	const int32 deltaY = b.y - a.y;
 	const int32 deltaError = std::abs(deltaY) * 2;
-	int32 errorCount       = 0;
+	int32		errorCount = 0;
 
 	// https://github.com/ssloy/tinyrenderer/issues/28
 	int32 y = a.y;
@@ -450,8 +469,8 @@ void ScanlineRenderPipeline::resize(int32 width, int32 height)
 		return;
 	}
 
-	m_frameBuffer->resize({width, height});
-	m_depthBuffer->resize({width, height});
+	m_frameBuffer->resize({ width, height });
+	m_depthBuffer->resize({ width, height });
 }
 
 uint8* ScanlineRenderPipeline::getFrameData()
@@ -467,11 +486,4 @@ void ScanlineRenderPipeline::setViewData(ViewData* newViewData)
 void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
 {
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
-}
-
-void ScanlineRenderPipeline::setVertexData(float* data, size_t size, int32 count)
-{
-	assert(sizeof(Vertex) * count == size);
-	m_vertexBuffer.resize(count);
-	std::memcpy(m_vertexBuffer.data(), data, size);
 }

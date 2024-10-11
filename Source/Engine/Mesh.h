@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <vector>
-#include "math/Vector.h"
+
+#include "Math/Vector.h"
+#include "Math/Transform.h"
 
 class Mesh;
 /* Global container for all mesh objects. */
@@ -45,13 +47,13 @@ struct Vertex
 
 struct Triangle
 {
-	std::vector<int32> positionIndexes;
-	std::vector<int32> normalIndexes;
-	std::vector<int32> texCoordIndexes;
-
 	Vertex v0;
 	Vertex v1;
 	Vertex v2;
+
+	std::vector<int32> positionIndexes;
+	std::vector<int32> normalIndexes;
+	std::vector<int32> texCoordIndexes;
 
 	Triangle() = default;
 
@@ -60,6 +62,32 @@ struct Triangle
 		: positionIndexes(inPositionIndexes)
 		  , normalIndexes(inNormalIndexes)
 		  , texCoordIndexes(inTexCoordIndexes) {}
+
+	Vertex operator[](int32 index) const
+	{
+		switch (index)
+		{
+			case 0:
+				return v0;
+			case 1:
+				return v1;
+			case 2:
+				return v2;
+		}
+	}
+
+	Vertex& operator[](int32 index)
+	{
+		switch (index)
+		{
+			case 0:
+				return v0;
+			case 1:
+				return v1;
+			case 2:
+				return v2;
+		}
+	}
 };
 
 class Mesh
@@ -69,6 +97,8 @@ class Mesh
 	std::vector<vec3f> m_positions;
 	std::vector<vec3f> m_normals;
 	std::vector<vec2f> m_texCoords;
+
+	std::vector<float> m_vertexBuffer;
 
 public:
 	Mesh() = default;
@@ -94,6 +124,8 @@ public:
 	}
 
 	void processTriangles();
+
+	std::vector<float> toVertexData();
 
 	std::vector<Triangle>* getTriangles()
 	{
@@ -135,7 +167,30 @@ public:
 		m_texCoords = texCoords;
 	}
 
-	// Primitives
-	static std::shared_ptr<Mesh> createPlane(float size);
-	static std::shared_ptr<Mesh> createPlane(float width, float height);
+	std::vector<float>* getVertexData()
+	{
+		return &m_vertexBuffer;
+	}
+
+	/** Returns the size of this mesh's geometry in bytes. **/
+	[[nodiscard]] size_t memorySize() const
+	{
+		return m_vertexBuffer.size() * sizeof(float);
+	}
+};
+
+struct MeshDescription
+{
+	/** Pointer to the transform of this mesh. **/
+	transf* transform = nullptr;
+	/** Byte size of the mesh. **/
+	uint32 byteSize = 0;
+	/** Vertex count. **/
+	uint32 vertexCount = 0;
+	/** Index count. **/
+	uint32 indexCount = 0;
+	/** Stride **/
+	uint32 stride = 0;
+	/** Vertex data pointer **/
+	float* data = nullptr;
 };

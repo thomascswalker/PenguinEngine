@@ -77,6 +77,9 @@ void Viewport::draw()
 		// Transfer render settings
 		m_renderPipeline->setRenderSettings(&m_settings);
 
+		// Update camera data
+		m_renderPipeline->setViewData(m_camera->getViewData());
+
 		// Draw all geometry
 		m_renderPipeline->beginDraw();
 
@@ -84,10 +87,7 @@ void Viewport::draw()
 		m_renderPipeline->drawGrid(m_grid.get());
 
 		// Draw each renderable object
-		for (IRenderable* renderable : g_objectManager.getRenderables())
-		{
-			m_renderPipeline->draw(renderable);
-		}
+		m_renderPipeline->draw();
 
 		// Called after drawing geometry
 		m_renderPipeline->endDraw();
@@ -132,12 +132,6 @@ bool Viewport::initRenderPipeline(void* windowHandle) const
 IRenderPipeline* Viewport::getRenderPipeline() const
 {
 	return m_renderPipeline.get();
-}
-
-void Viewport::updateSceneCamera() const
-{
-	m_camera->computeViewProjectionMatrix();
-	m_renderPipeline->setViewData(m_camera->getViewData());
 }
 
 void Viewport::formatDebugText()

@@ -143,8 +143,8 @@ inline std::map<std::string, EPngChunkType> g_pngChunkTypeMap = {
 
 struct PngChunk
 {
-	Buffer<uint8> uncompressedBuffer;
-	Buffer<uint8> compressedBuffer;
+	RawBuffer<uint8> uncompressedBuffer;
+	RawBuffer<uint8> compressedBuffer;
 	EPngChunkType type;
 };
 
@@ -164,7 +164,7 @@ struct PngMetadata
 struct PngTexture
 {
 	PngMetadata metadata{};
-	Buffer<uint8> data{};
+	RawBuffer<uint8> data{};
 };
 
 class TextureImporter
@@ -182,8 +182,8 @@ class TextureImporter
 	                                 int32 rowSizeBytes, int32 filterBytes, uint8* previousScanline);
 	static int32 pngStripFilterByte(uint8* in, uint8* out, int32 inSize);
 
-	static int32 pngUnfilter(Buffer<uint8>* buffer, PngTexture* png, size_t offset = 0);
-	static int32 pngUnfilterInterlaced(Buffer<uint8>* buffer, PngTexture* png, size_t offset = 0);
+	static int32 pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, size_t offset = 0);
+	static int32 pngUnfilterInterlaced(RawBuffer<uint8>* buffer, PngTexture* png, size_t offset = 0);
 
 	static int32 importPng(ByteReader* reader, Texture* texture, ETextureFileFormat format);
 

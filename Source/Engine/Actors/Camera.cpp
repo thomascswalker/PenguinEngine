@@ -75,6 +75,9 @@ void Camera::update(float deltaTime)
 	// Reset the delta after rotation and translation have been set
 	m_deltaTranslation.zero();
 	m_deltaRotation.zero();
+
+	// Update VP matrix
+	computeViewProjectionMatrix();
 }
 
 void Camera::setFov(const float newFov)
@@ -104,10 +107,7 @@ ViewData* Camera::getViewData()
 	m_viewData.minZ                    = m_minZ;
 	m_viewData.maxZ                    = m_maxZ;
 	m_viewData.target                  = m_targetTranslation;
-	m_viewData.projectionMatrix        = m_projectionMatrix;
-	m_viewData.viewMatrix              = m_viewMatrix;
 	m_viewData.viewProjectionMatrix    = m_viewProjectionMatrix;
-	m_viewData.invViewProjectionMatrix = m_invViewProjectionMatrix;
 	m_viewData.cameraDirection         = getForwardVector();
 	m_viewData.cameraTranslation       = getTranslation();
 	return &m_viewData;
