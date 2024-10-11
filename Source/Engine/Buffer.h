@@ -12,9 +12,7 @@ protected:
 public:
 	GenericBuffer() = default;
 	GenericBuffer(const std::vector<float>& vertexData)
-		: m_vertexData(vertexData)
-	{
-	}
+		: m_vertexData(vertexData) {}
 
 	virtual void createVertexBuffer(std::vector<float>& data) = 0;
 	virtual void createConstantBuffer() = 0;

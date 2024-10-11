@@ -50,11 +50,8 @@ struct ViewData
 
 	vec3f target = vec3f::zeroVector(); // Origin
 
-	mat4f projectionMatrix;
-	mat4f viewMatrix;
 	mat4f modelMatrix;
 	mat4f viewProjectionMatrix;
-	mat4f invViewProjectionMatrix;
 	mat4f modelViewProjectionMatrix;
 
 	vec3f cameraDirection;

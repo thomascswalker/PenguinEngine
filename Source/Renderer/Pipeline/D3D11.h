@@ -53,7 +53,7 @@ inline const char* formatHResult(const HRESULT err)
 
 /** Constant Buffers **/
 
-constexpr uint32 g_constantBufferCount = 2;
+constexpr uint32 g_constantBufferCount = 1;
 
 namespace ConstantBufferId
 {
@@ -164,7 +164,7 @@ class D3D11RenderPipeline : public IRenderPipeline
 	/** Vertex & Index Buffer **/
 
 	ID3D11Buffer*				 m_constantBuffers[g_constantBufferCount];
-	std::vector<Buffer11>		 m_vertexBuffers;
+	std::vector<Buffer11>		 m_meshBuffers;
 
 	/** Shaders **/
 

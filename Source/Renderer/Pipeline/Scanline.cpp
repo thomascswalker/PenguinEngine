@@ -90,18 +90,15 @@ void ScanlineRenderPipeline::draw()
 void ScanlineRenderPipeline::addRenderable(IRenderable* renderable)
 {
 	// Convert the current renderable's geometry into a vertex buffer
-	MeshDescription desc{};
-
-	// Set the transform pointer
 	Mesh* mesh = renderable->getMesh();
-	desc.transform = renderable->getTransform();
-
-	// Add each vertex to the vertex buffer and increment the vertex count by 3
 	auto vertexData = mesh->getVertexData();
+
+	MeshDescription desc{};
 	desc.data = vertexData->data();
 	desc.byteSize = vertexData->size();
 	desc.stride = sizeof(Vertex);
 	desc.vertexCount = vertexData->size() / sizeof(Vertex);
+	desc.transform = renderable->getTransform();
 
 	// Add to mesh descriptions
 	m_meshDescriptions.emplace_back(desc);

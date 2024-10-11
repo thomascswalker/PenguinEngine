@@ -1,3 +1,5 @@
+#pragma warning(disable : 6385)
+
 #include "D3D11.h"
 
 #include <d3dcompiler.h>
@@ -196,7 +198,7 @@ bool D3D11RenderPipeline::init(void* windowHandle)
 	LOG_DEBUG("Initializing D3D11 pipeline.")
 
 	m_hwnd = (HWND)windowHandle;
-	//ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
+	// ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
 
 	CHECK_RESULT(createDevice())
 	CHECK_RESULT(createSwapChain())
@@ -273,7 +275,7 @@ void D3D11RenderPipeline::beginDraw()
 
 void D3D11RenderPipeline::draw()
 {
-	for (auto& buffer : m_vertexBuffers)
+	for (auto& buffer : m_meshBuffers)
 	{
 		drawMesh(&buffer);
 	}
@@ -290,26 +292,25 @@ void D3D11RenderPipeline::drawMesh(Buffer11* buffer)
 {
 	// Buffers
 	ID3D11Buffer* vertexBufferData = buffer->getVertexBuffer();
-	ID3D11Buffer* constantBufferData = m_constantBuffers[ConstantBufferId::Model];
+	ID3D11Buffer* constantBufferData = buffer->getConstantBuffer();
 
 	// Update model constant buffer
-	auto		  xform = *buffer->getMeshDescription()->transform;
-	mat4f model = xform.toMatrix();
-	CBModel		  data{};
+	mat4f	model = buffer->getMeshDescription()->transform->toMatrix();
+	CBModel data{};
 	data.model = XMMATRIX(&model.m[0][0]);
 	m_deviceContext->UpdateSubresource(constantBufferData, 0, nullptr, &data, 0, 0);
 
 	// Get mesh info
-	auto		  desc = buffer->getMeshDescription();
-	uint32		  vertexBufferStride = desc->stride;
-	uint32		  vertexBufferOffset = 0;
+	auto   desc = buffer->getMeshDescription();
+	uint32 vertexBufferStride = desc->stride;
+	uint32 vertexBufferOffset = 0;
 
 	// Set the current vertex buffer to this mesh's buffer
 	m_deviceContext->IASetVertexBuffers(0, 1, &vertexBufferData, &vertexBufferStride, &vertexBufferOffset);
 
 	// Set the constant buffer for this mesh
-	m_deviceContext->VSSetConstantBuffers(ConstantBufferId::Camera, 1, &m_constantBuffers[ConstantBufferId::Camera]);
-	m_deviceContext->VSSetConstantBuffers(ConstantBufferId::Model, 1, &m_constantBuffers[ConstantBufferId::Model]);
+	m_deviceContext->VSSetConstantBuffers(0 /* Camera */, 1, &m_constantBuffers[ConstantBufferId::Camera]);
+	m_deviceContext->VSSetConstantBuffers(1 /* Model */, 1, &constantBufferData);
 
 	// Draw the mesh to the screen
 	m_deviceContext->Draw(desc->byteSize, 0);
@@ -320,6 +321,7 @@ void D3D11RenderPipeline::addRenderable(IRenderable* renderable)
 	Buffer11 buffer;
 	auto	 vertexData = renderable->getMesh()->getVertexData();
 	buffer.createVertexBuffer(*vertexData);
+	buffer.createConstantBuffer();
 
 	MeshDescription meshDesc;
 	meshDesc.stride = sizeof(Vertex);
@@ -328,7 +330,7 @@ void D3D11RenderPipeline::addRenderable(IRenderable* renderable)
 	meshDesc.transform = renderable->getTransform();
 	buffer.setMeshDescription(meshDesc);
 
-	m_vertexBuffers.emplace_back(buffer);
+	m_meshBuffers.emplace_back(buffer);
 }
 
 void D3D11RenderPipeline::endDraw()
@@ -364,12 +366,11 @@ void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 
 	// Convert from native to DX types
 	XMMATRIX viewProjection = XMMATRIX(&m_viewData->viewProjectionMatrix.m[0][0]);
-	XMFLOAT3 direction = XMFLOAT3(&m_viewData->cameraDirection.xyz[0]);
 
 	// Create constant buffer
 	CBCamera data{};
 	data.viewProjection = XMMatrixTranspose(viewProjection);
-	data.cameraDirection = XMFLOAT4(direction.x, direction.y, direction.z, 0);
+	data.cameraDirection = XMFLOAT4(m_viewData->cameraDirection.x, m_viewData->cameraDirection.y, m_viewData->cameraDirection.z, 0);
 
 	// Update the buffer data
 	ID3D11Buffer* cameraBuffer = m_constantBuffers[ConstantBufferId::Camera];
@@ -529,6 +530,7 @@ void Buffer11::createConstantBuffer()
 	ASSERT(g_device != nullptr, msg);
 
 	D3D11_BUFFER_DESC bufferDesc{};
+	bufferDesc.ByteWidth = sizeof(CBModel);
 	bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
 	HRESULT result = g_device->CreateBuffer(&bufferDesc, nullptr, m_constantBuffer.GetAddressOf());
