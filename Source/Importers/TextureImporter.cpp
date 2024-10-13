@@ -33,7 +33,7 @@ inline ETextureFileType TextureImporter::getTextureFileType(const std::string& f
 	{
 		return ETextureFileType::Jpg;
 	}
-	app->getPlatform()->messageBox("TextureImporter", std::format("Invalid texture type {}.", fileName));
+	LOG_ERROR("Invalid texture type {}.", fileName)
 	return ETextureFileType::Unknown;
 }
 

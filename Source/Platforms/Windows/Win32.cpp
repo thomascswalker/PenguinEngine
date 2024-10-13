@@ -123,7 +123,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			}
 
 			// If we have a D3D11 render pipeline, skip the paint step as this is handled by D3D11.
-			if (dynamic_cast<D3D11RenderPipeline*>(viewport->getRenderPipeline()) != nullptr)
+			if (dynamic_cast<D3D11RHI*>(viewport->getRHI()) != nullptr)
 			{
 				return 0;
 			}
@@ -139,7 +139,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC deviceContext = BeginPaint(hwnd, &paint);
 			const HDC renderContext = CreateCompatibleDC(deviceContext);
 
-			void* colorBuffer = viewport->getRenderPipeline()->getFrameData();
+			void* colorBuffer = viewport->getRHI()->getFrameData();
 			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
 			StretchBlt(renderContext, 0, 0, -width, height, renderContext, 0, 0, width, height, SRCCOPY);
 			SelectObject(renderContext, m_displayBitmap);
@@ -302,7 +302,7 @@ int32 Win32Platform::create()
 	RECT clientRect;
 	GetClientRect(m_hwnd, &clientRect);
 	engine->startup(clientRect.right, clientRect.bottom);
-	if (!engine->getViewport()->initRenderPipeline(m_hwnd))
+	if (!engine->getViewport()->initRHI(m_hwnd))
 	{
 		return PlatformInitError;
 	}

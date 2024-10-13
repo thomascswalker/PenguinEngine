@@ -5,12 +5,12 @@
 #include "Renderer/Grid.h"
 #include "Renderer/Settings.h"
 
-class IRenderPipeline
+class IRHI
 {
 public:
-	IRenderPipeline() = default;
-	IRenderPipeline(int32 width, int32 height) {}
-	virtual ~IRenderPipeline() = default;
+	IRHI() = default;
+	IRHI(int32 width, int32 height) {}
+	virtual ~IRHI() = default;
 
 	/** Main pipeline functions. **/
 
@@ -34,5 +34,5 @@ public:
 	virtual void setRenderSettings(RenderSettings* newRenderSettings) = 0;
 };
 
-class ScanlineRenderPipeline;
-class D3D11RenderPipeline;
+class ScanlineRHI;
+class D3D11RHI;

@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "RenderPipeline.h"
+#include "RHI.h"
 
 #include "Engine/Actors/Camera.h"
 #include "Engine/Mesh.h"
@@ -56,7 +56,7 @@ public:
 	static Color process(const PixelData& input);
 };
 
-class ScanlineRenderPipeline : public IRenderPipeline
+class ScanlineRHI : public IRHI
 {
 	std::shared_ptr<ScanlineVertexShader> m_vertexShader = nullptr;
 	std::shared_ptr<ScanlinePixelShader> m_pixelShader   = nullptr;
@@ -87,7 +87,7 @@ class ScanlineRenderPipeline : public IRenderPipeline
 	std::shared_ptr<RenderSettings> m_renderSettings = nullptr;
 
 public:
-	ScanlineRenderPipeline() = default;
+	ScanlineRHI() = default;
 
 	bool init(void* windowHandle) override;
 	void beginDraw() override;

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#define PENG_HARDWARE_ACCELERATION
+//#define PENG_HARDWARE_ACCELERATION
 
 #include "Engine/Actors/Camera.h"
 #include "Grid.h"
@@ -8,12 +8,12 @@
 #include "Core/Buffer.h"
 #include "Core/Types.h"
 #include "Math/MathCommon.h"
-#include "Pipeline/RenderPipeline.h"
+#include "Pipeline/RHI.h"
 
 class Viewport
 {
 	std::unique_ptr<Grid> m_grid;
-	std::shared_ptr<IRenderPipeline> m_renderPipeline;
+	std::shared_ptr<IRHI> m_rhi;
 
 public:
 	/* Render settings. */
@@ -41,9 +41,9 @@ public:
 	/** Render pipeline **/
 
 	void draw();
-	bool createRenderPipeline();
-	bool initRenderPipeline(void* windowHandle) const;
-	[[nodiscard]] IRenderPipeline* getRenderPipeline() const;
+	bool createRHI();
+	bool initRHI(void* windowHandle) const;
+	[[nodiscard]] IRHI* getRHI() const;
 
 	/** Debug **/
 
