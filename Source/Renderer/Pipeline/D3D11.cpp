@@ -10,7 +10,7 @@
 
 using namespace DirectX;
 
-bool D3D11RenderPipeline::createDevice()
+bool D3D11RHI::createDevice()
 {
 	LOG_DEBUG("Creating D3D11 Device.")
 	DWORD createDeviceFlags = 0;
@@ -28,7 +28,7 @@ bool D3D11RenderPipeline::createDevice()
 	return true;
 }
 
-bool D3D11RenderPipeline::createSwapChain()
+bool D3D11RHI::createSwapChain()
 {
 	LOG_DEBUG("Creating D3D11 Swap Chain.")
 	IDXGIDevice*  dxgiDevice = nullptr;
@@ -69,7 +69,7 @@ bool D3D11RenderPipeline::createSwapChain()
 	return true;
 }
 
-bool D3D11RenderPipeline::createBackBuffer()
+bool D3D11RHI::createBackBuffer()
 {
 	LOG_DEBUG("Creating D3D11 Frame Buffer.")
 	HRESULT result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
@@ -78,7 +78,7 @@ bool D3D11RenderPipeline::createBackBuffer()
 	return true;
 }
 
-bool D3D11RenderPipeline::createRenderTargetView()
+bool D3D11RHI::createRenderTargetView()
 {
 	LOG_DEBUG("Creating D3D11 Render Target View.")
 	HRESULT result = m_device->CreateRenderTargetView(m_backBuffer.Get(), nullptr, m_renderTargetView.GetAddressOf());
@@ -86,7 +86,7 @@ bool D3D11RenderPipeline::createRenderTargetView()
 	return true;
 }
 
-bool D3D11RenderPipeline::createShaders()
+bool D3D11RHI::createShaders()
 {
 	LOG_DEBUG("Creating D3D11 Vertex and Pixel Shaders.")
 	HRESULT result = createShader("VTX", "VertexShader.hlsl", EShaderType::VertexShader);
@@ -107,7 +107,7 @@ bool D3D11RenderPipeline::createShaders()
 	return true;
 }
 
-bool D3D11RenderPipeline::createDepthBuffer()
+bool D3D11RHI::createDepthBuffer()
 {
 	LOG_DEBUG("Creating D3D11 Depth Buffer.")
 
@@ -141,7 +141,7 @@ bool D3D11RenderPipeline::createDepthBuffer()
 	return true;
 }
 
-bool D3D11RenderPipeline::createInputLayout()
+bool D3D11RHI::createInputLayout()
 {
 	// Create input layout
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[3]{};
@@ -172,7 +172,7 @@ bool D3D11RenderPipeline::createInputLayout()
 }
 
 // https://samulinatri.com/blog/direct3d-11-constant-buffer-tutorial
-bool D3D11RenderPipeline::createConstantBuffers()
+bool D3D11RHI::createConstantBuffers()
 {
 	LOG_DEBUG("Creating D3D11 Constant Buffers.")
 
@@ -193,12 +193,12 @@ bool D3D11RenderPipeline::createConstantBuffers()
 	return true;
 }
 
-bool D3D11RenderPipeline::init(void* windowHandle)
+bool D3D11RHI::init(void* windowHandle)
 {
 	LOG_DEBUG("Initializing D3D11 pipeline.")
 
 	m_hwnd = (HWND)windowHandle;
-	// ASSERT(m_hwnd != nullptr, "D3D11RenderPipeline::init(): HWND not set.");
+	// ASSERT(m_hwnd != nullptr, "D3D11RHI::init(): HWND not set.");
 
 	CHECK_RESULT(createDevice())
 	CHECK_RESULT(createSwapChain())
@@ -219,7 +219,7 @@ bool D3D11RenderPipeline::init(void* windowHandle)
 	return true;
 }
 
-bool D3D11RenderPipeline::createRasterizerState() const
+bool D3D11RHI::createRasterizerState() const
 {
 	LOG_DEBUG("Creating D3D11 Raster State.")
 
@@ -240,7 +240,7 @@ bool D3D11RenderPipeline::createRasterizerState() const
 	return true;
 }
 
-bool D3D11RenderPipeline::createViewport() const
+bool D3D11RHI::createViewport() const
 {
 	LOG_DEBUG("Creating D3D11 Viewport.")
 	RECT winRect;
@@ -257,11 +257,11 @@ bool D3D11RenderPipeline::createViewport() const
 	return true;
 }
 
-void D3D11RenderPipeline::beginDraw()
+void D3D11RHI::beginDraw()
 {
 	if (!m_initialized)
 	{
-		auto msg = "D3D11RenderPipeline::beginDraw(): Pipeline is not initialized.";
+		auto msg = "D3D11RHI::beginDraw(): Pipeline is not initialized.";
 		ASSERT(false, msg);
 		return;
 	}
@@ -273,7 +273,7 @@ void D3D11RenderPipeline::beginDraw()
 	m_deviceContext->IASetInputLayout(m_vertexInputLayout);
 }
 
-void D3D11RenderPipeline::draw()
+void D3D11RHI::draw()
 {
 	for (auto& buffer : m_meshBuffers)
 	{
@@ -283,12 +283,12 @@ void D3D11RenderPipeline::draw()
 	HRESULT result = m_swapChain->Present(1, 0);
 	if (FAILED(result))
 	{
-		auto msg = "D3D11RenderPipeline::init(): Failed to present swap chain.";
+		auto msg = "D3D11RHI::init(): Failed to present swap chain.";
 		ASSERT(false, msg);
 	}
 }
 
-void D3D11RenderPipeline::drawMesh(Buffer11* buffer)
+void D3D11RHI::drawMesh(Buffer11* buffer)
 {
 	// Buffers
 	ID3D11Buffer* vertexBufferData = buffer->getVertexBuffer();
@@ -316,7 +316,7 @@ void D3D11RenderPipeline::drawMesh(Buffer11* buffer)
 	m_deviceContext->Draw(desc->byteSize, 0);
 }
 
-void D3D11RenderPipeline::addRenderable(IRenderable* renderable)
+void D3D11RHI::addRenderable(IRenderable* renderable)
 {
 	Buffer11 buffer;
 	auto	 vertexData = renderable->getMesh()->getVertexData();
@@ -333,33 +333,33 @@ void D3D11RenderPipeline::addRenderable(IRenderable* renderable)
 	m_meshBuffers.emplace_back(buffer);
 }
 
-void D3D11RenderPipeline::endDraw()
+void D3D11RHI::endDraw()
 {
 	m_deviceContext->OMSetDepthStencilState(nullptr, 0);
 }
 
-void D3D11RenderPipeline::shutdown()
+void D3D11RHI::shutdown()
 {
 	m_deviceContext->ClearState();
 
 	m_initialized = false;
 }
 
-void D3D11RenderPipeline::resize(int32 width, int32 height)
+void D3D11RHI::resize(int32 width, int32 height)
 {
 	m_width = width;
 	m_height = height;
 }
 
-void D3D11RenderPipeline::drawGrid(Grid* grid) {}
-void D3D11RenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) {}
+void D3D11RHI::drawGrid(Grid* grid) {}
+void D3D11RHI::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) {}
 
-uint8* D3D11RenderPipeline::getFrameData()
+uint8* D3D11RHI::getFrameData()
 {
 	return nullptr;
 }
 
-void D3D11RenderPipeline::setViewData(ViewData* newViewData)
+void D3D11RHI::setViewData(ViewData* newViewData)
 {
 	// Store new view data
 	m_viewData = newViewData;
@@ -377,17 +377,17 @@ void D3D11RenderPipeline::setViewData(ViewData* newViewData)
 	m_deviceContext->UpdateSubresource(cameraBuffer, 0, nullptr, &data, 0, 0);
 }
 
-void D3D11RenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
+void D3D11RHI::setRenderSettings(RenderSettings* newRenderSettings)
 {
 	m_renderSettings = *newRenderSettings;
 }
 
-void D3D11RenderPipeline::setHwnd(const HWND hwnd)
+void D3D11RHI::setHwnd(const HWND hwnd)
 {
 	m_hwnd = hwnd;
 }
 
-HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& fileName, EShaderType shaderType)
+HRESULT D3D11RHI::createShader(const char* name, const std::string& fileName, EShaderType shaderType)
 {
 	Shader*		shader;
 	std::string profile;
@@ -427,7 +427,7 @@ HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& f
 		{
 			blob->Release();
 		}
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed compiling vertex shader ({}).", formatHResult(result));
+		LOG_ERROR("D3D11RHI::init(): Failed compiling vertex shader ({}).", formatHResult(result));
 		m_shaders.erase(name); // Remove the entry we created
 		return result;
 	}
@@ -450,7 +450,7 @@ HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& f
 	}
 	if (FAILED(result))
 	{
-		LOG_ERROR("D3D11RenderPipeline::init(): Failed compiling shader ({}).", formatHResult(result));
+		LOG_ERROR("D3D11RHI::init(): Failed compiling shader ({}).", formatHResult(result));
 		shader = nullptr;
 		return result;
 	}
@@ -458,7 +458,7 @@ HRESULT D3D11RenderPipeline::createShader(const char* name, const std::string& f
 	return S_OK;
 }
 
-HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR entryPoint, const LPCSTR profile,
+HRESULT D3D11RHI::compileShader(const LPCWSTR fileName, const LPCSTR entryPoint, const LPCSTR profile,
 	ID3DBlob** blob)
 {
 	if (!fileName || !entryPoint || !blob)
@@ -483,12 +483,12 @@ HRESULT D3D11RenderPipeline::compileShader(const LPCWSTR fileName, const LPCSTR 
 		if (errorBlob)
 		{
 			const char* errorMessage = (char*)errorBlob->GetBufferPointer();
-			LOG_ERROR("D3D11RenderPipeline::compileShader(): Failed to compile shader ({}).", errorMessage)
+			LOG_ERROR("D3D11RHI::compileShader(): Failed to compile shader ({}).", errorMessage)
 			errorBlob->Release();
 		}
 		else
 		{
-			LOG_ERROR("D3D11RenderPipeline::compileShader(): Shader file not found ({}).",
+			LOG_ERROR("D3D11RHI::compileShader(): Shader file not found ({}).",
 				Strings::toString(fileName).c_str())
 		}
 

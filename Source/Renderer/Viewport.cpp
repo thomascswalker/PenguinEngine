@@ -15,17 +15,16 @@ Viewport::Viewport(const int32 inWidth, const int32 inHeight)
 
 	m_grid = std::make_unique<Grid>(8, 4.0f);
 
-	createRenderPipeline();
-
+	createRHI();
 	// Construct default render settings
 	m_settings = RenderSettings();
 }
 
 Viewport::~Viewport()
 {
-	if (m_renderPipeline != nullptr)
+	if (m_rhi != nullptr)
 	{
-		m_renderPipeline->shutdown();
+		m_rhi->shutdown();
 	}
 	else
 	{
@@ -37,7 +36,7 @@ void Viewport::resize(const int32 inWidth, const int32 inHeight) const
 {
 	m_camera->m_width  = inWidth;
 	m_camera->m_height = inHeight;
-	m_renderPipeline->resize(inWidth, inHeight);
+	m_rhi->resize(inWidth, inHeight);
 }
 
 int32 Viewport::getWidth() const
@@ -72,25 +71,25 @@ void Viewport::resetView() const
 
 void Viewport::draw()
 {
-	if (m_renderPipeline != nullptr)
+	if (m_rhi != nullptr)
 	{
 		// Transfer render settings
-		m_renderPipeline->setRenderSettings(&m_settings);
+		m_rhi->setRenderSettings(&m_settings);
 
 		// Update camera data
-		m_renderPipeline->setViewData(m_camera->getViewData());
+		m_rhi->setViewData(m_camera->getViewData());
 
 		// Draw all geometry
-		m_renderPipeline->beginDraw();
+		m_rhi->beginDraw();
 
 		// Called prior to drawing geometry, draws the world grid
-		m_renderPipeline->drawGrid(m_grid.get());
+		m_rhi->drawGrid(m_grid.get());
 
 		// Draw each renderable object
-		m_renderPipeline->draw();
+		m_rhi->draw();
 
 		// Called after drawing geometry
-		m_renderPipeline->endDraw();
+		m_rhi->endDraw();
 	}
 	else
 	{
@@ -98,40 +97,33 @@ void Viewport::draw()
 	}
 }
 
-bool Viewport::createRenderPipeline()
+bool Viewport::createRHI()
 {
 	// Construct the render pipeline
 #ifdef PENG_HARDWARE_ACCELERATION
-	m_renderPipeline = std::make_shared<D3D11RenderPipeline>();
+	m_rhi = std::make_shared<D3D11RHI>();
 #else
-	m_renderPipeline = std::make_shared<ScanlineRenderPipeline>();
+	m_rhi = std::make_shared<ScanlineRHI>();
 #endif
-
-	// TODO: For some reason normals need to be flipped in D3D11
-	if (dynamic_cast<D3D11RenderPipeline*>(m_renderPipeline.get()))
-	{
-		m_flipNormals = true;
-	}
-	// TODO
 
 	return true;
 }
 
-bool Viewport::initRenderPipeline(void* windowHandle) const
+bool Viewport::initRHI(void* windowHandle) const
 {
-	if (!m_renderPipeline->init(windowHandle))
+	if (!m_rhi->init(windowHandle))
 	{
 		return false;
 	}
 
-	m_renderPipeline->setViewData(m_camera->getViewData());
+	m_rhi->setViewData(m_camera->getViewData());
 
 	return true;
 }
 
-IRenderPipeline* Viewport::getRenderPipeline() const
+IRHI* Viewport::getRHI() const
 {
-	return m_renderPipeline.get();
+	return m_rhi.get();
 }
 
 void Viewport::formatDebugText()

@@ -16,7 +16,7 @@
 #include <wrl/client.h>
 
 #include "Engine/Buffer.h"
-#include "RenderPipeline.h"
+#include "RHI.h"
 #include "Core/String.h"
 #include "Engine/Actors/Camera.h"
 #include "Renderer/Shader.h"
@@ -38,7 +38,7 @@ inline ID3D11DeviceContext* g_deviceContext = nullptr;
 #define CHECK_HR(result, msg)                                                                 \
 	if (FAILED(result))                                                                       \
 	{                                                                                         \
-		LOG_ERROR("D3D11RenderPipeline::{}(): {} ({})", __func__, msg, formatHResult(result)) \
+		LOG_ERROR("D3D11RHI::{}(): {} ({})", __func__, msg, formatHResult(result)) \
 		return false;                                                                         \
 	}
 
@@ -133,7 +133,7 @@ public:
 // https://gist.github.com/d7samurai/261c69490cce0620d0bfc93003cd1052
 /** https://walbourn.github.io/anatomy-of-direct3d-11-create-device/ **/
 /** https://antongerdelan.net/opengl/d3d11.html **/
-class D3D11RenderPipeline : public IRenderPipeline
+class D3D11RHI : public IRHI
 {
 	bool m_initialized = false;
 	HWND m_hwnd = nullptr;
@@ -178,7 +178,7 @@ class D3D11RenderPipeline : public IRenderPipeline
 	ViewData* m_viewData = nullptr;
 
 public:
-	~D3D11RenderPipeline() override = default;
+	~D3D11RHI() override = default;
 
 	bool createDevice();
 	bool createSwapChain();

@@ -24,6 +24,8 @@ Color ScanlinePixelShader::process(const PixelData& input)
 		// Compute the relative UV coordinates on the texture
 		int32 x = input.uv.x * (input.texture->getWidth() - 1);
 		int32 y = input.uv.y * (input.texture->getHeight() - 1);
+		x = std::abs(x);
+		y = std::abs(y);
 
 		// Set the outColor to the pixel at [x,y] in the texture
 		out = input.texture->getPixelAsColor(x, y);
@@ -37,7 +39,7 @@ Color ScanlinePixelShader::process(const PixelData& input)
 
 /** Pipeline **/
 
-bool ScanlineRenderPipeline::init(void* windowHandle)
+bool ScanlineRHI::init(void* windowHandle)
 {
 	int32 width = g_defaultViewportWidth;
 	int32 height = g_defaultViewportHeight;
@@ -55,7 +57,7 @@ bool ScanlineRenderPipeline::init(void* windowHandle)
 	return true;
 }
 
-void ScanlineRenderPipeline::beginDraw()
+void ScanlineRHI::beginDraw()
 {
 	// Reset all buffers to their default values (namely z to Inf)
 	m_frameBuffer->fill(Color::black());
@@ -67,7 +69,7 @@ void ScanlineRenderPipeline::beginDraw()
 	}
 }
 
-void ScanlineRenderPipeline::draw()
+void ScanlineRHI::draw()
 {
 	for (const MeshDescription& desc : m_meshDescriptions)
 	{
@@ -87,7 +89,7 @@ void ScanlineRenderPipeline::draw()
 	}
 }
 
-void ScanlineRenderPipeline::addRenderable(IRenderable* renderable)
+void ScanlineRHI::addRenderable(IRenderable* renderable)
 {
 	// Convert the current renderable's geometry into a vertex buffer
 	Mesh* mesh = renderable->getMesh();
@@ -104,9 +106,9 @@ void ScanlineRenderPipeline::addRenderable(IRenderable* renderable)
 	m_meshDescriptions.emplace_back(desc);
 }
 
-void ScanlineRenderPipeline::endDraw() {}
+void ScanlineRHI::endDraw() {}
 
-bool ScanlineRenderPipeline::vertexStage()
+bool ScanlineRHI::vertexStage()
 {
 	// Run the vertex shader for each vertex. This is assuming the output is a vec4f which is the
 	// final projected vertex position on the screen. The W component of that vector needs to be
@@ -159,7 +161,7 @@ bool ScanlineRenderPipeline::vertexStage()
 	return true;
 }
 
-void ScanlineRenderPipeline::rasterStage()
+void ScanlineRHI::rasterStage()
 {
 	// Clear pixel buffer prior to rasterization
 	m_pixelBuffer.clear();
@@ -260,7 +262,7 @@ void ScanlineRenderPipeline::rasterStage()
 	}
 }
 
-void ScanlineRenderPipeline::fragmentStage() const
+void ScanlineRHI::fragmentStage() const
 {
 	// Render each pixel
 	for (const auto& pixel : m_pixelBuffer)
@@ -270,7 +272,7 @@ void ScanlineRenderPipeline::fragmentStage() const
 	}
 }
 
-void ScanlineRenderPipeline::drawTriangle(Vertex* vertex)
+void ScanlineRHI::drawTriangle(Vertex* vertex)
 {
 	// Set the vertex buffer pointer to the current vertex.
 	m_vertexBufferPtr = vertex;
@@ -302,7 +304,7 @@ void ScanlineRenderPipeline::drawTriangle(Vertex* vertex)
 	}
 }
 
-void ScanlineRenderPipeline::drawWireframe() const
+void ScanlineRHI::drawWireframe() const
 {
 	auto s0 = m_screenPoints[0];
 	auto s1 = m_screenPoints[1];
@@ -318,7 +320,7 @@ void ScanlineRenderPipeline::drawWireframe() const
 	}
 }
 
-void ScanlineRenderPipeline::drawNormal()
+void ScanlineRHI::drawNormal()
 {
 	auto v0 = m_vertexBufferPtr[0];
 	auto v1 = m_vertexBufferPtr[1];
@@ -351,7 +353,7 @@ void ScanlineRenderPipeline::drawNormal()
 	}
 }
 
-void ScanlineRenderPipeline::drawGrid(Grid* grid)
+void ScanlineRHI::drawGrid(Grid* grid)
 {
 	if (grid == nullptr)
 	{
@@ -377,7 +379,7 @@ void ScanlineRenderPipeline::drawGrid(Grid* grid)
 	}
 }
 
-void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const Color& color)
+void ScanlineRHI::drawLine(const vec3f& inA, const vec3f& inB, const Color& color)
 {
 	std::vector<vec2f> pixels;
 	computeLinePixels(inA, inB, pixels);
@@ -387,7 +389,7 @@ void ScanlineRenderPipeline::drawLine(const vec3f& inA, const vec3f& inB, const 
 	}
 }
 
-void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& inB, std::vector<vec2f>& points) const
+void ScanlineRHI::computeLinePixels(const vec3f& inA, const vec3f& inB, std::vector<vec2f>& points) const
 {
 	vec2i a((int32)inA.x, (int32)inA.y);
 	vec2i b((int32)inB.x, (int32)inB.y);
@@ -461,11 +463,11 @@ void ScanlineRenderPipeline::computeLinePixels(const vec3f& inA, const vec3f& in
 	}
 }
 
-void ScanlineRenderPipeline::resize(int32 width, int32 height)
+void ScanlineRHI::resize(int32 width, int32 height)
 {
 	if (width != m_viewData->width || height != m_viewData->height)
 	{
-		LOG_ERROR("Size mismatch with ScanlineRenderPipeline::resize() and m_viewData. Skipping resize.")
+		LOG_ERROR("Size mismatch with ScanlineRHI::resize() and m_viewData. Skipping resize.")
 		return;
 	}
 
@@ -473,17 +475,17 @@ void ScanlineRenderPipeline::resize(int32 width, int32 height)
 	m_depthBuffer->resize({ width, height });
 }
 
-uint8* ScanlineRenderPipeline::getFrameData()
+uint8* ScanlineRHI::getFrameData()
 {
 	return m_frameBuffer->getMemory<uint8>();
 }
 
-void ScanlineRenderPipeline::setViewData(ViewData* newViewData)
+void ScanlineRHI::setViewData(ViewData* newViewData)
 {
 	m_viewData = std::make_shared<ViewData>(*newViewData);
 }
 
-void ScanlineRenderPipeline::setRenderSettings(RenderSettings* newRenderSettings)
+void ScanlineRHI::setRenderSettings(RenderSettings* newRenderSettings)
 {
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
 }

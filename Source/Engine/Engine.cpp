@@ -220,7 +220,7 @@ void Engine::loadMesh() const
 			// Set the mesh in the actor
 			staticMeshActor->setMesh(g_meshes.back());
 			// Bind the mesh to the render pipeline
-			m_viewport->getRenderPipeline()->addRenderable(staticMeshActor);
+			m_viewport->getRHI()->addRenderable(staticMeshActor);
 		}
 		else
 		{
