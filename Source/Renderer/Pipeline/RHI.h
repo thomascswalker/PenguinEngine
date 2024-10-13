@@ -4,6 +4,7 @@
 #include "Engine/Object.h"
 #include "Renderer/Grid.h"
 #include "Renderer/Settings.h"
+#include <Renderer/Texture.h>
 
 class IRHI
 {
@@ -17,7 +18,6 @@ public:
 	virtual bool init(void* windowHandle) = 0;
 	virtual void beginDraw() = 0;
 	virtual void draw() = 0;
-	virtual void addRenderable(IRenderable* renderable) = 0;
 	virtual void endDraw() = 0;
 	virtual void shutdown() = 0;
 	virtual void resize(int32 width, int32 height) = 0;
@@ -32,6 +32,9 @@ public:
 	virtual uint8* getFrameData() = 0;
 	virtual void setViewData(ViewData* newViewData) = 0;
 	virtual void setRenderSettings(RenderSettings* newRenderSettings) = 0;
+
+	virtual void addRenderable(IRenderable* renderable) = 0;
+	virtual void addTexture(Texture* texture) = 0;
 };
 
 class ScanlineRHI;

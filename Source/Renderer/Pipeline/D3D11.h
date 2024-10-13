@@ -35,11 +35,11 @@ inline ID3D11DeviceContext* g_deviceContext = nullptr;
 		return false;      \
 	}
 
-#define CHECK_HR(result, msg)                                                                 \
-	if (FAILED(result))                                                                       \
-	{                                                                                         \
+#define CHECK_HR(result, msg)                                                      \
+	if (FAILED(result))                                                            \
+	{                                                                              \
 		LOG_ERROR("D3D11RHI::{}(): {} ({})", __func__, msg, formatHResult(result)) \
-		return false;                                                                         \
+		return false;                                                              \
 	}
 
 inline const char* formatHResult(const HRESULT err)
@@ -76,39 +76,81 @@ struct CBModel
 
 class VertexShader11 : public VertexShader
 {
-public:
-	ID3D11VertexShader* m_shaderPtr = nullptr;
+	ID3D11VertexShader* m_ptr = nullptr;
 
+public:
 	~VertexShader11() override
 	{
-		if (m_shaderPtr)
+		if (m_ptr)
 		{
-			m_shaderPtr->Release();
+			m_ptr->Release();
 		}
 	}
 
-	ID3D11VertexShader* getPipelineShader() const
+	ID3D11VertexShader* getDXShader() const
 	{
-		return m_shaderPtr;
+		return m_ptr;
+	}
+
+	ID3D11VertexShader* const* getDXShaderPtr() const throw()
+	{
+		return &m_ptr;
+	}
+
+	ID3D11VertexShader** getDXShaderPtr() throw()
+	{
+		return &m_ptr;
 	}
 };
 
 class PixelShader11 : public PixelShader
 {
-public:
-	ID3D11PixelShader* m_shaderPtr = nullptr;
+	ID3D11PixelShader*				 m_ptr = nullptr;
+	ComPtr<ID3D11ShaderResourceView> m_shaderResourceView = nullptr;
+	ComPtr<ID3D11SamplerState>		 m_samplerState = nullptr;
 
+public:
 	~PixelShader11() override
 	{
-		if (m_shaderPtr)
+		if (m_ptr)
 		{
-			m_shaderPtr->Release();
+			m_ptr->Release();
 		}
 	}
 
-	ID3D11PixelShader* getPipelineShader() const
+	ID3D11PixelShader* getDXShader() const
 	{
-		return m_shaderPtr;
+		return m_ptr;
+	}
+
+	ID3D11PixelShader* const* getDXShaderPtr() const throw()
+	{
+		return &m_ptr;
+	}
+
+	ID3D11PixelShader** getDXShaderPtr() throw()
+	{
+		return &m_ptr;
+	}
+
+	void setShaderResourceView(ID3D11ShaderResourceView* view)
+	{
+		m_shaderResourceView = view;
+	}
+
+	ID3D11ShaderResourceView* getShaderResourceView() const
+	{
+		return m_shaderResourceView.Get();
+	}
+
+	void setSamplerState(ID3D11SamplerState* state)
+	{
+		m_samplerState = state;
+	}
+
+	ID3D11SamplerState* getSamplerState() const
+	{
+		return m_samplerState.Get();
 	}
 };
 
@@ -163,8 +205,8 @@ class D3D11RHI : public IRHI
 
 	/** Vertex & Index Buffer **/
 
-	ID3D11Buffer*				 m_constantBuffers[g_constantBufferCount];
-	std::vector<Buffer11>		 m_meshBuffers;
+	ID3D11Buffer*					 m_constantBuffers[g_constantBufferCount];
+	std::vector<Buffer11>			 m_meshBuffers;
 
 	/** Shaders **/
 
@@ -185,6 +227,7 @@ public:
 	bool createBackBuffer();
 	bool createRenderTargetView();
 	bool createShaders();
+	void  createDefaultShader();
 	bool createDepthBuffer();
 	bool createInputLayout();
 	bool createConstantBuffers();
@@ -196,7 +239,6 @@ public:
 	void   beginDraw() override;
 	void   draw() override;
 	void   drawMesh(Buffer11* buffer);
-	void   addRenderable(IRenderable* renderable) override;
 	void   endDraw() override;
 	void   shutdown() override;
 	void   resize(int32 width, int32 height) override;
@@ -209,4 +251,7 @@ public:
 
 	HRESULT		   createShader(const char* name, const std::string& fileName, EShaderType shaderType);
 	static HRESULT compileShader(LPCWSTR fileName, LPCSTR entryPoint, LPCSTR profile, ID3DBlob** blob);
+
+	void addRenderable(IRenderable* renderable) override;
+	void addTexture(Texture* texture) override;
 };

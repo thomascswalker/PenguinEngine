@@ -525,6 +525,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	}
 
 	RawBuffer<uint8> data = png.data;
+	// Bytes per row
 	int32 bpr          = (png.metadata.width * g_bytesPerPixel) + 1;
 	int32 tmpSize      = bpr * png.metadata.height;
 	RawBuffer<uint8> tmp(tmpSize);
@@ -537,7 +538,8 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 
 	texture->resize({(int32)png.metadata.width, (int32)png.metadata.height});
 	texture->setMemory(&data);
-#if defined(_WIN32) || defined(_WIN64)
+#ifndef PENG_HARDWARE_ACCELERATION
+	// Swap byte order for scanline
 	texture->setByteOrder(ETextureByteOrder::BRGA);
 #endif
 	texture->setChannelCount((uint8)format);

@@ -94,17 +94,30 @@ bool D3D11RHI::createShaders()
 	result = createShader("PXL", "PixelShader.hlsl", EShaderType::PixelShader);
 	CHECK_HR(result, "Failed to create pixel shader");
 
+
 	// Set the vertex and pixel shaders on the device context
-	if (m_vertexShader->m_shaderPtr)
+	if (auto shader = m_vertexShader->getDXShader())
 	{
-		m_deviceContext->VSSetShader(m_vertexShader->m_shaderPtr, nullptr, 0);
+		m_deviceContext->VSSetShader(shader, nullptr, 0);
 	}
-	if (m_pixelShader->m_shaderPtr)
+	if (auto shader = m_pixelShader->getDXShader())
 	{
-		m_deviceContext->PSSetShader(m_pixelShader->m_shaderPtr, nullptr, 0);
+		m_deviceContext->PSSetShader(shader, nullptr, 0);
 	}
 
+	createDefaultShader();
+
 	return true;
+}
+
+void D3D11RHI::createDefaultShader
+()
+{
+	// TODO: Store this somewhere else
+	// Create default texture for pixel shader
+	Texture def(vec2i(1, 1));
+	def.fill(Color::white());
+	addTexture(&def);
 }
 
 bool D3D11RHI::createDepthBuffer()
@@ -131,7 +144,7 @@ bool D3D11RHI::createDepthBuffer()
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depthStencilViewDesc.Flags = 0;
-	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.ViewDimension = m_sampleCount <= 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
 	result = m_device->CreateDepthStencilView(m_depthStencilTexture.Get(), // Depth stencil texture
@@ -179,7 +192,6 @@ bool D3D11RHI::createConstantBuffers()
 	// Store buffer sizes in an array
 	uint32 bufferSizes[g_constantBufferCount];
 	bufferSizes[ConstantBufferId::Camera] = sizeof(CBCamera);
-	bufferSizes[ConstantBufferId::Model] = sizeof(CBModel);
 
 	// Create each buffer
 	for (int32 i = 0; i < g_constantBufferCount; i++)
@@ -312,25 +324,17 @@ void D3D11RHI::drawMesh(Buffer11* buffer)
 	m_deviceContext->VSSetConstantBuffers(0 /* Camera */, 1, &m_constantBuffers[ConstantBufferId::Camera]);
 	m_deviceContext->VSSetConstantBuffers(1 /* Model */, 1, &constantBufferData);
 
+	if (auto shaderResourceView = m_pixelShader->getShaderResourceView())
+	{
+		m_deviceContext->PSSetShaderResources(0, 1, &shaderResourceView);
+	}
+	if (auto samplerState = m_pixelShader->getSamplerState())
+	{
+		m_deviceContext->PSSetSamplers(0, 1, &samplerState);
+	}
+
 	// Draw the mesh to the screen
 	m_deviceContext->Draw(desc->byteSize, 0);
-}
-
-void D3D11RHI::addRenderable(IRenderable* renderable)
-{
-	Buffer11 buffer;
-	auto	 vertexData = renderable->getMesh()->getVertexData();
-	buffer.createVertexBuffer(*vertexData);
-	buffer.createConstantBuffer();
-
-	MeshDescription meshDesc;
-	meshDesc.stride = sizeof(Vertex);
-	meshDesc.data = vertexData->data();
-	meshDesc.byteSize = vertexData->size();
-	meshDesc.transform = renderable->getTransform();
-	buffer.setMeshDescription(meshDesc);
-
-	m_meshBuffers.emplace_back(buffer);
 }
 
 void D3D11RHI::endDraw()
@@ -437,14 +441,16 @@ HRESULT D3D11RHI::createShader(const char* name, const std::string& fileName, ES
 	{
 		case EShaderType::VertexShader:
 		{
+			auto shaderPtr = m_vertexShader->getDXShader();
 			result = m_device->CreateVertexShader(m_vertexShader->getByteCode(), m_vertexShader->getByteCodeSize(),
-				nullptr, &m_vertexShader->m_shaderPtr);
+				nullptr, m_vertexShader->getDXShaderPtr());
 			break;
 		}
 		case EShaderType::PixelShader:
 		{
+			auto shaderPtr = m_pixelShader->getDXShader();
 			result = m_device->CreatePixelShader(m_pixelShader->getByteCode(), m_pixelShader->getByteCodeSize(),
-				nullptr, &m_pixelShader->m_shaderPtr);
+				nullptr, m_pixelShader->getDXShaderPtr());
 			break;
 		}
 	}
@@ -538,4 +544,82 @@ void Buffer11::createConstantBuffer()
 	{
 		LOG_ERROR("D3D11Buffer::createConstantBuffer(): Failed to create constant buffer ({}).", formatHResult(result));
 	}
+}
+
+void D3D11RHI::addRenderable(IRenderable* renderable)
+{
+	Buffer11 buffer;
+	auto	 vertexData = renderable->getMesh()->getVertexData();
+	buffer.createVertexBuffer(*vertexData);
+	buffer.createConstantBuffer();
+
+	MeshDescription meshDesc;
+	meshDesc.stride = sizeof(Vertex);
+	meshDesc.data = vertexData->data();
+	meshDesc.byteSize = vertexData->size();
+	meshDesc.transform = renderable->getTransform();
+	buffer.setMeshDescription(meshDesc);
+
+	m_meshBuffers.emplace_back(buffer);
+}
+
+void D3D11RHI::addTexture(Texture* texture)
+{
+	uint32 qualityLevels;
+	m_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, 1, &qualityLevels);
+
+	D3D11_TEXTURE2D_DESC textureDesc{};
+	textureDesc.Width = texture->getWidth();
+	textureDesc.Height = texture->getHeight();
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = m_sampleCount;
+	textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	D3D11_SUBRESOURCE_DATA subResourceData{};
+	subResourceData.pSysMem = texture->getRawMemory();
+	subResourceData.SysMemPitch = texture->getWidth() * 4;
+
+	ID3D11Texture2D* image;
+	HRESULT			 result = m_device->CreateTexture2D(&textureDesc, &subResourceData, &image);
+	if (FAILED(result) || image == nullptr)
+	{
+		LOG_ERROR("D3D11Buffer::addTexture(): Failed to create Texture2D ({}).", formatHResult(result));
+		return;
+	}
+
+	ID3D11ShaderResourceView* shaderResourceView;
+	result = m_device->CreateShaderResourceView(image, nullptr, &shaderResourceView);
+	if (FAILED(result))
+	{
+		LOG_ERROR("D3D11Buffer::addTexture(): Failed to create Shader Resource View ({}).", formatHResult(result));
+		return;
+	}
+	m_pixelShader->setShaderResourceView(shaderResourceView);
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.BorderColor[0] = 1.0f;
+	samplerDesc.BorderColor[1] = 1.0f;
+	samplerDesc.BorderColor[2] = 1.0f;
+	samplerDesc.BorderColor[3] = 1.0f;
+	samplerDesc.MinLOD = -FLT_MAX;
+	samplerDesc.MaxLOD = FLT_MAX;
+
+	ID3D11SamplerState* samplerState;
+	result = m_device->CreateSamplerState(&samplerDesc, &samplerState);
+	if (FAILED(result))
+	{
+		LOG_ERROR("D3D11Buffer::addTexture(): Failed to create Image Sampler State ({}).", formatHResult(result));
+		return;
+	}
+	m_pixelShader->setSamplerState(samplerState);
 }
