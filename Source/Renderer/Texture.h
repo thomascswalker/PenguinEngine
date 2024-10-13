@@ -317,7 +317,6 @@ public:
 	// Swap the RGBA bytes for BGRA
 	void setByteOrder(ETextureByteOrder newOrder)
 	{
-		// TODO: Somehow this is corrupting the heap
 		size_t index = 0;
 		size_t size  = getMemorySize();
 		uint8* ptr   = m_buffer.getPtr();

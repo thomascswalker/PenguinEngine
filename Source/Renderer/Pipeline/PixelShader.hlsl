@@ -6,10 +6,13 @@ struct PS_INPUT
     float3 direction: TEXCOORD1;
 };
 
+Texture2D _texture;
+SamplerState _sampler;
+
 float4 main(PS_INPUT input) : SV_TARGET
 {
-    float4 finalColor = 0;
-    float4 rgb = dot(input.direction, input.normal);
-    finalColor = finalColor + rgb;
+    float4 diffuse = _texture.Sample(_sampler, input.tex);
+    float4 lighting = dot(input.direction, input.normal);
+    float4 finalColor = diffuse * lighting;
     return finalColor;
 }

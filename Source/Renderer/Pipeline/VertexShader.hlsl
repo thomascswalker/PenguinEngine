@@ -39,6 +39,8 @@ VS_OUTPUT main(VS_Input input)
     // Tangent to Object normal
     output.normal = mul(float4(input.normal, 1.0f), model).xyz;
 
+    output.tex = input.tex;
+
     // Camera direction
     output.direction = cameraDirection;
 

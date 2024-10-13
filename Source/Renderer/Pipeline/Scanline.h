@@ -92,10 +92,11 @@ public:
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
 	void draw() override;
-	void addRenderable(IRenderable* renderable) override;
 	void endDraw() override;
 	void shutdown() override {}
 	void resize(int32 width, int32 height) override;
+	void addRenderable(IRenderable* renderable) override;
+	void addTexture(Texture* texture) override {}
 
 	/** Geometry drawing **/
 

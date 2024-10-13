@@ -243,6 +243,8 @@ void Engine::loadTexture() const
 		texture->flipVertical();
 		g_textures.emplace_back(texture);
 		LOG_INFO("Loaded texture {}.", fileName)
+
+		m_viewport->getRHI()->addTexture(texture.get());
 	}
 }
 
