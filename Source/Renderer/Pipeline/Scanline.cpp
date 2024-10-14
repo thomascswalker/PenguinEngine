@@ -30,6 +30,7 @@ Color ScanlinePixelShader::process(const PixelData& input)
 
 		// Set the outColor to the pixel at [x,y] in the texture
 		out = input.texture->getPixelAsColor(x, y);
+		
 	}
 	float facingRatio = (-input.cameraNormal).dot(input.worldNormal);
 	facingRatio = std::clamp(facingRatio, 0.0f, 1.0f);

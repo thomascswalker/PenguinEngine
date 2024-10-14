@@ -6,7 +6,7 @@
 #include "Core/Bitmask.h"
 #include "Math/Vector.h"
 #include "Engine/Delegate.h"
-#include "Engine/Mouse.h"
+#include "Input/Mouse.h"
 
 class IInputHandler;
 class Win32InputHandler;

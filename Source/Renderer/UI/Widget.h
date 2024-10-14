@@ -4,10 +4,19 @@
 
 #include "Math/Rect.h"
 #include "Renderer/Texture.h"
-#include "Engine/Mouse.h"
+#include "Input/Mouse.h"
+#include "Engine/Delegate.h"
 
 class Widget;
 class Button;
+
+namespace UIColors
+{
+	inline Color base = Color(128, 128, 128);
+	inline Color dark = Color(50, 50, 50);
+	inline Color light = Color(200, 200, 200);
+	inline Color clicked = Color(66, 103, 210);
+} // namespace UIColors
 
 class Widget
 {
@@ -16,6 +25,13 @@ protected:
 	rectf	m_geometry{};
 	bool	m_hovered = false;
 	bool	m_clicked = false;
+
+	Widget()
+	{
+#if (defined(_WIN32) || defined(_WIN64))
+		m_data.setByteOrder(ETextureByteOrder::BRGA);
+#endif
+	}
 
 public:
 	rectf getGeometry() const { return m_geometry; }
@@ -79,16 +95,33 @@ public:
 	virtual void onClickEnd() { LOG_INFO("Click end") }
 };
 
+DECLARE_MULTICAST_DELEGATE(OnClicked);
+
 class Button : public Widget
 {
+public:
+	OnClicked m_onClicked;
+
 	virtual void paint() override
 	{
 		// Fill with 50% gray
-		auto  size = m_data.getDataSize();
-		auto  mem = m_data.getData();
-		uint8 color = m_hovered ? 200 : 128;
-		color = m_clicked ? 50 : color;
-		std::fill(mem, mem + size, color);
+		Color color = m_hovered ? UIColors::light : UIColors::base;
+		if (m_clicked)
+		{
+			color = UIColors::clicked;
+		}
+		m_data.fill(color);
+	}
+
+	virtual void onClickEnd() override
+	{
+		// Only broadcast that we've clicked the button if we're still hovering on
+		// the button.
+		if (!m_hovered)
+		{
+			return;
+		}
+		m_onClicked.broadcast();
 	}
 };
 

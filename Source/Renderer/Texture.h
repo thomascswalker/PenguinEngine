@@ -53,28 +53,30 @@ class Texture
 		EPlatformType platformType = getPlatformType();
 		switch (platformType)
 		{
-		case EPlatformType::Windows: m_byteOrder = ETextureByteOrder::BRGA;
-			break;
-		case EPlatformType::MacOS:
-		case EPlatformType::Linux:
-		default: m_byteOrder = ETextureByteOrder::RGBA;
-			break;
+			case EPlatformType::Windows:
+				m_byteOrder = ETextureByteOrder::BRGA;
+				break;
+			case EPlatformType::MacOS:
+			case EPlatformType::Linux:
+			default:
+				m_byteOrder = ETextureByteOrder::RGBA;
+				break;
 		}
 	}
 
 public:
 	Texture()
 	{
-		m_size.x       = 1;
-		m_size.y       = 1;
-		m_pitch        = 1;
+		m_size.x = 1;
+		m_size.y = 1;
+		m_pitch = 1;
 		size_t memSize = getDataSize();
 		m_buffer.resize(memSize);
 	}
 
 	Texture(const vec2i inSize)
 		: m_size(inSize)
-		  , m_pitch(inSize.x)
+		, m_pitch(inSize.x)
 	{
 		size_t memSize = getDataSize();
 		m_buffer.resize(memSize);
@@ -82,7 +84,7 @@ public:
 
 	Texture(RawBuffer<uint8>* inData, vec2i inSize)
 		: m_size(inSize)
-		  , m_pitch(inSize.x)
+		, m_pitch(inSize.x)
 	{
 		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
 		assert(targetSize == inData->size());
@@ -92,13 +94,13 @@ public:
 
 	Texture(const Texture& other)
 		: m_buffer(other.m_buffer)
-		  , m_size(other.m_size)
-		  , m_pitch(other.m_pitch) {}
+		, m_size(other.m_size)
+		, m_pitch(other.m_pitch) {}
 
 	Texture(Texture&& other) noexcept
 		: m_buffer(other.m_buffer)
-		  , m_size(other.m_size)
-		  , m_pitch(other.m_pitch) {}
+		, m_size(other.m_size)
+		, m_pitch(other.m_pitch) {}
 
 	Texture& operator=(const Texture& other)
 	{
@@ -107,8 +109,8 @@ public:
 			return *this;
 		}
 		m_buffer = other.m_buffer;
-		m_size   = other.m_size;
-		m_pitch  = other.m_pitch;
+		m_size = other.m_size;
+		m_pitch = other.m_pitch;
 		return *this;
 	}
 
@@ -119,8 +121,8 @@ public:
 			return *this;
 		}
 		m_buffer = other.m_buffer;
-		m_size   = other.m_size;
-		m_pitch  = other.m_pitch;
+		m_size = other.m_size;
+		m_pitch = other.m_pitch;
 		return *this;
 	}
 
@@ -131,7 +133,7 @@ public:
 
 	void resize(const vec2i inSize)
 	{
-		m_size  = inSize;
+		m_size = inSize;
 		m_pitch = inSize.x;
 		m_buffer.resize(getDataSize());
 	}
@@ -205,8 +207,10 @@ public:
 	 */
 	void fill(const Color& inColor)
 	{
-		int32 color = inColor.toInt32();
-		PlatformMemory::fill(m_buffer.getPtr(), getDataSize(), color);
+		int32* ptr = (int32*)m_buffer.getPtr();
+		int32  color = inColor.toInt32();
+		size_t size = m_size.x * m_size.y;
+		std::fill(ptr, ptr + size, color);
 	}
 
 	/**
@@ -216,15 +220,9 @@ public:
 	 */
 	void fill(const float value)
 	{
-		auto floatData = (float*)m_buffer.getPtr();
-		int32 size     = m_size.x * m_size.y;
-		for (int32 i = 0; i < size; i++)
-		{
-			floatData[i] = value;
-		}
-
-		// TODO: Figure out why this fails for floats
-		// PlatformMemory::fill(m_data, getMemorySize(), value);
+		auto  ptr = (float*)m_buffer.getPtr();
+		int32 size = m_size.x * m_size.y;
+		std::fill(ptr, ptr + size, value);
 	}
 
 	/**
@@ -247,7 +245,7 @@ public:
 	[[nodiscard]] Color getPixelAsColor(const int32 x, const int32 y)
 	{
 		uint32* line = scanline(y);
-		uint32 v     = line[x];
+		uint32	v = line[x];
 		return Color::fromUInt32(v);
 	}
 
@@ -266,7 +264,7 @@ public:
 	void setPixel(const int32 x, const int32 y, const uint8 color)
 	{
 		uint8* line = m_buffer.getPtr() + (y * m_pitch);
-		line[x]     = color;
+		line[x] = color;
 	}
 
 	void setPixelFromColor(const int32 x, const int32 y, const Color& color)
@@ -278,17 +276,17 @@ public:
 
 	void setPixelFromFloat(const int32 x, const int32 y, float value)
 	{
-		uint32* line  = (uint32*)m_buffer.getPtr() + (y * m_pitch);
-		auto* castInt = reinterpret_cast<uint32*>(&value);
-		line[x]       = *castInt;
+		uint32* line = (uint32*)m_buffer.getPtr() + (y * m_pitch);
+		auto*	castInt = reinterpret_cast<uint32*>(&value);
+		line[x] = *castInt;
 	}
 
 	// stbi__vertical_flip
 	static void flipVertical(void* ptr, int32 width, int32 height)
 	{
 		size_t bytesPerRow = (size_t)width * g_bytesPerPixel;
-		uint8 temp[2048];
-		auto* bytes = static_cast<uint8*>(ptr);
+		uint8  temp[2048];
+		auto*  bytes = static_cast<uint8*>(ptr);
 
 		for (int32 row = 0; row < (height >> 1); row++)
 		{
@@ -318,8 +316,8 @@ public:
 	void setByteOrder(ETextureByteOrder newOrder)
 	{
 		size_t index = 0;
-		size_t size  = getDataSize();
-		uint8* ptr   = m_buffer.getPtr();
+		size_t size = getDataSize();
+		uint8* ptr = m_buffer.getPtr();
 
 		if (!ptr)
 		{
@@ -328,7 +326,7 @@ public:
 
 		switch (newOrder)
 		{
-		case ETextureByteOrder::RGBA:
+			case ETextureByteOrder::RGBA:
 			{
 				while (index < size)
 				{
@@ -337,7 +335,7 @@ public:
 					uint8 r = ptr[index + 2];
 					uint8 a = ptr[index + 3];
 
-					ptr[index]     = r;
+					ptr[index] = r;
 					ptr[index + 1] = g;
 					ptr[index + 2] = b;
 					ptr[index + 3] = a;
@@ -346,7 +344,7 @@ public:
 				}
 				break;
 			}
-		case ETextureByteOrder::BRGA:
+			case ETextureByteOrder::BRGA:
 			{
 				while (index < size - 4)
 				{
@@ -355,7 +353,7 @@ public:
 					uint8 b = ptr[index + 2];
 					uint8 a = ptr[index + 3];
 
-					ptr[index]     = b;
+					ptr[index] = b;
 					ptr[index + 1] = g;
 					ptr[index + 2] = r;
 					ptr[index + 3] = a;
@@ -364,7 +362,8 @@ public:
 				}
 				break;
 			}
-		default: break;
+			default:
+				break;
 		}
 
 		m_byteOrder = newOrder;

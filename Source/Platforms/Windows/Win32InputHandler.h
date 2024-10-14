@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Input/InputHandler.h"
-#include "Engine/Mouse.h"
+#include "Input/Mouse.h"
 
 class Win32InputHandler : public IInputHandler
 {
