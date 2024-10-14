@@ -1,6 +1,7 @@
 #include "Scanline.h"
 
 #include "Math/Clipping.h"
+#include "Renderer/UI/Widget.h"
 
 /** Vertex Shader **/
 
@@ -71,6 +72,7 @@ void ScanlineRHI::beginDraw()
 
 void ScanlineRHI::draw()
 {
+	// Draw all renderables
 	for (const MeshDescription& desc : m_meshDescriptions)
 	{
 		m_vertexBuffer.clear();
@@ -87,13 +89,20 @@ void ScanlineRHI::draw()
 			drawTriangle(vertex);
 		}
 	}
+
+	// Draw all UI elements
+	for (Widget* w : WidgetManager::g_widgets)
+	{
+		w->paint();
+		drawTexture(w->getTexture(), w->getPosition());
+	}
 }
 
 void ScanlineRHI::addRenderable(IRenderable* renderable)
 {
 	// Convert the current renderable's geometry into a vertex buffer
 	Mesh* mesh = renderable->getMesh();
-	auto vertexData = mesh->getVertexData();
+	auto  vertexData = mesh->getVertexData();
 
 	MeshDescription desc{};
 	desc.data = vertexData->data();
@@ -477,7 +486,7 @@ void ScanlineRHI::resize(int32 width, int32 height)
 
 uint8* ScanlineRHI::getFrameData()
 {
-	return m_frameBuffer->getMemory<uint8>();
+	return m_frameBuffer->getData<uint8>();
 }
 
 void ScanlineRHI::setViewData(ViewData* newViewData)
@@ -488,4 +497,49 @@ void ScanlineRHI::setViewData(ViewData* newViewData)
 void ScanlineRHI::setRenderSettings(RenderSettings* newRenderSettings)
 {
 	m_renderSettings = std::make_shared<RenderSettings>(*newRenderSettings);
+}
+
+void ScanlineRHI::drawTexture(Texture* texture, const vec2f& position)
+{
+	if (texture == nullptr)
+	{
+		LOG_ERROR("Texture is invalid.")
+		return;
+	}
+
+	uint8* data = texture->getData();
+
+	float viewportWidth = (float)m_viewData->width;
+	float viewportHeight = (float)m_viewData->height;
+	rectf viewport = { 0, 0, viewportWidth, viewportHeight };
+
+#if defined(_WIN32) || defined(_WIN64)
+	rectf bounds = { position.x, std::abs(viewportHeight - position.y), (float)texture->getWidth(), (float)texture->getHeight() };
+#else
+	rectf bounds = { position.x, position.y, (float)texture->getWidth(), (float)texture->getHeight() };
+#endif
+	bounds.clamp(viewport);
+
+	// Weird math to account for WIN32 bitmaps being flipped vertically
+	uint32 minX = bounds.x;
+#if defined(_WIN32) || defined(_WIN64)
+	uint32 minY = bounds.y - bounds.height;
+#else
+	uint32 minY = bounds.y;
+#endif
+	uint32 maxX = bounds.x + bounds.width;
+#if defined(_WIN32) || defined(_WIN64)
+	uint32 maxY = bounds.y;
+#else
+	uint32 maxY = bounds.y + bounds.height;
+#endif
+
+	for (auto x = minX; x < maxX; x++)
+	{
+		for (auto y = minY; y < maxY; y++)
+		{
+			auto color = texture->getPixelAsColor(x - minX, y - minY);
+			m_frameBuffer->setPixelFromColor(x, y, color);
+		}
+	}
 }

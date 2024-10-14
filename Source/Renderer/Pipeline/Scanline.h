@@ -116,4 +116,6 @@ public:
 	uint8* getFrameData() override;
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
+
+	void drawTexture(Texture* texture, const vec2f& position) override;
 };

@@ -26,6 +26,7 @@ public:
 
 	virtual void drawGrid(Grid* grid) = 0;
 	virtual void drawLine(const vec3f& inA, const vec3f& inB, const Color& color) = 0;
+	virtual void drawTexture(Texture* texture, const vec2f& position) {}
 
 	/** Getter/setters **/
 

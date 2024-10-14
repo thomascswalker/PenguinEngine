@@ -68,7 +68,7 @@ public:
 		m_size.x       = 1;
 		m_size.y       = 1;
 		m_pitch        = 1;
-		size_t memSize = getMemorySize();
+		size_t memSize = getDataSize();
 		m_buffer.resize(memSize);
 	}
 
@@ -76,7 +76,7 @@ public:
 		: m_size(inSize)
 		  , m_pitch(inSize.x)
 	{
-		size_t memSize = getMemorySize();
+		size_t memSize = getDataSize();
 		m_buffer.resize(memSize);
 	}
 
@@ -133,13 +133,13 @@ public:
 	{
 		m_size  = inSize;
 		m_pitch = inSize.x;
-		m_buffer.resize(getMemorySize());
+		m_buffer.resize(getDataSize());
 	}
 
 	/**
 	 * @brief Returns the raw void pointer to this texture's memory.
 	 */
-	[[nodiscard]] void* getRawMemory()
+	[[nodiscard]] void* getRawData()
 	{
 		return (void*)m_buffer.getPtr();
 	}
@@ -147,20 +147,20 @@ public:
 	/**
 	 * @brief Returns a type T (e.g. int32, float) pointer to this texture's memory.
 	 */
-	template <typename T>
-	T* getMemory() const
+	template <typename T = uint8>
+	T* getData() const
 	{
 		return m_buffer.getPtr();
 	}
 
-	void setMemory(RawBuffer<uint8>* newMemory, const size_t inSize = 0)
+	void setData(RawBuffer<uint8>* newMemory, const size_t inSize = 0)
 	{
 		if (newMemory->getPtr() == nullptr)
 		{
 			LOG_ERROR("Invalid memory allocation.")
 			return;
 		}
-		auto size = inSize ? inSize : getMemorySize();
+		auto size = inSize ? inSize : getDataSize();
 		memcpy(m_buffer.getPtr(), newMemory->getPtr(), size);
 	}
 
@@ -168,7 +168,7 @@ public:
 	 * @brief Returns the memory size of this texture in bytes.
 	 * @return The number of bytes this texture allocates.
 	 */
-	[[nodiscard]] size_t getMemorySize() const
+	[[nodiscard]] size_t getDataSize() const
 	{
 		return m_size.x * m_size.y * g_bytesPerPixel;
 	}
@@ -206,7 +206,7 @@ public:
 	void fill(const Color& inColor)
 	{
 		int32 color = inColor.toInt32();
-		PlatformMemory::fill(m_buffer.getPtr(), getMemorySize(), color);
+		PlatformMemory::fill(m_buffer.getPtr(), getDataSize(), color);
 	}
 
 	/**
@@ -318,7 +318,7 @@ public:
 	void setByteOrder(ETextureByteOrder newOrder)
 	{
 		size_t index = 0;
-		size_t size  = getMemorySize();
+		size_t size  = getDataSize();
 		uint8* ptr   = m_buffer.getPtr();
 
 		if (!ptr)

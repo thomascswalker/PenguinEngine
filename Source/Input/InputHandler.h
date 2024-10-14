@@ -6,6 +6,7 @@
 #include "Core/Bitmask.h"
 #include "Math/Vector.h"
 #include "Engine/Delegate.h"
+#include "Engine/Mouse.h"
 
 class IInputHandler;
 class Win32InputHandler;
@@ -108,26 +109,22 @@ enum class EMenuAction : uint8
 	VertexNormals,
 };
 
-DECLARE_MULTICAST_DELEGATE(OnMouseMoved, const vec2f&);
-DECLARE_MULTICAST_DELEGATE(OnMouseLeftDown, const vec2f&);
-DECLARE_MULTICAST_DELEGATE(OnMouseLeftUp, const vec2f&);
-DECLARE_MULTICAST_DELEGATE(OnMouseRightDown, const vec2f&);
-DECLARE_MULTICAST_DELEGATE(OnMouseRightUp, const vec2f&);
-DECLARE_MULTICAST_DELEGATE(OnMouseMiddleDown, const vec2f&);
-DECLARE_MULTICAST_DELEGATE(OnMouseMiddleUp, const vec2f&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMoved, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseLeftDown, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseLeftUp, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseRightDown, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseRightUp, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleDown, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleUp, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleScrolled, const MouseData&);
 
 DECLARE_MULTICAST_DELEGATE(OnKeyPressed, EKey);
-DECLARE_MULTICAST_DELEGATE(OnMouseMiddleScrolled, float);
 
 DECLARE_MULTICAST_DELEGATE(OnMenuActionPressed, EMenuAction);
 
 class IInputHandler
 {
 protected:
-	bool m_mouseLeftDown   = false;
-	bool m_mouseRightDown  = false;
-	bool m_mouseMiddleDown = false;
-
 	vec2f m_clickPosition;
 	vec2f m_currentCursorPosition;
 	vec2f m_previousCursorPosition;
@@ -158,7 +155,7 @@ public:
 	virtual bool onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition);
 	virtual bool onMouseUp(EMouseButtonType buttonType, const vec2f& cursorPosition);
 	virtual bool onMouseWheel(float delta);
-	virtual bool onMouseMove(const vec2f& cursorPosition);
+	virtual bool onMouseMoved(const vec2f& cursorPosition);
 	virtual bool isMouseDown(EMouseButtonType buttonType) const;
 	virtual bool isAnyMouseDown() const;
 

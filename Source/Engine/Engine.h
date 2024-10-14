@@ -7,12 +7,12 @@
 class Engine
 {
 	std::shared_ptr<Viewport> m_viewport;
-	bool m_isRunning = false;
+	bool					  m_isRunning = false;
 
 	TimePoint m_startTime;
-	float m_deltaTime = 0.0f;
+	float	  m_deltaTime = 0.0f;
 
-	float m_cameraSpeed           = .01f;
+	float m_cameraSpeed = .01f;
 	float m_cameraSpeedMultiplier = 1.0f;
 
 public:
@@ -63,11 +63,13 @@ public:
 		return 1000.0f / m_deltaTime;
 	}
 
-	void onMouseMiddleScrolled(float delta) const;
-	void onKeyPressed(EKey keyCode) const;
+	void onMouseMiddleScrolled(const MouseData& mouse) const;
+	void onLeftMouseDown(const MouseData& mouse) const;
+	void onLeftMouseUp(const MouseData& mouse) const;
+	void onMiddleMouseUp(const MouseData& mouse) const;
+	void onMouseMoved(const MouseData& mouse) const;
 
-	void onLeftMouseUp(const vec2f& cursorPosition) const;
-	void onMiddleMouseUp(const vec2f& cursorPosition) const;
+	void onKeyPressed(EKey keyCode) const;
 
 	void onMenuActionPressed(EMenuAction actionId);
 

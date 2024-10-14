@@ -579,7 +579,7 @@ void D3D11RHI::addTexture(Texture* texture)
 	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
 	D3D11_SUBRESOURCE_DATA subResourceData{};
-	subResourceData.pSysMem = texture->getRawMemory();
+	subResourceData.pSysMem = texture->getRawData();
 	subResourceData.SysMemPitch = texture->getWidth() * 4;
 
 	ID3D11Texture2D* image;

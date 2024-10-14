@@ -80,8 +80,8 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 	case WM_MOUSEMOVE:
 	case WM_INPUT:
 		{
-			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(viewport->getHeight() - lParam));
-			inputHandler->onMouseMove(cursorPosition);
+		const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+			inputHandler->onMouseMoved(cursorPosition);
 			return 0;
 		}
 	case WM_MOUSEWHEEL:

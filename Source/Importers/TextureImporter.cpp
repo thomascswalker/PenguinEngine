@@ -537,7 +537,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	}
 
 	texture->resize({(int32)png.metadata.width, (int32)png.metadata.height});
-	texture->setMemory(&data);
+	texture->setData(&data);
 #ifndef PENG_HARDWARE_ACCELERATION
 	// Swap byte order for scanline
 	texture->setByteOrder(ETextureByteOrder::BRGA);

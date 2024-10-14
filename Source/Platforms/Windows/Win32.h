@@ -140,28 +140,16 @@ public:
 	// Platform interface
 
 	int32 create() override;
-
 	int32 show() override;
-
 	int32 start() override;
-
 	int32 loop() override;
-
 	int32 paint() override;
-
 	int32 end() override;
-
 	int32 swapBuffers() override;
-
 	[[nodiscard]] bool isInitialized() const override;
-
 	rectf getSize() override;
-
 	bool getFileDialog(std::string& outFileName, const std::string& filter) override;
-
 	void constructMenuBar() override;
-
 	void setMenuItemChecked(EMenuAction actionId, bool checkState) override;
-
 	void messageBox(const std::string& title, const std::string& message) override;
 };

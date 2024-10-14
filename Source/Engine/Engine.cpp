@@ -10,6 +10,7 @@
 #include "Input/InputHandler.h"
 #include "Platforms/Generic/PlatformInterface.h"
 #include "Engine/Mesh.h"
+#include <Renderer/UI/Widget.h>
 
 Engine* Engine::m_instance = getInstance();
 
@@ -26,7 +27,7 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 {
 	LOG_INFO("Starting up engine.")
 
-	m_viewport  = std::make_shared<Viewport>(inWidth, inHeight);
+	m_viewport = std::make_shared<Viewport>(inWidth, inHeight);
 	m_isRunning = true;
 
 	// Track starting time
@@ -41,12 +42,18 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 
 		// Mouse
 		input->m_onMouseMiddleScrolled.addRaw(this, &Engine::onMouseMiddleScrolled);
+		input->m_onMouseLeftDown.addRaw(this, &Engine::onLeftMouseDown);
 		input->m_onMouseLeftUp.addRaw(this, &Engine::onLeftMouseUp);
 		input->m_onMouseMiddleUp.addRaw(this, &Engine::onMiddleMouseUp);
+		input->m_onMouseMoved.addRaw(this, &Engine::onMouseMoved);
 
 		// Menu
 		input->m_menuActionPressed.addRaw(this, &Engine::onMenuActionPressed);
 	}
+
+	/** TODO: MOVE THIS **/
+	auto button = WidgetManager::constructWidget<Button>();
+	button->resize({ 100, 50 });
 
 	LOG_INFO("Renderer constructed.")
 	return true;
@@ -62,14 +69,14 @@ bool Engine::shutdown()
 void Engine::tick()
 {
 	const TimePoint endTime = PTimer::now();
-	m_deltaTime             = std::chrono::duration_cast<DurationMs>(endTime - m_startTime).count();
-	m_startTime             = PTimer::now();
+	m_deltaTime = std::chrono::duration_cast<DurationMs>(endTime - m_startTime).count();
+	m_startTime = PTimer::now();
 
 	// Update camera movement
 	if (const IInputHandler* input = IInputHandler::getInstance())
 	{
 		// Update camera position
-		Camera* camera               = getViewportCamera();
+		Camera*		camera = getViewportCamera();
 		const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
 
 		// Orbit
@@ -106,95 +113,114 @@ void Engine::onKeyPressed(const EKey keyCode) const
 {
 	switch (keyCode)
 	{
-	case EKey::T:
+		case EKey::T:
 		{
 			getViewport()->toggleShowDebugText();
 			break;
 		}
-	case EKey::F:
+		case EKey::F:
 		{
 			getViewport()->resetView();
 			break;
 		}
-	case EKey::F1:
+		case EKey::F1:
 		{
 			m_viewport->m_settings.toggleRenderFlag(Wireframe);
 			break;
 		}
-	case EKey::F2:
+		case EKey::F2:
 		{
 			m_viewport->m_settings.toggleRenderFlag(Shaded);
 			break;
 		}
-	case EKey::F3:
+		case EKey::F3:
 		{
 			m_viewport->m_settings.toggleRenderFlag(Depth);
 			break;
 		}
-	case EKey::F4:
+		case EKey::F4:
 		{
 			m_viewport->m_settings.toggleRenderFlag(Normals);
 			break;
 		}
-	default: break;
+		default:
+			break;
 	}
 }
 
-void Engine::onLeftMouseUp(const vec2f& cursorPosition) const
+void Engine::onLeftMouseDown(const MouseData& mouse) const
 {
-	Camera* camera                = getViewportCamera();
-	camera->m_deltaRotation.phi   = 0.0f;
+	WidgetManager::updateWidgets(mouse);
+}
+
+void Engine::onLeftMouseUp(const MouseData& mouse) const
+{
+	WidgetManager::updateWidgets(mouse);
+
+	Camera* camera = getViewportCamera();
+	camera->m_deltaRotation.phi = 0.0f;
 	camera->m_deltaRotation.theta = 0.0f;
 }
 
-void Engine::onMiddleMouseUp(const vec2f& cursorPosition) const
+void Engine::onMiddleMouseUp(const MouseData& mouse) const
 {
-	Camera* camera             = getViewportCamera();
+	Camera* camera = getViewportCamera();
 	camera->m_deltaTranslation = 0;
+}
+
+void Engine::onMouseMoved(const MouseData& mouse) const
+{
+	WidgetManager::updateWidgets(mouse);
+}
+
+void Engine::onMouseMiddleScrolled(const MouseData& mouse) const
+{
+	Camera* camera = getViewportCamera();
+	camera->setFov(camera->m_fov + (mouse.middleDelta));
 }
 
 void Engine::onMenuActionPressed(const EMenuAction actionId)
 {
 	const Application* app = Application::getInstance();
-	IPlatform* platform    = app->getPlatform();
+	IPlatform*		   platform = app->getPlatform();
 	switch (actionId)
 	{
-	case EMenuAction::LoadModel:
+		case EMenuAction::LoadModel:
 		{
 			loadMesh();
 			break;
 		}
-	case EMenuAction::LoadTexture:
+		case EMenuAction::LoadTexture:
 		{
 			loadTexture();
 			break;
 		}
-	case EMenuAction::Quit:
+		case EMenuAction::Quit:
 		{
 			m_isRunning = false;
 			break;
 		}
-	case EMenuAction::Wireframe:
+		case EMenuAction::Wireframe:
 		{
 			platform->setMenuItemChecked(EMenuAction::Wireframe, m_viewport->m_settings.toggleRenderFlag(Wireframe));
 			break;
 		}
-	case EMenuAction::Shaded:
+		case EMenuAction::Shaded:
 		{
 			platform->setMenuItemChecked(EMenuAction::Shaded, m_viewport->m_settings.toggleRenderFlag(Shaded));
 			break;
 		}
-	case EMenuAction::Depth:
+		case EMenuAction::Depth:
 		{
 			platform->setMenuItemChecked(EMenuAction::Depth, m_viewport->m_settings.toggleRenderFlag(Depth));
 			break;
 		}
-	case EMenuAction::Normals:
+		case EMenuAction::Normals:
 		{
 			platform->setMenuItemChecked(EMenuAction::Normals, m_viewport->m_settings.toggleRenderFlag(Normals));
 			break;
 		}
-	case EMenuAction::VertexNormals:
+		case EMenuAction::VertexNormals:
 		{
 			break;
 		}
@@ -203,9 +229,9 @@ void Engine::onMenuActionPressed(const EMenuAction actionId)
 
 void Engine::loadMesh() const
 {
-	Application* app    = Application::getInstance();
-	IPlatform* platform = app->getPlatform();
-	std::string fileName;
+	Application* app = Application::getInstance();
+	IPlatform*	 platform = app->getPlatform();
+	std::string	 fileName;
 	if (platform->getFileDialog(fileName, "obj"))
 	{
 		// Load model
@@ -231,9 +257,9 @@ void Engine::loadMesh() const
 
 void Engine::loadTexture() const
 {
-	Application* app    = Application::getInstance();
-	IPlatform* platform = app->getPlatform();
-	std::string fileName;
+	Application* app = Application::getInstance();
+	IPlatform*	 platform = app->getPlatform();
+	std::string	 fileName;
 	if (platform->getFileDialog(fileName, "png"))
 	{
 		// Load texture
@@ -246,10 +272,4 @@ void Engine::loadTexture() const
 
 		m_viewport->getRHI()->addTexture(texture.get());
 	}
-}
-
-void Engine::onMouseMiddleScrolled(const float delta) const
-{
-	Camera* camera = getViewportCamera();
-	camera->setFov(camera->m_fov + (delta));
 }
