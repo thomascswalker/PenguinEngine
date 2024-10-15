@@ -58,6 +58,15 @@ namespace Strings
 		}
 	}
 
+	inline void split(const std::string& inString, std::vector<std::string>& outStrings, int32 count)
+	{
+		int32 substringCount = inString.length() / count;
+		for (int32 i = 0; i < substringCount; i++)
+		{
+			outStrings.emplace_back(inString.substr(i * count, count));
+		}
+	}
+
 	/**
 	 * @brief Checks if the input string contains the specified character.
 	 * @param inString The string to search.

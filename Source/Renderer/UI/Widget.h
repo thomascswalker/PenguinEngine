@@ -12,26 +12,27 @@ class Button;
 
 namespace UIColors
 {
-	inline Color base = Color(128, 128, 128);
-	inline Color dark = Color(50, 50, 50);
-	inline Color light = Color(200, 200, 200);
-	inline Color clicked = Color(66, 103, 210);
+	inline Color Default = Color("#9E9E9E");
+	inline Color Dark = Color("#424242");
+	inline Color Light = Color("#E0E0E0");
+	inline Color Clicked = Color("#039BE5");
 } // namespace UIColors
 
 class Widget
 {
 protected:
 	Texture m_data;
-	rectf	m_geometry{};
-	bool	m_hovered = false;
-	bool	m_clicked = false;
 
-	Widget()
-	{
-#if (defined(_WIN32) || defined(_WIN64))
-		m_data.setByteOrder(ETextureByteOrder::BRGA);
-#endif
-	}
+	/** Geometry **/
+
+	rectf m_geometry{};
+
+	/** State **/
+
+	bool m_hovered = false;
+	bool m_clicked = false;
+
+	Widget() {}
 
 public:
 	rectf getGeometry() const { return m_geometry; }
@@ -105,10 +106,10 @@ public:
 	virtual void paint() override
 	{
 		// Fill with 50% gray
-		Color color = m_hovered ? UIColors::light : UIColors::base;
+		Color color = m_hovered ? UIColors::Light : UIColors::Default;
 		if (m_clicked)
 		{
-			color = UIColors::clicked;
+			color = UIColors::Clicked;
 		}
 		m_data.fill(color);
 	}

@@ -51,9 +51,10 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 		input->m_menuActionPressed.addRaw(this, &Engine::onMenuActionPressed);
 	}
 
-	/** TODO: BUTOTN CREATION; MOVE THIS **/
+	/** TODO: BUTTON CREATION; MOVE THIS **/
 	auto button = WidgetManager::constructWidget<Button>();
 	button->resize({ 100, 50 });
+	button->reposition({ 50, 50 });
 	button->m_onClicked.addRaw(this, &Engine::loadMesh);
 
 	LOG_INFO("Renderer constructed.")

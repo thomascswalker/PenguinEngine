@@ -30,7 +30,6 @@ Color ScanlinePixelShader::process(const PixelData& input)
 
 		// Set the outColor to the pixel at [x,y] in the texture
 		out = input.texture->getPixelAsColor(x, y);
-		
 	}
 	float facingRatio = (-input.cameraNormal).dot(input.worldNormal);
 	facingRatio = std::clamp(facingRatio, 0.0f, 1.0f);
@@ -73,6 +72,12 @@ void ScanlineRHI::beginDraw()
 
 void ScanlineRHI::draw()
 {
+	drawRenderables();
+	drawUI();
+}
+
+void ScanlineRHI::drawRenderables()
+{
 	// Draw all renderables
 	for (const MeshDescription& desc : m_meshDescriptions)
 	{
@@ -90,6 +95,10 @@ void ScanlineRHI::draw()
 			drawTriangle(vertex);
 		}
 	}
+}
+
+void ScanlineRHI::drawUI()
+{
 
 	// Draw all UI elements
 	for (Widget* w : WidgetManager::g_widgets)

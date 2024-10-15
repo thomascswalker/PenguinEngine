@@ -276,9 +276,18 @@ public:
 
 	void setPixelFromFloat(const int32 x, const int32 y, float value)
 	{
-		uint32* line = (uint32*)m_buffer.getPtr() + (y * m_pitch);
+		uint32* line = (uint32*)m_buffer.getPtr();
+		line += (y * m_pitch);
 		auto*	castInt = reinterpret_cast<uint32*>(&value);
 		line[x] = *castInt;
+	}
+
+	void setRow(const int32 row, const Color& color)
+	{
+		auto line = (uint32*)m_buffer.getPtr();
+		line += (row * m_pitch);
+		int32 value = color.toInt32();
+		std::fill(line, line + m_pitch, value);
 	}
 
 	// stbi__vertical_flip
