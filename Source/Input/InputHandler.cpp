@@ -37,7 +37,7 @@ bool IInputHandler::onMouseWheel(float delta)
 	return false;
 }
 
-bool IInputHandler::onMouseMove(const vec2f& cursorPosition)
+bool IInputHandler::onMouseMoved(const vec2f& cursorPosition)
 {
 	return false;
 }

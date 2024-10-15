@@ -1,8 +1,11 @@
 ﻿#pragma once
 
+#include <cassert>
 #include <format>
 #include <random>
+#include <string>
 
+#include "Core/String.h"
 #include "MathFwd.h"
 
 struct Color;
@@ -36,6 +39,19 @@ struct Color
 		g = inG;
 		b = inB;
 		a = inA;
+	}
+
+	Color(const std::string& hex)
+	{
+		assert(hex.starts_with("#"));
+		std::string tmp = hex.substr(1, 6);
+		std::vector<std::string> result;
+		Strings::split(tmp, result, 2);
+
+		r = std::stoi(result[0], nullptr, 16);
+		g = std::stoi(result[1], nullptr, 16);
+		b = std::stoi(result[2], nullptr, 16);
+		a = 255;
 	}
 
 	static Color red()

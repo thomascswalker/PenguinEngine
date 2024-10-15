@@ -92,6 +92,8 @@ public:
 	bool init(void* windowHandle) override;
 	void beginDraw() override;
 	void draw() override;
+	void drawRenderables();
+	void drawUI();
 	void endDraw() override;
 	void shutdown() override {}
 	void resize(int32 width, int32 height) override;
@@ -116,4 +118,6 @@ public:
 	uint8* getFrameData() override;
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
+
+	void drawTexture(Texture* texture, const vec2f& position) override;
 };
