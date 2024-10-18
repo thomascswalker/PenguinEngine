@@ -15,5 +15,5 @@ public:
 		: m_vertexData(vertexData) {}
 
 	virtual void createVertexBuffer(std::vector<float>& data) = 0;
-	virtual void createConstantBuffer() = 0;
+	virtual void createConstantBuffer(int32 byteSize) = 0;
 };

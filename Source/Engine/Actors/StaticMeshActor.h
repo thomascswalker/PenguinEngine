@@ -33,8 +33,6 @@ public:
 
 	void update(float deltaTime) override
 	{
-		float rate = deltaTime * 0.1f;
-		rotate(rate / 2, rate, 0);
 	}
 
 	transf* getTransform() override
