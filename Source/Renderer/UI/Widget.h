@@ -6,26 +6,56 @@
 #include "Renderer/Texture.h"
 #include "Input/Mouse.h"
 #include "Engine/Delegate.h"
+#include "Painter.h"
 
 class Widget;
 class Button;
+class Panel;
 
 namespace UIColors
 {
-	inline Color Default = Color("#9E9E9E");
-	inline Color Dark = Color("#424242");
-	inline Color Light = Color("#E0E0E0");
-	inline Color Clicked = Color("#039BE5");
+	inline Color VeryDarkGray = Color("#1A1A1A");
+	inline Color DarkGray = Color("#242424");
+	inline Color MidDarkGray = Color("#2F2F2F");
+	inline Color MidGray = Color("#383838");
+	inline Color LightGray = Color("#E1E1E1");
+
+	inline Color Black = Color("#0F0F0F");
+	inline Color White = Color("#FFFFFF");
+
+	inline Color Red = Color("#B92D10");
+	inline Color Green = Color("#84BD49");
+	inline Color Blue = Color("#2E84D8");
 } // namespace UIColors
+
+enum class ELayoutMode
+{
+	Horizontal,
+	Vertical
+};
+
+enum class ESizeMode
+{
+	Fixed,
+	Expanding
+};
 
 class Widget
 {
 protected:
-	Texture m_data;
+	ELayoutMode m_layoutMode = ELayoutMode::Horizontal;
+	ESizeMode	m_horizontalSizeMode = ESizeMode::Expanding;
+	ESizeMode	m_verticalSizeMode = ESizeMode::Expanding;
+
+	Widget*				 m_parent = nullptr;
+	std::vector<Widget*> m_children;
 
 	/** Geometry **/
 
-	rectf m_geometry{};
+	recti m_geometry{};
+	vec2i m_fixedSize{};
+	recti m_renderGeometry{};
+	vec4i m_margin{ 0, 0, 0, 0 };
 
 	/** State **/
 
@@ -35,24 +65,44 @@ protected:
 	Widget() {}
 
 public:
-	rectf getGeometry() const { return m_geometry; }
-	vec2f getSize() const
+	recti getGeometry() const { return m_geometry; }
+	recti getRenderGeometry() const { return m_renderGeometry; }
+	vec2i getSize() const
 	{
-		return vec2f(m_geometry.width, m_geometry.height);
+		return vec2i(m_geometry.width, m_geometry.height);
 	}
-	vec2f getPosition() const
+	vec2i getPosition() const
 	{
-		return vec2f(m_geometry.x, m_geometry.y);
+		return vec2i(m_geometry.x, m_geometry.y);
 	}
 
-	uint8*	 getData() { return m_data.getData(); }
-	Texture* getTexture() { return &m_data; }
+	void setMargin(vec4i margin)
+	{
+		m_margin = margin;
+	}
+	void setMargin(int32 x, int32 y, int32 z, int32 w)
+	{
+		m_margin = { x, y, z, w };
+	}
 
-	virtual void paint() {}
+	void setFixedWidth(int32 width)
+	{
+		m_fixedSize.x = width;
+	}
+	void setFixedHeight(int32 height)
+	{
+		m_fixedSize.y = height;
+	}
+	void setFixedSize(vec2i size)
+	{
+		m_fixedSize = size;
+	}
+
+	virtual void paint(Painter* painter) {}
 	virtual void update(const MouseData& mouse)
 	{
 		// Hover
-		bool newHovered = m_geometry.contains(mouse.position);
+		bool newHovered = m_renderGeometry.contains(mouse.position);
 		if (newHovered && !m_hovered)
 		{
 			onHoverBegin();
@@ -62,7 +112,6 @@ public:
 			onHoverEnd();
 		}
 		m_hovered = newHovered;
-		onHover();
 
 		// Click
 		bool newClicked = mouse.leftDown && m_hovered;
@@ -85,15 +134,70 @@ public:
 	{
 		m_geometry.width = size.x;
 		m_geometry.height = size.y;
-		m_data.resize(size);
+	}
+	virtual void recompute()
+	{
+		m_renderGeometry = m_geometry;
+
+		m_renderGeometry.x += m_margin.x;
+		m_renderGeometry.y += m_margin.y;
+
+		switch (m_horizontalSizeMode)
+		{
+			case ESizeMode::Fixed:
+				m_renderGeometry.width = m_fixedSize.x;
+				break;
+			case ESizeMode::Expanding:
+				m_renderGeometry.width -= (m_margin.z * 2);
+				break;
+		}
+
+		switch (m_verticalSizeMode)
+		{
+			case ESizeMode::Fixed:
+				m_renderGeometry.height = m_fixedSize.y;
+				break;
+			case ESizeMode::Expanding:
+				m_renderGeometry.height -= (m_margin.w * 2);
+				break;
+		}
 	}
 
-	virtual void onHover() {}
 	virtual void onHoverBegin() { LOG_INFO("Hover begin") }
 	virtual void onHoverEnd() { LOG_INFO("Hover end") }
 
 	virtual void onClickBegin() { LOG_INFO("Click begin") }
 	virtual void onClickEnd() { LOG_INFO("Click end") }
+
+	virtual void		setLayoutMode(ELayoutMode mode) { m_layoutMode = mode; }
+	virtual ELayoutMode getLayoutMode() const { return m_layoutMode; }
+
+	virtual void	  setHorizontalSizeMode(ESizeMode mode) { m_horizontalSizeMode = mode; }
+	virtual ESizeMode getHorizontalSizeMode() const { return m_horizontalSizeMode; }
+
+	virtual void	  setVerticalSizeMode(ESizeMode mode) { m_verticalSizeMode = mode; }
+	virtual ESizeMode getVerticalSizeMode() const { return m_verticalSizeMode; }
+
+	virtual void				  addChild(Widget* w) { m_children.emplace_back(w); }
+	virtual std::vector<Widget*>& getChildren() { return m_children; }
+};
+
+class Canvas : public Widget
+{
+};
+
+class Spacer : public Widget
+{
+};
+
+class Panel : public Widget
+{
+public:
+	virtual void paint(Painter* painter) override
+	{
+		// Draw the filled panel
+		painter->drawRectFilled(m_renderGeometry, UIColors::DarkGray);
+	}
 };
 
 DECLARE_MULTICAST_DELEGATE(OnClicked);
@@ -103,15 +207,23 @@ class Button : public Widget
 public:
 	OnClicked m_onClicked;
 
-	virtual void paint() override
+	Button()
+	{
+		setMargin(8, 8, 8, 8);
+	}
+
+	virtual void paint(Painter* painter) override
 	{
 		// Fill with 50% gray
-		Color color = m_hovered ? UIColors::Light : UIColors::Default;
+		Color color = m_hovered ? UIColors::MidGray : UIColors::MidDarkGray;
 		if (m_clicked)
 		{
-			color = UIColors::Clicked;
+			color = UIColors::Blue;
 		}
-		m_data.fill(color);
+		// Draw the filled button
+		painter->drawRectFilled(m_renderGeometry, color);
+		// Draw the button border
+		painter->drawRect(m_renderGeometry, UIColors::VeryDarkGray);
 	}
 
 	virtual void onClickEnd() override
@@ -129,6 +241,7 @@ public:
 namespace WidgetManager
 {
 	inline std::vector<Widget*> g_widgets;
+	inline Widget*				g_rootWidget = nullptr;
 
 	template <typename T>
 	T* constructWidget()
@@ -143,6 +256,49 @@ namespace WidgetManager
 		for (Widget* w : g_widgets)
 		{
 			w->update(mouse);
+		}
+	}
+
+	inline void layoutWidgets(Widget* w, recti bounds)
+	{
+		ELayoutMode			  mode = w->getLayoutMode();
+		std::vector<Widget*>& children = w->getChildren();
+		int32				  childCount = w->getChildren().size();
+
+		int32 horizontalSize = childCount != 0 ? bounds.width / childCount : bounds.width;
+		int32 verticalSize = childCount != 0 ? bounds.height / childCount : bounds.height;
+
+		int32 halfWidth = bounds.width / 2;
+		int32 halfHeight = bounds.height / 2;
+
+		// Move and resize the children
+		for (int32 i = 0; i < childCount; i++)
+		{
+			Widget* child = children[i];
+			switch (mode)
+			{
+				case ELayoutMode::Horizontal:
+				{
+					child->reposition(vec2i(horizontalSize * i, 0));
+					child->resize(vec2i(horizontalSize, bounds.height));
+					break;
+				}
+				case ELayoutMode::Vertical:
+				{
+					child->reposition(vec2i(0, verticalSize * i));
+					child->resize(vec2i(bounds.width, verticalSize));
+					break;
+				}
+				default:
+					return;
+			}
+			child->recompute();
+
+			// Layout of children of this widget, if present
+			if (child->getChildren().size() != 0)
+			{
+				layoutWidgets(child, child->getRenderGeometry());
+			}
 		}
 	}
 } // namespace WidgetManager

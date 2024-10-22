@@ -164,7 +164,7 @@ class Buffer11 : public GenericBuffer
 
 public:
 	void createVertexBuffer(std::vector<float>& data) override;
-	void createConstantBuffer() override;
+	void createConstantBuffer(int32 byteSize) override;
 	void setMeshDescription(const MeshDescription& meshDescription) { m_meshDescription = meshDescription; }
 
 	MeshDescription* getMeshDescription() { return &m_meshDescription; }

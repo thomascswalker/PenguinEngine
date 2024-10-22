@@ -94,7 +94,7 @@ struct rect_t
 		x += value;
 		y += value;
 		width -= value;
-		height += value;
+		height -= value;
 	}
 
 	[[nodiscard]] bool contains(const vec2f& point) const

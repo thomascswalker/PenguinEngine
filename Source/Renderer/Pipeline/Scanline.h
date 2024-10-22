@@ -10,6 +10,8 @@
 #include "Renderer/Settings.h"
 #include "Renderer/Shader.h"
 #include "Renderer/Texture.h"
+#include "Renderer/UI/Painter.h"
+#include "Renderer/UI/Widget.h"
 
 struct VertexInput
 {
@@ -86,6 +88,8 @@ class ScanlineRHI : public IRHI
 	Triangle* m_currentTriangle                      = nullptr;
 	std::shared_ptr<RenderSettings> m_renderSettings = nullptr;
 
+	std::shared_ptr<Painter> m_painter = nullptr;
+
 public:
 	ScanlineRHI() = default;
 
@@ -93,7 +97,7 @@ public:
 	void beginDraw() override;
 	void draw() override;
 	void drawRenderables();
-	void drawUI();
+	void drawUI(Widget* w);
 	void endDraw() override;
 	void shutdown() override {}
 	void resize(int32 width, int32 height) override;

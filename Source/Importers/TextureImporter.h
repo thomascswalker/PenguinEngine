@@ -60,7 +60,7 @@ DEFINE_BITMASK_OPERATORS(EPngColorType)
 
 enum class EPngCompressionMethod : uint8
 {
-	Default = 0, // ZLib
+	MidGray = 0, // ZLib
 	Invalid = 1
 };
 

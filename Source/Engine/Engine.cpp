@@ -52,10 +52,27 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	}
 
 	/** TODO: BUTTON CREATION; MOVE THIS **/
+	auto canvas = WidgetManager::constructWidget<Canvas>();
+	canvas->setLayoutMode(ELayoutMode::Horizontal);
+	WidgetManager::g_rootWidget = canvas;
+
+	auto panel = WidgetManager::constructWidget<Panel>();
+	canvas->addChild(panel);
+	panel->setLayoutMode(ELayoutMode::Vertical);
+	panel->setHorizontalSizeMode(ESizeMode::Fixed);
+	panel->setFixedWidth(100);
+
+	auto spacer = WidgetManager::constructWidget<Spacer>();
+	canvas->addChild(spacer);
+
 	auto button = WidgetManager::constructWidget<Button>();
-	button->resize({ 100, 50 });
-	button->reposition({ 50, 50 });
 	button->m_onClicked.addRaw(this, &Engine::loadMesh);
+	button->setVerticalSizeMode(ESizeMode::Fixed);
+	button->setFixedHeight(20);
+	panel->addChild(button);
+
+	auto spacer2 = WidgetManager::constructWidget<Spacer>();
+	panel->addChild(spacer2);
 
 	LOG_INFO("Renderer constructed.")
 	return true;
