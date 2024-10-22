@@ -62,17 +62,17 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	panel->setHorizontalSizeMode(ESizeMode::Fixed);
 	panel->setFixedWidth(100);
 
-	auto spacer = WidgetManager::constructWidget<Spacer>();
-	canvas->addChild(spacer);
+	auto meshButton = WidgetManager::constructWidget<Button>();
+	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
+	meshButton->setVerticalSizeMode(ESizeMode::Fixed);
+	meshButton->setFixedHeight(20);
+	panel->addChild(meshButton);
 
-	auto button = WidgetManager::constructWidget<Button>();
-	button->m_onClicked.addRaw(this, &Engine::loadMesh);
-	button->setVerticalSizeMode(ESizeMode::Fixed);
-	button->setFixedHeight(20);
-	panel->addChild(button);
-
-	auto spacer2 = WidgetManager::constructWidget<Spacer>();
-	panel->addChild(spacer2);
+	auto texButton = WidgetManager::constructWidget<Button>();
+	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
+	texButton->setVerticalSizeMode(ESizeMode::Fixed);
+	texButton->setFixedHeight(20);
+	panel->addChild(texButton);
 
 	LOG_INFO("Renderer constructed.")
 	return true;

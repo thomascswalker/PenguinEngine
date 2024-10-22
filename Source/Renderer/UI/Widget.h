@@ -84,8 +84,12 @@ public:
 	{
 		m_margin = { x, y, z, w };
 	}
+	vec4i getMargin() const { return m_margin; }
 
-	void setFixedWidth(int32 width)
+	vec2i getFixedSize() const { return m_fixedSize; }
+	int32 getFixedWidth() const { return m_fixedSize.x; }
+	int32 getFixedHeight() const { return m_fixedSize.y; }
+	void  setFixedWidth(int32 width)
 	{
 		m_fixedSize.x = width;
 	}
@@ -134,6 +138,14 @@ public:
 	{
 		m_geometry.width = size.x;
 		m_geometry.height = size.y;
+	}
+	virtual void setWidth(int32 width)
+	{
+		m_geometry.width = width;
+	}
+	virtual void setHeight(int32 height)
+	{
+		m_geometry.height = height;
 	}
 	virtual void recompute()
 	{
@@ -272,21 +284,47 @@ namespace WidgetManager
 		int32 halfHeight = bounds.height / 2;
 
 		// Move and resize the children
+		int32 totalWidth = 0;
+		int32 totalHeight = 0;
 		for (int32 i = 0; i < childCount; i++)
 		{
 			Widget* child = children[i];
+			vec4i	margin = child->getMargin();
 			switch (mode)
 			{
 				case ELayoutMode::Horizontal:
 				{
-					child->reposition(vec2i(horizontalSize * i, 0));
-					child->resize(vec2i(horizontalSize, bounds.height));
+					switch (child->getHorizontalSizeMode())
+					{
+						case ESizeMode::Expanding:
+							child->reposition(vec2i(horizontalSize * i, 0));
+							child->resize(vec2i(horizontalSize, bounds.height));
+							break;
+						case ESizeMode::Fixed:
+							int32 width = child->getFixedWidth();
+							child->reposition(vec2i(totalWidth, 0));
+							totalWidth += width;
+							child->resize(vec2i(width, bounds.height));
+							break;
+					}
+
 					break;
 				}
 				case ELayoutMode::Vertical:
 				{
-					child->reposition(vec2i(0, verticalSize * i));
-					child->resize(vec2i(bounds.width, verticalSize));
+					switch (child->getVerticalSizeMode())
+					{
+						case ESizeMode::Expanding:
+							child->reposition(vec2i(0, verticalSize * i));
+							child->resize(vec2i(bounds.width, verticalSize));
+							break;
+						case ESizeMode::Fixed:
+							int32 height = child->getFixedHeight();
+							child->reposition(vec2i(0, totalHeight * i));
+							totalHeight += height;
+							child->resize(vec2i(bounds.width, height));
+							break;
+					}
 					break;
 				}
 				default:
