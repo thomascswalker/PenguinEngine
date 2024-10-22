@@ -59,18 +59,18 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	auto panel = WidgetManager::constructWidget<Panel>();
 	canvas->addChild(panel);
 	panel->setLayoutMode(ELayoutMode::Vertical);
-	panel->setHorizontalSizeMode(ESizeMode::Fixed);
+	panel->setHorizontalResizeMode(EResizeMode::Fixed);
 	panel->setFixedWidth(100);
 
 	auto meshButton = WidgetManager::constructWidget<Button>();
 	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
-	meshButton->setVerticalSizeMode(ESizeMode::Fixed);
+	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
 	meshButton->setFixedHeight(20);
 	panel->addChild(meshButton);
 
 	auto texButton = WidgetManager::constructWidget<Button>();
 	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
-	texButton->setVerticalSizeMode(ESizeMode::Fixed);
+	texButton->setVerticalResizeMode(EResizeMode::Fixed);
 	texButton->setFixedHeight(20);
 	panel->addChild(texButton);
 

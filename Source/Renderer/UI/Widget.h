@@ -34,7 +34,7 @@ enum class ELayoutMode
 	Vertical
 };
 
-enum class ESizeMode
+enum class EResizeMode
 {
 	Fixed,
 	Expanding
@@ -43,9 +43,10 @@ enum class ESizeMode
 class Widget
 {
 protected:
+	/** Properties **/
 	ELayoutMode m_layoutMode = ELayoutMode::Horizontal;
-	ESizeMode	m_horizontalSizeMode = ESizeMode::Expanding;
-	ESizeMode	m_verticalSizeMode = ESizeMode::Expanding;
+	EResizeMode m_horizontalResizeMode = EResizeMode::Expanding;
+	EResizeMode m_verticalResizeMode = EResizeMode::Expanding;
 
 	Widget*				 m_parent = nullptr;
 	std::vector<Widget*> m_children;
@@ -65,6 +66,9 @@ protected:
 	Widget() {}
 
 public:
+	void	setParent(Widget* w) { m_parent = w; }
+	Widget* getParent() { return m_parent; }
+
 	recti getGeometry() const { return m_geometry; }
 	recti getRenderGeometry() const { return m_renderGeometry; }
 	vec2i getSize() const
@@ -154,22 +158,22 @@ public:
 		m_renderGeometry.x += m_margin.x;
 		m_renderGeometry.y += m_margin.y;
 
-		switch (m_horizontalSizeMode)
+		switch (m_horizontalResizeMode)
 		{
-			case ESizeMode::Fixed:
+			case EResizeMode::Fixed:
 				m_renderGeometry.width = m_fixedSize.x;
 				break;
-			case ESizeMode::Expanding:
+			case EResizeMode::Expanding:
 				m_renderGeometry.width -= (m_margin.z * 2);
 				break;
 		}
 
-		switch (m_verticalSizeMode)
+		switch (m_verticalResizeMode)
 		{
-			case ESizeMode::Fixed:
+			case EResizeMode::Fixed:
 				m_renderGeometry.height = m_fixedSize.y;
 				break;
-			case ESizeMode::Expanding:
+			case EResizeMode::Expanding:
 				m_renderGeometry.height -= (m_margin.w * 2);
 				break;
 		}
@@ -184,13 +188,17 @@ public:
 	virtual void		setLayoutMode(ELayoutMode mode) { m_layoutMode = mode; }
 	virtual ELayoutMode getLayoutMode() const { return m_layoutMode; }
 
-	virtual void	  setHorizontalSizeMode(ESizeMode mode) { m_horizontalSizeMode = mode; }
-	virtual ESizeMode getHorizontalSizeMode() const { return m_horizontalSizeMode; }
+	virtual void		setHorizontalResizeMode(EResizeMode mode) { m_horizontalResizeMode = mode; }
+	virtual EResizeMode getHorizontalResizeMode() const { return m_horizontalResizeMode; }
 
-	virtual void	  setVerticalSizeMode(ESizeMode mode) { m_verticalSizeMode = mode; }
-	virtual ESizeMode getVerticalSizeMode() const { return m_verticalSizeMode; }
+	virtual void		setVerticalResizeMode(EResizeMode mode) { m_verticalResizeMode = mode; }
+	virtual EResizeMode getVerticalResizeMode() const { return m_verticalResizeMode; }
 
-	virtual void				  addChild(Widget* w) { m_children.emplace_back(w); }
+	virtual void addChild(Widget* w)
+	{
+		m_children.emplace_back(w);
+		w->setParent(this);
+	}
 	virtual std::vector<Widget*>& getChildren() { return m_children; }
 };
 
@@ -294,13 +302,13 @@ namespace WidgetManager
 			{
 				case ELayoutMode::Horizontal:
 				{
-					switch (child->getHorizontalSizeMode())
+					switch (child->getHorizontalResizeMode())
 					{
-						case ESizeMode::Expanding:
+						case EResizeMode::Expanding:
 							child->reposition(vec2i(horizontalSize * i, 0));
 							child->resize(vec2i(horizontalSize, bounds.height));
 							break;
-						case ESizeMode::Fixed:
+						case EResizeMode::Fixed:
 							int32 width = child->getFixedWidth();
 							child->reposition(vec2i(totalWidth, 0));
 							totalWidth += width;
@@ -312,13 +320,13 @@ namespace WidgetManager
 				}
 				case ELayoutMode::Vertical:
 				{
-					switch (child->getVerticalSizeMode())
+					switch (child->getVerticalResizeMode())
 					{
-						case ESizeMode::Expanding:
+						case EResizeMode::Expanding:
 							child->reposition(vec2i(0, verticalSize * i));
 							child->resize(vec2i(bounds.width, verticalSize));
 							break;
-						case ESizeMode::Fixed:
+						case EResizeMode::Fixed:
 							int32 height = child->getFixedHeight();
 							child->reposition(vec2i(0, totalHeight * i));
 							totalHeight += height;
