@@ -12,6 +12,8 @@ class Widget;
 class Button;
 class Panel;
 
+constexpr int32 g_defaultMargin = 10;
+
 namespace UIColors
 {
 	inline Color VeryDarkGray = Color("#1A1A1A");
@@ -47,6 +49,7 @@ protected:
 	ELayoutMode m_layoutMode = ELayoutMode::Horizontal;
 	EResizeMode m_horizontalResizeMode = EResizeMode::Expanding;
 	EResizeMode m_verticalResizeMode = EResizeMode::Expanding;
+	bool		m_consumeInput = false;
 
 	Widget*				 m_parent = nullptr;
 	std::vector<Widget*> m_children;
@@ -88,6 +91,11 @@ public:
 	{
 		m_margin = { x, y, z, w };
 	}
+	void setMargin(int32 value)
+	{
+		m_margin = { value, value, value, value };
+	}
+
 	vec4i getMargin() const { return m_margin; }
 
 	vec2i getFixedSize() const { return m_fixedSize; }
@@ -107,7 +115,7 @@ public:
 	}
 
 	virtual void paint(Painter* painter) {}
-	virtual void update(const MouseData& mouse)
+	virtual void update(MouseData& mouse)
 	{
 		// Hover
 		bool newHovered = m_renderGeometry.contains(mouse.position);
@@ -120,18 +128,6 @@ public:
 			onHoverEnd();
 		}
 		m_hovered = newHovered;
-
-		// Click
-		bool newClicked = mouse.leftDown && m_hovered;
-		if (newClicked && !m_clicked)
-		{
-			onClickBegin();
-		}
-		if (!newClicked && m_clicked)
-		{
-			onClickEnd();
-		}
-		m_clicked = newClicked;
 	}
 	virtual void reposition(const vec2i& position)
 	{
@@ -153,8 +149,10 @@ public:
 	}
 	virtual void recompute()
 	{
+		// Set the render geometry to the base geometry
 		m_renderGeometry = m_geometry;
 
+		// Offset render geometry origin (top-left) by the margin X & Y
 		m_renderGeometry.x += m_margin.x;
 		m_renderGeometry.y += m_margin.y;
 
@@ -229,7 +227,7 @@ public:
 
 	Button()
 	{
-		setMargin(8, 8, 8, 8);
+		setMargin(g_defaultMargin);
 	}
 
 	virtual void paint(Painter* painter) override
@@ -244,6 +242,30 @@ public:
 		painter->drawRectFilled(m_renderGeometry, color);
 		// Draw the button border
 		painter->drawRect(m_renderGeometry, UIColors::VeryDarkGray);
+	}
+
+	virtual void update(MouseData& mouse) override
+	{
+		Widget::update(mouse);
+
+		// If input has been consumed, skip this widget updating
+		if (mouse.inputConsumed)
+		{
+			return;
+		}
+		// Click
+		bool newClicked = mouse.leftDown && m_hovered;
+		if (newClicked && !m_clicked)
+		{
+			onClickBegin();
+		}
+		if (!newClicked && m_clicked)
+		{
+			onClickEnd();
+			// Set input to consumed
+			mouse.inputConsumed = m_consumeInput;
+		}
+		m_clicked = newClicked;
 	}
 
 	virtual void onClickEnd() override
@@ -271,7 +293,7 @@ namespace WidgetManager
 		return dynamic_cast<T*>(g_widgets.back());
 	}
 
-	inline void updateWidgets(const MouseData& mouse)
+	inline void updateWidgets(MouseData& mouse)
 	{
 		for (Widget* w : g_widgets)
 		{
@@ -310,6 +332,7 @@ namespace WidgetManager
 							break;
 						case EResizeMode::Fixed:
 							int32 width = child->getFixedWidth();
+							width += margin.x;
 							child->reposition(vec2i(totalWidth, 0));
 							totalWidth += width;
 							child->resize(vec2i(width, bounds.height));
@@ -328,8 +351,10 @@ namespace WidgetManager
 							break;
 						case EResizeMode::Fixed:
 							int32 height = child->getFixedHeight();
-							child->reposition(vec2i(0, totalHeight * i));
+							height += margin.y;
+							child->reposition(vec2i(0, totalHeight));
 							totalHeight += height;
+
 							child->resize(vec2i(bounds.width, height));
 							break;
 					}

@@ -10,5 +10,5 @@ struct MouseData
 	bool  middleDown = false;
 	bool  rightDown = false;
 	float middleDelta = 0.0f;
-
+	bool  inputConsumed = false;
 };

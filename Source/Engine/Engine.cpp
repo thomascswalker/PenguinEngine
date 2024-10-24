@@ -167,12 +167,12 @@ void Engine::onKeyPressed(const EKey keyCode) const
 	}
 }
 
-void Engine::onLeftMouseDown(const MouseData& mouse) const
+void Engine::onLeftMouseDown(MouseData& mouse) const
 {
 	WidgetManager::updateWidgets(mouse);
 }
 
-void Engine::onLeftMouseUp(const MouseData& mouse) const
+void Engine::onLeftMouseUp(MouseData& mouse) const
 {
 	WidgetManager::updateWidgets(mouse);
 
@@ -181,18 +181,18 @@ void Engine::onLeftMouseUp(const MouseData& mouse) const
 	camera->m_deltaRotation.theta = 0.0f;
 }
 
-void Engine::onMiddleMouseUp(const MouseData& mouse) const
+void Engine::onMiddleMouseUp(MouseData& mouse) const
 {
 	Camera* camera = getViewportCamera();
 	camera->m_deltaTranslation = 0;
 }
 
-void Engine::onMouseMoved(const MouseData& mouse) const
+void Engine::onMouseMoved(MouseData& mouse) const
 {
 	WidgetManager::updateWidgets(mouse);
 }
 
-void Engine::onMouseMiddleScrolled(const MouseData& mouse) const
+void Engine::onMouseMiddleScrolled(MouseData& mouse) const
 {
 	Camera* camera = getViewportCamera();
 	camera->setFov(camera->m_fov + (mouse.middleDelta));

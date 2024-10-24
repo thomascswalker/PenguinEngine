@@ -109,14 +109,14 @@ enum class EMenuAction : uint8
 	VertexNormals,
 };
 
-DECLARE_MULTICAST_DELEGATE(OnMouseMoved, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseLeftDown, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseLeftUp, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseRightDown, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseRightUp, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseMiddleDown, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseMiddleUp, const MouseData&);
-DECLARE_MULTICAST_DELEGATE(OnMouseMiddleScrolled, const MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMoved, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseLeftDown, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseLeftUp, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseRightDown, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseRightUp, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleDown, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleUp, MouseData&);
+DECLARE_MULTICAST_DELEGATE(OnMouseMiddleScrolled, MouseData&);
 
 DECLARE_MULTICAST_DELEGATE(OnKeyPressed, EKey);
 
