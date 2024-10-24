@@ -20,7 +20,7 @@ inline uint8 g_bitsPerByte = 8;
 template <typename T>
 T swapByteOrder(T value)
 {
-	T result = 0;
+	T	result = 0;
 	int size = sizeof(T) - 1;
 	for (int i = 0; i <= size; i++)
 	{
@@ -37,7 +37,7 @@ T swapByteOrder(T value)
 template <typename T>
 class RawBuffer
 {
-	T* m_data     = nullptr;
+	T*	   m_data = nullptr;
 	size_t m_size = 0;
 
 public:
@@ -51,7 +51,7 @@ public:
 
 	explicit RawBuffer(T* inData, const size_t inSize)
 		: m_data(inData)
-		  , m_size(inSize)
+		, m_size(inSize)
 	{
 		m_data = PlatformMemory::malloc<T>(inSize);
 		std::memcpy(m_data, inData, inSize);
@@ -76,8 +76,8 @@ public:
 	// Move constructor
 	RawBuffer(RawBuffer&& other) noexcept
 	{
-		m_data       = other.m_data;
-		m_size       = other.m_size;
+		m_data = other.m_data;
+		m_size = other.m_size;
 		other.m_data = nullptr;
 		other.m_size = 0;
 	}
@@ -109,8 +109,8 @@ public:
 		if (!(*this == other))
 		{
 			PlatformMemory::free(m_data);
-			m_data       = other.m_data;
-			m_size       = other.m_size;
+			m_data = other.m_data;
+			m_size = other.m_size;
 			other.m_data = nullptr;
 			other.m_size = 0;
 		}
@@ -249,6 +249,27 @@ public:
 
 struct StreamBuffer : std::streambuf
 {
+protected:
+	pos_type seekoff(off_type	off,
+		std::ios_base::seekdir	dir,
+		std::ios_base::openmode which = std::ios_base::in)
+	{
+		if (dir == std::ios_base::cur)
+		{
+			gbump(off);
+		}
+		else if (dir == std::ios_base::end)
+		{
+			setg(eback(), egptr() + off, egptr());
+		}
+		else if (dir == std::ios_base::beg)
+		{
+			setg(eback(), eback() + off, egptr());
+		}
+		return gptr() - eback();
+	}
+
+public:
 	explicit StreamBuffer(RawBuffer<uint8>& buffer)
 	{
 		auto begin = (int8*)buffer.data();
@@ -259,8 +280,8 @@ struct StreamBuffer : std::streambuf
 enum class ESeekDir : int32
 {
 	Beginning = std::ios_base::beg,
-	Current   = std::ios_base::cur,
-	End       = std::ios_base::end,
+	Current = std::ios_base::cur,
+	End = std::ios_base::end,
 };
 
 class ByteReader
@@ -273,13 +294,13 @@ class ByteReader
 	std::endian m_endian = std::endian::native;
 
 	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
-	std::unique_ptr<std::istream> m_stream       = nullptr;
+	std::unique_ptr<std::istream> m_stream = nullptr;
 
 	// Bit reading
-	uint8 m_bitCount   = 0;
+	uint8 m_bitCount = 0;
 	uint8 m_codeBuffer = 0;
 
-	uint8 m_bitPos      = 0;
+	uint8 m_bitPos = 0;
 	uint8 m_currentByte = 0;
 
 	template <typename T>
@@ -315,32 +336,32 @@ public:
 	ByteReader() = default;
 
 	ByteReader(std::string& inString, const size_t inSize,
-	           const std::endian endian = std::endian::native)
+		const std::endian endian = std::endian::native)
 		: m_size(inSize)
-		  , m_endian(endian)
+		, m_endian(endian)
 	{
 		RawBuffer buffer((uint8*)inString.data(), inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
 	explicit ByteReader(uint8* inBuffer, const size_t inSize,
-	                    const std::endian endian = std::endian::native)
+		const std::endian endian = std::endian::native)
 		: m_size(inSize)
-		  , m_endian(endian)
+		, m_endian(endian)
 	{
 		RawBuffer buffer(inBuffer, inSize);
 		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
 	explicit ByteReader(RawBuffer<uint8>& inBuffer,
-	                    const std::endian endian = std::endian::native)
+		const std::endian				  endian = std::endian::native)
 		: m_size(inBuffer.size())
-		  , m_endian(endian)
+		, m_endian(endian)
 	{
 		m_streamBuffer = std::make_unique<StreamBuffer>(inBuffer);
-		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
 	}
 
 	~ByteReader() = default;
@@ -429,6 +450,7 @@ public:
 	{
 		m_pos += offset;
 		m_stream->seekg(offset, (int32)seekDir);
+		m_streamBuffer->pubseekoff(offset, (int32)seekDir, std::ios_base::binary);
 		return m_pos;
 	}
 };
