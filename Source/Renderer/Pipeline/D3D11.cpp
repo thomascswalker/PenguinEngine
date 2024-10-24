@@ -530,7 +530,7 @@ inline void Buffer11::createVertexBuffer(std::vector<float>& vertexData)
 	}
 }
 
-void Buffer11::createConstantBuffer()
+void Buffer11::createConstantBuffer(int32 byteSize)
 {
 	auto msg = "Buffer11::createVertexBuffer(): ID3D11Device is not instantiated.";
 	ASSERT(g_device != nullptr, msg);
@@ -551,7 +551,7 @@ void D3D11RHI::addRenderable(IRenderable* renderable)
 	Buffer11 buffer;
 	auto	 vertexData = renderable->getMesh()->getVertexData();
 	buffer.createVertexBuffer(*vertexData);
-	buffer.createConstantBuffer();
+	buffer.createConstantBuffer(vertexData->size());
 
 	MeshDescription meshDesc;
 	meshDesc.stride = sizeof(Vertex);

@@ -152,7 +152,7 @@ public:
 	template <typename T = uint8>
 	T* getData() const
 	{
-		return m_buffer.getPtr();
+		return (T*)m_buffer.getPtr();
 	}
 
 	void setData(RawBuffer<uint8>* newMemory, const size_t inSize = 0)

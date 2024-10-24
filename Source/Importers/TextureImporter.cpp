@@ -109,7 +109,7 @@ int32 TextureImporter::parsePngIDAT(PngChunk* chunk, PngTexture* png)
 	// (ZLib).
 	switch (metadata->compressionMethod)
 	{
-	case EPngCompressionMethod::Default:
+	case EPngCompressionMethod::MidGray:
 		{
 			// Uncompress the whole compressedBuffer with ZLib's inflate
 			int32 result = Compression::uncompressZlib(&chunk->uncompressedBuffer, &chunk->compressedBuffer);

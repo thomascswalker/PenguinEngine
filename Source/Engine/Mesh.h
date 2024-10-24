@@ -34,15 +34,16 @@ enum EPrimitiveType
 struct Vertex
 {
 	vec3f position; // 12-bytes
-	vec3f normal;   // 12-bytes
+	vec3f normal;	// 12-bytes
 	vec2f texCoord; // 8-bytes
 
 	Vertex() = default;
-
+	Vertex(float x, float y, float z, float nx, float ny, float nz, float u, float v)
+		: position(x, y, z), normal(nx, ny, nz), texCoord(u, v) {}
 	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec2f& inTexCoord)
 		: position(inPosition)
-		  , normal(inNormal)
-		  , texCoord(inTexCoord) {}
+		, normal(inNormal)
+		, texCoord(inTexCoord) {}
 };
 
 struct Triangle
@@ -58,10 +59,10 @@ struct Triangle
 	Triangle() = default;
 
 	Triangle(const std::vector<int32>& inPositionIndexes, const std::vector<int32>& inNormalIndexes,
-	         const std::vector<int32>& inTexCoordIndexes)
+		const std::vector<int32>& inTexCoordIndexes)
 		: positionIndexes(inPositionIndexes)
-		  , normalIndexes(inNormalIndexes)
-		  , texCoordIndexes(inTexCoordIndexes) {}
+		, normalIndexes(inNormalIndexes)
+		, texCoordIndexes(inTexCoordIndexes) {}
 
 	Vertex operator[](int32 index) const
 	{
@@ -94,9 +95,9 @@ class Mesh
 {
 	// Properties
 	std::vector<Triangle> m_triangles;
-	std::vector<vec3f> m_positions;
-	std::vector<vec3f> m_normals;
-	std::vector<vec2f> m_texCoords;
+	std::vector<vec3f>	  m_positions;
+	std::vector<vec3f>	  m_normals;
+	std::vector<vec2f>	  m_texCoords;
 
 	std::vector<float> m_vertexBuffer;
 
@@ -104,11 +105,11 @@ public:
 	Mesh() = default;
 
 	Mesh(const std::vector<Triangle>& inTriangles, const std::vector<vec3f>& inPositions,
-	     const std::vector<vec3f>& inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
+		const std::vector<vec3f>& inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
 		: m_triangles(inTriangles)
-		  , m_positions(inPositions)
-		  , m_normals(inNormals)
-		  , m_texCoords(inTexCoords)
+		, m_positions(inPositions)
+		, m_normals(inNormals)
+		, m_texCoords(inTexCoords)
 	{
 		processTriangles();
 	}

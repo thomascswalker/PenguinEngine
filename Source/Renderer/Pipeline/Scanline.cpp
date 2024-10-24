@@ -55,6 +55,8 @@ bool ScanlineRHI::init(void* windowHandle)
 	m_viewData->width = width;
 	m_viewData->height = height;
 
+	m_painter = std::make_shared<Painter>(m_frameBuffer.get(), recti{ 0, 0, width, height });
+
 	return true;
 }
 
@@ -73,7 +75,10 @@ void ScanlineRHI::beginDraw()
 void ScanlineRHI::draw()
 {
 	drawRenderables();
-	drawUI();
+
+	Widget* root = WidgetManager::g_rootWidget;
+	WidgetManager::layoutWidgets(root, recti{ 0, 0, m_viewData->width, m_viewData->height });
+	drawUI(WidgetManager::g_rootWidget);
 }
 
 void ScanlineRHI::drawRenderables()
@@ -97,14 +102,16 @@ void ScanlineRHI::drawRenderables()
 	}
 }
 
-void ScanlineRHI::drawUI()
+void ScanlineRHI::drawUI(Widget* w)
 {
-
 	// Draw all UI elements
-	for (Widget* w : WidgetManager::g_widgets)
+	if (w)
 	{
-		w->paint();
-		drawTexture(w->getTexture(), w->getPosition());
+		w->paint(m_painter.get());
+		for (Widget* w : w->getChildren())
+		{
+			drawUI(w);
+		}
 	}
 }
 

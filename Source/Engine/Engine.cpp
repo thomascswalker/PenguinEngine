@@ -52,10 +52,27 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	}
 
 	/** TODO: BUTTON CREATION; MOVE THIS **/
-	auto button = WidgetManager::constructWidget<Button>();
-	button->resize({ 100, 50 });
-	button->reposition({ 50, 50 });
-	button->m_onClicked.addRaw(this, &Engine::loadMesh);
+	auto canvas = WidgetManager::constructWidget<Canvas>();
+	canvas->setLayoutMode(ELayoutMode::Horizontal);
+	WidgetManager::g_rootWidget = canvas;
+
+	auto panel = WidgetManager::constructWidget<Panel>();
+	canvas->addChild(panel);
+	panel->setLayoutMode(ELayoutMode::Vertical);
+	panel->setHorizontalResizeMode(EResizeMode::Fixed);
+	panel->setFixedWidth(100);
+
+	auto meshButton = WidgetManager::constructWidget<Button>();
+	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
+	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
+	meshButton->setFixedHeight(20);
+	panel->addChild(meshButton);
+
+	auto texButton = WidgetManager::constructWidget<Button>();
+	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
+	texButton->setVerticalResizeMode(EResizeMode::Fixed);
+	texButton->setFixedHeight(20);
+	panel->addChild(texButton);
 
 	LOG_INFO("Renderer constructed.")
 	return true;
@@ -150,12 +167,12 @@ void Engine::onKeyPressed(const EKey keyCode) const
 	}
 }
 
-void Engine::onLeftMouseDown(const MouseData& mouse) const
+void Engine::onLeftMouseDown(MouseData& mouse) const
 {
 	WidgetManager::updateWidgets(mouse);
 }
 
-void Engine::onLeftMouseUp(const MouseData& mouse) const
+void Engine::onLeftMouseUp(MouseData& mouse) const
 {
 	WidgetManager::updateWidgets(mouse);
 
@@ -164,18 +181,18 @@ void Engine::onLeftMouseUp(const MouseData& mouse) const
 	camera->m_deltaRotation.theta = 0.0f;
 }
 
-void Engine::onMiddleMouseUp(const MouseData& mouse) const
+void Engine::onMiddleMouseUp(MouseData& mouse) const
 {
 	Camera* camera = getViewportCamera();
 	camera->m_deltaTranslation = 0;
 }
 
-void Engine::onMouseMoved(const MouseData& mouse) const
+void Engine::onMouseMoved(MouseData& mouse) const
 {
 	WidgetManager::updateWidgets(mouse);
 }
 
-void Engine::onMouseMiddleScrolled(const MouseData& mouse) const
+void Engine::onMouseMiddleScrolled(MouseData& mouse) const
 {
 	Camera* camera = getViewportCamera();
 	camera->setFov(camera->m_fov + (mouse.middleDelta));

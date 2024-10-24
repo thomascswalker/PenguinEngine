@@ -63,11 +63,11 @@ public:
 		return 1000.0f / m_deltaTime;
 	}
 
-	void onMouseMiddleScrolled(const MouseData& mouse) const;
-	void onLeftMouseDown(const MouseData& mouse) const;
-	void onLeftMouseUp(const MouseData& mouse) const;
-	void onMiddleMouseUp(const MouseData& mouse) const;
-	void onMouseMoved(const MouseData& mouse) const;
+	void onMouseMiddleScrolled(MouseData& mouse) const;
+	void onLeftMouseDown(MouseData& mouse) const;
+	void onLeftMouseUp(MouseData& mouse) const;
+	void onMiddleMouseUp(MouseData& mouse) const;
+	void onMouseMoved(MouseData& mouse) const;
 
 	void onKeyPressed(EKey keyCode) const;
 
