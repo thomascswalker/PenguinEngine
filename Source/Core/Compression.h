@@ -33,7 +33,7 @@ namespace Compression
 		stream.zalloc    = &zalloc;
 		stream.zfree     = &zfree;
 		stream.opaque    = nullptr;
-		stream.next_in   = compressedBuffer->getPtr();
+		stream.next_in   = compressedBuffer->data();
 		stream.avail_in  = (uInt)compressedBuffer->size();
 		stream.next_out  = uncompressedData;
 		stream.avail_out = uncompressedSize;
@@ -69,7 +69,7 @@ namespace Compression
 		}
 		result = inflateEnd(&stream);
 
-		memcpy(uncompressedBuffer->getPtr(), uncompressedData, uncompressedSize);
+		memcpy(uncompressedBuffer->data(), uncompressedData, uncompressedSize);
 
 		return result;
 	}

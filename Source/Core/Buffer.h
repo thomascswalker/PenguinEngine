@@ -117,12 +117,12 @@ public:
 		return *this;
 	}
 
-	T* getPtr()
+	T* data()
 	{
 		return m_data;
 	}
 
-	T* getPtr() const
+	T* data() const
 	{
 		return m_data;
 	}
@@ -196,6 +196,11 @@ public:
 		m_data = nullptr;
 	}
 
+	bool isValid() const
+	{
+		return m_data != nullptr && m_size != 0;
+	}
+
 	T* begin()
 	{
 		return m_data;
@@ -246,7 +251,7 @@ struct StreamBuffer : std::streambuf
 {
 	explicit StreamBuffer(RawBuffer<uint8>& buffer)
 	{
-		auto begin = (int8*)buffer.getPtr();
+		auto begin = (int8*)buffer.data();
 		this->setg(begin, begin, begin + buffer.size());
 	}
 };

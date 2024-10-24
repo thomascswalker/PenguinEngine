@@ -174,12 +174,12 @@ int32 TextureImporter::pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, si
 {
 	// Raw pointer to the final PNG data which is pushed to the Texture object
 	// This is offset by the size of the previous IDAT chunk, in case there's multiple chunks.
-	uint8* out     = png->data.getPtr() + offset;
+	uint8* out     = png->data.data() + offset;
 	size_t outSize = png->data.size();
 
 	// Raw pointer to the uncompressed image data. This pointer is what is incremented and accessed
 	// to retrieve the current working byte.
-	uint8* in = buffer->getPtr();
+	uint8* in = buffer->data();
 
 	// Metadata local vars
 	PngMetadata* metadata = &png->metadata;
@@ -533,7 +533,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	for (int32 row = 0; row < (int32)png.metadata.height; row++)
 	{
 		size_t offset = row * bpr;
-		memcpy(tmp.getPtr() + offset, data.getPtr() + offset, bpr);
+		memcpy(tmp.data() + offset, data.data() + offset, bpr);
 	}
 
 	texture->resize({(int32)png.metadata.width, (int32)png.metadata.height});
