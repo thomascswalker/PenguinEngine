@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -19,14 +20,14 @@ inline char							 g_alphabet[91] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnop
 
 namespace TTF
 {
-	enum class ScalarType : uint8
+	enum class EScalarType : uint8
 	{
 		True = 0x74727565,
 		OpenType = 0x4F54544F,
 		Typ1 = 0X74797031
 	};
 
-	enum class TableType : uint8
+	enum class ETableType : uint8
 	{
 		CMAP,
 		GLYF,
@@ -47,7 +48,13 @@ namespace TTF
 		PREP
 	};
 
-	enum class CMAPPlatform : uint8
+#define SET_TABLE_TYPE(name)       \
+	if (tag == #name)              \
+	{                              \
+		t.type = ETableType::name; \
+	}
+
+	enum class ECMAPPlatform : uint8
 	{
 		Unicode = 0,
 		Macintosh = 1,
@@ -55,7 +62,7 @@ namespace TTF
 		Microsoft = 3
 	};
 
-	enum class WindowsEncoding : uint8
+	enum class EWindowsEncoding : uint8
 	{
 		Symbol,
 		UnicodeBMP,
@@ -77,10 +84,10 @@ namespace TTF
 
 	struct Table
 	{
-		std::string type;
-		uint32		checkSum;
-		uint32		offset;
-		uint32		length;
+		ETableType type;
+		uint32	   checkSum;
+		uint32	   offset;
+		uint32	   length;
 	};
 
 	struct CMAPEncodingSubTable
@@ -121,11 +128,44 @@ namespace TTF
 		std::vector<CMAPEncodingSubTable> subTables;
 	};
 
+	struct HEAD
+	{
+	};
+
+	struct LOCA
+	{
+		int16 version[2];
+		int16 fontRevision[2];
+
+		uint32 checkSumAdjustment;
+		uint32 magicNumber = 0x5F0F3CF5;
+
+		uint16 flags;
+		uint16 unitsPerEm;
+
+		int64 created;
+		int64 modified;
+
+		int16 xMin;
+		int16 yMin;
+		int16 xMax;
+		int16 yMax;
+
+		uint16 macStyle;
+		uint16 lowestRecPPEM;
+		int16  fontDirectionHint;
+		int16  indexToLocFormat;
+		int16  glyphDataFormat;
+	};
+
 	struct FontDirectory
 	{
 		OffsetSubtable				 offsetSubtable;
 		std::vector<Table>			 tables;
 		std::unique_ptr<CMAPFormat4> format = nullptr;
+		std::unique_ptr<CMAP>		 cmap = nullptr;
+		std::unique_ptr<HEAD>		 head = nullptr;
+		std::unique_ptr<LOCA>		 loca = nullptr;
 		std::map<char, int32>		 glyphIndexes;
 	};
 
@@ -138,20 +178,20 @@ namespace TTF
 		offsetSubtable->rangeShift = reader.readUInt16();
 	}
 
-	inline void readCMAP(ByteReader& reader, int32 offset, CMAP* cmap)
+	inline void readCMAP(ByteReader& reader, int32 offset, CMAP* format)
 	{
 		reader.seek(offset, ESeekDir::Beginning);
 
-		cmap->version = reader.readUInt16();
-		cmap->subTableCount = reader.readUInt16();
+		format->version = reader.readUInt16();
+		format->subTableCount = reader.readUInt16();
 
-		for (int32 i = 0; i < cmap->subTableCount; i++)
+		for (int32 i = 0; i < format->subTableCount; i++)
 		{
 			CMAPEncodingSubTable encodingSubTable;
 			encodingSubTable.platformId = reader.readUInt16();
 			encodingSubTable.platformSpecificId = reader.readUInt16();
 			encodingSubTable.offset = reader.readUInt32();
-			cmap->subTables.emplace_back(encodingSubTable);
+			format->subTables.emplace_back(encodingSubTable);
 		}
 	}
 
@@ -162,11 +202,30 @@ namespace TTF
 			Table t;
 
 			// Read the tag into a string.
-			uint8 tag[4]{};
-			t.type.push_back(reader.readUInt8());
-			t.type.push_back(reader.readUInt8());
-			t.type.push_back(reader.readUInt8());
-			t.type.push_back(reader.readUInt8());
+			std::string tag;
+			tag.push_back(reader.readUInt8());
+			tag.push_back(reader.readUInt8());
+			tag.push_back(reader.readUInt8());
+			tag.push_back(reader.readUInt8());
+
+			// Convert to uppercase
+			Strings::toUpper(tag);
+
+			SET_TABLE_TYPE(CMAP);
+			SET_TABLE_TYPE(GLYF);
+			SET_TABLE_TYPE(HEAD);
+			SET_TABLE_TYPE(HHEA);
+			SET_TABLE_TYPE(HMTX);
+			SET_TABLE_TYPE(LOCA);
+			SET_TABLE_TYPE(MAXP);
+			SET_TABLE_TYPE(NAME);
+			SET_TABLE_TYPE(POST);
+			SET_TABLE_TYPE(CVT);
+			SET_TABLE_TYPE(FPGM);
+			SET_TABLE_TYPE(HDMX);
+			SET_TABLE_TYPE(KERN);
+			SET_TABLE_TYPE(OS2);
+			SET_TABLE_TYPE(PREP);
 
 			t.checkSum = reader.readUInt32();
 			t.offset = reader.readUInt32();
@@ -215,38 +274,41 @@ namespace TTF
 	{
 		for (const auto& t : fontDirectory->tables)
 		{
-			if (t.type == "cmap")
+			switch (t.type)
 			{
-				CMAP cmap;
-				readCMAP(reader, t.offset, &cmap);
-
-				// Go to the offset of this CMAP subtable
-				reader.seek(t.offset + cmap.subTables[0].offset, ESeekDir::Beginning);
-
-				auto fmt = reader.readUInt16();
-				auto length = reader.readUInt16();
-				auto language = reader.readUInt16();
-
-				switch (fmt)
+				case ETableType::CMAP:
 				{
-					case 4:
+					CMAP format;
+					readCMAP(reader, t.offset, &format);
+
+					// Go to the offset of this CMAP subtable
+					reader.seek(t.offset + format.subTables[0].offset, ESeekDir::Beginning);
+
+					auto fmt = reader.readUInt16();
+					auto length = reader.readUInt16();
+					auto language = reader.readUInt16();
+
+					switch (fmt)
 					{
-						fontDirectory->format = std::make_unique<CMAPFormat4>();
-						
-						auto f = fontDirectory->format.get();
-						f->format = fmt;
-						f->length = length;
-						f->language = language;
-						readFormat4(reader, f);
-						break;
+						case 4:
+						{
+							fontDirectory->format = std::make_unique<CMAPFormat4>();
+
+							auto f = fontDirectory->format.get();
+							f->format = fmt;
+							f->length = length;
+							f->language = language;
+							readFormat4(reader, f);
+							break;
+						}
+						default:
+						{
+							LOG_ERROR("Format {} not implemented.", fmt)
+						}
 					}
-					default:
-					{
-						LOG_ERROR("Format {} not implemented.", fmt)
-					}
+					break;
 				}
 			}
-
 		}
 		return true;
 	}
@@ -303,12 +365,6 @@ namespace TTF
 
 		int32 tableSize = fontDirectory->offsetSubtable.tableCount;
 		readTableDirectory(reader, fontDirectory->tables, tableSize);
-#ifdef _DEBUG
-		for (const auto& t : fontDirectory->tables)
-		{
-			LOG_INFO("{}\t\t{}\t\t{}", t.type, t.length, t.offset);
-		}
-#endif
 		readTables(reader, fontDirectory);
 
 		if (!fontDirectory->format)

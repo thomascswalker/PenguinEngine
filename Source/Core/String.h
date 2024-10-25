@@ -1,6 +1,7 @@
 ﻿#pragma once
 #pragma warning(disable : 4244)
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -96,11 +97,36 @@ namespace Strings
 	 */
 	inline std::wstring toWString(const std::string& str)
 	{
-		return {str.begin(), str.end()};
+		return { str.begin(), str.end() };
 	}
 
 	inline std::string toString(const std::wstring& wstr)
 	{
-		return {wstr.begin(), wstr.end()};
+		return { wstr.begin(), wstr.end() };
 	}
+
+	inline std::string toLower(const std::string& str)
+	{
+		std::string out;
+		std::transform(str.begin(), str.end(), out.begin(), ::tolower);
+		return out;
+	}
+
+	inline void toLower(std::string& str)
+	{
+		std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	}
+
+	inline std::string toUpper(const std::string& str)
+	{
+		std::string out;
+		std::transform(str.begin(), str.end(), out.begin(), ::toupper);
+		return out;
+	}
+
+	inline void toUpper(std::string& str)
+	{
+		std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+	}
+
 } // namespace Strings
