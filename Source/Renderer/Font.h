@@ -6,11 +6,13 @@
 #include <string>
 #include <vector>
 
+#include "Core/Bitmask.h"
 #include "Core/Buffer.h"
 #include "Core/Types.h"
 #include "Core/IO.h"
 
 /** https://handmade.network/forums/articles/t/7330-implementing_a_font_reader_and_rasterizer_from_scratch%252C_part_1__ttf_font_reader. **/
+/** https://handmade.network/forums/wip/t/7610-reading_ttf_files_and_rasterizing_them_using_a_handmade_approach%252C_part_2__rasterization **/
 
 struct Font;
 class FontDatabase;
@@ -18,17 +20,31 @@ class FontDatabase;
 inline std::unique_ptr<FontDatabase> g_fontDatabase = std::make_unique<FontDatabase>();
 inline char							 g_alphabet[91] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()_+";
 
-struct Fixed
+typedef union
 {
-	union
-	{
-		uint16 s[2];
-		uint32 i;
-	};
-};
+	uint16 s[2];
+	uint32 i;
+} Fixed;
 using FWord = int16;
 using UFWord = uint16;
 using LongDateTime = int64;
+
+enum class EGlyphFlag : uint8
+{
+	OnCurve, // This point is on the curve.
+
+	XShort, // The corresponding byte is 1 byte, otherwise 2.
+	YShort, // The corresponding byte is 1 byte, otherwise 2.
+
+	Repeat, // The next byte specifies how many times this flag is repeated.
+
+	XShortPos,
+	YShortPos,
+
+	Reserved1, // Reserved, not set in TrueType
+	Reserved2, // Reserved, not set in TrueType
+};
+DEFINE_BITMASK_OPERATORS(EGlyphFlag);
 
 namespace TTF
 {
@@ -169,19 +185,34 @@ namespace TTF
 		std::map<char, int32> glyphOffsets;
 	};
 
+	struct GlyphOutline
+	{
+		uint16				contourCount;
+		uint16				xMin;
+		uint16				yMin;
+		uint16				xMax;
+		uint16				yMax;
+		uint16				instructionLength;
+		std::vector<uint8>	instructions;
+		std::vector<uint8>	flags;
+		std::vector<int16>	xCoordinates;
+		std::vector<int16>	yCoordinates;
+		std::vector<uint16> contourEndPoints;
+	};
+
 	struct GLYF
 	{
 	};
 
 	struct FontDirectory
 	{
-		OffsetSubtable			 offsetSubtable;
-		std::vector<Table>		 tables;
-		std::unique_ptr<Format4> format = nullptr;
-		std::unique_ptr<CMAP>	 cmap = nullptr;
-		std::unique_ptr<HEAD>	 head = nullptr;
-		std::unique_ptr<LOCA>	 loca = nullptr;
-		std::unique_ptr<GLYF>	 glyf = nullptr;
+		OffsetSubtable				offsetSubtable;
+		std::map<ETableType, Table> tables;
+		std::unique_ptr<Format4>	format = nullptr;
+		std::unique_ptr<CMAP>		cmap = nullptr;
+		std::unique_ptr<HEAD>		head = nullptr;
+		std::unique_ptr<LOCA>		loca = nullptr;
+		std::unique_ptr<GLYF>		glyf = nullptr;
 	};
 
 	inline int32 getGlyphIndex(uint16 codePoint, FontDirectory* fontDirectory)
@@ -237,6 +268,24 @@ namespace TTF
 		return bitSize32 ? reader.readUInt32() : reader.readUInt16() * 2;
 	}
 
+	inline GlyphOutline getGlyphOutline(ByteReader& reader, FontDirectory* directory, int32 glyphOffset)
+	{
+		reader.seek(glyphOffset); // Seek to the offset of this glyph
+
+		GlyphOutline outline{};
+		outline.contourCount = reader.readUInt16();
+		outline.xMin = reader.readUInt16();
+		outline.yMin = reader.readUInt16();
+		outline.xMax = reader.readUInt16();
+		outline.yMax = reader.readUInt16();
+
+		for (int32 i = 0; i < outline.contourCount; i++)
+		{
+			outline.contourEndPoints.emplace_back(reader.readUInt16());
+		}
+		return outline;
+	}
+
 	inline void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable)
 	{
 		offsetSubtable->scalarType = reader.readUInt32();
@@ -246,9 +295,45 @@ namespace TTF
 		offsetSubtable->rangeShift = reader.readUInt16();
 	}
 
-	inline void readCMAP(ByteReader& reader, FontDirectory* fontDirectory)
+	inline void readFormat4(ByteReader& reader, Format4* f)
+	{
+		int32 start = reader.getPos() - 6; // Start position is -3x u16
+
+		f->segCountX2 = reader.readUInt16();
+		f->searchRange = reader.readUInt16();
+		f->entrySelector = reader.readUInt16();
+		f->rangeShift = reader.readUInt16();
+
+		int32 segmentCount = f->segCountX2 / 2;
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->endCode.emplace_back(reader.readUInt16());
+		}
+		reader.seek(2);
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->startCode.emplace_back(reader.readUInt16());
+		}
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->idDelta.emplace_back(reader.readUInt16());
+		}
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->idRangeOffset.emplace_back(reader.readUInt16());
+		}
+		int32 end = reader.getPos();
+		int32 remaining = f->length - (end - start);
+		for (int32 i = 0; i < remaining / 2; i++)
+		{
+			f->glyphIndexArray.emplace_back(reader.readUInt16());
+		}
+	}
+
+	inline void readCMAP(ByteReader& reader, FontDirectory* fontDirectory, int32 initialOffset)
 	{
 		auto cmap = fontDirectory->cmap.get();
+		reader.seek(initialOffset, ESeekDir::Beginning);
 		cmap->version = reader.readUInt16();
 		cmap->subTableCount = reader.readUInt16();
 
@@ -259,6 +344,33 @@ namespace TTF
 			encodingSubTable.platformSpecificId = reader.readUInt16();
 			encodingSubTable.offset = reader.readUInt32();
 			cmap->subTables.emplace_back(encodingSubTable);
+		}
+
+		// Go to the offset of this CMAP subtable
+		reader.seek(initialOffset + fontDirectory->cmap->subTables[0].offset, ESeekDir::Beginning);
+
+		auto fmt = reader.readUInt16();
+		auto length = reader.readUInt16();
+		auto language = reader.readUInt16();
+
+		switch (fmt)
+		{
+			case 4:
+			{
+				fontDirectory->format = std::make_unique<Format4>();
+
+				auto f = fontDirectory->format.get();
+				f->format = fmt;
+				f->length = length;
+				f->language = language;
+				readFormat4(reader, f);
+				break;
+			}
+			default:
+			{
+				LOG_ERROR("Format {} not implemented.", fmt)
+				break;
+			}
 		}
 	}
 
@@ -309,11 +421,17 @@ namespace TTF
 		head->glyphDataFormat = reader.readInt16();
 	}
 
-	inline void readGLYF(ByteReader& reader, FontDirectory* fontDirectory)
+	inline void readGLYF(ByteReader& reader, FontDirectory* fontDirectory, int32 initialOffset)
 	{
+
+		for (const auto& [k, v] : fontDirectory->loca->glyphOffsets)
+		{
+			reader.seek(initialOffset, ESeekDir::Beginning); // Reset to beginning of the GLYF table
+			GlyphOutline outline = getGlyphOutline(reader, fontDirectory, v);
+		}
 	}
 
-	inline void readTableDirectory(ByteReader& reader, std::vector<Table>& tables, int32 tableSize)
+	inline void readTableDirectory(ByteReader& reader, std::map<ETableType, Table>& tables, int32 tableSize)
 	{
 		for (int32 i = 0; i < tableSize; i++)
 		{
@@ -325,6 +443,7 @@ namespace TTF
 			// Convert to uppercase
 			Strings::toUpper(tag);
 
+			// Necessary because no reflection
 			SET_TABLE_TYPE(CMAP);
 			SET_TABLE_TYPE(GLYF);
 			SET_TABLE_TYPE(HEAD);
@@ -345,116 +464,39 @@ namespace TTF
 			t.offset = reader.readUInt32();
 			t.length = reader.readUInt32();
 
-			tables.emplace_back(t);
-		}
-	}
-
-	inline void readFormat4(ByteReader& reader, Format4* f)
-	{
-		int32 start = reader.getPos() - 6; // Start position is -3x u16
-
-		f->segCountX2 = reader.readUInt16();
-		f->searchRange = reader.readUInt16();
-		f->entrySelector = reader.readUInt16();
-		f->rangeShift = reader.readUInt16();
-
-		int32 segmentCount = f->segCountX2 / 2;
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->endCode.emplace_back(reader.readUInt16());
-		}
-		reader.seek(2);
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->startCode.emplace_back(reader.readUInt16());
-		}
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->idDelta.emplace_back(reader.readUInt16());
-		}
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->idRangeOffset.emplace_back(reader.readUInt16());
-		}
-		int32 end = reader.getPos();
-		int32 remaining = f->length - (end - start);
-		for (int32 i = 0; i < remaining / 2; i++)
-		{
-			f->glyphIndexArray.emplace_back(reader.readUInt16());
+			if (tables.find(t.type) != tables.end())
+			{
+				// Skip duplicates
+				continue;
+			}
+			tables[t.type] = t;
 		}
 	}
 
 	inline bool readTables(ByteReader& reader, FontDirectory* fontDirectory)
 	{
-		for (const auto& t : fontDirectory->tables)
-		{
-			switch (t.type)
-			{
-				default:
-				{
-					continue;
-				}
-				case ETableType::CMAP:
-				{
-					// TODO: For now, ignore duplicate CMAP tables
-					if (fontDirectory->cmap != nullptr)
-					{
-						continue;
-					}
-					reader.seek(t.offset, ESeekDir::Beginning);
-					fontDirectory->cmap = std::make_unique<CMAP>();
-					readCMAP(reader, fontDirectory);
 
-					// Go to the offset of this CMAP subtable
-					reader.seek(t.offset + fontDirectory->cmap->subTables[0].offset, ESeekDir::Beginning);
+		// Read HEAD
+		auto headTable = fontDirectory->tables[ETableType::HEAD];
+		fontDirectory->head = std::make_unique<HEAD>();
+		reader.seek(headTable.offset, ESeekDir::Beginning);
+		readHEAD(reader, fontDirectory);
 
-					auto fmt = reader.readUInt16();
-					auto length = reader.readUInt16();
-					auto language = reader.readUInt16();
+		//  Read CMAP
+		auto cmapTable = fontDirectory->tables[ETableType::CMAP];
+		fontDirectory->cmap = std::make_unique<CMAP>();
+		readCMAP(reader, fontDirectory, cmapTable.offset);
 
-					switch (fmt)
-					{
-						case 4:
-						{
-							fontDirectory->format = std::make_unique<Format4>();
+		// Read LOCA
+		auto locaTable = fontDirectory->tables[ETableType::LOCA];
+		fontDirectory->loca = std::make_unique<LOCA>();
+		readLOCA(reader, fontDirectory, locaTable.offset);
 
-							auto f = fontDirectory->format.get();
-							f->format = fmt;
-							f->length = length;
-							f->language = language;
-							readFormat4(reader, f);
-							break;
-						}
-						default:
-						{
-							LOG_ERROR("Format {} not implemented.", fmt)
-							break;
-						}
-					}
-					break;
-				}
-				case ETableType::LOCA:
-				{
-					fontDirectory->loca = std::make_unique<LOCA>();
-					readLOCA(reader, fontDirectory, t.offset);
-					break;
-				}
-				case ETableType::HEAD:
-				{
-					reader.seek(t.offset, ESeekDir::Beginning);
-					fontDirectory->head = std::make_unique<HEAD>();
-					readHEAD(reader, fontDirectory);
-					break;
-				}
-				case ETableType::GLYF:
-				{
-					reader.seek(t.offset, ESeekDir::Beginning);
-					fontDirectory->glyf = std::make_unique<GLYF>();
-					readGLYF(reader, fontDirectory);
-					break;
-				}
-			}
-		}
+		// Read GLYF
+		auto glyfTable = fontDirectory->tables[ETableType::GLYF];
+		fontDirectory->glyf = std::make_unique<GLYF>();
+		readGLYF(reader, fontDirectory, glyfTable.offset);
+
 		return true;
 	}
 
