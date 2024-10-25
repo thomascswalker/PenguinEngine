@@ -15,7 +15,7 @@ struct Font;
 class FontDatabase;
 
 inline std::unique_ptr<FontDatabase> g_fontDatabase = std::make_unique<FontDatabase>();
-inline char							 g_alphabet[89] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()";
+inline char							 g_alphabet[91] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()_+";
 
 namespace TTF
 {
@@ -129,14 +129,6 @@ namespace TTF
 		std::map<char, int32>		 glyphIndexes;
 	};
 
-	inline void printTableDirectory(std::vector<Table>& tables, int32 tableSize)
-	{
-		for (const auto& t : tables)
-		{
-			LOG_INFO("{}\t\t{}\t\t{}", t.type, t.length, t.offset);
-		}
-	}
-
 	inline void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable)
 	{
 		offsetSubtable->scalarType = reader.readUInt32();
@@ -184,7 +176,42 @@ namespace TTF
 		}
 	}
 
-	inline void readTables(ByteReader& reader, FontDirectory* fontDirectory)
+	inline void readFormat4(ByteReader& reader, CMAPFormat4* f)
+	{
+		int32 start = reader.getPos() - 6; // Start position is -3x u16
+
+		f->segCountX2 = reader.readUInt16();
+		f->searchRange = reader.readUInt16();
+		f->entrySelector = reader.readUInt16();
+		f->rangeShift = reader.readUInt16();
+
+		int32 segmentCount = f->segCountX2 / 2;
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->endCode.emplace_back(reader.readUInt16());
+		}
+		reader.seek(1);
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->startCode.emplace_back(reader.readUInt16());
+		}
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->idDelta.emplace_back(reader.readUInt16());
+		}
+		for (int32 i = 0; i < segmentCount; i++)
+		{
+			f->idRangeOffset.emplace_back(reader.readUInt16());
+		}
+		int32 end = reader.getPos();
+		int32 remaining = f->length - (end - start);
+		for (int32 i = 0; i < remaining / 2; i++)
+		{
+			f->glyphIndexArray.emplace_back(reader.readUInt16());
+		}
+	}
+
+	inline bool readTables(ByteReader& reader, FontDirectory* fontDirectory)
 	{
 		for (const auto& t : fontDirectory->tables)
 		{
@@ -195,7 +222,6 @@ namespace TTF
 
 				// Go to the offset of this CMAP subtable
 				reader.seek(t.offset + cmap.subTables[0].offset, ESeekDir::Beginning);
-				int32 start = reader.getPos();
 
 				auto fmt = reader.readUInt16();
 				auto length = reader.readUInt16();
@@ -206,45 +232,23 @@ namespace TTF
 					case 4:
 					{
 						fontDirectory->format = std::make_unique<CMAPFormat4>();
+						
 						auto f = fontDirectory->format.get();
 						f->format = fmt;
 						f->length = length;
 						f->language = language;
-						f->segCountX2 = reader.readUInt16();
-						f->searchRange = reader.readUInt16();
-						f->entrySelector = reader.readUInt16();
-						f->rangeShift = reader.readUInt16();
-
-						int32 segmentCount = f->segCountX2 / 2;
-						for (int32 i = 0; i < segmentCount; i++)
-						{
-							f->endCode.emplace_back(reader.readUInt16());
-						}
-						reader.seek(1);
-						for (int32 i = 0; i < segmentCount; i++)
-						{
-							f->startCode.emplace_back(reader.readUInt16());
-						}
-						for (int32 i = 0; i < segmentCount; i++)
-						{
-							f->idDelta.emplace_back(reader.readUInt16());
-						}
-						for (int32 i = 0; i < segmentCount; i++)
-						{
-							f->idRangeOffset.emplace_back(reader.readUInt16());
-						}
-						int32 end = reader.getPos();
-						int32 remaining = length - (end - start);
-						for (int32 i = 0; i < remaining / 2; i++)
-						{
-							f->glyphIndexArray.emplace_back(reader.readUInt16());
-						}
+						readFormat4(reader, f);
+						break;
+					}
+					default:
+					{
+						LOG_ERROR("Format {} not implemented.", fmt)
 					}
 				}
-
-				break;
 			}
+
 		}
+		return true;
 	}
 
 	inline int32 getGlyphIndex(uint16 codePoint, CMAPFormat4* f)
@@ -280,13 +284,13 @@ namespace TTF
 				{
 					uint16 idDelta = f->idDelta[index];
 					uint16 glyphIndex = codePoint - f->startCode[index];
-					uint16 result = f->glyphIndexArray[glyphIndex] + f->idDelta[index];
+					uint16 result = f->glyphIndexArray[glyphIndex];
 
 					return result;
 				}
 				else
 				{
-					return codePoint + f->idDelta[index];
+					return codePoint;
 				}
 			}
 				return 0;
@@ -300,14 +304,26 @@ namespace TTF
 		int32 tableSize = fontDirectory->offsetSubtable.tableCount;
 		readTableDirectory(reader, fontDirectory->tables, tableSize);
 #ifdef _DEBUG
-		printTableDirectory(fontDirectory->tables, tableSize);
+		for (const auto& t : fontDirectory->tables)
+		{
+			LOG_INFO("{}\t\t{}\t\t{}", t.type, t.length, t.offset);
+		}
 #endif
 		readTables(reader, fontDirectory);
+
+		if (!fontDirectory->format)
+		{
+			LOG_ERROR("Failed to read tables on font.")
+			return;
+		}
 
 		for (auto c : g_alphabet)
 		{
 			int32 r = getGlyphIndex(c, fontDirectory->format.get());
 			fontDirectory->glyphIndexes[c] = r;
+#ifdef _DEBUG
+			LOG_INFO("{} = {}", c, r)
+#endif
 		}
 	}
 } // namespace TTF
@@ -316,8 +332,6 @@ using namespace TTF;
 
 class FontDatabase
 {
-	std::vector<Font> m_fonts;
-
 	std::string getFontDirectory()
 	{
 #if defined(_WIN32) || defined(_WIN64)
@@ -334,12 +348,6 @@ class FontDatabase
 		ByteReader	  buffer(data, data.size(), std::endian::big);
 		FontDirectory fontDirectory;
 		readFontDirectory(buffer, &fontDirectory);
-#ifdef _DEBUG
-		for (const auto& [k, v] : fontDirectory.glyphIndexes)
-		{
-			LOG_INFO("{} = {}", k, v)
-		}
-#endif
 	}
 
 	void loadFonts()
@@ -363,7 +371,10 @@ class FontDatabase
 			}
 
 			// TODO: Remove this hardcoded path
-			path = "C:\\Users\\thoma\\Desktop\\Envy Code R.ttf";
+			if (path.find("arial") == std::string::npos)
+			{
+				return;
+			}
 			std::string strBuffer;
 			if (!IO::readFile(path, strBuffer))
 			{
