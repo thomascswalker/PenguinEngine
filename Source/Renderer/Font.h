@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -14,7 +15,7 @@ struct Font;
 class FontDatabase;
 
 inline std::unique_ptr<FontDatabase> g_fontDatabase = std::make_unique<FontDatabase>();
-
+inline char							 g_alphabet[89] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()";
 struct Font
 {
 	std::string family;
@@ -125,9 +126,10 @@ struct TTFCMAP
 
 struct FontDirectory
 {
-	OffsetSubtable				   offsetSubtable;
-	std::vector<TTFTable>		   tables;
+	OffsetSubtable					offsetSubtable;
+	std::vector<TTFTable>			tables;
 	std::unique_ptr<TTFCMAPFormat4> format = nullptr;
+	std::map<char, int32>			glyphIndexes;
 };
 
 namespace TTF
@@ -257,7 +259,7 @@ namespace TTF
 		{
 			case 4:
 			{
-				uint16*			ptr = nullptr;
+				uint16* ptr = nullptr;
 
 				for (int32 i = 0; i < f->segCountX2 / 2; i++)
 				{
@@ -275,7 +277,8 @@ namespace TTF
 
 				if (f->startCode[index] >= codePoint)
 				{
-					return 0;;
+					return 0;
+					;
 				}
 
 				if (f->idRangeOffset[index] != 0)
@@ -283,7 +286,7 @@ namespace TTF
 					uint16 idDelta = f->idDelta[index];
 					uint16 glyphIndex = codePoint - f->startCode[index];
 					uint16 result = f->glyphIndexArray[glyphIndex] + f->idDelta[index];
-						
+
 					return result;
 				}
 				else
@@ -305,11 +308,11 @@ namespace TTF
 		printTableDirectory(fontDirectory->tables, tableSize);
 #endif
 		readTables(reader, fontDirectory);
-		char alphabet[27] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		for (auto c : alphabet)
+
+		for (auto c : g_alphabet)
 		{
-			auto r = getGlyphIndex(c, fontDirectory->format.get());
-			LOG_INFO("{} = {}", c, r)
+			int32 r = getGlyphIndex(c, fontDirectory->format.get());
+			fontDirectory->glyphIndexes[c] = r;
 		}
 	}
 } // namespace TTF
@@ -334,6 +337,12 @@ class FontDatabase
 		ByteReader	  buffer(data, data.size(), std::endian::big);
 		FontDirectory fontDirectory;
 		TTF::readFontDirectory(buffer, &fontDirectory);
+#ifdef _DEBUG
+		for (const auto& [k, v] : fontDirectory.glyphIndexes)
+		{
+			LOG_INFO("{} = {}", k, v)
+		}
+#endif
 	}
 
 	void loadFonts()
@@ -345,7 +354,6 @@ class FontDatabase
 			return;
 		}
 
-		
 		for (const auto& entry : std::filesystem::directory_iterator(fontDir))
 		{
 			int8*		data = nullptr;
