@@ -247,36 +247,6 @@ public:
 	}
 };
 
-struct StreamBuffer : std::streambuf
-{
-protected:
-	pos_type seekoff(off_type	off,
-		std::ios_base::seekdir	dir,
-		std::ios_base::openmode which = std::ios_base::in)
-	{
-		if (dir == std::ios_base::cur)
-		{
-			gbump(off);
-		}
-		else if (dir == std::ios_base::end)
-		{
-			setg(eback(), egptr() + off, egptr());
-		}
-		else if (dir == std::ios_base::beg)
-		{
-			setg(eback(), eback() + off, egptr());
-		}
-		return gptr() - eback();
-	}
-
-public:
-	explicit StreamBuffer(RawBuffer<uint8>& buffer)
-	{
-		auto begin = (int8*)buffer.data();
-		this->setg(begin, begin, begin + buffer.size());
-	}
-};
-
 enum class ESeekDir : int32
 {
 	Beginning = std::ios_base::beg,
@@ -286,15 +256,13 @@ enum class ESeekDir : int32
 
 class ByteReader
 {
+	std::unique_ptr<RawBuffer<uint8>> m_buffer;
 	/* Position of the cursor. */
 	int32 m_pos = 0;
 	/* Size of the entire buffer. */
 	size_t m_size = 0;
 	/* Endian type this buffer reads bytes by. */
 	std::endian m_endian = std::endian::native;
-
-	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
-	std::unique_ptr<std::istream> m_stream = nullptr;
 
 	// Bit reading
 	uint8 m_bitCount = 0;
@@ -309,26 +277,22 @@ class ByteReader
 		// Reset the bit position
 		m_bitPos = 0;
 
-		// Read compressedSize
-		T value;
-		m_stream->read(reinterpret_cast<int8*>(&value), (int64)size);
-		m_pos += (int32)size;
-		if (std::endian::native != m_endian)
-		{
-			return swapByteOrder(value);
-		}
-		return value;
-	}
+		// Get pointer to the current offset
+		auto ptr = m_buffer->data() + m_pos;
 
-	template <typename T>
-	T peek(const size_t size)
-	{
-		T value;
-		m_stream->peek(reinterpret_cast<int8*>(&value), (int64)size);
+		// Reinterpret cast pointer to type T
+		T value = *reinterpret_cast<T*>(ptr);
+
+		// Increment the position by the size of type T
+		m_pos += (int32)size;
+
+		// If this buffer is using the non-native endian format, swap the byte order
 		if (std::endian::native != m_endian)
 		{
 			return swapByteOrder(value);
 		}
+
+		// Return the value
 		return value;
 	}
 
@@ -340,9 +304,7 @@ public:
 		: m_size(inSize)
 		, m_endian(endian)
 	{
-		RawBuffer buffer((uint8*)inString.data(), inSize);
-		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_buffer = std::make_unique<RawBuffer<uint8>>((uint8*)inString.data(), inSize);
 	}
 
 	explicit ByteReader(uint8* inBuffer, const size_t inSize,
@@ -350,9 +312,7 @@ public:
 		: m_size(inSize)
 		, m_endian(endian)
 	{
-		RawBuffer buffer(inBuffer, inSize);
-		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_buffer = std::make_unique<RawBuffer<uint8>>(inBuffer, inSize);
 	}
 
 	explicit ByteReader(RawBuffer<uint8>& inBuffer,
@@ -360,8 +320,7 @@ public:
 		: m_size(inBuffer.size())
 		, m_endian(endian)
 	{
-		m_streamBuffer = std::make_unique<StreamBuffer>(inBuffer);
-		m_stream = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_buffer = std::make_unique<RawBuffer<uint8>>(inBuffer);
 	}
 
 	~ByteReader() = default;
@@ -421,6 +380,16 @@ public:
 		return read<uint64>(8);
 	}
 
+	std::string readString(size_t size)
+	{
+		std::string out;
+		for (int32 i = 0; i < size; i++)
+		{
+			out.push_back(readUInt8());
+		}
+		return out;
+	}
+
 	void fillBits()
 	{
 		while (m_bitCount <= 24)
@@ -448,9 +417,18 @@ public:
 
 	uint32 seek(const int32 offset, ESeekDir seekDir = ESeekDir::Current)
 	{
-		m_pos += offset;
-		m_stream->seekg(offset, (int32)seekDir);
-		m_streamBuffer->pubseekoff(offset, (int32)seekDir, std::ios_base::binary);
+		switch (seekDir)
+		{
+			case ESeekDir::Beginning:
+				m_pos = offset;
+				break;
+			case ESeekDir::Current:
+				m_pos += offset;
+				break;
+			case ESeekDir::End:
+				m_pos = m_size - offset;
+				break;
+		}
 		return m_pos;
 	}
 };

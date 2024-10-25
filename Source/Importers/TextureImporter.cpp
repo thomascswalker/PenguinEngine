@@ -139,18 +139,8 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	auto compressedSize = reader->readUInt32();
 	chunk->compressedBuffer.resize(compressedSize);
 
-	// Read each char of the name
-	int8 name0 = reader->readInt8();
-	int8 name1 = reader->readInt8();
-	int8 name2 = reader->readInt8();
-	int8 name3 = reader->readInt8();
-
 	// Determine the chunk type
-	std::string name;
-	name.push_back(name0);
-	name.push_back(name1);
-	name.push_back(name2);
-	name.push_back(name3);
+	std::string name = reader->readString(4);
 	chunk->type = g_pngChunkTypeMap[name];
 
 	// Allocate the memory for this chunk's uncompressedData, given the
