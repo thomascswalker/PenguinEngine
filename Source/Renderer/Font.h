@@ -16,125 +16,120 @@ class FontDatabase;
 
 inline std::unique_ptr<FontDatabase> g_fontDatabase = std::make_unique<FontDatabase>();
 inline char							 g_alphabet[89] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()";
-struct Font
-{
-	std::string family;
-	std::string name;
-};
-
-enum class TTFScalarType : uint8
-{
-	True = 0x74727565,
-	OpenType = 0x4F54544F,
-	Typ1 = 0X74797031
-};
-
-enum class TTFTableType : uint8
-{
-	CMAP,
-	GLYF,
-	HEAD,
-	HHEA,
-	HMTX,
-	LOCA,
-	MAXP,
-	NAME,
-	POST,
-
-	// Optional
-	CVT,
-	FPGM,
-	HDMX,
-	KERN,
-	OS2,
-	PREP
-};
-
-enum class TTFCMAPPlatform : uint8
-{
-	Unicode = 0,
-	Macintosh = 1,
-	Reserved = 2,
-	Microsoft = 3
-};
-
-enum class TTFWindowsEncoding : uint8
-{
-	Symbol,
-	UnicodeBMP,
-	ShiftJIS,
-	PRC,
-	BigFive,
-	Johab,
-	UnicodeUCS4
-};
-
-struct OffsetSubtable
-{
-	uint32 scalarType{};
-	uint16 tableCount{};
-	uint16 searchRange{};
-	uint16 entrySelector{};
-	uint16 rangeShift{};
-};
-
-struct TTFTable
-{
-	std::string type;
-	uint32		checkSum;
-	uint32		offset;
-	uint32		length;
-};
-
-struct TTFCMAPEncodingSubTable
-{
-	uint16 platformId;
-	uint16 platformSpecificId;
-	uint32 offset;
-};
-
-struct TTFCMAPFormat
-{
-	uint16 format;
-	uint16 length;
-	uint16 language;
-};
-
-struct TTFCMAPFormat4 : TTFCMAPFormat
-{
-	uint16				format = 4;
-	uint16				length;
-	uint16				language;
-	uint16				segCountX2;
-	uint16				searchRange;
-	uint16				entrySelector;
-	uint16				rangeShift;
-	uint16				reservedPad;
-	std::vector<uint16> endCode;
-	std::vector<uint16> startCode;
-	std::vector<uint16> idDelta;
-	std::vector<uint16> idRangeOffset;
-	std::vector<uint16> glyphIndexArray;
-};
-
-struct TTFCMAP
-{
-	uint16								 version;
-	uint16								 subTableCount;
-	std::vector<TTFCMAPEncodingSubTable> subTables;
-};
-
-struct FontDirectory
-{
-	OffsetSubtable					offsetSubtable;
-	std::vector<TTFTable>			tables;
-	std::unique_ptr<TTFCMAPFormat4> format = nullptr;
-	std::map<char, int32>			glyphIndexes;
-};
 
 namespace TTF
 {
-	inline void printTableDirectory(std::vector<TTFTable>& tables, int32 tableSize)
+	enum class ScalarType : uint8
+	{
+		True = 0x74727565,
+		OpenType = 0x4F54544F,
+		Typ1 = 0X74797031
+	};
+
+	enum class TableType : uint8
+	{
+		CMAP,
+		GLYF,
+		HEAD,
+		HHEA,
+		HMTX,
+		LOCA,
+		MAXP,
+		NAME,
+		POST,
+
+		// Optional
+		CVT,
+		FPGM,
+		HDMX,
+		KERN,
+		OS2,
+		PREP
+	};
+
+	enum class CMAPPlatform : uint8
+	{
+		Unicode = 0,
+		Macintosh = 1,
+		Reserved = 2,
+		Microsoft = 3
+	};
+
+	enum class WindowsEncoding : uint8
+	{
+		Symbol,
+		UnicodeBMP,
+		ShiftJIS,
+		PRC,
+		BigFive,
+		Johab,
+		UnicodeUCS4
+	};
+
+	struct OffsetSubtable
+	{
+		uint32 scalarType{};
+		uint16 tableCount{};
+		uint16 searchRange{};
+		uint16 entrySelector{};
+		uint16 rangeShift{};
+	};
+
+	struct Table
+	{
+		std::string type;
+		uint32		checkSum;
+		uint32		offset;
+		uint32		length;
+	};
+
+	struct CMAPEncodingSubTable
+	{
+		uint16 platformId;
+		uint16 platformSpecificId;
+		uint32 offset;
+	};
+
+	struct CMAPFormat
+	{
+		uint16 format;
+		uint16 length;
+		uint16 language;
+	};
+
+	struct CMAPFormat4 : CMAPFormat
+	{
+		uint16				format = 4;
+		uint16				length;
+		uint16				language;
+		uint16				segCountX2;
+		uint16				searchRange;
+		uint16				entrySelector;
+		uint16				rangeShift;
+		uint16				reservedPad;
+		std::vector<uint16> endCode;
+		std::vector<uint16> startCode;
+		std::vector<uint16> idDelta;
+		std::vector<uint16> idRangeOffset;
+		std::vector<uint16> glyphIndexArray;
+	};
+
+	struct CMAP
+	{
+		uint16							  version;
+		uint16							  subTableCount;
+		std::vector<CMAPEncodingSubTable> subTables;
+	};
+
+	struct FontDirectory
+	{
+		OffsetSubtable				 offsetSubtable;
+		std::vector<Table>			 tables;
+		std::unique_ptr<CMAPFormat4> format = nullptr;
+		std::map<char, int32>		 glyphIndexes;
+	};
+
+	inline void printTableDirectory(std::vector<Table>& tables, int32 tableSize)
 	{
 		for (const auto& t : tables)
 		{
@@ -151,7 +146,7 @@ namespace TTF
 		offsetSubtable->rangeShift = reader.readUInt16();
 	}
 
-	inline void readCMAP(ByteReader& reader, int32 offset, TTFCMAP* cmap)
+	inline void readCMAP(ByteReader& reader, int32 offset, CMAP* cmap)
 	{
 		reader.seek(offset, ESeekDir::Beginning);
 
@@ -160,7 +155,7 @@ namespace TTF
 
 		for (int32 i = 0; i < cmap->subTableCount; i++)
 		{
-			TTFCMAPEncodingSubTable encodingSubTable;
+			CMAPEncodingSubTable encodingSubTable;
 			encodingSubTable.platformId = reader.readUInt16();
 			encodingSubTable.platformSpecificId = reader.readUInt16();
 			encodingSubTable.offset = reader.readUInt32();
@@ -168,11 +163,11 @@ namespace TTF
 		}
 	}
 
-	inline void readTableDirectory(ByteReader& reader, std::vector<TTFTable>& tables, int32 tableSize)
+	inline void readTableDirectory(ByteReader& reader, std::vector<Table>& tables, int32 tableSize)
 	{
 		for (int32 i = 0; i < tableSize; i++)
 		{
-			TTFTable t;
+			Table t;
 
 			// Read the tag into a string.
 			uint8 tag[4]{};
@@ -195,7 +190,7 @@ namespace TTF
 		{
 			if (t.type == "cmap")
 			{
-				TTFCMAP cmap;
+				CMAP cmap;
 				readCMAP(reader, t.offset, &cmap);
 
 				// Go to the offset of this CMAP subtable
@@ -210,7 +205,7 @@ namespace TTF
 				{
 					case 4:
 					{
-						fontDirectory->format = std::make_unique<TTFCMAPFormat4>();
+						fontDirectory->format = std::make_unique<CMAPFormat4>();
 						auto f = fontDirectory->format.get();
 						f->format = fmt;
 						f->length = length;
@@ -252,7 +247,7 @@ namespace TTF
 		}
 	}
 
-	inline int32 getGlyphIndex(uint16 codePoint, TTFCMAPFormat4* f)
+	inline int32 getGlyphIndex(uint16 codePoint, CMAPFormat4* f)
 	{
 		int32 index = -1;
 		switch (f->format)
@@ -317,6 +312,8 @@ namespace TTF
 	}
 } // namespace TTF
 
+using namespace TTF;
+
 class FontDatabase
 {
 	std::vector<Font> m_fonts;
@@ -336,7 +333,7 @@ class FontDatabase
 
 		ByteReader	  buffer(data, data.size(), std::endian::big);
 		FontDirectory fontDirectory;
-		TTF::readFontDirectory(buffer, &fontDirectory);
+		readFontDirectory(buffer, &fontDirectory);
 #ifdef _DEBUG
 		for (const auto& [k, v] : fontDirectory.glyphIndexes)
 		{
