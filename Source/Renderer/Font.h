@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <algorithm>
 #include <filesystem>
 #include <map>
@@ -10,6 +11,7 @@
 #include "Core/Buffer.h"
 #include "Core/Types.h"
 #include "Core/IO.h"
+#include "Math/Vector.h"
 
 /** https://handmade.network/forums/articles/t/7330-implementing_a_font_reader_and_rasterizer_from_scratch%252C_part_1__ttf_font_reader. **/
 /** https://handmade.network/forums/wip/t/7610-reading_ttf_files_and_rasterizing_them_using_a_handmade_approach%252C_part_2__rasterization **/
@@ -28,23 +30,6 @@ typedef union
 using FWord = int16;
 using UFWord = uint16;
 using LongDateTime = int64;
-
-enum class EGlyphFlag : uint8
-{
-	OnCurve, // This point is on the curve.
-
-	XShort, // The corresponding byte is 1 byte, otherwise 2.
-	YShort, // The corresponding byte is 1 byte, otherwise 2.
-
-	Repeat, // The next byte specifies how many times this flag is repeated.
-
-	XShortPos,
-	YShortPos,
-
-	Reserved1, // Reserved, not set in TrueType
-	Reserved2, // Reserved, not set in TrueType
-};
-DEFINE_BITMASK_OPERATORS(EGlyphFlag);
 
 namespace TTF
 {
@@ -100,6 +85,60 @@ namespace TTF
 		Johab,
 		UnicodeUCS4
 	};
+
+	enum EGlyphFlag : uint8
+	{
+		OnCurve = 1, // This point is on the curve.
+		XShort = 2,	 // The corresponding byte is 1 byte, otherwise 2.
+		YShort = 4,	 // The corresponding byte is 1 byte, otherwise 2.
+		Repeat = 8,	 // The next byte specifies how many times this flag is repeated.
+		XShortPos = 16,
+		YShortPos = 32,
+		Reserved1 = 64,	 // Reserved, not set in TrueType
+		Reserved2 = 128, // Reserved, not set in TrueType
+	};
+	DEFINE_BITMASK_OPERATORS(EGlyphFlag);
+
+	inline std::string glyphFlagToString(EGlyphFlag f)
+	{
+		static const char* flags[] = { "OnCurve", "XShort", "YShort", "Repeat", "XShortPos", "YShortPos", "Res1", "Res2", 0 }; // Synchronise with Color enum!
+
+		// For each possible color string...
+		std::string outString;
+		for (const char* const* ptr = flags;
+			 *ptr != 0;
+			 ++ptr)
+		{
+
+			// Get whether to print something
+			bool output = (f & 0x01) != 0;
+
+			// Is color bit set?
+			if (output)
+			{
+				// Yes! Output that string.
+				outString += *ptr;
+			} // if
+
+			// Next bit in color
+			f = (EGlyphFlag)(f >> 1);
+
+			// All done?
+			if (f == 0)
+			{
+				// Yes! Leave
+				break;
+			} // if
+
+			// No, so show some more...
+			if (output)
+			{
+				// If output something, need 'OR'
+				outString += " | ";
+			} // if
+		}	  // for
+		return outString;
+	} // operator <<(Color)
 
 	struct OffsetSubtable
 	{
@@ -185,23 +224,23 @@ namespace TTF
 		std::map<char, int32> glyphOffsets;
 	};
 
-	struct GlyphOutline
+	struct GlyphShape
 	{
-		uint16				contourCount;
-		uint16				xMin;
-		uint16				yMin;
-		uint16				xMax;
-		uint16				yMax;
-		uint16				instructionLength;
-		std::vector<uint8>	instructions;
-		std::vector<uint8>	flags;
-		std::vector<int16>	xCoordinates;
-		std::vector<int16>	yCoordinates;
-		std::vector<uint16> contourEndPoints;
+		uint16					contourCount;
+		int16					xMin;
+		int16					yMin;
+		int16					xMax;
+		int16					yMax;
+		uint16					instructionLength;
+		std::vector<uint8>		instructions;
+		std::vector<EGlyphFlag> flags;
+		std::vector<vec2i>		coordinates;
+		std::vector<uint16>		contourEndPoints;
 	};
 
 	struct GLYF
 	{
+		std::map<char, GlyphShape> shapes;
 	};
 
 	struct FontDirectory
@@ -244,15 +283,16 @@ namespace TTF
 				}
 
 				int32 idRangeOffset = f->idRangeOffset[index];
+				int32 idDelta = f->idDelta[index];
 				if (idRangeOffset != 0)
 				{
 					int32 glyphIndex = codePoint - startCode;
 					int32 result = f->glyphIndexArray[glyphIndex];
-					return result;
+					return (result + idDelta) & 0xffff;
 				}
 				else
 				{
-					return codePoint;
+					return (codePoint + idDelta) & 0xffff;
 				}
 			}
 		}
@@ -268,22 +308,83 @@ namespace TTF
 		return bitSize32 ? reader.readUInt32() : reader.readUInt16() * 2;
 	}
 
-	inline GlyphOutline getGlyphOutline(ByteReader& reader, FontDirectory* directory, int32 glyphOffset)
+	inline void readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag)
 	{
-		reader.seek(glyphOffset); // Seek to the offset of this glyph
+		int32 pointCount = shape->coordinates.size();
+		int16 value = 0;
 
-		GlyphOutline outline{};
-		outline.contourCount = reader.readUInt16();
-		outline.xMin = reader.readUInt16();
-		outline.yMin = reader.readUInt16();
-		outline.xMax = reader.readUInt16();
-		outline.yMax = reader.readUInt16();
-
-		for (int32 i = 0; i < outline.contourCount; i++)
+		// https://stevehanov.ca/blog/?id=143
+		for (int32 i = 0; i < pointCount; i++)
 		{
-			outline.contourEndPoints.emplace_back(reader.readUInt16());
+			// https://github.com/nothings/stb/blob/2e2bef463a5b53ddf8bb788e25da6b8506314c08/stb_truetype.h#L1726
+			auto f = shape->flags[i];
+
+			// Short
+			if (f & byteFlag)
+			{
+				int16 delta = reader.readUInt8();
+				value += (f & deltaFlag) ? delta : -delta;
+			}
+			// Long
+			else if (!(f & deltaFlag))
+			{
+				int16 a = reader.readUInt8();
+				int16 b = reader.readUInt8();
+				value += (a << 8) + b;
+			}
+			shape->coordinates[i][index] = value;
 		}
-		return outline;
+	}
+
+	inline GlyphShape getGlyphShape(ByteReader& reader, FontDirectory* directory)
+	{
+		auto start = reader.ptr();
+
+		GlyphShape shape{};
+		shape.contourCount = reader.readUInt16();
+		shape.xMin = reader.readUInt16();
+		shape.yMin = reader.readUInt16();
+		shape.xMax = reader.readUInt16();
+		shape.yMax = reader.readUInt16();
+
+		for (int32 i = 0; i < shape.contourCount; i++)
+		{
+			shape.contourEndPoints.emplace_back(reader.readUInt16());
+		}
+		assert(shape.contourEndPoints.size() == shape.contourCount);
+
+		shape.instructionLength = reader.readUInt16();								   // Instruction size
+		shape.instructions.resize(shape.instructionLength);							   // Resize vector to instruction size
+		std::memcpy(shape.instructions.data(), reader.ptr(), shape.instructionLength); // Copy memory from reader ptr to instruction vector
+		reader.seek(shape.instructionLength);										   // Offset reader by length of instructions
+
+		// https://stackoverflow.com/a/36371452
+		int32	   pointCount = shape.contourEndPoints.back() + 1;
+		int32	   flagCount = 0;
+		EGlyphFlag flag;
+		for (int32 i = 0; i < pointCount; ++i)
+		{
+			if (flagCount == 0)
+			{
+				flag = (EGlyphFlag)(reader.readUInt8());
+				if (flag & EGlyphFlag::Repeat)
+				{
+					flagCount = reader.readUInt8();
+				}
+			}
+			else
+			{
+				--flagCount;
+			}
+
+			shape.flags.emplace_back(flag);
+		}
+
+		// Update point count to number of flags
+		shape.coordinates.resize(pointCount);
+		readGlyphCoordinates(reader, &shape, 0, XShort, XShortPos);
+		readGlyphCoordinates(reader, &shape, 1, YShort, YShortPos);
+		return shape;
 	}
 
 	inline void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable)
@@ -426,8 +527,9 @@ namespace TTF
 
 		for (const auto& [k, v] : fontDirectory->loca->glyphOffsets)
 		{
-			reader.seek(initialOffset, ESeekDir::Beginning); // Reset to beginning of the GLYF table
-			GlyphOutline outline = getGlyphOutline(reader, fontDirectory, v);
+			reader.seek(initialOffset + v, ESeekDir::Beginning); // Reset to beginning of the GLYF table
+			GlyphShape shape = getGlyphShape(reader, fontDirectory);
+			fontDirectory->glyf->shapes[k] = shape;
 		}
 	}
 

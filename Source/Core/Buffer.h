@@ -296,6 +296,30 @@ class ByteReader
 		return value;
 	}
 
+	
+	template <typename T>
+	T peek(size_t size)
+	{
+		// Reset the bit position
+		m_bitPos = 0;
+
+		// Get pointer to the current offset
+		auto ptr = m_buffer->data() + m_pos;
+
+		// Reinterpret cast pointer to type T
+		T value = *reinterpret_cast<T*>(ptr);
+
+		// If this buffer is using the non-native endian format, swap the byte order
+		if (std::endian::native != m_endian)
+		{
+			return swapByteOrder(value);
+		}
+
+		// Return the value
+		return value;
+	}
+
+
 public:
 	ByteReader() = default;
 
@@ -340,6 +364,11 @@ public:
 		return m_size;
 	}
 
+	uint8* ptr()
+	{
+		return m_buffer->data() + m_pos;
+	}
+
 	int8 readInt8()
 	{
 		return read<int8>(1);
@@ -363,6 +392,11 @@ public:
 	uint8 readUInt8()
 	{
 		return read<uint8>(1);
+	}
+
+	uint8 peekUInt8()
+	{
+		return peek<uint8>(1);
 	}
 
 	uint16 readUInt16()
