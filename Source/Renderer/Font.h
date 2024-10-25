@@ -109,14 +109,14 @@ namespace TTF
 		uint32 offset;
 	};
 
-	struct CMAPFormat
+	struct Format
 	{
 		uint16 format;
 		uint16 length;
 		uint16 language;
 	};
 
-	struct CMAPFormat4 : CMAPFormat
+	struct Format4 : Format
 	{
 		uint16				segCountX2;
 		uint16				searchRange;
@@ -165,19 +165,77 @@ namespace TTF
 
 	struct LOCA
 	{
+		std::map<char, int32> glyphIndexes;
+		std::map<char, int32> glyphOffsets;
+	};
 
+	struct GLYF
+	{
 	};
 
 	struct FontDirectory
 	{
-		OffsetSubtable				 offsetSubtable;
-		std::vector<Table>			 tables;
-		std::unique_ptr<CMAPFormat4> format = nullptr;
-		std::unique_ptr<CMAP>		 cmap = nullptr;
-		std::unique_ptr<HEAD>		 head = nullptr;
-		std::unique_ptr<LOCA>		 loca = nullptr;
-		std::map<char, int32>		 glyphIndexes;
+		OffsetSubtable			 offsetSubtable;
+		std::vector<Table>		 tables;
+		std::unique_ptr<Format4> format = nullptr;
+		std::unique_ptr<CMAP>	 cmap = nullptr;
+		std::unique_ptr<HEAD>	 head = nullptr;
+		std::unique_ptr<LOCA>	 loca = nullptr;
+		std::unique_ptr<GLYF>	 glyf = nullptr;
 	};
+
+	inline int32 getGlyphIndex(uint16 codePoint, FontDirectory* fontDirectory)
+	{
+		int32 index = -1;
+		auto  f = fontDirectory->format.get();
+		switch (f->format)
+		{
+			case 4:
+			{
+				for (int32 i = 0; i < f->segCountX2 / 2; i++)
+				{
+					if (f->endCode[i] > codePoint)
+					{
+						index = i;
+						break;
+					}
+				}
+
+				if (index == -1)
+				{
+					return 0;
+				}
+
+				int32 startCode = f->startCode[index];
+				if (startCode >= codePoint)
+				{
+					return 0;
+				}
+
+				int32 idRangeOffset = f->idRangeOffset[index];
+				if (idRangeOffset != 0)
+				{
+					int32 glyphIndex = codePoint - startCode;
+					int32 result = f->glyphIndexArray[glyphIndex];
+					return result;
+				}
+				else
+				{
+					return codePoint;
+				}
+			}
+		}
+		return 0;
+	}
+
+	/** Returns the byte offset of the specified Glyph relative to the GLYF table. **/
+	inline uint32 getGlyphOffset(ByteReader& reader, FontDirectory* fontDirectory, uint32 glyphIndex, int32 initialOffset)
+	{
+		bool  bitSize32 = fontDirectory->head->indexToLocFormat != 0;
+		int32 indexOffset = bitSize32 ? glyphIndex * sizeof(uint32) : glyphIndex * sizeof(uint16);
+		reader.seek(initialOffset + indexOffset, ESeekDir::Beginning); // Reset to beginning of the LOCA table
+		return bitSize32 ? reader.readUInt32() : reader.readUInt16() * 2;
+	}
 
 	inline void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable)
 	{
@@ -188,27 +246,42 @@ namespace TTF
 		offsetSubtable->rangeShift = reader.readUInt16();
 	}
 
-	inline void readCMAP(ByteReader& reader, CMAP* format)
+	inline void readCMAP(ByteReader& reader, FontDirectory* fontDirectory)
 	{
-		format->version = reader.readUInt16();
-		format->subTableCount = reader.readUInt16();
+		auto cmap = fontDirectory->cmap.get();
+		cmap->version = reader.readUInt16();
+		cmap->subTableCount = reader.readUInt16();
 
-		for (int32 i = 0; i < format->subTableCount; i++)
+		for (int32 i = 0; i < cmap->subTableCount; i++)
 		{
 			CMAPEncodingSubTable encodingSubTable;
 			encodingSubTable.platformId = reader.readUInt16();
 			encodingSubTable.platformSpecificId = reader.readUInt16();
 			encodingSubTable.offset = reader.readUInt32();
-			format->subTables.emplace_back(encodingSubTable);
+			cmap->subTables.emplace_back(encodingSubTable);
 		}
 	}
 
-	inline void readLOCA(ByteReader& reader, LOCA* loca)
+	inline void readLOCA(ByteReader& reader, FontDirectory* fontDirectory, int32 initialOffset)
 	{
+		auto loca = fontDirectory->loca.get();
+
+		for (auto c : g_alphabet)
+		{
+			int32 index = getGlyphIndex(c, fontDirectory);
+			loca->glyphIndexes[c] = index;
+			int32 offset = getGlyphOffset(reader, fontDirectory, index, initialOffset);
+			loca->glyphOffsets[c] = offset;
+#ifdef _DEBUG
+			LOG_INFO("Glyph '{}' = Index: {}\tOffset: {}", c, index, offset)
+#endif
+		}
 	}
 
-	inline void readHEAD(ByteReader& reader, HEAD* head)
+	inline void readHEAD(ByteReader& reader, FontDirectory* fontDirectory)
 	{
+		auto head = fontDirectory->head.get();
+
 		head->version.s[0] = reader.readUInt16();
 		head->version.s[1] = reader.readUInt16();
 
@@ -234,6 +307,10 @@ namespace TTF
 		head->fontDirectionHint = reader.readInt16();
 		head->indexToLocFormat = reader.readInt16();
 		head->glyphDataFormat = reader.readInt16();
+	}
+
+	inline void readGLYF(ByteReader& reader, FontDirectory* fontDirectory)
+	{
 	}
 
 	inline void readTableDirectory(ByteReader& reader, std::vector<Table>& tables, int32 tableSize)
@@ -272,7 +349,7 @@ namespace TTF
 		}
 	}
 
-	inline void readFormat4(ByteReader& reader, CMAPFormat4* f)
+	inline void readFormat4(ByteReader& reader, Format4* f)
 	{
 		int32 start = reader.getPos() - 6; // Start position is -3x u16
 
@@ -286,7 +363,7 @@ namespace TTF
 		{
 			f->endCode.emplace_back(reader.readUInt16());
 		}
-		reader.seek(1);
+		reader.seek(2);
 		for (int32 i = 0; i < segmentCount; i++)
 		{
 			f->startCode.emplace_back(reader.readUInt16());
@@ -319,14 +396,14 @@ namespace TTF
 				}
 				case ETableType::CMAP:
 				{
-					// For now, ignore duplicate CMAP tables
+					// TODO: For now, ignore duplicate CMAP tables
 					if (fontDirectory->cmap != nullptr)
 					{
 						continue;
 					}
 					reader.seek(t.offset, ESeekDir::Beginning);
 					fontDirectory->cmap = std::make_unique<CMAP>();
-					readCMAP(reader, fontDirectory->cmap.get());
+					readCMAP(reader, fontDirectory);
 
 					// Go to the offset of this CMAP subtable
 					reader.seek(t.offset + fontDirectory->cmap->subTables[0].offset, ESeekDir::Beginning);
@@ -339,7 +416,7 @@ namespace TTF
 					{
 						case 4:
 						{
-							fontDirectory->format = std::make_unique<CMAPFormat4>();
+							fontDirectory->format = std::make_unique<Format4>();
 
 							auto f = fontDirectory->format.get();
 							f->format = fmt;
@@ -358,72 +435,27 @@ namespace TTF
 				}
 				case ETableType::LOCA:
 				{
-					reader.seek(t.offset, ESeekDir::Beginning);
 					fontDirectory->loca = std::make_unique<LOCA>();
-					readLOCA(reader, fontDirectory->loca.get());
+					readLOCA(reader, fontDirectory, t.offset);
 					break;
 				}
 				case ETableType::HEAD:
 				{
 					reader.seek(t.offset, ESeekDir::Beginning);
 					fontDirectory->head = std::make_unique<HEAD>();
-					readHEAD(reader, fontDirectory->head.get());
+					readHEAD(reader, fontDirectory);
+					break;
+				}
+				case ETableType::GLYF:
+				{
+					reader.seek(t.offset, ESeekDir::Beginning);
+					fontDirectory->glyf = std::make_unique<GLYF>();
+					readGLYF(reader, fontDirectory);
 					break;
 				}
 			}
 		}
 		return true;
-	}
-
-	inline uint16 getGlyphIndex(uint16 codePoint, CMAPFormat4* f)
-	{
-		uint16 index = -1;
-		switch (f->format)
-		{
-			case 4:
-			{
-				uint16* ptr = nullptr;
-
-				for (int32 i = 0; i < f->segCountX2 / 2; i++)
-				{
-					if (f->endCode[i] > codePoint)
-					{
-						index = i;
-						break;
-					}
-				}
-
-				if (index == -1)
-				{
-					return 0;
-				}
-
-				if (f->startCode[index] >= codePoint)
-				{
-					return 0;
-					;
-				}
-
-				if (f->idRangeOffset[index] != 0)
-				{
-					uint16 idDelta = f->idDelta[index];
-					uint16 glyphIndex = codePoint - f->startCode[index];
-					uint16 result = f->glyphIndexArray[glyphIndex];
-
-					return result;
-				}
-				else
-				{
-					return codePoint;
-				}
-			}
-				return 0;
-		}
-	}
-
-	inline uint16 getGlyphOffset()
-	{
-		return 0;
 	}
 
 	inline void readFontDirectory(ByteReader& reader, FontDirectory* fontDirectory)
@@ -438,15 +470,6 @@ namespace TTF
 		{
 			LOG_ERROR("Failed to read tables on font.")
 			return;
-		}
-
-		for (auto c : g_alphabet)
-		{
-			int32 r = getGlyphIndex(c, fontDirectory->format.get());
-			fontDirectory->glyphIndexes[c] = r;
-#ifdef _DEBUG
-			LOG_INFO("{} = {}", c, r)
-#endif
 		}
 	}
 } // namespace TTF
@@ -494,10 +517,12 @@ class FontDatabase
 			}
 
 			// TODO: Remove this hardcoded path
-			if (path.find("arial") == std::string::npos)
-			{
-				return;
-			}
+			// if (path.find("arial") == std::string::npos)
+			//{
+			//	return;
+			//}
+			path = "C:\\Users\\thoma\\Desktop\\Envy Code R.ttf";
+
 			std::string strBuffer;
 			if (!IO::readFile(path, strBuffer))
 			{
