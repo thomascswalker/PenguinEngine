@@ -311,6 +311,10 @@ namespace TTF
 	inline void readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag)
 	{
 		int32 pointCount = shape->coordinates.size();
+
+		// Value for each coordinate. All coordinates are sequential and either:
+		// 1. If it's the first coordinate, it's just added to 0.
+		// 2. If it's any other coordinate, it's added to the previous coordinate.
 		int16 value = 0;
 
 		// https://stevehanov.ca/blog/?id=143
@@ -319,19 +323,23 @@ namespace TTF
 			// https://github.com/nothings/stb/blob/2e2bef463a5b53ddf8bb788e25da6b8506314c08/stb_truetype.h#L1726
 			auto f = shape->flags[i];
 
-			// Short
+			// Char
 			if (f & byteFlag)
 			{
+				// Read uint8 into int16
 				int16 delta = reader.readUInt8();
 				value += (f & deltaFlag) ? delta : -delta;
 			}
-			// Long
+			// Short
 			else if (!(f & deltaFlag))
 			{
+				// Read the first and second half of this uint16
 				int16 a = reader.readUInt8();
 				int16 b = reader.readUInt8();
 				value += (a << 8) + b;
 			}
+
+			// Set this coordinate's index (x, y) to the current value
 			shape->coordinates[i][index] = value;
 		}
 	}
@@ -342,10 +350,10 @@ namespace TTF
 
 		GlyphShape shape{};
 		shape.contourCount = reader.readUInt16();
-		shape.xMin = reader.readUInt16();
-		shape.yMin = reader.readUInt16();
-		shape.xMax = reader.readUInt16();
-		shape.yMax = reader.readUInt16();
+		shape.xMin = reader.readInt16();
+		shape.yMin = reader.readInt16();
+		shape.xMax = reader.readInt16();
+		shape.yMax = reader.readInt16();
 
 		for (int32 i = 0; i < shape.contourCount; i++)
 		{
