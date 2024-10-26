@@ -16,10 +16,8 @@
 /** https://handmade.network/forums/articles/t/7330-implementing_a_font_reader_and_rasterizer_from_scratch%252C_part_1__ttf_font_reader. **/
 /** https://handmade.network/forums/wip/t/7610-reading_ttf_files_and_rasterizing_them_using_a_handmade_approach%252C_part_2__rasterization **/
 
-struct Font;
 class FontDatabase;
-
-inline std::unique_ptr<FontDatabase> g_fontDatabase = std::make_unique<FontDatabase>();
+inline std::shared_ptr<FontDatabase> g_fontDatabase = std::make_shared<FontDatabase>();
 inline char							 g_alphabet[91] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()_+";
 
 typedef union
@@ -140,6 +138,30 @@ namespace TTF
 		return outString;
 	} // operator <<(Color)
 
+	struct GlyphShape
+	{
+		uint16					contourCount;
+		int16					xMin;
+		int16					yMin;
+		int16					xMax;
+		int16					yMax;
+		uint16					instructionLength;
+		std::vector<uint8>		instructions;
+		std::vector<EGlyphFlag> flags;
+		std::vector<vec2i>		coordinates;
+		std::vector<uint16>		contourEndPoints;
+	};
+
+	struct NameRecord
+	{
+		uint16 platformId;
+		uint16 platformSpecificId;
+		uint16 languageId;
+		uint16 nameId;
+		uint16 length;
+		uint16 offset;
+	};
+
 	struct OffsetSubtable
 	{
 		uint32 scalarType{};
@@ -224,40 +246,41 @@ namespace TTF
 		std::map<char, int32> glyphOffsets;
 	};
 
-	struct GlyphShape
-	{
-		uint16					contourCount;
-		int16					xMin;
-		int16					yMin;
-		int16					xMax;
-		int16					yMax;
-		uint16					instructionLength;
-		std::vector<uint8>		instructions;
-		std::vector<EGlyphFlag> flags;
-		std::vector<vec2i>		coordinates;
-		std::vector<uint16>		contourEndPoints;
-	};
-
 	struct GLYF
 	{
 		std::map<char, GlyphShape> shapes;
 	};
 
-	struct FontDirectory
+	struct NAME
 	{
-		OffsetSubtable				offsetSubtable;
-		std::map<ETableType, Table> tables;
-		std::unique_ptr<Format4>	format = nullptr;
-		std::unique_ptr<CMAP>		cmap = nullptr;
-		std::unique_ptr<HEAD>		head = nullptr;
-		std::unique_ptr<LOCA>		loca = nullptr;
-		std::unique_ptr<GLYF>		glyf = nullptr;
+		uint16					format;
+		uint16					count;
+		uint16					stringOffset;
+		std::vector<NameRecord> records;
+
+		std::string family;
+		std::string subFamily;
+		std::string subFamilyId;
+		std::string fullName;
 	};
 
-	inline int32 getGlyphIndex(uint16 codePoint, FontDirectory* fontDirectory)
+	struct FontInfo
+	{
+		std::string					fileName;
+		OffsetSubtable				offsetSubtable;
+		std::map<ETableType, Table> tables;
+		std::shared_ptr<Format4>	format = nullptr;
+		std::shared_ptr<NAME>		name = nullptr;
+		std::shared_ptr<CMAP>		cmap = nullptr;
+		std::shared_ptr<HEAD>		head = nullptr;
+		std::shared_ptr<LOCA>		loca = nullptr;
+		std::shared_ptr<GLYF>		glyf = nullptr;
+	};
+
+	inline int32 getGlyphIndex(uint16 codePoint, FontInfo* fontInfo)
 	{
 		int32 index = -1;
-		auto  f = fontDirectory->format.get();
+		auto  f = fontInfo->format.get();
 		switch (f->format)
 		{
 			case 4:
@@ -300,9 +323,9 @@ namespace TTF
 	}
 
 	/** Returns the byte offset of the specified Glyph relative to the GLYF table. **/
-	inline uint32 getGlyphOffset(ByteReader& reader, FontDirectory* fontDirectory, uint32 glyphIndex, int32 initialOffset)
+	inline uint32 getGlyphOffset(ByteReader& reader, FontInfo* fontInfo, uint32 glyphIndex, int32 initialOffset)
 	{
-		bool  bitSize32 = fontDirectory->head->indexToLocFormat != 0;
+		bool  bitSize32 = fontInfo->head->indexToLocFormat != 0;
 		int32 indexOffset = bitSize32 ? glyphIndex * sizeof(uint32) : glyphIndex * sizeof(uint16);
 		reader.seek(initialOffset + indexOffset, ESeekDir::Beginning); // Reset to beginning of the LOCA table
 		return bitSize32 ? reader.readUInt32() : reader.readUInt16() * 2;
@@ -344,34 +367,42 @@ namespace TTF
 		}
 	}
 
-	inline GlyphShape getGlyphShape(ByteReader& reader, FontDirectory* directory)
+	inline bool getGlyphShape(ByteReader& reader, FontInfo* directory, GlyphShape* shape)
 	{
 		auto start = reader.ptr();
 
-		GlyphShape shape{};
-		shape.contourCount = reader.readUInt16();
-		shape.xMin = reader.readInt16();
-		shape.yMin = reader.readInt16();
-		shape.xMax = reader.readInt16();
-		shape.yMax = reader.readInt16();
+		shape->contourCount = reader.readUInt16();
+		shape->xMin = reader.readInt16();
+		shape->yMin = reader.readInt16();
+		shape->xMax = reader.readInt16();
+		shape->yMax = reader.readInt16();
 
-		for (int32 i = 0; i < shape.contourCount; i++)
+		for (int32 i = 0; i < shape->contourCount; i++)
 		{
-			shape.contourEndPoints.emplace_back(reader.readUInt16());
+			shape->contourEndPoints.emplace_back(reader.readUInt16());
 		}
-		assert(shape.contourEndPoints.size() == shape.contourCount);
+		if (shape->contourEndPoints.size() != shape->contourCount)
+		{
+			return false;
+		}
 
-		shape.instructionLength = reader.readUInt16();								   // Instruction size
-		shape.instructions.resize(shape.instructionLength);							   // Resize vector to instruction size
-		std::memcpy(shape.instructions.data(), reader.ptr(), shape.instructionLength); // Copy memory from reader ptr to instruction vector
-		reader.seek(shape.instructionLength);										   // Offset reader by length of instructions
+		shape->instructionLength = reader.readUInt16();									 // Instruction size
+		shape->instructions.resize(shape->instructionLength);							 // Resize vector to instruction size
+		std::memcpy(shape->instructions.data(), reader.ptr(), shape->instructionLength); // Copy memory from reader ptr to instruction vector
+		reader.seek(shape->instructionLength);											 // Offset reader by length of instructions
 
 		// https://stackoverflow.com/a/36371452
-		int32	   pointCount = shape.contourEndPoints.back() + 1;
+		int32	   pointCount = shape->contourEndPoints.back() + 1;
 		int32	   flagCount = 0;
 		EGlyphFlag flag;
+		int32	   end = directory->tables[ETableType::GLYF].length;
 		for (int32 i = 0; i < pointCount; ++i)
 		{
+			if (reader.getPos() >= end)
+			{
+				LOG_ERROR("End of buffer.")
+				return false;
+			}
 			if (flagCount == 0)
 			{
 				flag = (EGlyphFlag)(reader.readUInt8());
@@ -385,14 +416,15 @@ namespace TTF
 				--flagCount;
 			}
 
-			shape.flags.emplace_back(flag);
+			shape->flags.emplace_back(flag);
 		}
 
 		// Update point count to number of flags
-		shape.coordinates.resize(pointCount);
-		readGlyphCoordinates(reader, &shape, 0, XShort, XShortPos);
-		readGlyphCoordinates(reader, &shape, 1, YShort, YShortPos);
-		return shape;
+		shape->coordinates.resize(pointCount);
+		readGlyphCoordinates(reader, shape, 0, XShort, XShortPos);
+		readGlyphCoordinates(reader, shape, 1, YShort, YShortPos);
+
+		return true;
 	}
 
 	inline void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable)
@@ -439,9 +471,9 @@ namespace TTF
 		}
 	}
 
-	inline void readCMAP(ByteReader& reader, FontDirectory* fontDirectory, int32 initialOffset)
+	inline bool readCMAP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
-		auto cmap = fontDirectory->cmap.get();
+		auto cmap = fontInfo->cmap.get();
 		reader.seek(initialOffset, ESeekDir::Beginning);
 		cmap->version = reader.readUInt16();
 		cmap->subTableCount = reader.readUInt16();
@@ -456,7 +488,7 @@ namespace TTF
 		}
 
 		// Go to the offset of this CMAP subtable
-		reader.seek(initialOffset + fontDirectory->cmap->subTables[0].offset, ESeekDir::Beginning);
+		reader.seek(initialOffset + fontInfo->cmap->subTables[0].offset, ESeekDir::Beginning);
 
 		auto fmt = reader.readUInt16();
 		auto length = reader.readUInt16();
@@ -466,9 +498,9 @@ namespace TTF
 		{
 			case 4:
 			{
-				fontDirectory->format = std::make_unique<Format4>();
+				fontInfo->format = std::make_shared<Format4>();
 
-				auto f = fontDirectory->format.get();
+				auto f = fontInfo->format.get();
 				f->format = fmt;
 				f->length = length;
 				f->language = language;
@@ -477,31 +509,35 @@ namespace TTF
 			}
 			default:
 			{
+#ifdef _DEBUG
 				LOG_ERROR("Format {} not implemented.", fmt)
-				break;
+#endif
+				return false;
 			}
 		}
+		return true;
 	}
 
-	inline void readLOCA(ByteReader& reader, FontDirectory* fontDirectory, int32 initialOffset)
+	inline void readLOCA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
-		auto loca = fontDirectory->loca.get();
+		auto loca = fontInfo->loca.get();
 
 		for (auto c : g_alphabet)
 		{
-			int32 index = getGlyphIndex(c, fontDirectory);
+			if (c == '\0')
+			{
+				continue;
+			}
+			int32 index = getGlyphIndex(c, fontInfo);
 			loca->glyphIndexes[c] = index;
-			int32 offset = getGlyphOffset(reader, fontDirectory, index, initialOffset);
+			int32 offset = getGlyphOffset(reader, fontInfo, index, initialOffset);
 			loca->glyphOffsets[c] = offset;
-#ifdef _DEBUG
-			LOG_INFO("Glyph '{}' = Index: {}\tOffset: {}", c, index, offset)
-#endif
 		}
 	}
 
-	inline void readHEAD(ByteReader& reader, FontDirectory* fontDirectory)
+	inline void readHEAD(ByteReader& reader, FontInfo* fontInfo)
 	{
-		auto head = fontDirectory->head.get();
+		auto head = fontInfo->head.get();
 
 		head->version.s[0] = reader.readUInt16();
 		head->version.s[1] = reader.readUInt16();
@@ -530,15 +566,90 @@ namespace TTF
 		head->glyphDataFormat = reader.readInt16();
 	}
 
-	inline void readGLYF(ByteReader& reader, FontDirectory* fontDirectory, int32 initialOffset)
+	inline bool readGLYF(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
 
-		for (const auto& [k, v] : fontDirectory->loca->glyphOffsets)
+		for (const auto& [k, v] : fontInfo->loca->glyphOffsets)
 		{
 			reader.seek(initialOffset + v, ESeekDir::Beginning); // Reset to beginning of the GLYF table
-			GlyphShape shape = getGlyphShape(reader, fontDirectory);
-			fontDirectory->glyf->shapes[k] = shape;
+			GlyphShape shape;
+			if (!getGlyphShape(reader, fontInfo, &shape))
+			{
+				LOG_ERROR("Failed to read glyph shape {}", k)
+				return false;
+			}
+			fontInfo->glyf->shapes[k] = shape;
 		}
+	}
+
+	// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6name.html
+	inline bool readNAME(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
+	{
+		// Get record metadata
+		NAME* name = fontInfo->name.get();
+		reader.seek(initialOffset, ESeekDir::Beginning);
+		name->format = reader.readUInt16();
+		name->count = reader.readUInt16();
+		name->stringOffset = reader.readUInt16();
+
+		// Construct all records
+		for (int32 i = 0; i < name->count; i++)
+		{
+			NameRecord record;
+			record.platformId = reader.readUInt16();
+			record.platformSpecificId = reader.readUInt16();
+			record.languageId = reader.readUInt16();
+			record.nameId = reader.readUInt16();
+			record.length = reader.readUInt16();
+			record.offset = reader.readUInt16();
+			name->records.emplace_back(record);
+		}
+
+		// Read all name strings
+		for (int32 i = 0; i < name->records.size(); i++)
+		{
+			auto& record = name->records[i];
+			reader.seek(initialOffset + name->stringOffset + record.offset + 1, ESeekDir::Beginning);
+
+			// Read the text
+			std::string		   text;
+
+			// Read the raw record text into a buffer
+			std::vector<uint8> textBuffer;
+			reader.readSize(record.length, textBuffer);
+
+			// For some reason there can be `\0` in between every character,
+			// so we'll loop through the text buffer and if the current
+			// element is a valid char, add it to the text string.
+			for (int32 j = 0; j < textBuffer.size(); j++)
+			{
+				if (textBuffer[j] == '\0')
+				{
+					continue;
+				}
+				text.push_back(textBuffer[j]);
+			}
+
+			switch (record.nameId)
+			{
+				case 1: // Family
+					name->family = text;
+					break;
+				case 2: // Subfamily
+					name->subFamily = text;
+					break;
+				case 3: // Subfamily ID
+					name->subFamilyId = text;
+					break;
+				case 4: // Full name
+					name->fullName = text;
+					break;
+				default:
+					continue;
+			}
+		}
+
+		return true;
 	}
 
 	inline void readTableDirectory(ByteReader& reader, std::map<ETableType, Table>& tables, int32 tableSize)
@@ -583,46 +694,49 @@ namespace TTF
 		}
 	}
 
-	inline bool readTables(ByteReader& reader, FontDirectory* fontDirectory)
+	inline bool readTables(ByteReader& reader, FontInfo* fontInfo)
 	{
+		// Read NAME
+		auto nameTable = fontInfo->tables[ETableType::NAME];
+		fontInfo->name = std::make_shared<NAME>();
+		readNAME(reader, fontInfo, nameTable.offset);
 
 		// Read HEAD
-		auto headTable = fontDirectory->tables[ETableType::HEAD];
-		fontDirectory->head = std::make_unique<HEAD>();
+		auto headTable = fontInfo->tables[ETableType::HEAD];
+		fontInfo->head = std::make_shared<HEAD>();
 		reader.seek(headTable.offset, ESeekDir::Beginning);
-		readHEAD(reader, fontDirectory);
+		readHEAD(reader, fontInfo);
 
 		//  Read CMAP
-		auto cmapTable = fontDirectory->tables[ETableType::CMAP];
-		fontDirectory->cmap = std::make_unique<CMAP>();
-		readCMAP(reader, fontDirectory, cmapTable.offset);
-
+		auto cmapTable = fontInfo->tables[ETableType::CMAP];
+		fontInfo->cmap = std::make_shared<CMAP>();
+		if (!readCMAP(reader, fontInfo, cmapTable.offset))
+		{
+			return false;
+		}
 		// Read LOCA
-		auto locaTable = fontDirectory->tables[ETableType::LOCA];
-		fontDirectory->loca = std::make_unique<LOCA>();
-		readLOCA(reader, fontDirectory, locaTable.offset);
+		auto locaTable = fontInfo->tables[ETableType::LOCA];
+		fontInfo->loca = std::make_shared<LOCA>();
+		readLOCA(reader, fontInfo, locaTable.offset);
 
 		// Read GLYF
-		auto glyfTable = fontDirectory->tables[ETableType::GLYF];
-		fontDirectory->glyf = std::make_unique<GLYF>();
-		readGLYF(reader, fontDirectory, glyfTable.offset);
+		auto glyfTable = fontInfo->tables[ETableType::GLYF];
+		fontInfo->glyf = std::make_shared<GLYF>();
+		if (!readGLYF(reader, fontInfo, glyfTable.offset))
+		{
+			return false;
+		}
 
 		return true;
 	}
 
-	inline void readFontDirectory(ByteReader& reader, FontDirectory* fontDirectory)
+	inline bool readfontInfo(ByteReader& reader, FontInfo* fontInfo)
 	{
-		readOffsetSubtable(reader, &fontDirectory->offsetSubtable);
+		readOffsetSubtable(reader, &fontInfo->offsetSubtable);
 
-		int32 tableSize = fontDirectory->offsetSubtable.tableCount;
-		readTableDirectory(reader, fontDirectory->tables, tableSize);
-		readTables(reader, fontDirectory);
-
-		if (!fontDirectory->format)
-		{
-			LOG_ERROR("Failed to read tables on font.")
-			return;
-		}
+		int32 tableSize = fontInfo->offsetSubtable.tableCount;
+		readTableDirectory(reader, fontInfo->tables, tableSize);
+		return readTables(reader, fontInfo);
 	}
 } // namespace TTF
 
@@ -630,7 +744,9 @@ using namespace TTF;
 
 class FontDatabase
 {
-	std::string getFontDirectory()
+	std::map<std::string, FontInfo> fonts;
+
+	std::string getfontInfoPath()
 	{
 #if defined(_WIN32) || defined(_WIN64)
 		return "C:\\Windows\\Fonts";
@@ -641,16 +757,19 @@ class FontDatabase
 
 	void registerFont(std::string& data, const std::string& fileName)
 	{
-		LOG_INFO("Registering {}", fileName)
-
-		ByteReader	  buffer(data, data.size(), std::endian::big);
-		FontDirectory fontDirectory;
-		readFontDirectory(buffer, &fontDirectory);
+		FontInfo font;
+		font.fileName = fileName;
+		ByteReader buffer(data, data.size(), std::endian::big);
+		if (!readfontInfo(buffer, &font))
+		{
+			return;
+		}
+		fonts[font.name->family.c_str()] = font;
 	}
 
 	void loadFonts()
 	{
-		std::filesystem::path fontDir = getFontDirectory();
+		std::filesystem::path fontDir = getfontInfoPath();
 		if (!std::filesystem::exists(fontDir))
 		{
 			LOG_ERROR("OS not implemented.");
@@ -668,29 +787,44 @@ class FontDatabase
 				continue;
 			}
 
-			// TODO: Remove this hardcoded path
-			// if (path.find("arial") == std::string::npos)
-			//{
-			//	return;
-			//}
-			path = "C:\\Users\\thoma\\Desktop\\Envy Code R.ttf";
-
 			std::string strBuffer;
 			if (!IO::readFile(path, strBuffer))
 			{
 				LOG_ERROR("Failed to load font {}.", path)
 				return;
 			}
-			registerFont(strBuffer, path);
 
-			// TODO: Remove this `break`
-			break;
+			registerFont(strBuffer, path);
 		}
 	}
 
 public:
+	FontInfo* getFontInfo(const std::string& name)
+	{
+		for (auto& [k, v] : fonts)
+		{
+			if (k == name)
+			{
+				return &fonts[name.c_str()];
+			}
+		}
+		return nullptr;
+	}
+
 	void init()
 	{
 		loadFonts();
+
+		const char* str = "Test string.";
+		FontInfo*	f = getFontInfo("Courier New");
+		if (f != nullptr)
+		{
+			LOG_INFO("Found Courier New")
+			LOG_INFO("Shape Count: {}", f->glyf->shapes.size())
+		}
+		else
+		{
+			LOG_ERROR("Unable to find Courier New")
+		}
 	}
 };

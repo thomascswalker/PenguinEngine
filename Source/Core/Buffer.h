@@ -414,12 +414,22 @@ public:
 		return read<uint64>(8);
 	}
 
-	std::string readString(size_t size)
+	template <typename T>
+	void readSize(size_t size, std::vector<T>& buffer)
+	{
+		for (int32 i = 0; i < size; i++)
+		{
+			buffer.emplace_back(read<T>(sizeof(T)));
+		}
+	}
+
+	std::string readString(size_t size, int32 step = 0)
 	{
 		std::string out;
 		for (int32 i = 0; i < size; i++)
 		{
-			out.push_back(readUInt8());
+			unsigned char c = readUInt8();
+			out.push_back(c);
 		}
 		return out;
 	}
@@ -464,5 +474,10 @@ public:
 				break;
 		}
 		return m_pos;
+	}
+
+	uint8* next()
+	{
+		return m_buffer->data() + m_pos + 1;
 	}
 };
