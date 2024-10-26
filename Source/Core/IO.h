@@ -4,6 +4,7 @@
 
 #include "String.h"
 #include "Core/Logging.h"
+#include "Core/Buffer.h"
 
 namespace IO
 {
@@ -33,6 +34,41 @@ namespace IO
 		const uint64 size = std::filesystem::file_size(fileName);
 		buffer.resize(size, '\0');
 		stream.read(buffer.data(), size);
+		return true;
+	}
+
+	static bool readFile(const std::string& fileName, RawBuffer<uint8>& buffer)
+	{
+		if (!exists(fileName))
+		{
+			LOG_ERROR("File {} not found.", fileName.c_str());
+			return false;
+		}
+		std::ifstream stream(fileName, std::ios::ate | std::ios::binary);
+		if (stream.bad())
+		{
+			LOG_ERROR("Unable to read file {}.", fileName.c_str());
+			return false;
+		}
+		
+		auto end = stream.tellg();
+		stream.seekg(0, std::ios::beg);
+
+		auto size = std::size_t(end - stream.tellg());
+		if (size == 0)
+		{
+			LOG_ERROR("File is empty {}.", fileName.c_str());
+			return false;
+		}
+
+		buffer.resize(size);
+		stream.read((char*)buffer.data(), buffer.size());
+
+		if (!buffer.isValid())
+		{
+			LOG_ERROR("Unable to load into RawBuffer {}.", fileName.c_str());
+			return false;
+		}
 		return true;
 	}
 

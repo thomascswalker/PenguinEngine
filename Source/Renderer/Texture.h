@@ -89,7 +89,7 @@ public:
 		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
 		assert(targetSize == inData->size());
 		m_buffer.resize(inData->size());
-		memcpy(m_buffer.getPtr(), inData->getPtr(), inData->size());
+		memcpy(m_buffer.data(), inData->data(), inData->size());
 	}
 
 	Texture(const Texture& other)
@@ -128,7 +128,7 @@ public:
 
 	bool isValid()
 	{
-		return m_buffer.getPtr() != nullptr;
+		return m_buffer.data() != nullptr;
 	}
 
 	void resize(const vec2i inSize)
@@ -143,7 +143,7 @@ public:
 	 */
 	[[nodiscard]] void* getRawData()
 	{
-		return (void*)m_buffer.getPtr();
+		return (void*)m_buffer.data();
 	}
 
 	/**
@@ -152,18 +152,18 @@ public:
 	template <typename T = uint8>
 	T* getData() const
 	{
-		return (T*)m_buffer.getPtr();
+		return (T*)m_buffer.data();
 	}
 
 	void setData(RawBuffer<uint8>* newMemory, const size_t inSize = 0)
 	{
-		if (newMemory->getPtr() == nullptr)
+		if (newMemory->data() == nullptr)
 		{
 			LOG_ERROR("Invalid memory allocation.")
 			return;
 		}
 		auto size = inSize ? inSize : getDataSize();
-		memcpy(m_buffer.getPtr(), newMemory->getPtr(), size);
+		memcpy(m_buffer.data(), newMemory->data(), size);
 	}
 
 	/**
@@ -207,7 +207,7 @@ public:
 	 */
 	void fill(const Color& inColor)
 	{
-		int32* ptr = (int32*)m_buffer.getPtr();
+		int32* ptr = (int32*)m_buffer.data();
 		int32  color = inColor.toInt32();
 		size_t size = m_size.x * m_size.y;
 		std::fill(ptr, ptr + size, color);
@@ -220,7 +220,7 @@ public:
 	 */
 	void fill(const float value)
 	{
-		auto  ptr = (float*)m_buffer.getPtr();
+		auto  ptr = (float*)m_buffer.data();
 		int32 size = m_size.x * m_size.y;
 		std::fill(ptr, ptr + size, value);
 	}
@@ -232,7 +232,7 @@ public:
 	 */
 	[[nodiscard]] uint32* scanline(const int y)
 	{
-		return (uint32*)m_buffer.getPtr() + (y * m_pitch);
+		return (uint32*)m_buffer.data() + (y * m_pitch);
 	}
 
 	template <typename T>
@@ -263,20 +263,20 @@ public:
 
 	void setPixel(const int32 x, const int32 y, const uint8 color)
 	{
-		uint8* line = m_buffer.getPtr() + (y * m_pitch);
+		uint8* line = m_buffer.data() + (y * m_pitch);
 		line[x] = color;
 	}
 
 	void setPixelFromColor(const int32 x, const int32 y, const Color& color)
 	{
-		auto line = (uint32*)m_buffer.getPtr();
+		auto line = (uint32*)m_buffer.data();
 		line += (y * m_pitch);
 		line[x] = color.toInt32();
 	}
 
 	void setPixelFromFloat(const int32 x, const int32 y, float value)
 	{
-		uint32* line = (uint32*)m_buffer.getPtr();
+		uint32* line = (uint32*)m_buffer.data();
 		line += (y * m_pitch);
 		auto*	castInt = reinterpret_cast<uint32*>(&value);
 		line[x] = *castInt;
@@ -284,7 +284,7 @@ public:
 
 	void setRow(const int32 row, const Color& color)
 	{
-		auto line = (uint32*)m_buffer.getPtr();
+		auto line = (uint32*)m_buffer.data();
 		line += (row * m_pitch);
 		int32 value = color.toInt32();
 		std::fill(line, line + m_pitch, value);
@@ -318,7 +318,7 @@ public:
 
 	void flipVertical()
 	{
-		Texture::flipVertical(m_buffer.getPtr(), m_size.x, m_size.y);
+		Texture::flipVertical(m_buffer.data(), m_size.x, m_size.y);
 	}
 
 	// Swap the RGBA bytes for BGRA
@@ -326,7 +326,7 @@ public:
 	{
 		size_t index = 0;
 		size_t size = getDataSize();
-		uint8* ptr = m_buffer.getPtr();
+		uint8* ptr = m_buffer.data();
 
 		if (!ptr)
 		{

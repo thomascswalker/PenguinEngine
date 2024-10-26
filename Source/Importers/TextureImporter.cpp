@@ -139,18 +139,8 @@ bool TextureImporter::readPngChunk(ByteReader* reader, PngChunk* chunk, PngMetad
 	auto compressedSize = reader->readUInt32();
 	chunk->compressedBuffer.resize(compressedSize);
 
-	// Read each char of the name
-	int8 name0 = reader->readInt8();
-	int8 name1 = reader->readInt8();
-	int8 name2 = reader->readInt8();
-	int8 name3 = reader->readInt8();
-
 	// Determine the chunk type
-	std::string name;
-	name.push_back(name0);
-	name.push_back(name1);
-	name.push_back(name2);
-	name.push_back(name3);
+	std::string name = reader->readString(4);
 	chunk->type = g_pngChunkTypeMap[name];
 
 	// Allocate the memory for this chunk's uncompressedData, given the
@@ -174,12 +164,12 @@ int32 TextureImporter::pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, si
 {
 	// Raw pointer to the final PNG data which is pushed to the Texture object
 	// This is offset by the size of the previous IDAT chunk, in case there's multiple chunks.
-	uint8* out     = png->data.getPtr() + offset;
+	uint8* out     = png->data.data() + offset;
 	size_t outSize = png->data.size();
 
 	// Raw pointer to the uncompressed image data. This pointer is what is incremented and accessed
 	// to retrieve the current working byte.
-	uint8* in = buffer->getPtr();
+	uint8* in = buffer->data();
 
 	// Metadata local vars
 	PngMetadata* metadata = &png->metadata;
@@ -533,7 +523,7 @@ int32 TextureImporter::importPng(ByteReader* reader, Texture* texture, ETextureF
 	for (int32 row = 0; row < (int32)png.metadata.height; row++)
 	{
 		size_t offset = row * bpr;
-		memcpy(tmp.getPtr() + offset, data.getPtr() + offset, bpr);
+		memcpy(tmp.data() + offset, data.data() + offset, bpr);
 	}
 
 	texture->resize({(int32)png.metadata.width, (int32)png.metadata.height});

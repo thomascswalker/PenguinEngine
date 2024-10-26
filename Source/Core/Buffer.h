@@ -20,7 +20,7 @@ inline uint8 g_bitsPerByte = 8;
 template <typename T>
 T swapByteOrder(T value)
 {
-	T result = 0;
+	T	result = 0;
 	int size = sizeof(T) - 1;
 	for (int i = 0; i <= size; i++)
 	{
@@ -37,7 +37,7 @@ T swapByteOrder(T value)
 template <typename T>
 class RawBuffer
 {
-	T* m_data     = nullptr;
+	T*	   m_data = nullptr;
 	size_t m_size = 0;
 
 public:
@@ -51,7 +51,7 @@ public:
 
 	explicit RawBuffer(T* inData, const size_t inSize)
 		: m_data(inData)
-		  , m_size(inSize)
+		, m_size(inSize)
 	{
 		m_data = PlatformMemory::malloc<T>(inSize);
 		std::memcpy(m_data, inData, inSize);
@@ -76,8 +76,8 @@ public:
 	// Move constructor
 	RawBuffer(RawBuffer&& other) noexcept
 	{
-		m_data       = other.m_data;
-		m_size       = other.m_size;
+		m_data = other.m_data;
+		m_size = other.m_size;
 		other.m_data = nullptr;
 		other.m_size = 0;
 	}
@@ -109,20 +109,20 @@ public:
 		if (!(*this == other))
 		{
 			PlatformMemory::free(m_data);
-			m_data       = other.m_data;
-			m_size       = other.m_size;
+			m_data = other.m_data;
+			m_size = other.m_size;
 			other.m_data = nullptr;
 			other.m_size = 0;
 		}
 		return *this;
 	}
 
-	T* getPtr()
+	T* data()
 	{
 		return m_data;
 	}
 
-	T* getPtr() const
+	T* data() const
 	{
 		return m_data;
 	}
@@ -196,6 +196,11 @@ public:
 		m_data = nullptr;
 	}
 
+	bool isValid() const
+	{
+		return m_data != nullptr && m_size != 0;
+	}
+
 	T* begin()
 	{
 		return m_data;
@@ -242,24 +247,16 @@ public:
 	}
 };
 
-struct StreamBuffer : std::streambuf
-{
-	explicit StreamBuffer(RawBuffer<uint8>& buffer)
-	{
-		auto begin = (int8*)buffer.getPtr();
-		this->setg(begin, begin, begin + buffer.size());
-	}
-};
-
 enum class ESeekDir : int32
 {
 	Beginning = std::ios_base::beg,
-	Current   = std::ios_base::cur,
-	End       = std::ios_base::end,
+	Current = std::ios_base::cur,
+	End = std::ios_base::end,
 };
 
 class ByteReader
 {
+	std::unique_ptr<RawBuffer<uint8>> m_buffer;
 	/* Position of the cursor. */
 	int32 m_pos = 0;
 	/* Size of the entire buffer. */
@@ -267,14 +264,11 @@ class ByteReader
 	/* Endian type this buffer reads bytes by. */
 	std::endian m_endian = std::endian::native;
 
-	std::unique_ptr<StreamBuffer> m_streamBuffer = nullptr;
-	std::unique_ptr<std::istream> m_stream       = nullptr;
-
 	// Bit reading
-	uint8 m_bitCount   = 0;
+	uint8 m_bitCount = 0;
 	uint8 m_codeBuffer = 0;
 
-	uint8 m_bitPos      = 0;
+	uint8 m_bitPos = 0;
 	uint8 m_currentByte = 0;
 
 	template <typename T>
@@ -283,59 +277,74 @@ class ByteReader
 		// Reset the bit position
 		m_bitPos = 0;
 
-		// Read compressedSize
-		T value;
-		m_stream->read(reinterpret_cast<int8*>(&value), (int64)size);
+		// Get pointer to the current offset
+		auto ptr = m_buffer->data() + m_pos;
+
+		// Reinterpret cast pointer to type T
+		T value = *reinterpret_cast<T*>(ptr);
+
+		// Increment the position by the size of type T
 		m_pos += (int32)size;
+
+		// If this buffer is using the non-native endian format, swap the byte order
 		if (std::endian::native != m_endian)
 		{
 			return swapByteOrder(value);
 		}
+
+		// Return the value
 		return value;
 	}
 
+	
 	template <typename T>
-	T peek(const size_t size)
+	T peek(size_t size)
 	{
-		T value;
-		m_stream->peek(reinterpret_cast<int8*>(&value), (int64)size);
+		// Reset the bit position
+		m_bitPos = 0;
+
+		// Get pointer to the current offset
+		auto ptr = m_buffer->data() + m_pos;
+
+		// Reinterpret cast pointer to type T
+		T value = *reinterpret_cast<T*>(ptr);
+
+		// If this buffer is using the non-native endian format, swap the byte order
 		if (std::endian::native != m_endian)
 		{
 			return swapByteOrder(value);
 		}
+
+		// Return the value
 		return value;
 	}
+
 
 public:
 	ByteReader() = default;
 
 	ByteReader(std::string& inString, const size_t inSize,
-	           const std::endian endian = std::endian::native)
+		const std::endian endian = std::endian::native)
 		: m_size(inSize)
-		  , m_endian(endian)
+		, m_endian(endian)
 	{
-		RawBuffer buffer((uint8*)inString.data(), inSize);
-		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_buffer = std::make_unique<RawBuffer<uint8>>((uint8*)inString.data(), inSize);
 	}
 
 	explicit ByteReader(uint8* inBuffer, const size_t inSize,
-	                    const std::endian endian = std::endian::native)
+		const std::endian endian = std::endian::native)
 		: m_size(inSize)
-		  , m_endian(endian)
+		, m_endian(endian)
 	{
-		RawBuffer buffer(inBuffer, inSize);
-		m_streamBuffer = std::make_unique<StreamBuffer>(buffer);
-		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_buffer = std::make_unique<RawBuffer<uint8>>(inBuffer, inSize);
 	}
 
 	explicit ByteReader(RawBuffer<uint8>& inBuffer,
-	                    const std::endian endian = std::endian::native)
+		const std::endian				  endian = std::endian::native)
 		: m_size(inBuffer.size())
-		  , m_endian(endian)
+		, m_endian(endian)
 	{
-		m_streamBuffer = std::make_unique<StreamBuffer>(inBuffer);
-		m_stream       = std::make_unique<std::istream>(m_streamBuffer.get(), false);
+		m_buffer = std::make_unique<RawBuffer<uint8>>(inBuffer);
 	}
 
 	~ByteReader() = default;
@@ -353,6 +362,11 @@ public:
 	[[nodiscard]] size_t getSize() const
 	{
 		return m_size;
+	}
+
+	uint8* ptr()
+	{
+		return m_buffer->data() + m_pos;
 	}
 
 	int8 readInt8()
@@ -380,6 +394,11 @@ public:
 		return read<uint8>(1);
 	}
 
+	uint8 peekUInt8()
+	{
+		return peek<uint8>(1);
+	}
+
 	uint16 readUInt16()
 	{
 		return read<uint16>(2);
@@ -393,6 +412,26 @@ public:
 	uint64 readUInt64()
 	{
 		return read<uint64>(8);
+	}
+
+	template <typename T>
+	void readSize(size_t size, std::vector<T>& buffer)
+	{
+		for (int32 i = 0; i < size; i++)
+		{
+			buffer.emplace_back(read<T>(sizeof(T)));
+		}
+	}
+
+	std::string readString(size_t size, int32 step = 0)
+	{
+		std::string out;
+		for (int32 i = 0; i < size; i++)
+		{
+			unsigned char c = readUInt8();
+			out.push_back(c);
+		}
+		return out;
 	}
 
 	void fillBits()
@@ -422,8 +461,23 @@ public:
 
 	uint32 seek(const int32 offset, ESeekDir seekDir = ESeekDir::Current)
 	{
-		m_pos += offset;
-		m_stream->seekg(offset, (int32)seekDir);
+		switch (seekDir)
+		{
+			case ESeekDir::Beginning:
+				m_pos = offset;
+				break;
+			case ESeekDir::Current:
+				m_pos += offset;
+				break;
+			case ESeekDir::End:
+				m_pos = m_size - offset;
+				break;
+		}
 		return m_pos;
+	}
+
+	uint8* next()
+	{
+		return m_buffer->data() + m_pos + 1;
 	}
 };

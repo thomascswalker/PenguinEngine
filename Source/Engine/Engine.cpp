@@ -10,7 +10,8 @@
 #include "Input/InputHandler.h"
 #include "Platforms/Generic/PlatformInterface.h"
 #include "Engine/Mesh.h"
-#include <Renderer/UI/Widget.h>
+#include "Renderer/UI/Widget.h"
+#include "Renderer/Font.h"
 
 Engine* Engine::m_instance = getInstance();
 
@@ -50,6 +51,9 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 		// Menu
 		input->m_menuActionPressed.addRaw(this, &Engine::onMenuActionPressed);
 	}
+
+	// Load fonts
+	g_fontDatabase->init();
 
 	/** TODO: BUTTON CREATION; MOVE THIS **/
 	auto canvas = WidgetManager::constructWidget<Canvas>();
