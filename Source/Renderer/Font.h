@@ -386,7 +386,12 @@ namespace TTF
 			return false;
 		}
 
-		shape->instructionLength = reader.readUInt16();									 // Instruction size
+		shape->instructionLength = reader.readUInt16(); // Instruction size
+		if (!reader.canSeek(shape->instructionLength))
+		{
+			LOG_ERROR("Unable to seek past instruction length.")
+			return false;
+		}
 		shape->instructions.resize(shape->instructionLength);							 // Resize vector to instruction size
 		std::memcpy(shape->instructions.data(), reader.ptr(), shape->instructionLength); // Copy memory from reader ptr to instruction vector
 		reader.seek(shape->instructionLength);											 // Offset reader by length of instructions
@@ -612,7 +617,7 @@ namespace TTF
 			reader.seek(initialOffset + name->stringOffset + record.offset + 1, ESeekDir::Beginning);
 
 			// Read the text
-			std::string		   text;
+			std::string text;
 
 			// Read the raw record text into a buffer
 			std::vector<uint8> textBuffer;

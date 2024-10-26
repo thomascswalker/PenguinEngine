@@ -17,18 +17,25 @@ class Painter
 public:
 	Painter(Texture* data, recti viewport);
 
-	void setViewport(recti viewport)
-	{
-		m_viewport = viewport;
-	}
+	void setViewport(recti viewport);
+
+	/**
+	 * @brief Draws a line from point A to point B with the specified color.
+	 */
+	void drawLine(vec2i a, vec2i b, const Color& color);
 
 	/**
 	 * @brief Draws a rectangle with no fill color.
 	 */
-	virtual void drawRect(recti r, Color color, int32 thickness = 1);
+	void drawRect(recti r, const Color& color, int32 thickness = 1);
 
 	/**
 	 * Draws a rectangle filled with the specified color.
 	 */
-	virtual void drawRectFilled(recti r, Color color);
+	void drawRectFilled(recti r, const Color& color);
+
+	/**
+	 * @brief Draws a bezier curve along all points with the specified color.
+	 */
+	void drawBezierCurve(std::vector<vec2i>& points, const Color& color);
 };

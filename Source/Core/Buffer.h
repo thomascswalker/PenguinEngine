@@ -480,4 +480,9 @@ public:
 	{
 		return m_buffer->data() + m_pos + 1;
 	}
+
+	bool canSeek(const int32 offset) const
+	{
+		return m_pos + offset < m_size;
+	}
 };
