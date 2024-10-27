@@ -242,6 +242,8 @@ public:
 		painter->drawRectFilled(m_renderGeometry, color);
 		// Draw the button border
 		painter->drawRect(m_renderGeometry, UIColors::VeryDarkGray);
+
+		painter->drawText({0,0}, "A", UIColors::White);
 	}
 
 	virtual void update(MouseData& mouse) override

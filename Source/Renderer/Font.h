@@ -18,7 +18,7 @@
 
 class FontDatabase;
 inline std::shared_ptr<FontDatabase> g_fontDatabase = std::make_shared<FontDatabase>();
-inline char							 g_alphabet[91] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnoprstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()_+";
+inline char							 g_alphabet[93] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghikjklmnopqrstuvwxyz1234567890-=[]{};':\",./<>?!@#$%^&*()_+ ";
 
 typedef union
 {
@@ -138,18 +138,34 @@ namespace TTF
 		return outString;
 	} // operator <<(Color)
 
+	enum EGlyphVertexType
+	{
+		Move,
+		VLine,
+		VCurve,
+		VCubic
+	};
+
+	struct GlyphVertex
+	{
+		vec2i	   position;
+		EGlyphFlag flag;
+		EGlyphVertexType type;
+	};
+
 	struct GlyphShape
 	{
-		uint16					contourCount;
-		int16					xMin;
-		int16					yMin;
-		int16					xMax;
-		int16					yMax;
-		uint16					instructionLength;
-		std::vector<uint8>		instructions;
-		std::vector<EGlyphFlag> flags;
-		std::vector<vec2i>		coordinates;
-		std::vector<uint16>		contourEndPoints;
+		uint16					 contourCount;
+		int16					 xMin;
+		int16					 yMin;
+		int16					 xMax;
+		int16					 yMax;
+		uint16					 instructionLength;
+		std::vector<uint8>		 instructions;
+		std::vector<GlyphVertex> vertices;
+		//std::vector<EGlyphFlag>	 flags;
+		//std::vector<vec2i>		 coordinates;
+		std::vector<uint16>		 contourEndPoints;
 	};
 
 	struct NameRecord
@@ -264,6 +280,42 @@ namespace TTF
 		std::string fullName;
 	};
 
+	struct HHEA
+	{
+		uint16 majorVersion;
+		uint16 minorVersion;
+		FWord  ascender;
+		FWord  descender;
+		FWord  lineGap;
+		UFWord advanceWidthMax;
+		FWord  minLeftSideBearing;
+		FWord  minRightSideBearing;
+		FWord  xMaxExtent;
+		int16  caretSlopeRise;
+		int16  caretSlopeRun;
+		int16  caretOffset;
+		int64  reserved;
+		int16  metricDataFormat;
+		uint16 hMetricCount;
+	};
+
+	struct LongHMetric
+	{
+		int16 advanceWidth;
+		int16 leftSideBearing;
+	};
+
+	struct HMTX
+	{
+		std::vector<LongHMetric> hMetrics;
+	};
+
+	struct MAXP
+	{
+		Fixed  version;
+		uint16 glyphCount;
+	};
+
 	struct FontInfo
 	{
 		std::string					fileName;
@@ -275,7 +327,12 @@ namespace TTF
 		std::shared_ptr<HEAD>		head = nullptr;
 		std::shared_ptr<LOCA>		loca = nullptr;
 		std::shared_ptr<GLYF>		glyf = nullptr;
+		std::shared_ptr<HHEA>		hhea = nullptr;
+		std::shared_ptr<HMTX>		hmtx = nullptr;
+		std::shared_ptr<MAXP>		maxp = nullptr;
 	};
+
+	float getScaleForPixelHeight(FontInfo* fontInfo, int32 pixelHeight);
 
 	inline int32 getGlyphIndex(uint16 codePoint, FontInfo* fontInfo)
 	{
@@ -333,7 +390,7 @@ namespace TTF
 
 	inline void readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag)
 	{
-		int32 pointCount = shape->coordinates.size();
+		int32 pointCount = shape->vertices.size();
 
 		// Value for each coordinate. All coordinates are sequential and either:
 		// 1. If it's the first coordinate, it's just added to 0.
@@ -344,7 +401,7 @@ namespace TTF
 		for (int32 i = 0; i < pointCount; i++)
 		{
 			// https://github.com/nothings/stb/blob/2e2bef463a5b53ddf8bb788e25da6b8506314c08/stb_truetype.h#L1726
-			auto f = shape->flags[i];
+			auto f = shape->vertices[i].flag;
 
 			// Char
 			if (f & byteFlag)
@@ -363,7 +420,7 @@ namespace TTF
 			}
 
 			// Set this coordinate's index (x, y) to the current value
-			shape->coordinates[i][index] = value;
+			shape->vertices[i].position[index] = value;
 		}
 	}
 
@@ -401,6 +458,9 @@ namespace TTF
 		int32	   flagCount = 0;
 		EGlyphFlag flag;
 		int32	   end = directory->tables[ETableType::GLYF].length;
+
+		shape->vertices.resize(pointCount);
+
 		for (int32 i = 0; i < pointCount; ++i)
 		{
 			if (reader.getPos() >= end)
@@ -421,13 +481,15 @@ namespace TTF
 				--flagCount;
 			}
 
-			shape->flags.emplace_back(flag);
+			shape->vertices[i].flag = flag;
 		}
 
 		// Update point count to number of flags
-		shape->coordinates.resize(pointCount);
 		readGlyphCoordinates(reader, shape, 0, XShort, XShortPos);
 		readGlyphCoordinates(reader, shape, 1, YShort, YShortPos);
+
+		// Set EGlyphVertexType
+
 
 		return true;
 	}
@@ -476,6 +538,7 @@ namespace TTF
 		}
 	}
 
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
 	inline bool readCMAP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
 		auto cmap = fontInfo->cmap.get();
@@ -523,6 +586,7 @@ namespace TTF
 		return true;
 	}
 
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/loca
 	inline void readLOCA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
 		auto loca = fontInfo->loca.get();
@@ -540,6 +604,7 @@ namespace TTF
 		}
 	}
 
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/head
 	inline void readHEAD(ByteReader& reader, FontInfo* fontInfo)
 	{
 		auto head = fontInfo->head.get();
@@ -571,6 +636,7 @@ namespace TTF
 		head->glyphDataFormat = reader.readInt16();
 	}
 
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/glyf
 	inline bool readGLYF(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
 
@@ -583,11 +649,12 @@ namespace TTF
 				LOG_ERROR("Failed to read glyph shape {}", k)
 				return false;
 			}
+
 			fontInfo->glyf->shapes[k] = shape;
 		}
 	}
 
-	// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6name.html
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/name
 	inline bool readNAME(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	{
 		// Get record metadata
@@ -652,6 +719,94 @@ namespace TTF
 				default:
 					continue;
 			}
+		}
+
+		return true;
+	}
+
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/hhea
+	inline bool readHHEA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
+	{
+		HHEA* hhea = fontInfo->hhea.get();
+		reader.seek(initialOffset, ESeekDir::Beginning);
+
+		hhea->majorVersion = reader.readUInt16();
+		hhea->minorVersion = reader.readUInt16();
+		hhea->ascender = reader.readInt16();
+		hhea->descender = reader.readInt16();
+		hhea->lineGap = reader.readInt16();
+		hhea->advanceWidthMax = reader.readUInt16();
+		hhea->minLeftSideBearing = reader.readInt16();
+		hhea->minRightSideBearing = reader.readInt16();
+		hhea->xMaxExtent = reader.readInt16();
+		hhea->caretSlopeRise = reader.readInt16();
+		hhea->caretSlopeRun = reader.readInt16();
+		hhea->caretOffset = reader.readInt16();
+		hhea->reserved = reader.readInt64();
+		hhea->metricDataFormat = reader.readInt16();
+		hhea->hMetricCount = reader.readUInt16();
+
+		return true;
+	}
+
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/maxp
+	inline bool readMAXP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
+	{
+		MAXP* maxp = fontInfo->maxp.get();
+		reader.seek(initialOffset, ESeekDir::Beginning);
+
+		maxp->version.i = reader.readUInt32();
+		maxp->glyphCount = reader.readUInt16();
+
+		return true;
+	}
+
+	// https://learn.microsoft.com/en-us/typography/opentype/spec/hmtx
+	inline bool readHMTX(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
+	{
+		HMTX* hmtx = fontInfo->hmtx.get();
+		reader.seek(initialOffset, ESeekDir::Beginning);
+		uint8* hmtx_ptr = reader.ptr();
+
+		auto  glyphIndexes = fontInfo->loca->glyphIndexes;
+		int32 hMetricCount = fontInfo->hhea->hMetricCount;
+		if (hMetricCount < glyphIndexes.size())
+		{
+			LOG_ERROR("Horizontal Metric count ({}) is lower than Glyph Index count ({}).", hMetricCount, glyphIndexes.size())
+			return false;
+		}
+		hmtx->hMetrics.resize(hMetricCount);
+		int32 glyphCount = fontInfo->maxp->glyphCount;
+
+		for (auto& [k, glyphIndex] : glyphIndexes)
+		{
+			if (glyphIndex == 36)
+			{
+				int a = 5;
+			}
+			LongHMetric lhm;
+			uint8*		p;
+			// Seek to beginning of HMTX
+			reader.seek(initialOffset, ESeekDir::Beginning);
+			if (glyphIndex < hMetricCount)
+			{
+				// Seek to glyph offset. Multiply by 4 because each glyph is 32 bytes.
+				reader.seek(4 * glyphIndex);
+				lhm.advanceWidth = reader.readInt16();
+				lhm.leftSideBearing = reader.readInt16();
+			}
+			else
+			{
+				// Seek to last glyph offset.
+				reader.seek(4 * (hMetricCount - 1));
+				lhm.advanceWidth = reader.readInt16();
+				// Seek to end of AdvanceWidth section. Multiply by 4 because each glyph is 32 bytes.
+				reader.seek(initialOffset + (4 * hMetricCount), ESeekDir::Beginning);
+				// Seek offset for this specific glyph
+				reader.seek(2 * (glyphIndex - hMetricCount));
+				lhm.leftSideBearing = reader.readInt16();
+			}
+			hmtx->hMetrics[glyphIndex] = lhm;
 		}
 
 		return true;
@@ -732,6 +887,30 @@ namespace TTF
 			return false;
 		}
 
+		// Read HHEA
+		auto hheaTable = fontInfo->tables[ETableType::HHEA];
+		fontInfo->hhea = std::make_shared<HHEA>();
+		if (!readHHEA(reader, fontInfo, hheaTable.offset))
+		{
+			return false;
+		}
+
+		// Read MAXP
+		auto maxpTable = fontInfo->tables[ETableType::MAXP];
+		fontInfo->maxp = std::make_shared<MAXP>();
+		if (!readMAXP(reader, fontInfo, maxpTable.offset))
+		{
+			return false;
+		}
+
+		// Read HMTX
+		auto hmtxTable = fontInfo->tables[ETableType::HMTX];
+		fontInfo->hmtx = std::make_shared<HMTX>();
+		if (!readHMTX(reader, fontInfo, hmtxTable.offset))
+		{
+			return false;
+		}
+
 		return true;
 	}
 
@@ -792,6 +971,11 @@ class FontDatabase
 				continue;
 			}
 
+			if (!path.find("arial.ttf"))
+			{
+				continue;
+			}
+
 			std::string strBuffer;
 			if (!IO::readFile(path, strBuffer))
 			{
@@ -800,6 +984,7 @@ class FontDatabase
 			}
 
 			registerFont(strBuffer, path);
+			break;
 		}
 	}
 
@@ -819,17 +1004,5 @@ public:
 	void init()
 	{
 		loadFonts();
-
-		const char* str = "Test string.";
-		FontInfo*	f = getFontInfo("Courier New");
-		if (f != nullptr)
-		{
-			LOG_INFO("Found Courier New")
-			LOG_INFO("Shape Count: {}", f->glyf->shapes.size())
-		}
-		else
-		{
-			LOG_ERROR("Unable to find Courier New")
-		}
 	}
 };

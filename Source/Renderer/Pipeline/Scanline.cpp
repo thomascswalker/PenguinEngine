@@ -56,6 +56,7 @@ bool ScanlineRHI::init(void* windowHandle)
 	m_viewData->height = height;
 
 	m_painter = std::make_shared<Painter>(m_frameBuffer.get(), recti{ 0, 0, width, height });
+	
 
 	return true;
 }

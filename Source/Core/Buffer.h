@@ -296,7 +296,6 @@ class ByteReader
 		return value;
 	}
 
-	
 	template <typename T>
 	T peek(size_t size)
 	{
@@ -318,7 +317,6 @@ class ByteReader
 		// Return the value
 		return value;
 	}
-
 
 public:
 	ByteReader() = default;

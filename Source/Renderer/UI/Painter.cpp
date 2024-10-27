@@ -3,6 +3,9 @@
 #include "Painter.h"
 #include "Engine/Actors/Camera.h"
 
+inline std::string g_defaultFont = "Arial";
+constexpr int32	   g_scaleFactor = 150;
+
 void Painter::assertValid()
 {
 	assert(m_data != nullptr);
@@ -11,68 +14,43 @@ void Painter::assertValid()
 Painter::Painter(Texture* data, recti viewport)
 	: m_data(data), m_viewport(viewport)
 {
-}
-
-inline void Painter::setViewport(recti viewport)
-{
-	m_viewport = viewport;
+	setFont(g_fontDatabase->getFontInfo(g_defaultFont));
 }
 
 void Painter::drawLine(vec2i a, vec2i b, const Color& color)
 {
-	bool isSteep = false;
-	if (std::abs(a.x - b.x) < std::abs(a.y - b.y))
+	int32 x0 = std::clamp(a.x, 0, m_viewport.width);
+	int32 y0 = std::clamp(a.y, 0, m_viewport.height);
+	int32 x1 = std::clamp(b.x, 0, m_viewport.width);
+	int32 y1 = std::clamp(b.y, 0, m_viewport.height);
+
+	int32 dx = std::abs(x1 - x0);
+	int32 sx = x0 < x1 ? 1 : -1;
+
+	int32 dy = -std::abs(y1 - y0);
+	int32 sy = y0 < y1 ? 1 : -1;
+
+	int32 err = dx + dy;
+	int32 e2 = 0;
+
+	while (true)
 	{
-		a = vec2i(a.y, a.x);
-		b = vec2i(b.y, b.x);
-		isSteep = true;
-	}
-
-	if (a.x > b.x)
-	{
-		std::swap(a, b);
-	}
-
-	const int32 deltaX = b.x - a.x;
-	const int32 deltaY = b.y - a.y;
-	const int32 deltaError = std::abs(deltaY) * 2;
-	int32		errorCount = 0;
-
-	// https://github.com/ssloy/tinyrenderer/issues/28
-	int32 y = a.y;
-
-	if (isSteep)
-	{
-		for (int32 x = a.x; x < b.x; ++x)
+		if (x0 == x1 && y0 == y1)
 		{
-			if (y < 0)
-			{
-				continue;
-			}
-			m_data->setPixelFromColor(y, x, color);
-			errorCount += deltaError;
-			if (errorCount > deltaX)
-			{
-				y += (b.y > a.y ? 1 : -1);
-				errorCount -= deltaX * 2;
-			}
+			break;
 		}
-	}
-	else
-	{
-		for (int32 x = a.x; x < b.x; ++x)
+		m_data->setPixelFromColor(x0, y0, color);
+
+		e2 = 2 * err;
+		if (e2 >= dy)
 		{
-			if (y < 0)
-			{
-				continue;
-			}
-			m_data->setPixelFromColor(x, y, color);
-			errorCount += deltaError;
-			if (errorCount > deltaX)
-			{
-				y += (b.y > a.y ? 1 : -1);
-				errorCount -= deltaX * 2;
-			}
+			err += dy;
+			x0 += sx;
+		}
+		if (e2 <= dx)
+		{
+			err += dx;
+			y0 += sy;
 		}
 	}
 }
@@ -199,15 +177,21 @@ void Painter::drawRectFilled(recti r, const Color& color)
 #endif
 }
 
-void Painter::drawBezierCurve(std::vector<vec2i>& points, const Color& color)
+void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
 {
 	assert(points.size() > 2); // Minimum of 3 points to draw a curve
 	int32 stepCount = 25;
 	float stepInterval = 1.0f / stepCount;
 
-	vec2i* pPoint = &points.front();// Previous point
-	vec2i* cPoint = pPoint; // Current point
-	int32 limit = points.size() - 3;
+	for (auto& p : points)
+	{
+		p.x = std::clamp(p.x, 0, m_viewport.width);
+		p.y = std::clamp(p.y, 0, m_viewport.height);
+	}
+
+	vec2i* pPoint = &points.front(); // Previous point
+	vec2i* cPoint = pPoint;			 // Current point
+	int32  limit = points.size() - 3;
 
 	for (int32 i = 0; i <= limit; i++)
 	{
@@ -226,7 +210,8 @@ void Painter::drawBezierCurve(std::vector<vec2i>& points, const Color& color)
 			vec2i p012 = Math::lerp(p01, p12, t);
 
 			// Draw a line between the previous point and the current interpolated point
-			drawLine(*pPoint, p012, color);
+			// drawLine(*pPoint, p012, color);
+			m_data->setPixelFromColor(p012.x, p012.y, color);
 
 			// Store the most recently-interpolated point
 			*pPoint = p012;
@@ -235,5 +220,94 @@ void Painter::drawBezierCurve(std::vector<vec2i>& points, const Color& color)
 		// Increment the current point ptr
 		cPoint++;
 	}
+}
 
+std::vector<vec2i> Painter::getWindings(GlyphShape* glyph)
+{
+	std::vector<vec2i> windings;
+	return windings;
+}
+
+vec2i Painter::drawGlyph(GlyphShape* glyph, int32 byteOffset, const vec2f& scale, const vec2f& shift, float flatness, const Color& color)
+{
+	int32 windingCount = 0;
+	std::vector<int32> windingLengths;
+	std::vector<vec2f> points;
+
+	// Tesselate and scale
+
+	float fscale = scale.x > scale.y ? scale.y : scale.x;
+	float flatScale = flatness / fscale;
+	float flatnessSquared = flatScale * flatScale;
+	int32 num_points = glyph->contourCount;
+	int32 pass = 0;
+	int32 n = 0;
+
+	for (pass = 0; pass < 2; pass++)
+	{
+		float x = 0;
+		float y = 0;
+
+		// If we're on the first pass, resize the points array
+		if (pass == 1)
+		{
+			points.resize(num_points);
+		}
+
+		num_points = 0;
+		n = -1;
+		for (int32 i = 0; i < num_points; i++)
+		{
+
+		}
+	}
+
+
+	if (points.size() != 0)
+	{
+		// Rasterize
+	}
+}
+
+void Painter::drawText(const vec2i& pos, const std::string& text, const Color& color)
+{
+	int32 lineHeight = 64;
+	assert(m_font != nullptr);
+
+	// Get vertical metrics
+	float scale = TTF::getScaleForPixelHeight(m_font, lineHeight);
+	float ascent = m_font->hhea->ascender;
+	float descent = m_font->hhea->descender;
+	float lineGap = m_font->hhea->lineGap;
+
+	ascent = std::roundf(ascent * scale);
+	descent = std::roundf(descent * scale);
+
+	// Track horizontal position
+	int32 x = 0;
+
+	// Draw each character
+	for (auto c : text)
+	{
+		GlyphShape* glyph = &m_font->glyf->shapes[c];
+		int32		glyphIndex = m_font->loca->glyphIndexes[c];
+
+		// Get horizontal metrics for this glyph
+		int32 advanceWidth = m_font->hmtx->hMetrics[glyphIndex].advanceWidth;
+		int32 leftSideBearing = m_font->hmtx->hMetrics[glyphIndex].leftSideBearing;
+
+		int32 x0 = std::floor(glyph->xMin * scale + pos.x);
+		int32 y0 = std::floor(-glyph->yMax * scale + pos.y);
+		int32 x1 = std::floor(glyph->xMax * scale + pos.x);
+		int32 y1 = std::floor(-glyph->yMin * scale + pos.y);
+
+		int32 y = ascent + y0;
+
+		int32 byteOffset = x + roundf(leftSideBearing * scale) + (y * m_viewport.width);
+		float flatness = 0.35f;
+		drawGlyph(glyph, byteOffset, vec2f(scale, scale), vec2f(x1 - x0, y1 - y0), flatness, color);
+
+		// Advance
+		x += roundf(advanceWidth * scale);
+	}
 }
