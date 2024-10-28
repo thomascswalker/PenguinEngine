@@ -13,6 +13,7 @@ class Painter
 	Texture*  m_data = nullptr;
 	recti	  m_viewport{};
 	FontInfo* m_font = nullptr;
+	int32	  m_fontSize = 24;
 
 	void assertValid();
 
@@ -23,6 +24,7 @@ public:
 
 	void setViewport(recti viewport) { m_viewport = viewport; }
 	void setFont(FontInfo* font) { m_font = font; }
+	void setFontSize(int32 fontSize) { m_fontSize; }
 
 	/** Drawing **/
 
@@ -47,6 +49,6 @@ public:
 	void drawBezierCurve(std::vector<vec2i> points, const Color& color);
 
 	std::vector<vec2i> getWindings(GlyphShape* glyph);
-	vec2i			   drawGlyph(GlyphShape* glyph, int32 byteOffset, const vec2f& scale, const vec2f& shift, float flatness, const Color& color);
-	void drawText(const vec2i& pos, const std::string& text, const Color& color);
+	void			   drawGlyph(GlyphShape* glyph, int32 xOffset, int32 yOffset, const vec2f& scale, const vec2i& shift, const Color& color);
+	void drawText(vec2i pos, const std::string& text, const Color& color);
 };

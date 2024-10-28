@@ -3,15 +3,8 @@
 #include "Engine/Actors/Actor.h"
 #include "Math/MathFwd.h"
 #include "Math/Spherical.h"
+#include "Platforms/Generic/PlatformMemory.h"
 
-constexpr int32 g_windowWidthClip       = 16;
-constexpr int32 g_windowHeightClip      = 59;
-constexpr int32 g_defaultViewportWidth  = 640 + g_windowWidthClip;
-constexpr int32 g_defaultViewportHeight = 480 + g_windowHeightClip;
-constexpr int32 g_minWindowWidth        = 320;
-constexpr int32 g_minWindowHeight       = 240;
-constexpr int32 g_maxWindowWidth        = 1280;
-constexpr int32 g_maxWindowHeight       = 720;
 
 constexpr float g_defaultFov  = 54.3f;
 constexpr float g_defaultMinz = 0.1f;

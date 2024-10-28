@@ -56,7 +56,6 @@ bool ScanlineRHI::init(void* windowHandle)
 	m_viewData->height = height;
 
 	m_painter = std::make_shared<Painter>(m_frameBuffer.get(), recti{ 0, 0, width, height });
-	
 
 	return true;
 }
@@ -65,6 +64,13 @@ void ScanlineRHI::beginDraw()
 {
 	// Reset all buffers to their default values (namely z to Inf)
 	m_frameBuffer->fill(Color::black());
+	Color bgColor = Color::fromRgba(80, 128, 200);
+	for (int i = m_viewData->height - 1; i >= 0; i--)
+	{
+		float perc = (float)i / (float)m_viewData->height;
+		Color color = bgColor * Math::remap(perc, 0.0f, 1.0f, 0.1f, 1.0f);
+		m_frameBuffer->fillRow(i, color);
+	}
 	m_depthBuffer->fill(10000.0f);
 
 	if (TextureManager::count() > 0)
@@ -76,9 +82,6 @@ void ScanlineRHI::beginDraw()
 void ScanlineRHI::draw()
 {
 	drawRenderables();
-
-	Widget* root = WidgetManager::g_rootWidget;
-	WidgetManager::layoutWidgets(root, recti{ 0, 0, m_viewData->width, m_viewData->height });
 	drawUI(WidgetManager::g_rootWidget);
 }
 
@@ -492,19 +495,14 @@ void ScanlineRHI::computeLinePixels(const vec3f& inA, const vec3f& inB, std::vec
 
 void ScanlineRHI::resize(int32 width, int32 height)
 {
-	if (width != m_viewData->width || height != m_viewData->height)
-	{
-		LOG_ERROR("Size mismatch with ScanlineRHI::resize() and m_viewData. Skipping resize.")
-		return;
-	}
-
-	m_frameBuffer->resize({ width, height });
-	m_depthBuffer->resize({ width, height });
+	m_frameBuffer->resize({ width, height }, g_maxWindowBufferSize);
+	m_depthBuffer->resize({ width, height }, g_maxWindowBufferSize);
+	m_painter->setViewport({ 0, 0, width, height });
 }
 
-uint8* ScanlineRHI::getFrameData()
+Texture* ScanlineRHI::getFrameData()
 {
-	return m_frameBuffer->getData<uint8>();
+	return m_frameBuffer.get();
 }
 
 void ScanlineRHI::setViewData(ViewData* newViewData)

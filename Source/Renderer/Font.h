@@ -12,6 +12,7 @@
 #include "Core/Types.h"
 #include "Core/IO.h"
 #include "Math/Vector.h"
+#include "Math/Rect.h"
 
 /** https://handmade.network/forums/articles/t/7330-implementing_a_font_reader_and_rasterizer_from_scratch%252C_part_1__ttf_font_reader. **/
 /** https://handmade.network/forums/wip/t/7610-reading_ttf_files_and_rasterizing_them_using_a_handmade_approach%252C_part_2__rasterization **/
@@ -148,24 +149,22 @@ namespace TTF
 
 	struct GlyphVertex
 	{
-		vec2i	   position;
-		EGlyphFlag flag;
+		vec2i			 position;
+		vec2i			 cPosition;
+		EGlyphFlag		 flag;
 		EGlyphVertexType type;
 	};
 
 	struct GlyphShape
 	{
 		uint16					 contourCount;
-		int16					 xMin;
-		int16					 yMin;
-		int16					 xMax;
-		int16					 yMax;
+		recti					 bounds;
 		uint16					 instructionLength;
 		std::vector<uint8>		 instructions;
 		std::vector<GlyphVertex> vertices;
-		//std::vector<EGlyphFlag>	 flags;
-		//std::vector<vec2i>		 coordinates;
-		std::vector<uint16>		 contourEndPoints;
+		// std::vector<EGlyphFlag>	 flags;
+		// std::vector<vec2i>		 coordinates;
+		std::vector<uint16> contourEndPoints;
 	};
 
 	struct NameRecord
@@ -424,42 +423,60 @@ namespace TTF
 		}
 	}
 
-	inline bool getGlyphShape(ByteReader& reader, FontInfo* directory, GlyphShape* shape)
+	inline std::vector<vec2i> tessellateGlyph(GlyphShape* shape)
+	{
+		std::vector<vec2i> vertices;
+		for (auto& v : shape->vertices)
+		{
+			vertices.emplace_back(v.position);
+		}
+		return vertices;
+
+	}
+
+	inline bool getGlyphShape(ByteReader& reader, FontInfo* directory, GlyphShape* glyph)
 	{
 		auto start = reader.ptr();
 
-		shape->contourCount = reader.readUInt16();
-		shape->xMin = reader.readInt16();
-		shape->yMin = reader.readInt16();
-		shape->xMax = reader.readInt16();
-		shape->yMax = reader.readInt16();
+		glyph->contourCount = reader.readUInt16();
 
-		for (int32 i = 0; i < shape->contourCount; i++)
+		if (glyph->contourCount <= 0)
 		{
-			shape->contourEndPoints.emplace_back(reader.readUInt16());
+			LOG_WARNING("Contour count {} not supported.", glyph->contourCount)
+			return false;
 		}
-		if (shape->contourEndPoints.size() != shape->contourCount)
+		int32 x0 = reader.readInt16();
+		int32 y0 = reader.readInt16();
+		int32 x1 = reader.readInt16();
+		int32 y1 = reader.readInt16();
+		glyph->bounds = recti(x0, y0, x0 + x1, y0 + y1);
+
+		for (int32 i = 0; i < glyph->contourCount; i++)
+		{
+			glyph->contourEndPoints.emplace_back(reader.readUInt16());
+		}
+		if (glyph->contourEndPoints.size() != glyph->contourCount)
 		{
 			return false;
 		}
 
-		shape->instructionLength = reader.readUInt16(); // Instruction size
-		if (!reader.canSeek(shape->instructionLength))
+		glyph->instructionLength = reader.readUInt16(); // Instruction size
+		if (!reader.canSeek(glyph->instructionLength))
 		{
 			LOG_ERROR("Unable to seek past instruction length.")
 			return false;
 		}
-		shape->instructions.resize(shape->instructionLength);							 // Resize vector to instruction size
-		std::memcpy(shape->instructions.data(), reader.ptr(), shape->instructionLength); // Copy memory from reader ptr to instruction vector
-		reader.seek(shape->instructionLength);											 // Offset reader by length of instructions
+		glyph->instructions.resize(glyph->instructionLength);							 // Resize vector to instruction size
+		std::memcpy(glyph->instructions.data(), reader.ptr(), glyph->instructionLength); // Copy memory from reader ptr to instruction vector
+		reader.seek(glyph->instructionLength);											 // Offset reader by length of instructions
 
 		// https://stackoverflow.com/a/36371452
-		int32	   pointCount = shape->contourEndPoints.back() + 1;
+		int32	   pointCount = glyph->contourEndPoints.back() + 1;
 		int32	   flagCount = 0;
 		EGlyphFlag flag;
 		int32	   end = directory->tables[ETableType::GLYF].length;
 
-		shape->vertices.resize(pointCount);
+		glyph->vertices.resize(pointCount);
 
 		for (int32 i = 0; i < pointCount; ++i)
 		{
@@ -481,15 +498,12 @@ namespace TTF
 				--flagCount;
 			}
 
-			shape->vertices[i].flag = flag;
+			glyph->vertices[i].flag = flag;
 		}
 
 		// Update point count to number of flags
-		readGlyphCoordinates(reader, shape, 0, XShort, XShortPos);
-		readGlyphCoordinates(reader, shape, 1, YShort, YShortPos);
-
-		// Set EGlyphVertexType
-
+		readGlyphCoordinates(reader, glyph, 0, XShort, XShortPos);
+		readGlyphCoordinates(reader, glyph, 1, YShort, YShortPos);
 
 		return true;
 	}

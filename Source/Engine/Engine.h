@@ -38,6 +38,10 @@ public:
 	 */
 	void tick();
 
+	void exit() { m_isRunning = false; }
+
+	void constructUI();
+
 	[[nodiscard]] Viewport* getViewport() const
 	{
 		return m_viewport.get();
@@ -70,8 +74,6 @@ public:
 	void onMouseMoved(MouseData& mouse) const;
 
 	void onKeyPressed(EKey keyCode) const;
-
-	void onMenuActionPressed(EMenuAction actionId);
 
 	/**
 	 * @brief Called when the Load Model menu action is pressed. Loads the mesh selected by the file open dialog.

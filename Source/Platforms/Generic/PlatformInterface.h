@@ -77,19 +77,6 @@ public:
 	virtual bool getFileDialog(std::string& outFileName, const std::string& filter) = 0;
 
 	/**
-	 * @brief Constructs a platform-specific menu bar at the top of the dialog.
-	 */
-	virtual void constructMenuBar() = 0;
-
-	/**
-	 * @brief Sets the specified menu item (defined by EMenuAction) to the specified state.
-	 * This is called from Engine::onMenuActionPressed.
-	 * @param actionId The menu item ID to set the state of.
-	 * @param checkState The new state of the menu item.
-	 */
-	virtual void setMenuItemChecked(EMenuAction actionId, bool checkState) = 0;
-
-	/**
 	 * @brief Displays a modal message box using the platform-specific method of doing so.
 	 * @param title The title of the message box.
 	 * @param message The text to display within the message box.

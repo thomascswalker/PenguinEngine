@@ -30,7 +30,7 @@ public:
 
 	/** Getter/setters **/
 
-	virtual uint8* getFrameData() = 0;
+	virtual Texture* getFrameData() = 0;
 	virtual void setViewData(ViewData* newViewData) = 0;
 	virtual void setRenderSettings(RenderSettings* newRenderSettings) = 0;
 

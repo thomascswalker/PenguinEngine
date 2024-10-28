@@ -65,43 +65,6 @@ void Painter::drawRect(recti r, const Color& color, int32 thickness)
 	// Clamp the rectangle to the current viewport size
 	r.clamp(m_viewport);
 
-#if defined(_WIN32) || defined(_WIN64)
-	// On Windows we have to flip the Y values because Win32 draws
-	// from the bottom up, rather than top down.
-
-	vec2i rmin = r.min();
-	vec2i rmax = r.max();
-	int32 height = m_viewport.height;
-
-	// Start row
-	int32 end = std::clamp(height - rmin.y - g_windowHeightClip, 0, m_viewport.max().y);
-	// End row
-	int32 start = std::clamp(height - rmax.y - g_windowHeightClip, 0, m_viewport.max().y);
-
-	int32 _thickness = thickness - 1; // True thickness in pixels
-	for (int32 row = start; row < end; row++)
-	{
-		// Pointer to the first pixel in this row with the X offset
-		uint32* ptr = m_data->scanline(row) + r.min().x;
-
-		// Fill the entire row if it's either the start or end row,
-		// accounting for thickness
-		if (row <= (start + thickness) || row >= (end - thickness))
-		{
-			std::fill(ptr, ptr + (int32)r.width + 1, value);
-		}
-		// Otherwise only set the pixels on the left and right,
-		// accounting for thickness.
-		else
-		{
-			for (int32 i = 0; i < thickness; i++)
-			{
-				*(ptr + i) = value;					   // Left-side
-				*(ptr + ((int32)r.width - i)) = value; // Right-side
-			}
-		}
-	}
-#else
 	// Start row
 	int32 start = std::clamp(r.min().y, 0, m_viewport.max().y);
 	// End row
@@ -130,7 +93,6 @@ void Painter::drawRect(recti r, const Color& color, int32 thickness)
 			}
 		}
 	}
-#endif
 }
 
 void Painter::drawRectFilled(recti r, const Color& color)
@@ -143,26 +105,6 @@ void Painter::drawRectFilled(recti r, const Color& color)
 	// Clamp the rectangle to the current viewport size
 	r.clamp(m_viewport);
 
-#if defined(_WIN32) || defined(_WIN64)
-	// On Windows we have to flip the Y values because Win32 draws
-	// from the bottom up, rather than top down.
-
-	vec2i rmin = r.min();
-	vec2i rmax = r.max();
-	int32 height = m_viewport.height;
-
-	// Start row
-	int32 end = std::clamp(height - rmin.y - g_windowHeightClip, 0, m_viewport.max().y);
-	// End row
-	int32 start = std::clamp(height - rmax.y - g_windowHeightClip, 0, m_viewport.max().y);
-
-	// Fill each row with the color
-	for (int32 row = start; row < end; row++)
-	{
-		uint32* ptr = m_data->scanline(row) + r.min().x;
-		std::fill(ptr, ptr + (int32)r.width, value);
-	}
-#else
 	// Start row
 	int32 start = std::clamp(r.min().y, 0, m_viewport.max().y);
 	// End row
@@ -174,7 +116,6 @@ void Painter::drawRectFilled(recti r, const Color& color)
 		auto ptr = m_data->scanline(row) + r.min().x;
 		std::fill(ptr, ptr + (int32)r.width, value);
 	}
-#endif
 }
 
 void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
@@ -228,54 +169,39 @@ std::vector<vec2i> Painter::getWindings(GlyphShape* glyph)
 	return windings;
 }
 
-vec2i Painter::drawGlyph(GlyphShape* glyph, int32 byteOffset, const vec2f& scale, const vec2f& shift, float flatness, const Color& color)
+void Painter::drawGlyph(GlyphShape* glyph, int32 xOffset, int32 yOffset, const vec2f& scale, const vec2i& shift, const Color& color)
 {
-	int32 windingCount = 0;
-	std::vector<int32> windingLengths;
-	std::vector<vec2f> points;
+	std::vector<vec2i> points = TTF::tessellateGlyph(glyph);
 
-	// Tesselate and scale
-
-	float fscale = scale.x > scale.y ? scale.y : scale.x;
-	float flatScale = flatness / fscale;
-	float flatnessSquared = flatScale * flatScale;
-	int32 num_points = glyph->contourCount;
-	int32 pass = 0;
-	int32 n = 0;
-
-	for (pass = 0; pass < 2; pass++)
+	for (int32 i = 0; i < points.size() - 1; i++)
 	{
-		float x = 0;
-		float y = 0;
+		vec2i p0 = points[i];
+		vec2i p1 = i == points.size() - 1 ? points[0] : points[i + 1];
 
-		// If we're on the first pass, resize the points array
-		if (pass == 1)
-		{
-			points.resize(num_points);
-		}
+		p0.x = (float)p0.x * scale.x;
+		p0.y = (float)p0.y * scale.y;
 
-		num_points = 0;
-		n = -1;
-		for (int32 i = 0; i < num_points; i++)
-		{
+		p1.x = (float)p1.x * scale.x;
+		p1.y = (float)p1.y * scale.y;
 
-		}
-	}
+		p0 += shift;
+		p1 += shift;
 
+		p0.x += xOffset;
+		p1.x += xOffset;
+		p0.y += yOffset;
+		p1.y += yOffset;
 
-	if (points.size() != 0)
-	{
-		// Rasterize
+		drawLine(p0, p1, color);
 	}
 }
 
-void Painter::drawText(const vec2i& pos, const std::string& text, const Color& color)
+void Painter::drawText(vec2i pos,const std::string& text, const Color& color)
 {
-	int32 lineHeight = 64;
 	assert(m_font != nullptr);
 
 	// Get vertical metrics
-	float scale = TTF::getScaleForPixelHeight(m_font, lineHeight);
+	float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
 	float ascent = m_font->hhea->ascender;
 	float descent = m_font->hhea->descender;
 	float lineGap = m_font->hhea->lineGap;
@@ -296,18 +222,20 @@ void Painter::drawText(const vec2i& pos, const std::string& text, const Color& c
 		int32 advanceWidth = m_font->hmtx->hMetrics[glyphIndex].advanceWidth;
 		int32 leftSideBearing = m_font->hmtx->hMetrics[glyphIndex].leftSideBearing;
 
-		int32 x0 = std::floor(glyph->xMin * scale + pos.x);
-		int32 y0 = std::floor(-glyph->yMax * scale + pos.y);
-		int32 x1 = std::floor(glyph->xMax * scale + pos.x);
-		int32 y1 = std::floor(-glyph->yMin * scale + pos.y);
+		int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
+		int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
+		int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
+		int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
 
 		int32 y = ascent + y0;
 
-		int32 byteOffset = x + roundf(leftSideBearing * scale) + (y * m_viewport.width);
-		float flatness = 0.35f;
-		drawGlyph(glyph, byteOffset, vec2f(scale, scale), vec2f(x1 - x0, y1 - y0), flatness, color);
+		// Only draw actual characters
+		if (c != ' ')
+		{
+			drawGlyph(glyph, x, y, vec2f(scale, scale), vec2i(x1 - x0, y1 - y0), color);
+		}
 
 		// Advance
-		x += roundf(advanceWidth * scale);
+		x += roundf((float)advanceWidth * scale);
 	}
 }

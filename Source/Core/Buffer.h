@@ -38,6 +38,7 @@ template <typename T>
 class RawBuffer
 {
 	T*	   m_data = nullptr;
+	/* Size of this buffer in bytes. */
 	size_t m_size = 0;
 
 public:
@@ -148,12 +149,15 @@ public:
 			m_data = nullptr;
 		}
 		m_size = inSize;
-		m_data = (T*)PlatformMemory::malloc(m_size);
+		m_data = (T*)PlatformMemory::malloc(inSize);
+#ifdef _DEBUG
+		assert(m_data != nullptr);
+#endif
 	}
 
 	void resize(const uint32 width, const uint32 height)
 	{
-		m_size = width * height * g_bitsPerPixel;
+		m_size = width * height * g_bytesPerPixel;
 #ifdef _DEBUG
 		assert(m_size < UINT32_MAX);
 #endif
@@ -163,6 +167,9 @@ public:
 			m_data = nullptr;
 		}
 		m_data = (T*)PlatformMemory::malloc(m_size);
+#ifdef _DEBUG
+		assert(m_data != nullptr);
+#endif
 	}
 
 	void extend(const size_t addSize)

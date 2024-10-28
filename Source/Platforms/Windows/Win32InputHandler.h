@@ -80,11 +80,11 @@ public:
 	bool onMouseMoved(const vec2f& cursorPosition) override
 	{
 		// Update current cursor position
-		if (m_currentCursorPosition == cursorPosition)
-		{
-			m_deltaCursorPosition = 0;
-			return false;
-		}
+		//if (m_currentCursorPosition == cursorPosition)
+		//{
+		//	m_deltaCursorPosition = 0;
+		//	return false;
+		//}
 		m_mouse.position = cursorPosition;
 		m_previousCursorPosition = m_currentCursorPosition;
 		m_currentCursorPosition = cursorPosition;

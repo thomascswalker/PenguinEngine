@@ -11,7 +11,13 @@
 constexpr uint32 g_bytesPerPixel   = 4;
 constexpr uint32 g_bytesPerChannel = 8;
 constexpr uint32 g_bitsPerPixel    = 32;
-
+constexpr int32	 g_defaultViewportWidth = 640;
+constexpr int32	 g_defaultViewportHeight = 480;
+constexpr int32	 g_minWindowWidth = 320;
+constexpr int32	 g_minWindowHeight = 240;
+constexpr int32	 g_maxWindowWidth = 1280;
+constexpr int32	 g_maxWindowHeight = 720;
+constexpr int32	 g_maxWindowBufferSize = (g_maxWindowWidth + 1) * (g_maxWindowHeight + 1) * g_bytesPerPixel;
 /**
  * @brief Platform-specific memory management functions.
  */

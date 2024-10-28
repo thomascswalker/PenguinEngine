@@ -131,11 +131,18 @@ public:
 		return m_buffer.data() != nullptr;
 	}
 
-	void resize(const vec2i inSize)
+	void resize(const vec2i& inSize)
 	{
 		m_size = inSize;
 		m_pitch = inSize.x;
 		m_buffer.resize(getDataSize());
+	}
+
+	void resize(const vec2i& inSize, size_t dataSize)
+	{
+		m_size = inSize;
+		m_pitch = inSize.x;
+		m_buffer.resize(dataSize);
 	}
 
 	/**
@@ -223,6 +230,13 @@ public:
 		auto  ptr = (float*)m_buffer.data();
 		int32 size = m_size.x * m_size.y;
 		std::fill(ptr, ptr + size, value);
+	}
+
+	void fillRow(int32 row, const Color& inColor)
+	{
+		int32* ptr = (int32*)m_buffer.data() + (row * m_pitch);
+		int32  color = inColor.toInt32();
+		std::fill(ptr, ptr + m_pitch, color);
 	}
 
 	/**

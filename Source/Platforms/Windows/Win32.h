@@ -149,7 +149,5 @@ public:
 	[[nodiscard]] bool isInitialized() const override;
 	rectf getSize() override;
 	bool getFileDialog(std::string& outFileName, const std::string& filter) override;
-	void constructMenuBar() override;
-	void setMenuItemChecked(EMenuAction actionId, bool checkState) override;
 	void messageBox(const std::string& title, const std::string& message) override;
 };
