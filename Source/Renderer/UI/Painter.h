@@ -7,13 +7,22 @@
 #include "Math/Rect.h"
 #include "Renderer/Texture.h"
 #include <Renderer/Font.h>
+#include <Renderer/FontTexture.h>
+
+enum class EFontRenderMode : uint8
+{
+	System,
+	Texture
+};
 
 class Painter
 {
-	Texture*  m_data = nullptr;
-	recti	  m_viewport{};
-	FontInfo* m_font = nullptr;
-	int32	  m_fontSize = 12;
+	Texture*		m_data = nullptr;
+	recti			m_viewport{};
+	FontInfo*		m_font = nullptr;
+	int32			m_fontSize = 12;
+	Color			m_fontColor = Color::white();
+	EFontRenderMode m_glyphRenderMode = EFontRenderMode::Texture;
 
 	void assertValid();
 
@@ -22,10 +31,14 @@ public:
 
 	/** Getters & Setters **/
 
-	void setViewport(recti viewport) { m_viewport = viewport; }
-	void setFont(FontInfo* font) { m_font = font; }
-	void setFontSize(int32 fontSize) { m_fontSize; }
+	void  setViewport(recti viewport) { m_viewport = viewport; }
+	void  setFont(FontInfo* font) { m_font = font; }
+
+	void  setFontSize(int32 fontSize) { m_fontSize = fontSize; }
 	int32 getFontSize() const { return m_fontSize; }
+
+	void setFontColor(const Color& color) { m_fontColor = color; }
+	Color getFontColor() const { return m_fontColor; }
 
 	/** Drawing **/
 
@@ -50,6 +63,10 @@ public:
 	void drawBezierCurve(std::vector<vec2i> points, const Color& color);
 
 	std::vector<vec2i> getWindings(GlyphShape* glyph);
-	void			   drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, const Color& color);
-	void drawText(vec2i pos, const std::string& text, const Color& color);
+
+	void drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, const Color& color);
+
+	void drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color);
+
+	void drawText(const vec2i& pos, const std::string& text);
 };

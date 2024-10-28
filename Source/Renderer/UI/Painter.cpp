@@ -11,8 +11,7 @@ void Painter::assertValid()
 	assert(m_data != nullptr);
 }
 
-Painter::Painter(Texture* data, recti viewport)
-	: m_data(data), m_viewport(viewport)
+Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewport)
 {
 	setFont(g_fontDatabase->getFontInfo(g_defaultFont));
 }
@@ -111,11 +110,32 @@ void Painter::drawRectFilled(recti r, const Color& color)
 	int32 end = std::clamp(r.max().y, 0, m_viewport.max().y);
 
 	// Fill each row with the color
-	for (int32 row = start; row < end; row++)
-	{
-		auto ptr = m_data->scanline(row) + r.min().x;
-		std::fill(ptr, ptr + (int32)r.width, value);
+	if (color.a == 255) {
+		for (int32 row = start; row < end; row++)
+		{
+			auto ptr = m_data->scanline(row) + r.min().x;
+			std::fill(ptr, ptr + (int32)r.width, value);
+		}
 	}
+	else if (color.a < 255 && color.a > 0)
+	{
+		float perc = (float)color.a / 255.0f;
+		for (int32 y = start; y < end; y++)
+		{
+			auto ptr = m_data->scanline(y) + r.min().x;
+			for (int32 x = r.min().x; x < r.max().x; x++)
+			{
+				Color currentColor = m_data->getPixelAsColor(x, y);
+				currentColor = Color::blend(currentColor, color, EBlendMode::Normal, perc);
+				m_data->setPixelFromColor(x, y, currentColor);
+			}
+		}
+	}
+	else
+	{
+		// do nothing
+	}
+
 }
 
 void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
@@ -191,8 +211,49 @@ void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shif
 	}
 }
 
-void Painter::drawText(vec2i pos,const std::string& text, const Color& color)
+void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color)
 {
+	int32		maxX = pos.x + g_glyphTextureWidth;
+	int32		maxY = pos.y + g_glyphTextureHeight;
+	const char* ptr = ft->data;
+	for (int y = pos.y; y < maxY; y++)
+	{
+		for (int x = pos.x; x < maxX; x++)
+		{
+			int32 v = *ptr++;
+			if (v)
+			{
+				m_data->setPixelFromColor(x + 1, y + 1, Color::black()); // Outline
+				m_data->setPixelFromColor(x, y, color);					 // Actual text color
+			}
+		}
+	}
+}
+
+void Painter::drawText(const vec2i& pos, const std::string& text)
+{
+	if (m_glyphRenderMode == EFontRenderMode::Texture)
+	{
+		int32 totalWidth = text.size() * g_glyphTextureWidth;
+
+		int x = pos.x;
+		int y = pos.y;
+		for (auto c : text)
+		{
+			if (c == ' ')
+			{
+				x += g_glyphTextureWidth;
+				continue;
+			}
+			const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
+			y += glyphTexture->descent;
+			drawGlyphTexture(glyphTexture, { x, y }, m_fontColor);
+			x += g_glyphTextureWidth;
+			y += glyphTexture->ascent;
+		}
+		return;
+	}
+
 	assert(m_font != nullptr);
 
 	// Get vertical metrics
@@ -227,7 +288,7 @@ void Painter::drawText(vec2i pos,const std::string& text, const Color& color)
 		// Only draw actual characters
 		if (c != ' ')
 		{
-			drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), color);
+			drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), m_fontColor);
 		}
 
 		// Advance

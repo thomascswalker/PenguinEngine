@@ -82,6 +82,8 @@ void ScanlineRHI::beginDraw()
 void ScanlineRHI::draw()
 {
 	drawRenderables();
+	// TODO: Figure out why drawing is vertically flipped
+	m_frameBuffer->flipVertical();
 	drawUI(WidgetManager::g_rootWidget);
 }
 
