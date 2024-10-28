@@ -13,6 +13,8 @@
 #include "Renderer/UI/Widget.h"
 #include "Renderer/Font.h"
 
+using namespace WidgetManager;
+
 Engine* Engine::m_instance = getInstance();
 
 Engine* Engine::getInstance()
@@ -108,55 +110,51 @@ void Engine::tick()
 
 	// Update UI Widgets
 	Widget* root = WidgetManager::g_rootWidget;
-	WidgetManager::layoutWidget(root, vec2i{ m_viewport->getWidth(), m_viewport->getHeight() });
+	WidgetManager::layoutWidget(root, vec2i{ m_viewport->getWidth(), m_viewport->getHeight() }, recti{ { 0, 0 }, m_viewport->getSize() });
 }
 
 void Engine::constructUI()
 {
-
-	/** TODO: BUTTON CREATION; MOVE THIS **/
-	auto canvas = WidgetManager::constructWidget<Canvas>("Root");
+	auto canvas = constructWidget<Canvas>("Root");
 	canvas->setLayoutMode(ELayoutMode::Vertical);
 	canvas->setWidth(m_viewport->getWidth());
 	canvas->setHeight(m_viewport->getHeight());
-	WidgetManager::g_rootWidget = canvas;
+	g_rootWidget = canvas;
 
-	auto menuPanel = WidgetManager::constructWidget<Panel>("Menu");
+	auto menuPanel = constructWidget<Panel>("Menu");
 	menuPanel->setLayoutMode(ELayoutMode::Horizontal);
 	menuPanel->setVerticalResizeMode(EResizeMode::Fixed);
 	menuPanel->setHorizontalResizeMode(EResizeMode::Expanding);
 	menuPanel->setFixedHeight(40);
 	canvas->addChild(menuPanel);
 
-	auto exitButton = WidgetManager::constructWidget<Button>("Exit");
+	auto exitButton = constructWidget<Button>("Exit");
 	exitButton->m_onClicked.addRaw(this, &Engine::exit);
 	exitButton->setText("Exit");
 	exitButton->setHorizontalResizeMode(EResizeMode::Fixed);
 	exitButton->setFixedWidth(50);
 	menuPanel->addChild(exitButton);
 
-	auto viewportCanvas = WidgetManager::constructWidget<Canvas>("Viewport");
+	auto viewportCanvas = constructWidget<Canvas>("Viewport");
 	viewportCanvas->setVerticalResizeMode(EResizeMode::Expanding);
 	canvas->addChild(viewportCanvas);
 
-	auto toolPanel = WidgetManager::constructWidget<Panel>("Tools");
+	auto toolPanel = constructWidget<Panel>("Tools");
 	toolPanel->setLayoutMode(ELayoutMode::Vertical);
 	toolPanel->setHorizontalResizeMode(EResizeMode::Fixed);
 	toolPanel->setFixedWidth(100);
 	viewportCanvas->addChild(toolPanel);
 
-	auto meshButton = WidgetManager::constructWidget<Button>("ImportMesh");
+	auto meshButton = constructWidget<Button>("ImportMesh");
 	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
 	meshButton->setText("Import Mesh");
 	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
-	meshButton->setFixedHeight(30);
 	toolPanel->addChild(meshButton);
 
-	auto texButton = WidgetManager::constructWidget<Button>("ImportTexture");
+	auto texButton = constructWidget<Button>("ImportTexture");
 	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
 	texButton->setText("Import Texture");
 	texButton->setVerticalResizeMode(EResizeMode::Fixed);
-	texButton->setFixedHeight(30);
 	toolPanel->addChild(texButton);
 
 }

@@ -49,9 +49,9 @@ int32 Viewport::getHeight() const
 	return m_camera->m_height;
 }
 
-vec2f Viewport::getSize() const
+vec2i Viewport::getSize() const
 {
-	return {static_cast<float>(m_camera->m_width), static_cast<float>(m_camera->m_height)};
+	return {m_camera->m_width, m_camera->m_height};
 }
 
 float Viewport::getAspect() const

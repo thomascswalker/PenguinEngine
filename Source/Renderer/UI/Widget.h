@@ -222,6 +222,7 @@ DECLARE_MULTICAST_DELEGATE(OnClicked);
 class Button : public Widget
 {
 	std::string m_text;
+	int32		m_defaultFixedHeight = 20;
 
 public:
 	OnClicked m_onClicked;
@@ -229,6 +230,7 @@ public:
 	Button(const std::string& text = "")
 	{
 		setMargin(g_defaultMargin);
+		setFixedHeight(m_defaultFixedHeight);
 		m_text = text;
 	}
 
@@ -250,7 +252,7 @@ public:
 		// Draw the button border
 		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 		// Draw text
-		painter->drawText(m_geometry.min(), m_text, UIColors::White);
+		painter->drawText(m_geometry.center() - vec2i(painter->getFontSize()), m_text, UIColors::White);
 	}
 
 	virtual void update(MouseData& mouse) override
@@ -321,7 +323,7 @@ namespace WidgetManager
 		}
 	}
 
-	inline recti layoutWidget(Widget* w, const vec2i& available)
+	inline recti layoutWidget(Widget* w, const vec2i& available, const recti& viewport)
 	{
 		ELayoutMode layoutMode = w->getLayoutMode();
 		EResizeMode h = w->getHorizontalResizeMode();
@@ -372,11 +374,11 @@ namespace WidgetManager
 					: w->getHeight()					// Expanding
 				: child->getFixedHeight();				// Vertical
 
-			childPosition.x = std::clamp(childPosition.x, 0, available.x);
-			childPosition.y = std::clamp(childPosition.y, 0, available.y);
+			childPosition.x = childPosition.x >= viewport.width ? childPosition.x - viewport.width : childPosition.x;
+			childPosition.y = childPosition.y >= viewport.height ? childPosition.y - viewport.height : childPosition.y;
 			child->setPosition(childPosition);
 
-			layoutWidget(child, vec2i{ childWidth, childHeight });
+			layoutWidget(child, vec2i{ childWidth, childHeight }, viewport);
 
 			if (h == EResizeMode::Expanding)
 			{

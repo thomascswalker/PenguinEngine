@@ -169,7 +169,7 @@ std::vector<vec2i> Painter::getWindings(GlyphShape* glyph)
 	return windings;
 }
 
-void Painter::drawGlyph(GlyphShape* glyph, int32 xOffset, int32 yOffset, const vec2f& scale, const vec2i& shift, const Color& color)
+void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, const Color& color)
 {
 	std::vector<vec2i> points = TTF::tessellateGlyph(glyph);
 
@@ -184,13 +184,8 @@ void Painter::drawGlyph(GlyphShape* glyph, int32 xOffset, int32 yOffset, const v
 		p1.x = (float)p1.x * scale.x;
 		p1.y = (float)p1.y * scale.y;
 
-		p0 += shift;
-		p1 += shift;
-
-		p0.x += xOffset;
-		p1.x += xOffset;
-		p0.y += yOffset;
-		p1.y += yOffset;
+		p0 += shift + offset;
+		p1 += shift + offset;
 
 		drawLine(p0, p1, color);
 	}
@@ -232,7 +227,7 @@ void Painter::drawText(vec2i pos,const std::string& text, const Color& color)
 		// Only draw actual characters
 		if (c != ' ')
 		{
-			drawGlyph(glyph, x, y, vec2f(scale, scale), vec2i(x1 - x0, y1 - y0), color);
+			drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), color);
 		}
 
 		// Advance
