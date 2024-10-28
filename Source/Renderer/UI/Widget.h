@@ -177,7 +177,10 @@ public:
 	virtual void paint(Painter* painter) override
 	{
 		// Draw the filled panel
-		painter->drawRectFilled(m_geometry, UIColors::DarkGray);
+		Color color = UIColors::DarkGray;
+		color.a = 200;
+		painter->drawRectFilled(m_geometry, color);
+		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 	}
 };
 

@@ -110,11 +110,34 @@ void Painter::drawRectFilled(recti r, const Color& color)
 	int32 end = std::clamp(r.max().y, 0, m_viewport.max().y);
 
 	// Fill each row with the color
-	for (int32 row = start; row < end; row++)
-	{
-		auto ptr = m_data->scanline(row) + r.min().x;
-		std::fill(ptr, ptr + (int32)r.width, value);
+	if (color.a == 255) {
+		for (int32 row = start; row < end; row++)
+		{
+			auto ptr = m_data->scanline(row) + r.min().x;
+			std::fill(ptr, ptr + (int32)r.width, value);
+		}
 	}
+	else if (color.a < 255 && color.a > 0)
+	{
+		float perc = (float)color.a / 255.0f;
+		for (int32 y = start; y < end; y++)
+		{
+			auto ptr = m_data->scanline(y) + r.min().x;
+			for (int32 x = r.min().x; x < r.max().x; x++)
+			{
+				auto currentColor = m_data->getPixelAsColor(x, y);
+				currentColor.r = Math::lerp(currentColor.r, color.r, perc);
+				currentColor.g = Math::lerp(currentColor.g, color.g, perc);
+				currentColor.b = Math::lerp(currentColor.b, color.b, perc);
+				m_data->setPixelFromColor(x, y, currentColor);
+			}
+		}
+	}
+	else
+	{
+		// do nothing
+	}
+
 }
 
 void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
@@ -190,10 +213,10 @@ void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shif
 	}
 }
 
-void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color) 
+void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color)
 {
-	int32 maxX = pos.x + g_glyphTextureWidth;
-	int32 maxY = pos.y + g_glyphTextureHeight;
+	int32		maxX = pos.x + g_glyphTextureWidth;
+	int32		maxY = pos.y + g_glyphTextureHeight;
 	const char* ptr = ft->data;
 	for (int y = pos.y; y < maxY; y++)
 	{
@@ -202,7 +225,8 @@ void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const C
 			int32 v = *ptr++;
 			if (v)
 			{
-				m_data->setPixelFromColor(x, y, color);
+				m_data->setPixelFromColor(x + 1, y + 1, Color::black()); // Outline
+				m_data->setPixelFromColor(x, y, color);					 // Actual text color
 			}
 		}
 	}
@@ -214,21 +238,15 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 	{
 		int32 totalWidth = text.size() * g_glyphTextureWidth;
 
-		int32 x = pos.x + 1;
-		int32 y = pos.y + 1;
+		int x = pos.x;
+		int y = pos.y;
 		for (auto c : text)
 		{
-			const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
-			y += glyphTexture->descent;
-			drawGlyphTexture(glyphTexture, {x,y}, Color::black());
-			x += g_glyphTextureWidth;
-			y += glyphTexture->ascent;
-		}
-
-		x = pos.x;
-		y = pos.y;
-		for (auto c : text)
-		{
+			if (c == ' ')
+			{
+				x += g_glyphTextureWidth;
+				continue;
+			}
 			const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
 			y += glyphTexture->descent;
 			drawGlyphTexture(glyphTexture, { x, y }, m_fontColor);

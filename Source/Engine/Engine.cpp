@@ -130,7 +130,7 @@ void Engine::constructUI()
 
 	auto exitButton = constructWidget<Button>("Exit");
 	exitButton->m_onClicked.addRaw(this, &Engine::exit);
-	exitButton->setText("e");
+	exitButton->setText("quit");
 	exitButton->setTextColor(UIColors::Red);
 	exitButton->setHorizontalResizeMode(EResizeMode::Fixed);
 	exitButton->setFixedWidth(50);
@@ -143,18 +143,18 @@ void Engine::constructUI()
 	auto toolPanel = constructWidget<Panel>("Tools");
 	toolPanel->setLayoutMode(ELayoutMode::Vertical);
 	toolPanel->setHorizontalResizeMode(EResizeMode::Fixed);
-	toolPanel->setFixedWidth(100);
+	toolPanel->setFixedWidth(140);
 	viewportCanvas->addChild(toolPanel);
 
 	auto meshButton = constructWidget<Button>("ImportMesh");
 	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
-	meshButton->setText("model");
+	meshButton->setText("load model");
 	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(meshButton);
 
 	auto texButton = constructWidget<Button>("ImportTexture");
 	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
-	texButton->setText("image");
+	texButton->setText("load texture");
 	texButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(texButton);
 
