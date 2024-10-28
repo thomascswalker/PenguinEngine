@@ -125,10 +125,8 @@ void Painter::drawRectFilled(recti r, const Color& color)
 			auto ptr = m_data->scanline(y) + r.min().x;
 			for (int32 x = r.min().x; x < r.max().x; x++)
 			{
-				auto currentColor = m_data->getPixelAsColor(x, y);
-				currentColor.r = Math::lerp(currentColor.r, color.r, perc);
-				currentColor.g = Math::lerp(currentColor.g, color.g, perc);
-				currentColor.b = Math::lerp(currentColor.b, color.b, perc);
+				Color currentColor = m_data->getPixelAsColor(x, y);
+				currentColor = Color::blend(currentColor, color, EBlendMode::Normal, perc);
 				m_data->setPixelFromColor(x, y, currentColor);
 			}
 		}

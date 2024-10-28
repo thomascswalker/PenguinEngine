@@ -42,6 +42,8 @@ enum class EResizeMode
 	Expanding
 };
 
+#define GENERATE_SUPER(n) using Super = n;
+
 class Widget
 {
 protected:
@@ -165,47 +167,68 @@ public:
 
 class Canvas : public Widget
 {
+	GENERATE_SUPER(Widget)
 };
 
 class Spacer : public Widget
 {
+	GENERATE_SUPER(Widget)
 };
 
 class Panel : public Widget
 {
+	GENERATE_SUPER(Widget)
 public:
 	virtual void paint(Painter* painter) override
 	{
 		// Draw the filled panel
-		Color color = UIColors::DarkGray;
-		color.a = 200;
-		painter->drawRectFilled(m_geometry, color);
+		painter->drawRectFilled(m_geometry, UIColors::DarkGray);
 		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 	}
 };
 
-DECLARE_MULTICAST_DELEGATE(OnClicked);
-
-class Button : public Widget
+class Label : public Widget
 {
+	GENERATE_SUPER(Widget)
+protected:
 	std::string m_text;
 	Color		m_textColor = Color::white();
 	int32		m_defaultFixedHeight = 25;
 	int32		m_defaultMargin = 5;
 
 public:
-	OnClicked m_onClicked;
-
-	Button(const std::string& text = "")
+	Label(const std::string& text = "")
 	{
 		setMargin(m_defaultMargin);
 		setFixedHeight(m_defaultFixedHeight);
 		m_text = text;
 	}
 
-	void setText(const std::string& text) { m_text = text; }
+	virtual void paint(Painter* painter) override
+	{
+		painter->drawRectFilled(m_geometry, UIColors::DarkGray);
+		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
+		vec2i textPos = m_geometry.min();
+		int32 textWidth = m_text.size() * g_glyphTextureWidth;
+		textPos.x += (m_geometry.width / 2) - (textWidth / 2);
+		textPos.y += (m_geometry.height / 2) - (g_glyphTextureHeight / 2);
+		painter->drawText(textPos, m_text);
+	}
 
-	void setTextColor(const Color& color) { m_textColor = color; }
+	virtual void setText(const std::string& text) { m_text = text; }
+
+	virtual void setTextColor(const Color& color) { m_textColor = color; }
+};
+
+DECLARE_MULTICAST_DELEGATE(OnClicked);
+
+class Button : public Label
+{
+	GENERATE_SUPER(Label)
+public:
+	OnClicked m_onClicked;
+
+	Button(const std::string& text = "") : Label(text) {}
 
 	virtual void paint(Painter* painter) override
 	{
@@ -231,7 +254,7 @@ public:
 
 	virtual void update(MouseData& mouse) override
 	{
-		Widget::update(mouse);
+		Super::update(mouse);
 
 		// If input has been consumed, skip this widget updating
 		if (mouse.inputConsumed)
