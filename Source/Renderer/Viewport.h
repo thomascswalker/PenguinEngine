@@ -33,7 +33,7 @@ public:
 	void resize(int32 inWidth, int32 inHeight) const;
 	[[nodiscard]] int32 getWidth() const;
 	[[nodiscard]] int32 getHeight() const;
-	[[nodiscard]] vec2f getSize() const;
+	[[nodiscard]] vec2i getSize() const;
 	[[nodiscard]] float getAspect() const;
 	[[nodiscard]] Camera* getCamera() const;
 	void resetView() const;

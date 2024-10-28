@@ -244,7 +244,7 @@ public:
 	void   resize(int32 width, int32 height) override;
 	void   drawGrid(Grid* grid) override;
 	void   drawLine(const vec3f& inA, const vec3f& inB, const Color& color) override;
-	uint8* getFrameData() override;
+	Texture* getFrameData() override;
 	void   setViewData(ViewData* newViewData) override;
 	void   setRenderSettings(RenderSettings* newRenderSettings) override;
 	void   setHwnd(HWND hwnd);

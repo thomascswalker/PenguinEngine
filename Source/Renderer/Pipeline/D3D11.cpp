@@ -358,7 +358,7 @@ void D3D11RHI::resize(int32 width, int32 height)
 void D3D11RHI::drawGrid(Grid* grid) {}
 void D3D11RHI::drawLine(const vec3f& inA, const vec3f& inB, const Color& color) {}
 
-uint8* D3D11RHI::getFrameData()
+Texture* D3D11RHI::getFrameData()
 {
 	return nullptr;
 }

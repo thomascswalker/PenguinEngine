@@ -45,9 +45,9 @@ struct sphericalf
 		}
 	}
 
-	void makeSafe(const float threshold = EPSILON)
+	void makeSafe(const float threshold = SMALL_NUMBER)
 	{
-		phi = std::clamp(phi, g_negPi + threshold, g_pi - threshold);
+		phi = std::clamp(phi, threshold, g_pi - threshold);
 	}
 
 	static sphericalf fromCartesian(const float x, const float y, const float z)
@@ -82,7 +82,7 @@ struct sphericalf
 		sphericalf s;
 		s.theta = Math::degreesToRadians(rot.pitch);
 		s.phi   = Math::degreesToRadians(rot.yaw);
-		s.makeSafe();
+		//s.makeSafe();
 		return s;
 	}
 
@@ -94,12 +94,12 @@ struct sphericalf
 	void rotateUp(const float angle)
 	{
 		phi += angle;
-		makeSafe();
+		//makeSafe();
 	}
 
-	void zero()
+	void zero(const float threshold = 0.01f)
 	{
 		theta = 0.0f;
-		phi   = 0.0f;
+		phi = 0.0f;
 	}
 };

@@ -119,7 +119,7 @@ public:
 	void drawLine(const vec3f& inA, const vec3f& inB, const Color& color) override;
 	void computeLinePixels(const vec3f& inA, const vec3f& inB, std::vector<vec2f>& points) const;
 
-	uint8* getFrameData() override;
+	Texture* getFrameData() override;
 	void setViewData(ViewData* newViewData) override;
 	void setRenderSettings(RenderSettings* newRenderSettings) override;
 

@@ -133,4 +133,9 @@ namespace Math
 		float xy      = x * x + y * y;
 		return yhx - xy / h;
 	}
+
+	inline vec2i lerp(const vec2i& a, const vec2i& b, float t)
+	{
+		return (a.toType<float>() * (1.0f - t) + (b.toType<float>() * t)).toType<int32>();
+	}
 }

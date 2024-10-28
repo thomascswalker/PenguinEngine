@@ -13,6 +13,8 @@
 #include "Renderer/UI/Widget.h"
 #include "Renderer/Font.h"
 
+using namespace WidgetManager;
+
 Engine* Engine::m_instance = getInstance();
 
 Engine* Engine::getInstance()
@@ -47,38 +49,16 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 		input->m_onMouseLeftUp.addRaw(this, &Engine::onLeftMouseUp);
 		input->m_onMouseMiddleUp.addRaw(this, &Engine::onMiddleMouseUp);
 		input->m_onMouseMoved.addRaw(this, &Engine::onMouseMoved);
-
-		// Menu
-		input->m_menuActionPressed.addRaw(this, &Engine::onMenuActionPressed);
 	}
 
 	// Load fonts
 	g_fontDatabase->init();
+	LOG_INFO("Initialized font database.")
 
-	/** TODO: BUTTON CREATION; MOVE THIS **/
-	auto canvas = WidgetManager::constructWidget<Canvas>();
-	canvas->setLayoutMode(ELayoutMode::Horizontal);
-	WidgetManager::g_rootWidget = canvas;
+	// Construct UI
+	constructUI();
+	LOG_INFO("Constructed UI.")
 
-	auto panel = WidgetManager::constructWidget<Panel>();
-	canvas->addChild(panel);
-	panel->setLayoutMode(ELayoutMode::Vertical);
-	panel->setHorizontalResizeMode(EResizeMode::Fixed);
-	panel->setFixedWidth(100);
-
-	auto meshButton = WidgetManager::constructWidget<Button>();
-	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
-	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
-	meshButton->setFixedHeight(20);
-	panel->addChild(meshButton);
-
-	auto texButton = WidgetManager::constructWidget<Button>();
-	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
-	texButton->setVerticalResizeMode(EResizeMode::Fixed);
-	texButton->setFixedHeight(20);
-	panel->addChild(texButton);
-
-	LOG_INFO("Renderer constructed.")
 	return true;
 }
 
@@ -128,8 +108,55 @@ void Engine::tick()
 		tickable->update(m_deltaTime);
 	}
 
-	// Format debug text
-	getViewport()->formatDebugText();
+	// Update UI Widgets
+	Widget* root = WidgetManager::g_rootWidget;
+	WidgetManager::layoutWidget(root, vec2i{ m_viewport->getWidth(), m_viewport->getHeight() }, recti{ { 0, 0 }, m_viewport->getSize() });
+}
+
+void Engine::constructUI()
+{
+	auto canvas = constructWidget<Canvas>("Root");
+	canvas->setLayoutMode(ELayoutMode::Vertical);
+	canvas->setWidth(m_viewport->getWidth());
+	canvas->setHeight(m_viewport->getHeight());
+	g_rootWidget = canvas;
+
+	auto menuPanel = constructWidget<Panel>("Menu");
+	menuPanel->setLayoutMode(ELayoutMode::Horizontal);
+	menuPanel->setVerticalResizeMode(EResizeMode::Fixed);
+	menuPanel->setHorizontalResizeMode(EResizeMode::Expanding);
+	menuPanel->setFixedHeight(40);
+	canvas->addChild(menuPanel);
+
+	auto exitButton = constructWidget<Button>("Exit");
+	exitButton->m_onClicked.addRaw(this, &Engine::exit);
+	exitButton->setText("Exit");
+	exitButton->setHorizontalResizeMode(EResizeMode::Fixed);
+	exitButton->setFixedWidth(50);
+	menuPanel->addChild(exitButton);
+
+	auto viewportCanvas = constructWidget<Canvas>("Viewport");
+	viewportCanvas->setVerticalResizeMode(EResizeMode::Expanding);
+	canvas->addChild(viewportCanvas);
+
+	auto toolPanel = constructWidget<Panel>("Tools");
+	toolPanel->setLayoutMode(ELayoutMode::Vertical);
+	toolPanel->setHorizontalResizeMode(EResizeMode::Fixed);
+	toolPanel->setFixedWidth(100);
+	viewportCanvas->addChild(toolPanel);
+
+	auto meshButton = constructWidget<Button>("ImportMesh");
+	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
+	meshButton->setText("Import Mesh");
+	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
+	toolPanel->addChild(meshButton);
+
+	auto texButton = constructWidget<Button>("ImportTexture");
+	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
+	texButton->setText("Import Texture");
+	texButton->setVerticalResizeMode(EResizeMode::Fixed);
+	toolPanel->addChild(texButton);
+
 }
 
 void Engine::onKeyPressed(const EKey keyCode) const
@@ -200,54 +227,6 @@ void Engine::onMouseMiddleScrolled(MouseData& mouse) const
 {
 	Camera* camera = getViewportCamera();
 	camera->setFov(camera->m_fov + (mouse.middleDelta));
-}
-
-void Engine::onMenuActionPressed(const EMenuAction actionId)
-{
-	const Application* app = Application::getInstance();
-	IPlatform*		   platform = app->getPlatform();
-	switch (actionId)
-	{
-		case EMenuAction::LoadModel:
-		{
-			loadMesh();
-			break;
-		}
-		case EMenuAction::LoadTexture:
-		{
-			loadTexture();
-			break;
-		}
-		case EMenuAction::Quit:
-		{
-			m_isRunning = false;
-			break;
-		}
-		case EMenuAction::Wireframe:
-		{
-			platform->setMenuItemChecked(EMenuAction::Wireframe, m_viewport->m_settings.toggleRenderFlag(Wireframe));
-			break;
-		}
-		case EMenuAction::Shaded:
-		{
-			platform->setMenuItemChecked(EMenuAction::Shaded, m_viewport->m_settings.toggleRenderFlag(Shaded));
-			break;
-		}
-		case EMenuAction::Depth:
-		{
-			platform->setMenuItemChecked(EMenuAction::Depth, m_viewport->m_settings.toggleRenderFlag(Depth));
-			break;
-		}
-		case EMenuAction::Normals:
-		{
-			platform->setMenuItemChecked(EMenuAction::Normals, m_viewport->m_settings.toggleRenderFlag(Normals));
-			break;
-		}
-		case EMenuAction::VertexNormals:
-		{
-			break;
-		}
-	}
 }
 
 void Engine::loadMesh() const

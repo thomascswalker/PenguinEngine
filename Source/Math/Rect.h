@@ -41,6 +41,11 @@ struct rect_t
 		return vec2_t(x + width, y + height);
 	}
 
+	vec2_t<T> center() const
+	{
+		return (min() + max()) / 2;
+	}
+
 	static rect_t makeBoundingBox(const vec2_t<T>& v0, const vec2_t<T>& v1)
 	{
 		T xValues[2] = {v0.x, v1.x};

@@ -146,35 +146,15 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			const HDC	deviceContext = BeginPaint(hwnd, &paint);
 			const HDC	renderContext = CreateCompatibleDC(deviceContext);
 
-			void* colorBuffer = viewport->getRHI()->getFrameData();
-			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer, &m_bitmapInfo, 0); // channel->memory
+			Texture* colorBuffer = viewport->getRHI()->getFrameData();
+			//colorBuffer->flipVertical();
+			SetDIBits(renderContext, m_displayBitmap, 0, height, colorBuffer->getData(), &m_bitmapInfo, 0); // channel->memory
 			StretchBlt(renderContext, 0, 0, width, height, renderContext, 0, 0, width, height, SRCCOPY);
 			SelectObject(renderContext, m_displayBitmap);
 			if (!BitBlt(deviceContext, 0, 0, width, height, renderContext, 0, 0, SRCCOPY)) // NOLINT
 			{
 				LOG_ERROR("Failed during BitBlt")
 				result = 1;
-			}
-
-			// Display debug text
-			if (viewport->getShowDebugText())
-			{
-				// Draw text indicating the current FPS
-				RECT clientRect;
-				GetClientRect(hwnd, &clientRect);
-				clientRect.top += 10;
-				clientRect.left += 10;
-
-				std::string outputString = viewport->getDebugText();
-				SetTextColor(deviceContext, RGB(255, 255, 0));
-				SetBkColor(deviceContext, TRANSPARENT);
-				DrawText(
-					deviceContext,													// DC
-					std::wstring(outputString.begin(), outputString.end()).c_str(), // Message
-					-1,
-					&clientRect,	 // Client rectangle (the window)
-					DT_TOP | DT_LEFT // Drawing options
-				);
 			}
 
 			// Cleanup and end painting
@@ -201,7 +181,7 @@ LRESULT Win32Platform::windowProc(const HWND hwnd, const UINT msg, const WPARAM 
 			LOG_DEBUG("Resized renderer to [{}, {}].", width, height)
 
 			m_bitmapInfo.bmiHeader.biWidth = width;
-			m_bitmapInfo.bmiHeader.biHeight = height;
+			m_bitmapInfo.bmiHeader.biHeight = -height;
 
 			// Create a new empty bitmap with the updated width and height
 			m_displayBitmap = CreateBitmap(width, height, 1, 32, nullptr);
@@ -299,8 +279,6 @@ int32 Win32Platform::create()
 		LOG_ERROR("Window failed to initialize (Win32Platform::Create).")
 		return PlatformInitError;
 	}
-
-	constructMenuBar();
 
 	// Construct the engine
 	Engine* engine = Engine::getInstance();
@@ -462,35 +440,6 @@ bool Win32Platform::getFileDialog(std::string& outFileName, const std::string& f
 	outFileName = std::string(tmp);
 
 	return true;
-}
-
-void Win32Platform::constructMenuBar()
-{
-	m_mainMenu = CreateMenu();
-	m_fileMenu = CreateMenu();
-	m_displayMenu = CreateMenu();
-
-	// File menu
-	AppendMenuW(m_mainMenu, MF_POPUP, UINT_PTR(m_fileMenu), L"&File");
-	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::LoadModel), L"&Load Model...");
-	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::LoadTexture), L"&Load Texture...");
-	AppendMenuW(m_fileMenu, MF_SEPARATOR, 0, nullptr);
-	AppendMenuW(m_fileMenu, MF_STRING, UINT_PTR(EMenuAction::Quit), L"&Quit");
-
-	// Display menu
-	AppendMenuW(m_mainMenu, MF_POPUP, UINT_PTR(m_displayMenu), L"&Display");
-	AppendMenuW(m_displayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Wireframe), L"&Wireframe");
-	AppendMenuW(m_displayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Shaded), L"&Shaded");
-	AppendMenuW(m_displayMenu, MF_CHECKED, UINT_PTR(EMenuAction::Depth), L"&Depth");
-	AppendMenuW(m_displayMenu, MF_UNCHECKED, UINT_PTR(EMenuAction::Normals), L"&Normals");
-
-	// Add the main menu bar to the window
-	SetMenu(m_hwnd, m_mainMenu);
-}
-
-void Win32Platform::setMenuItemChecked(EMenuAction actionId, const bool checkState)
-{
-	CheckMenuItem(m_displayMenu, UINT_PTR(actionId), checkState ? MF_CHECKED : MF_UNCHECKED);
 }
 
 void Win32Platform::messageBox(const std::string& title, const std::string& message)

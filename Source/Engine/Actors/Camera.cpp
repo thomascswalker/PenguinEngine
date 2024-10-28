@@ -53,7 +53,7 @@ void Camera::update(float deltaTime)
 	m_spherical.phi += m_deltaRotation.phi;
 
 	// Restrict phi to min/max polar angle to prevent gimbal lock
-	m_spherical.makeSafe(SMALL_NUMBER);
+	m_spherical.makeSafe();
 
 	// Set camera rotation pitch/yaw
 	const rotf newRotation(
