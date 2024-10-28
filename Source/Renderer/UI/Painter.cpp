@@ -11,8 +11,7 @@ void Painter::assertValid()
 	assert(m_data != nullptr);
 }
 
-Painter::Painter(Texture* data, recti viewport)
-	: m_data(data), m_viewport(viewport)
+Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewport)
 {
 	setFont(g_fontDatabase->getFontInfo(g_defaultFont));
 }
@@ -191,8 +190,54 @@ void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shif
 	}
 }
 
-void Painter::drawText(vec2i pos,const std::string& text, const Color& color)
+void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color) 
 {
+	int32 maxX = pos.x + g_glyphTextureWidth;
+	int32 maxY = pos.y + g_glyphTextureHeight;
+	const char* ptr = ft->data;
+	for (int y = pos.y; y < maxY; y++)
+	{
+		for (int x = pos.x; x < maxX; x++)
+		{
+			int32 v = *ptr++;
+			if (v)
+			{
+				m_data->setPixelFromColor(x, y, color);
+			}
+		}
+	}
+}
+
+void Painter::drawText(const vec2i& pos, const std::string& text)
+{
+	if (m_glyphRenderMode == EFontRenderMode::Texture)
+	{
+		int32 totalWidth = text.size() * g_glyphTextureWidth;
+
+		int32 x = pos.x + 1;
+		int32 y = pos.y + 1;
+		for (auto c : text)
+		{
+			const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
+			y += glyphTexture->descent;
+			drawGlyphTexture(glyphTexture, {x,y}, Color::black());
+			x += g_glyphTextureWidth;
+			y += glyphTexture->ascent;
+		}
+
+		x = pos.x;
+		y = pos.y;
+		for (auto c : text)
+		{
+			const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
+			y += glyphTexture->descent;
+			drawGlyphTexture(glyphTexture, { x, y }, m_fontColor);
+			x += g_glyphTextureWidth;
+			y += glyphTexture->ascent;
+		}
+		return;
+	}
+
 	assert(m_font != nullptr);
 
 	// Get vertical metrics
@@ -227,7 +272,7 @@ void Painter::drawText(vec2i pos,const std::string& text, const Color& color)
 		// Only draw actual characters
 		if (c != ' ')
 		{
-			drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), color);
+			drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), m_fontColor);
 		}
 
 		// Advance

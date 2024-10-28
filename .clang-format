@@ -7,7 +7,7 @@ AlignConsecutiveDeclarations: true
 AlignEscapedNewlines: Left
 AlignOperands: DontAlign
 AlignTrailingComments: true
-AllowShortBlocksOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: true
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortLambdasOnASingleLine: All
@@ -33,7 +33,7 @@ BreakInheritanceList: AfterColon
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakStringLiterals: false
-ColumnLimit: 0
+ColumnLimit: 200
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: false
 EmptyLineBeforeAccessModifier: LogicalBlock
