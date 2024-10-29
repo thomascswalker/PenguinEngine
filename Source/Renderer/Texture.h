@@ -44,7 +44,7 @@ class Texture
 	/** The size of a single row of pixels. */
 	size_t m_pitch = 0;
 	/** The number of channels in this texture. */
-	int32 m_channelCount = 0;
+	int32 m_channelCount = 4;
 	/** The order of RGB bytes in RGBA */
 	ETextureByteOrder m_byteOrder = ETextureByteOrder::RGBA;
 
@@ -74,33 +74,23 @@ public:
 		m_buffer.resize(memSize);
 	}
 
-	Texture(const vec2i inSize)
-		: m_size(inSize)
-		, m_pitch(inSize.x)
+	Texture(const vec2i inSize) : m_size(inSize), m_pitch(inSize.x)
 	{
 		size_t memSize = getDataSize();
 		m_buffer.resize(memSize);
 	}
 
-	Texture(RawBuffer<uint8>* inData, vec2i inSize)
-		: m_size(inSize)
-		, m_pitch(inSize.x)
+	Texture(RawBuffer<uint8>* inData, vec2i inSize, int32 channelCount = 4) : m_size(inSize), m_pitch(inSize.x), m_channelCount(channelCount)
 	{
-		int32 targetSize = inSize.x * inSize.y * g_bytesPerPixel;
+		int32 targetSize = inSize.x * inSize.y * m_channelCount;
 		assert(targetSize == inData->size());
 		m_buffer.resize(inData->size());
 		memcpy(m_buffer.data(), inData->data(), inData->size());
 	}
 
-	Texture(const Texture& other)
-		: m_buffer(other.m_buffer)
-		, m_size(other.m_size)
-		, m_pitch(other.m_pitch) {}
+	Texture(const Texture& other) : m_buffer(other.m_buffer), m_size(other.m_size), m_pitch(other.m_pitch) {}
 
-	Texture(Texture&& other) noexcept
-		: m_buffer(other.m_buffer)
-		, m_size(other.m_size)
-		, m_pitch(other.m_pitch) {}
+	Texture(Texture&& other) noexcept : m_buffer(other.m_buffer), m_size(other.m_size), m_pitch(other.m_pitch) {}
 
 	Texture& operator=(const Texture& other)
 	{
@@ -126,10 +116,7 @@ public:
 		return *this;
 	}
 
-	bool isValid()
-	{
-		return m_buffer.data() != nullptr;
-	}
+	bool isValid() { return m_buffer.data() != nullptr; }
 
 	void resize(const vec2i& inSize)
 	{
@@ -148,19 +135,12 @@ public:
 	/**
 	 * @brief Returns the raw void pointer to this texture's memory.
 	 */
-	[[nodiscard]] void* getRawData()
-	{
-		return (void*)m_buffer.data();
-	}
+	[[nodiscard]] void* getRawData() { return (void*)m_buffer.data(); }
 
 	/**
 	 * @brief Returns a type T (e.g. int32, float) pointer to this texture's memory.
 	 */
-	template <typename T = uint8>
-	T* getData() const
-	{
-		return (T*)m_buffer.data();
-	}
+	template <typename T = uint8> T* getData() const { return (T*)m_buffer.data(); }
 
 	void setData(RawBuffer<uint8>* newMemory, const size_t inSize = 0)
 	{
@@ -177,36 +157,21 @@ public:
 	 * @brief Returns the memory size of this texture in bytes.
 	 * @return The number of bytes this texture allocates.
 	 */
-	[[nodiscard]] size_t getDataSize() const
-	{
-		return m_size.x * m_size.y * g_bytesPerPixel;
-	}
+	[[nodiscard]] size_t getDataSize() const { return m_size.x * m_size.y * g_bytesPerPixel; }
 
 	/**
 	 * @brief Returns the width of the texture.
 	 */
-	[[nodiscard]] int32 getWidth() const
-	{
-		return m_size.x;
-	}
+	[[nodiscard]] int32 getWidth() const { return m_size.x; }
 
 	/**
 	 * @brief Returns the height of the texture.
 	 */
-	[[nodiscard]] int32 getHeight() const
-	{
-		return m_size.y;
-	}
+	[[nodiscard]] int32 getHeight() const { return m_size.y; }
 
-	int32 getChannelCount()
-	{
-		return m_channelCount;
-	}
+	int32 getChannelCount() { return m_channelCount; }
 
-	void setChannelCount(int32 count)
-	{
-		m_channelCount = count;
-	}
+	void setChannelCount(int32 count) { m_channelCount = count; }
 
 	/**
 	 * @brief Fills this texture with the specified color.
@@ -244,13 +209,9 @@ public:
 	 * @param y The row to return.
 	 * @return A type T pointer to the row of pixels.
 	 */
-	[[nodiscard]] uint32* scanline(const int y)
-	{
-		return (uint32*)m_buffer.data() + (y * m_pitch);
-	}
+	[[nodiscard]] uint32* scanline(const int y) { return (uint32*)m_buffer.data() + (y * m_pitch); }
 
-	template <typename T>
-	[[nodiscard]] T getPixel(const int32 x, const int32 y)
+	template <typename T> [[nodiscard]] T getPixel(const int32 x, const int32 y)
 	{
 		T* line = (T*)scanline(y);
 		return line[x];
@@ -292,7 +253,7 @@ public:
 	{
 		uint32* line = (uint32*)m_buffer.data();
 		line += (y * m_pitch);
-		auto*	castInt = reinterpret_cast<uint32*>(&value);
+		auto* castInt = reinterpret_cast<uint32*>(&value);
 		line[x] = *castInt;
 	}
 
@@ -302,6 +263,20 @@ public:
 		line += (row * m_pitch);
 		int32 value = color.toInt32();
 		std::fill(line, line + m_pitch, value);
+	}
+
+	Texture scale(float perc)
+	{
+		RawBuffer<uint8> input(m_buffer);
+
+		int32			 width = m_size.x * perc;
+		int32			 height = m_size.y * perc;
+		RawBuffer<uint8> output(width * height);
+
+		Algorithm::resizeNearestNeighbor(input.data(), output.data(), m_size.x, m_size.y, width, height);
+
+		Texture out(&output, vec2i(width, height), 1);
+		return out;
 	}
 
 	// stbi__vertical_flip
@@ -330,10 +305,7 @@ public:
 		}
 	}
 
-	void flipVertical()
-	{
-		Texture::flipVertical(m_buffer.data(), m_size.x, m_size.y);
-	}
+	void flipVertical() { Texture::flipVertical(m_buffer.data(), m_size.x, m_size.y); }
 
 	// Swap the RGBA bytes for BGRA
 	void setByteOrder(ETextureByteOrder newOrder)

@@ -110,7 +110,8 @@ void Painter::drawRectFilled(recti r, const Color& color)
 	int32 end = std::clamp(r.max().y, 0, m_viewport.max().y);
 
 	// Fill each row with the color
-	if (color.a == 255) {
+	if (color.a == 255)
+	{
 		for (int32 row = start; row < end; row++)
 		{
 			auto ptr = m_data->scanline(row) + r.min().x;
@@ -135,7 +136,6 @@ void Painter::drawRectFilled(recti r, const Color& color)
 	{
 		// do nothing
 	}
-
 }
 
 void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
@@ -232,66 +232,62 @@ void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const C
 
 void Painter::drawText(const vec2i& pos, const std::string& text)
 {
-	if (m_glyphRenderMode == EFontRenderMode::Texture)
+	switch (m_glyphRenderMode)
 	{
-		int32 totalWidth = text.size() * g_glyphTextureWidth;
-
-		int x = pos.x;
-		int y = pos.y;
-		for (auto c : text)
+		case EFontRenderMode::Texture:
 		{
-			if (c == ' ')
+			int32 x = pos.x;
+			for (auto c : text)
 			{
+				const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
+				int32				y = pos.y + glyphTexture->descent;
+				drawGlyphTexture(glyphTexture, vec2i(x, y), m_fontColor);
 				x += g_glyphTextureWidth;
-				continue;
 			}
-			const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
-			y += glyphTexture->descent;
-			drawGlyphTexture(glyphTexture, { x, y }, m_fontColor);
-			x += g_glyphTextureWidth;
-			y += glyphTexture->ascent;
+			return;
 		}
-		return;
-	}
-
-	assert(m_font != nullptr);
-
-	// Get vertical metrics
-	float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
-	float ascent = m_font->hhea->ascender;
-	float descent = m_font->hhea->descender;
-	float lineGap = m_font->hhea->lineGap;
-
-	ascent = std::roundf(ascent * scale);
-	descent = std::roundf(descent * scale);
-
-	// Track horizontal position
-	int32 x = 0;
-
-	// Draw each character
-	for (auto c : text)
-	{
-		GlyphShape* glyph = &m_font->glyf->shapes[c];
-		int32		glyphIndex = m_font->loca->glyphIndexes[c];
-
-		// Get horizontal metrics for this glyph
-		int32 advanceWidth = m_font->hmtx->hMetrics[glyphIndex].advanceWidth;
-		int32 leftSideBearing = m_font->hmtx->hMetrics[glyphIndex].leftSideBearing;
-
-		int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
-		int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
-		int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
-		int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
-
-		int32 y = ascent + y0;
-
-		// Only draw actual characters
-		if (c != ' ')
+		case EFontRenderMode::System:
 		{
-			drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), m_fontColor);
-		}
+			assert(m_font != nullptr);
 
-		// Advance
-		x += roundf((float)advanceWidth * scale);
+			// Get vertical metrics
+			float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
+			float ascent = m_font->hhea->ascender;
+			float descent = m_font->hhea->descender;
+			float lineGap = m_font->hhea->lineGap;
+
+			ascent = std::roundf(ascent * scale);
+			descent = std::roundf(descent * scale);
+
+			// Track horizontal position
+			int32 x = 0;
+
+			// Draw each character
+			for (auto c : text)
+			{
+				GlyphShape* glyph = &m_font->glyf->shapes[c];
+				int32		glyphIndex = m_font->loca->glyphIndexes[c];
+
+				// Get horizontal metrics for this glyph
+				int32 advanceWidth = m_font->hmtx->hMetrics[glyphIndex].advanceWidth;
+				int32 leftSideBearing = m_font->hmtx->hMetrics[glyphIndex].leftSideBearing;
+
+				int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
+				int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
+				int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
+				int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
+
+				int32 y = ascent + y0;
+
+				// Only draw actual characters
+				if (c != ' ')
+				{
+					drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), m_fontColor);
+				}
+
+				// Advance
+				x += roundf((float)advanceWidth * scale);
+			}
+		}
 	}
 }
