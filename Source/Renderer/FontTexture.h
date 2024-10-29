@@ -2,9 +2,9 @@
 
 #include <map>
 
-constexpr int g_glyphTextureDataSize = 96; // All chars are 128 bytes (12 row * 8 columns)
-constexpr int g_glyphTextureWidth = 8;
-constexpr int g_glyphTextureHeight = 12;
+constexpr int	g_glyphTextureDataSize = 96; // All chars are 128 bytes (12 row * 8 columns)
+constexpr int	g_glyphTextureWidth = 8;
+constexpr int	g_glyphTextureHeight = 12;
 constexpr float g_glyphTextureAspect = 0.6666667f;
 
 struct GlyphTexture
@@ -437,31 +437,48 @@ inline const char g_glyph_z[] = {
 };
 DECLARE_GLYPH_TEXTURE(z, 0);
 
+inline const char g_glyph_space[] = {
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+	0, 0, 0, 0, 0, 0, 0, 0, //
+};
+inline const GlyphTexture g_ft_space(" ", g_glyph_space, 0);
+
 inline std::map<char, const GlyphTexture*> g_glyphTextureMap{
-	{ 'a', &g_ft_a }, //
-	{ 'b', &g_ft_b }, //
-	{ 'c', &g_ft_c }, //
-	{ 'd', &g_ft_d }, //
-	{ 'e', &g_ft_e }, //
-	{ 'f', &g_ft_f }, //
-	{ 'g', &g_ft_g }, //
-	{ 'h', &g_ft_h }, //
-	{ 'i', &g_ft_i }, //
-	{ 'j', &g_ft_j }, //
-	{ 'k', &g_ft_k }, //
-	{ 'l', &g_ft_l }, //
-	{ 'm', &g_ft_m }, //
-	{ 'n', &g_ft_n }, //
-	{ 'o', &g_ft_o }, //
-	{ 'p', &g_ft_p }, //
-	{ 'q', &g_ft_q }, //
-	{ 'r', &g_ft_r }, //
-	{ 's', &g_ft_s }, //
-	{ 't', &g_ft_t }, //
-	{ 'u', &g_ft_u }, //
-	{ 'v', &g_ft_v }, //
-	{ 'w', &g_ft_w }, //
-	{ 'x', &g_ft_x }, //
-	{ 'y', &g_ft_y }, //
-	{ 'z', &g_ft_z }, //
+	{ 'a', &g_ft_a },	 //
+	{ 'b', &g_ft_b },	 //
+	{ 'c', &g_ft_c },	 //
+	{ 'd', &g_ft_d },	 //
+	{ 'e', &g_ft_e },	 //
+	{ 'f', &g_ft_f },	 //
+	{ 'g', &g_ft_g },	 //
+	{ 'h', &g_ft_h },	 //
+	{ 'i', &g_ft_i },	 //
+	{ 'j', &g_ft_j },	 //
+	{ 'k', &g_ft_k },	 //
+	{ 'l', &g_ft_l },	 //
+	{ 'm', &g_ft_m },	 //
+	{ 'n', &g_ft_n },	 //
+	{ 'o', &g_ft_o },	 //
+	{ 'p', &g_ft_p },	 //
+	{ 'q', &g_ft_q },	 //
+	{ 'r', &g_ft_r },	 //
+	{ 's', &g_ft_s },	 //
+	{ 't', &g_ft_t },	 //
+	{ 'u', &g_ft_u },	 //
+	{ 'v', &g_ft_v },	 //
+	{ 'w', &g_ft_w },	 //
+	{ 'x', &g_ft_x },	 //
+	{ 'y', &g_ft_y },	 //
+	{ 'z', &g_ft_z },	 //
+	{ ' ', &g_ft_space } //
 };
