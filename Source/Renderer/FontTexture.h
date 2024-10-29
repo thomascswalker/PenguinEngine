@@ -2,24 +2,10 @@
 
 #include <map>
 
-inline const char g_glyph_[] = {
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-	0, 0, 0, 0, 0, 0, 0, 0, //
-};
-
 constexpr int g_glyphTextureDataSize = 96; // All chars are 128 bytes (12 row * 8 columns)
 constexpr int g_glyphTextureWidth = 8;
 constexpr int g_glyphTextureHeight = 12;
+constexpr float g_glyphTextureAspect = 0.6666667f;
 
 struct GlyphTexture
 {
@@ -28,9 +14,9 @@ struct GlyphTexture
 	int			ascent;
 	int			descent;
 
-	GlyphTexture(char inC, const char* inData, int ascent) : c(inC), data(inData), ascent(-ascent), descent(ascent) {}
+	GlyphTexture(const char* inC, const char* inData, int ascent) : c(inC[0]), data(inData), ascent(-ascent), descent(ascent) {}
 };
-#define DECLARE_GLYPH_TEXTURE(c, ascent) inline const GlyphTexture g_ft_##c('c', g_glyph_##c, ascent)
+#define DECLARE_GLYPH_TEXTURE(c, ascent) inline const GlyphTexture g_ft_##c(#c, g_glyph_##c, ascent)
 
 // https://www.emigre.com/Fonts/Oblong
 
