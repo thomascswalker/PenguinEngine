@@ -158,7 +158,7 @@ bool ScanlineRHI::vertexStage()
 		auto output = ScanlineVertexShader::process(input);
 		if (output.position.w > 0.0f)
 		{
-			m_screenPoints[i] = Clipping::clip(output.position, m_viewData->width, m_viewData->height);
+			m_screenPoints[i] = Clipping::clipVertex(output.position, m_viewData->width, m_viewData->height);
 			m_screenNormals[i] = output.normal;
 			triangleOnScreen = true;
 		}

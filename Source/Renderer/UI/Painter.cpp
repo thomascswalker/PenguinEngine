@@ -16,6 +16,11 @@ Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewp
 	setFont(g_fontDatabase->getFontInfo(g_defaultFont));
 }
 
+void Painter::drawPoint(int32 x, int32 y, const Color& color)
+{
+	m_data->setPixelFromColor(x, y, color);
+}
+
 void Painter::drawLine(vec2i a, vec2i b, const Color& color)
 {
 	int32 x0 = std::clamp(a.x, 0, m_viewport.width);
@@ -189,29 +194,68 @@ std::vector<vec2i> Painter::getWindings(GlyphShape* glyph)
 	return windings;
 }
 
-void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, const Color& color)
+vec2i Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
 {
-	std::vector<vec2i> points = TTF::tessellateGlyph(glyph);
+	// Tesselate the curves
+	int32 pointCount = glyph->vertices.size();
 
-	for (int32 i = 0; i < points.size() - 1; i++)
+	// Calculate and scale edges
+	float xScale = scale.x;
+	float yScale = invert ? -scale.y : scale.y;
+
+	std::vector<GlyphEdge> edges;
+	int32				   i = 0;
+
+	int32 minX = 16384;
+	int32 minY = 16384;
+	int32 maxX = 0;
+	int32 maxY = 0;
+	for (auto& contour : glyph->contours)
 	{
-		vec2i p0 = points[i];
-		vec2i p1 = i == points.size() - 1 ? points[0] : points[i + 1];
+		for (int32 i = 0; i < contour.points.size(); i++)
+		{
+			auto  p0 = contour.points[i].position;
+			int32 nextIndex = i + 1 == contour.points.size() ? 0 : i + 1;
+			auto  p1 = contour.points[nextIndex].position;
 
-		p0.x = (float)p0.x * scale.x;
-		p0.y = (float)p0.y * scale.y;
+			GlyphEdge edge;
+			edge.v0.x = p0.x * xScale + shift.x + offset.x;
+			edge.v0.y = p0.y * yScale + shift.y + offset.y;
+			edge.v1.x = p1.x * xScale + shift.x + offset.x;
+			edge.v1.y = p1.y * yScale + shift.y + offset.y;
+			edges.emplace_back(edge);
 
-		p1.x = (float)p1.x * scale.x;
-		p1.y = (float)p1.y * scale.y;
-
-		p0 += shift + offset;
-		p1 += shift + offset;
-
-		drawLine(p0, p1, color);
+			if (edge.v0.x > maxX) { maxX = edge.v0.x; } //
+			if (edge.v0.y > maxY) { maxY = edge.v0.y; } //
+			if (edge.v0.x < minX) { minX = edge.v0.x; } //
+			if (edge.v0.y < minY) { minY = edge.v0.y; } //
+			if (edge.v1.x > maxX) { maxX = edge.v1.x; } //
+			if (edge.v1.y > maxY) { maxY = edge.v1.y; } //
+			if (edge.v1.x < minX) { minX = edge.v1.x; } //
+			if (edge.v1.y < minY) { minY = edge.v1.y; } //
+		}
 	}
+
+	// Rasterize edges, from left to right alternating drawing when we hit a line
+	bool on = false;
+	for (int32 x = minX; x < maxX; x++)
+	{
+		for (int32 y = minY; y < maxY; y++)
+		{
+			//drawPoint(x, y, m_fontColor);
+		}
+	}
+
+	for (int i = 0; i < edges.size(); i++)
+	{
+		auto e = edges[i];
+		drawLine(e.v0, e.v1, Color::red());
+	}
+
+	return vec2i(maxX - minX, maxY - minY);
 }
 
-void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color)
+void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos)
 {
 	int32		maxX = pos.x + g_glyphTextureWidth;
 	int32		maxY = pos.y + g_glyphTextureHeight;
@@ -224,7 +268,7 @@ void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const C
 			if (v)
 			{
 				m_data->setPixelFromColor(x + 1, y + 1, Color::black()); // Outline
-				m_data->setPixelFromColor(x, y, color);					 // Actual text color
+				m_data->setPixelFromColor(x, y, m_fontColor);			 // Actual text color
 			}
 		}
 	}
@@ -241,7 +285,7 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 			{
 				const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
 				int32				y = pos.y + glyphTexture->descent;
-				drawGlyphTexture(glyphTexture, vec2i(x, y), m_fontColor);
+				drawGlyphTexture(glyphTexture, vec2i(x, y));
 				x += g_glyphTextureWidth;
 			}
 			return;
@@ -278,15 +322,17 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 				int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
 
 				int32 y = ascent + y0;
+				auto  shift = vec2i(x1 - x0, y1 - y0);
+				auto  offset = vec2i(x, y);
 
 				// Only draw actual characters
 				if (c != ' ')
 				{
-					drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), m_fontColor);
+					offset = drawGlyph(glyph, vec2f(scale, -scale), shift, offset, false);
 				}
 
 				// Advance
-				x += roundf((float)advanceWidth * scale);
+				x += (float)advanceWidth * scale;
 			}
 		}
 	}

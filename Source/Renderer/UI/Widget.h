@@ -240,16 +240,16 @@ public:
 		}
 		// Draw the filled button
 		painter->drawRectFilled(m_geometry, color);
-		// Draw the button border
+		//// Draw the button border
 		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 		// Draw text
 		painter->setFontColor(m_textColor);
 		// Compute text position
-		vec2i textPos = m_geometry.min();
-		int32 textWidth = m_text.size() * g_glyphTextureWidth;
-		textPos.x += (m_geometry.width / 2) - (textWidth / 2);
-		textPos.y += (m_geometry.height / 2) - (g_glyphTextureHeight / 2);
-		painter->drawText(textPos, m_text);
+		//vec2i textPos = m_geometry.max();
+		//int32 textWidth = m_text.size() * g_glyphTextureWidth;
+		//textPos.x += (m_geometry.width / 2) - (textWidth / 2);
+		//textPos.y += (m_geometry.height / 2) - (g_glyphTextureHeight / 2);
+		painter->drawText({320,240}, m_text);
 	}
 
 	virtual void update(MouseData& mouse) override

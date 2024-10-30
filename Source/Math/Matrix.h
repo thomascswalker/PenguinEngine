@@ -8,39 +8,36 @@
 #include "Vector.h"
 #include "Core/Logging.h"
 
-template <typename T>
-mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ);
-template <typename T>
-mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, const vec3_t<T>& upDirection);
-template <typename T>
-mat4_t<T> lookAtLH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection);
-template <typename T>
-mat4_t<T> lookAtRH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection);
-template <typename T>
-mat4_t<T> translationMatrix(const vec3_t<T>& delta);
-template <typename T>
-mat4_t<T> rotationMatrix(T pitch, T yaw, T roll);
-template <typename T>
-mat4_t<T> rotationMatrix(const rot_t<T>& rot);
-template <typename T>
-mat4_t<T> rotationTranslationMatrix(const rot_t<T>& rotation, const vec3_t<T>& translation);
+template <typename T> mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ);
+template <typename T> mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, const vec3_t<T>& upDirection);
+template <typename T> mat4_t<T> lookAtLH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection);
+template <typename T> mat4_t<T> lookAtRH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection);
+template <typename T> mat4_t<T> translationMatrix(const vec3_t<T>& delta);
+template <typename T> mat4_t<T> rotationMatrix(T pitch, T yaw, T roll);
+template <typename T> mat4_t<T> rotationMatrix(const rot_t<T>& rot);
+template <typename T> mat4_t<T> rotationTranslationMatrix(const rot_t<T>& rotation, const vec3_t<T>& translation);
+
+// m[RowIndex][ColumnIndex]
+template <typename T> struct mat2_t
+{
+	union
+	{
+		T	   m[2][2];
+		float* f;
+	};
+};
 
 // m[RowIndex][ColumnIndex]
 template <typename T>
 struct mat4_t
 {
-	static_assert(std::is_floating_point_v<T>, "Type is not floating point.");
-
 	union
 	{
-		T m[4][4];
+		T	   m[4][4];
 		float* f;
 	};
 
-	mat4_t()
-	{
-		setIdentity();
-	}
+	mat4_t() { setIdentity(); }
 
 	mat4_t(const plane_t<T>& inX, const plane_t<T>& inY, const plane_t<T>& inZ, const plane_t<T>& inW)
 	{
@@ -122,15 +119,9 @@ struct mat4_t
 		m[3][3] = m15;
 	}
 
-	mat4_t(const mat4_t& other)
-	{
-		std::memcpy(m, &other.m, 16 * sizeof(T));
-	}
+	mat4_t(const mat4_t& other) { std::memcpy(m, &other.m, 16 * sizeof(T)); }
 
-	mat4_t(mat4_t&& other) noexcept
-	{
-		std::memcpy(m, &other.m, 16 * sizeof(T));
-	}
+	mat4_t(mat4_t&& other) noexcept { std::memcpy(m, &other.m, 16 * sizeof(T)); }
 
 	mat4_t flip() const
 	{
@@ -173,15 +164,7 @@ struct mat4_t
 		return true;
 	}
 
-	static mat4_t getIdentity()
-	{
-		return mat4_t{
-			plane_t<T>(1, 0, 0, 0),
-			plane_t<T>(0, 1, 0, 0),
-			plane_t<T>(0, 0, 1, 0),
-			plane_t<T>(0, 0, 0, 1)
-		};
-	}
+	static mat4_t getIdentity() { return mat4_t{ plane_t<T>(1, 0, 0, 0), plane_t<T>(0, 1, 0, 0), plane_t<T>(0, 0, 1, 0), plane_t<T>(0, 0, 0, 1) }; }
 
 	void setIdentity()
 	{
@@ -274,8 +257,7 @@ struct mat4_t
 		T det23 = a14 * a22 * a33 * a41;
 		T det24 = a14 * a23 * a31 * a42;
 
-		return (
-			det1 + det2 + det3 + det4 + det5 + det6 + det7 + det8 + det9 + det10 + det11 + det12 - det13 - det14 - det15 - det16 - det17 - det18 - det19 - det20 - det21 - det22 - det23 - det24);
+		return (det1 + det2 + det3 + det4 + det5 + det6 + det7 + det8 + det9 + det10 + det11 + det12 - det13 - det14 - det15 - det16 - det17 - det18 - det19 - det20 - det21 - det22 - det23 - det24);
 	}
 
 	// http://www.cg.info.hiroshima-cu.ac.jp/~miyazaki/knowledge/teche0023.html
@@ -351,10 +333,7 @@ struct mat4_t
 		return vec3_t<T>::zeroVector();
 	}
 
-	vec3_t<T> getAxisNormalized(const EAxis inAxis) const
-	{
-		return getAxis(inAxis).normalized();
-	}
+	vec3_t<T> getAxisNormalized(const EAxis inAxis) const { return getAxis(inAxis).normalized(); }
 
 	rot_t<T> getRotator() const
 	{
@@ -375,48 +354,30 @@ struct mat4_t
 
 	vec3_t<T> getScale(T tolerance = 0.00000001f);
 
-	vec3_t<T> getTranslation()
-	{
-		return vec3_t(m[3][0], m[3][1], m[3][2]);
-	}
+	vec3_t<T> getTranslation() { return vec3_t(m[3][0], m[3][1], m[3][2]); }
 
 	static mat4_t makeFromX(T angle)
 	{
 		T c = std::cosf(angle);
 		T s = std::sinf(angle);
-		return mat4_t(
-			plane_t<T>(1, 0, 0, 0),
-			plane_t<T>(0, c, -s, 0),
-			plane_t<T>(0, s, c, 0),
-			plane_t<T>(0, 0, 0, 1));
+		return mat4_t(plane_t<T>(1, 0, 0, 0), plane_t<T>(0, c, -s, 0), plane_t<T>(0, s, c, 0), plane_t<T>(0, 0, 0, 1));
 	}
 
 	static mat4_t makeFromY(T angle)
 	{
 		T c = std::cosf(angle);
 		T s = std::sinf(angle);
-		return mat4_t(
-			plane_t<T>(c, 0, s, 0),
-			plane_t<T>(0, 1, 0, 0),
-			plane_t<T>(-s, 0, c, 0),
-			plane_t<T>(0, 0, 0, 1));
+		return mat4_t(plane_t<T>(c, 0, s, 0), plane_t<T>(0, 1, 0, 0), plane_t<T>(-s, 0, c, 0), plane_t<T>(0, 0, 0, 1));
 	}
 
 	static mat4_t makeFromZ(T angle)
 	{
 		T c = std::cosf(angle);
 		T s = std::sinf(angle);
-		return mat4_t(
-			plane_t<T>(c, -s, 0, 0),
-			plane_t<T>(s, c, 0, 0),
-			plane_t<T>(0, 0, 1, 0),
-			plane_t<T>(0, 0, 0, 1));
+		return mat4_t(plane_t<T>(c, -s, 0, 0), plane_t<T>(s, c, 0, 0), plane_t<T>(0, 0, 1, 0), plane_t<T>(0, 0, 0, 1));
 	}
 
-	T get(int32 x, int32 y) const
-	{
-		return m[x][y];
-	}
+	T get(int32 x, int32 y) const { return m[x][y]; }
 
 	void transpose()
 	{
@@ -465,15 +426,9 @@ struct mat4_t
 
 	vec4_t<T> getRow(int32 row) const;
 
-	vec4_t<T> getColumn(int32 column) const
-	{
-		return { m[0][column], m[1][column], m[2][column], m[3][column] };
-	}
+	vec4_t<T> getColumn(int32 column) const { return { m[0][column], m[1][column], m[2][column], m[3][column] }; }
 
-	void set(int32 x, int32 y, T value)
-	{
-		m[x][y] = value;
-	}
+	void set(int32 x, int32 y, T value) { m[x][y] = value; }
 
 	std::string toString() const
 	{
@@ -487,10 +442,7 @@ struct mat4_t
 		return output;
 	}
 
-	float* asFloatArray()
-	{
-		return f;
-	}
+	float* asFloatArray() { return f; }
 
 	mat4_t operator+(const mat4_t& other) const
 	{
@@ -591,8 +543,7 @@ struct mat4_t
 	}
 };
 
-template <typename T>
-constexpr mat4_t<T> operator*(const mat4_t<T>& m0, const mat4_t<T>& m1)
+template <typename T> constexpr mat4_t<T> operator*(const mat4_t<T>& m0, const mat4_t<T>& m1)
 {
 	mat4_t<T> result;
 
@@ -642,8 +593,7 @@ constexpr mat4_t<T> operator*(const mat4_t<T>& m0, const mat4_t<T>& m1)
 	return result;
 }
 
-template <typename T>
-mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ)
+template <typename T> mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ)
 {
 	float sinFov;
 	float cosFov;
@@ -663,8 +613,7 @@ mat4_t<T> perspectiveFovLH(T fov, T aspect, T minZ, T maxZ)
 	return out;
 };
 
-template <typename T>
-mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, const vec3_t<T>& upDirection)
+template <typename T> mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, const vec3_t<T>& upDirection)
 {
 	// Forward vector
 	vec3_t<T> forward = eyeDirection;
@@ -703,22 +652,19 @@ mat4_t<T> lookTo(const vec3_t<T>& eyePosition, const vec3_t<T>& eyeDirection, co
 	return out;
 }
 
-template <typename T>
-mat4_t<T> lookAtLH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection)
+template <typename T> mat4_t<T> lookAtLH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection)
 {
 	auto eyeDirection = atPosition - eyePosition;
 	return lookTo(eyePosition, eyeDirection, upDirection);
 }
 
-template <typename T>
-mat4_t<T> lookAtRH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection)
+template <typename T> mat4_t<T> lookAtRH(const vec3_t<T>& eyePosition, const vec3_t<T>& atPosition, const vec3_t<T>& upDirection)
 {
 	auto eyeDirection = eyePosition - atPosition;
 	return lookTo(eyePosition, eyeDirection, upDirection);
 }
 
-template <typename T>
-mat4_t<T> translationMatrix(const vec3_t<T>& delta)
+template <typename T> mat4_t<T> translationMatrix(const vec3_t<T>& delta)
 {
 	mat4_t<T> out;
 	out.m[3][0] = delta.x;
@@ -727,8 +673,7 @@ mat4_t<T> translationMatrix(const vec3_t<T>& delta)
 	return out;
 }
 
-template <typename T>
-mat4_t<T> rotationMatrix(T pitch, T yaw, T roll)
+template <typename T> mat4_t<T> rotationMatrix(T pitch, T yaw, T roll)
 {
 	mat4_t<T> out;
 	// Convert from degrees to radians
@@ -759,14 +704,12 @@ mat4_t<T> rotationMatrix(T pitch, T yaw, T roll)
 	return out;
 }
 
-template <typename T>
-mat4_t<T> rotationMatrix(const rot_t<T>& rot)
+template <typename T> mat4_t<T> rotationMatrix(const rot_t<T>& rot)
 {
 	return rotationMatrix(rot.pitch, rot.yaw, rot.roll);
 }
 
-template <typename T>
-mat4_t<T> rotationTranslationMatrix(const rot_t<T>& rotation, const vec3_t<T>& translation)
+template <typename T> mat4_t<T> rotationTranslationMatrix(const rot_t<T>& rotation, const vec3_t<T>& translation)
 {
 	return rotationMatrix(rotation) * translationMatrix(translation);
 }

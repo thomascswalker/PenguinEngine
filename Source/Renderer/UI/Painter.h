@@ -20,9 +20,9 @@ class Painter
 	Texture*		m_data = nullptr;
 	recti			m_viewport{};
 	FontInfo*		m_font = nullptr;
-	int32			m_fontSize = 12;
+	int32			m_fontSize = 30;
 	Color			m_fontColor = Color::white();
-	EFontRenderMode m_glyphRenderMode = EFontRenderMode::Texture;
+	EFontRenderMode m_glyphRenderMode = EFontRenderMode::System;
 
 	void assertValid();
 
@@ -41,6 +41,8 @@ public:
 	Color getFontColor() const { return m_fontColor; }
 
 	/** Drawing **/
+
+	void drawPoint(int32 x, int32 y, const Color& color);
 
 	/**
 	 * @brief Draws a line from point A to point B with the specified color.
@@ -64,9 +66,9 @@ public:
 
 	std::vector<vec2i> getWindings(GlyphShape* glyph);
 
-	void drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, const Color& color);
+	vec2i drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert);
 
-	void drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color);
+	void drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos);
 
 	void drawText(const vec2i& pos, const std::string& text);
 };
