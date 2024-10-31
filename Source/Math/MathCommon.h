@@ -134,13 +134,20 @@ namespace Math
 		return yhx - xy / h;
 	}
 
-	inline int32 lerp(int32 a, int32 b, float t)
+	inline int32 lerp(int32 start, int32 end, float t)
 	{
-		return (int32)((float)a * (1.0f - t) + ((float)b * t));
+		return start + (end - start) * t;
 	}
 
-	inline vec2i lerp(const vec2i& a, const vec2i& b, float t)
+	inline vec2i lerp(const vec2i& start, const vec2i& end, float t)
 	{
-		return (a.toType<float>() * (1.0f - t) + (b.toType<float>() * t)).toType<int32>();
+		return start + (end - start) * t;
+	}
+
+	inline vec2i bezierLerp(const vec2i& p0, const vec2i& p1, const vec2i& p2, float t)
+	{
+		vec2i p01 = lerp(p0, p1, t);
+		vec2i p12 = lerp(p1, p2, t);
+		return lerp(p01, p12, t);
 	}
 }

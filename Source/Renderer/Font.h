@@ -14,6 +14,7 @@
 #include "Math/Vector.h"
 #include "Math/Rect.h"
 #include "Math/Matrix.h"
+#include "Math/Line.h"
 
 /** https://handmade.network/forums/articles/t/7330-implementing_a_font_reader_and_rasterizer_from_scratch%252C_part_1__ttf_font_reader. **/
 /** https://handmade.network/forums/wip/t/7610-reading_ttf_files_and_rasterizing_them_using_a_handmade_approach%252C_part_2__rasterization **/
@@ -115,45 +116,6 @@ namespace TTF
 	};
 	DEFINE_BITMASK_OPERATORS(ESubGlyphFlag);
 
-	inline std::string glyphFlagToString(EGlyphFlag f)
-	{
-		static const char* flags[] = { "OnCurve", "XShort", "YShort", "Repeat", "XShortPos", "YShortPos", "Res1", "Res2", 0 }; // Synchronise with Color enum!
-
-		// For each possible color string...
-		std::string outString;
-		for (const char* const* ptr = flags; *ptr != 0; ++ptr)
-		{
-
-			// Get whether to print something
-			bool output = (f & 0x01) != 0;
-
-			// Is color bit set?
-			if (output)
-			{
-				// Yes! Output that string.
-				outString += *ptr;
-			} // if
-
-			// Next bit in color
-			f = (EGlyphFlag)(f >> 1);
-
-			// All done?
-			if (f == 0)
-			{
-				// Yes! Leave
-				break;
-			} // if
-
-			// No, so show some more...
-			if (output)
-			{
-				// If output something, need 'OR'
-				outString += " | ";
-			} // if
-		}	  // for
-		return outString;
-	} // operator <<(Color)
-
 	enum EGlyphVertexType
 	{
 		Line,
@@ -171,9 +133,28 @@ namespace TTF
 
 	struct GlyphEdge
 	{
-		vec2i v0;
-		vec2i v1;
+		linei line;
 		bool  invert = false;
+
+		bool operator>(const GlyphEdge& other)
+		{
+			bool result = false;
+			result |= line.a.y > other.line.a.y;
+			result |= line.a.y > other.line.b.y;
+			result |= line.b.y > other.line.a.y;
+			result |= line.b.y > other.line.b.y;
+			return result;
+		}
+
+		bool operator<(const GlyphEdge& other)
+		{
+			bool result = false;
+			result |= line.a.y < other.line.a.y;
+			result |= line.a.y < other.line.b.y;
+			result |= line.b.y < other.line.a.y;
+			result |= line.b.y < other.line.b.y;
+			return result;
+		}
 	};
 
 	struct GlyphContour
@@ -184,21 +165,30 @@ namespace TTF
 	struct GlyphShape
 	{
 		// Simple
-		uint16					 contourCount;
-		recti					 bounds;
-		uint16					 instructionLength;
-		std::vector<uint8>		 instructions;
-		std::vector<GlyphVertex> vertices;
-		std::vector<uint16>		 contourEndPoints;
+		uint16					  contourCount;
+
+		int16					  minX;
+		int16					  maxX;
+		int16					  minY;
+		int16					  maxY;
+		int16					  width;
+		int16					  height;
+
+		uint16					  instructionLength;
+		std::vector<uint8>		  instructions;
+		std::vector<GlyphVertex>  vertices;
+		std::vector<uint16>		  contourEndPoints;
 		std::vector<GlyphContour> contours;
+		int32					  advanceWidth;
+		int32					  leftSideBearing;
 
 		// Compound
 		std::vector<GlyphShape> subGlyphs;
 		int32					index;
-		uint16 flags;
-		int32  arg1;
-		int32  arg2;
-		mat2i  transform;
+		uint16					flags;
+		int32					arg1;
+		int32					arg2;
+		mat2i					transform;
 	};
 
 	struct NameRecord
@@ -289,19 +279,13 @@ namespace TTF
 		int16  glyphDataFormat;
 	};
 
-	struct LOCA
+	struct FontInfo
 	{
-		std::map<char, int32> glyphIndexes;
-		std::map<char, int32> glyphOffsets;
-	};
+		std::string					fileName;
+		OffsetSubtable				offsetSubtable;
+		std::map<ETableType, Table> tables;
 
-	struct GLYF
-	{
-		std::map<char, GlyphShape> shapes;
-	};
-
-	struct NAME
-	{
+		// NAME
 		uint16					format;
 		uint16					count;
 		uint16					stringOffset;
@@ -311,10 +295,19 @@ namespace TTF
 		std::string subFamily;
 		std::string subFamilyId;
 		std::string fullName;
-	};
 
-	struct HHEA
-	{
+		// LOCA
+		std::map<char, int32> glyphIndexes;
+		std::map<char, int32> glyphOffsets;
+
+		// GLYF
+		std::map<char, GlyphShape> glyphs;
+
+		// MAXP
+		Fixed version;
+		int32 glyphCount;
+
+		// HHEA
 		uint16 majorVersion;
 		uint16 minorVersion;
 		FWord  ascender;
@@ -329,158 +322,25 @@ namespace TTF
 		int16  caretOffset;
 		int64  reserved;
 		int16  metricDataFormat;
-		uint16 hMetricCount;
-	};
+		uint16 numAdvanceWidthMetrics;
 
-	struct LongHMetric
-	{
-		int16 advanceWidth;
-		int16 leftSideBearing;
-	};
-
-	struct HMTX
-	{
-		std::vector<LongHMetric> hMetrics;
-	};
-
-	struct MAXP
-	{
-		Fixed  version;
-		uint16 glyphCount;
-	};
-
-	struct FontInfo
-	{
-		std::string					fileName;
-		OffsetSubtable				offsetSubtable;
-		std::map<ETableType, Table> tables;
-		std::shared_ptr<Format4>	format = nullptr;
-		std::shared_ptr<NAME>		name = nullptr;
-		std::shared_ptr<CMAP>		cmap = nullptr;
-		std::shared_ptr<HEAD>		head = nullptr;
-		std::shared_ptr<LOCA>		loca = nullptr;
-		std::shared_ptr<GLYF>		glyf = nullptr;
-		std::shared_ptr<HHEA>		hhea = nullptr;
-		std::shared_ptr<HMTX>		hmtx = nullptr;
-		std::shared_ptr<MAXP>		maxp = nullptr;
+		std::shared_ptr<Format4> format4 = nullptr;
+		std::shared_ptr<CMAP>	 cmap = nullptr;
+		std::shared_ptr<HEAD>	 head = nullptr;
 	};
 
 	float getScaleForPixelHeight(FontInfo* fontInfo, int32 pixelHeight);
 
-	inline int32 getGlyphIndex(uint16 codePoint, FontInfo* fontInfo)
-	{
-		int32 index = -1;
-		auto  f = fontInfo->format.get();
-		switch (f->format)
-		{
-			case 4:
-			{
-				for (int32 i = 0; i < f->segCountX2 / 2; i++)
-				{
-					if (f->endCode[i] > codePoint)
-					{
-						index = i;
-						break;
-					}
-				}
-
-				if (index == -1)
-				{
-					return 0;
-				}
-
-				int32 startCode = f->startCode[index];
-				if (startCode >= codePoint)
-				{
-					return 0;
-				}
-
-				int32 idRangeOffset = f->idRangeOffset[index];
-				int32 idDelta = f->idDelta[index];
-				if (idRangeOffset != 0)
-				{
-					int32 glyphIndex = codePoint - startCode;
-					int32 result = f->glyphIndexArray[glyphIndex];
-					return (result + idDelta) & 0xffff;
-				}
-				else
-				{
-					return (codePoint + idDelta) & 0xffff;
-				}
-			}
-		}
-		return 0;
-	}
+	int32 getGlyphIndex(uint16 codePoint, FontInfo* fontInfo);
 
 	/** Returns the byte offset of the specified Glyph relative to the GLYF table. **/
-	inline uint32 getGlyphOffset(ByteReader& reader, FontInfo* fontInfo, uint32 glyphIndex, int32 initialOffset)
-	{
-		bool  bitSize32 = fontInfo->head->indexToLocFormat != 0;
-		int32 indexOffset = bitSize32 ? glyphIndex * sizeof(uint32) : glyphIndex * sizeof(uint16);
-		reader.seek(initialOffset + indexOffset, ESeekDir::Beginning); // Reset to beginning of the LOCA table
-		return bitSize32 ? reader.readUInt32() : reader.readUInt16() * 2;
-	}
+	uint32 getGlyphOffset(ByteReader& reader, FontInfo* fontInfo, uint32 glyphIndex, int32 initialOffset);
 
-	inline void readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag)
-	{
-		int32 pointCount = shape->vertices.size();
+	void readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag);
 
-		// Value for each coordinate. All coordinates are sequential and either:
-		// 1. If it's the first coordinate, it's just added to 0.
-		// 2. If it's any other coordinate, it's added to the previous coordinate.
-		int16 value = 0;
+	std::vector<vec2i> interpolatePoints(std::vector<vec2i>& points);
 
-		// https://stevehanov.ca/blog/?id=143
-		for (int32 i = 0; i < pointCount; i++)
-		{
-			GlyphVertex* v = &shape->vertices[i];
-			EGlyphFlag	 f = v->flag;
-
-			// Char
-			if (f & byteFlag)
-			{
-				// Read uint8 into int16
-				int16 delta = reader.readUInt8();
-				value += (f & deltaFlag) ? delta : -delta;
-			}
-			// Short
-			else if (!(f & deltaFlag))
-			{
-				// Read the first and second half of this uint16
-				int16 a = reader.readUInt8();
-				int16 b = reader.readUInt8();
-				value += (a << 8) + b;
-			}
-
-			// Set this coordinate's index (x, y) to the current value
-			v->position[index] = value;
-		}
-
-		int a = 5;
-	}
-
-	inline void closeGlyphShape(GlyphShape* glyph) {}
-
-	inline void setVertexProperties(GlyphVertex* v, EGlyphVertexType type, int32 x, int32 y, int32 cx, int32 cy)
-	{
-		v->type = type;
-		v->position.x = x;
-		v->position.y = y;
-	}
-
-	inline std::vector<vec2i> interpolatePoints(std::vector<vec2i>& points);
-
-	inline void convertGlyphPoints(GlyphShape* glyph);
-
-	inline std::vector<vec2i> tessellateGlyph(GlyphShape* shape)
-	{
-		std::vector<vec2i> vertices;
-		for (auto& v : shape->vertices)
-		{
-			vertices.emplace_back(v.position);
-		}
-		return vertices;
-	}
+	void convertGlyphPoints(GlyphShape* glyph);
 
 	bool getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph);
 
@@ -489,436 +349,39 @@ namespace TTF
 
 	bool getGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph);
 
-	inline void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable)
-	{
-		offsetSubtable->scalarType = reader.readUInt32();
-		offsetSubtable->tableCount = reader.readUInt16();
-		offsetSubtable->searchRange = reader.readUInt16();
-		offsetSubtable->entrySelector = reader.readUInt16();
-		offsetSubtable->rangeShift = reader.readUInt16();
-	}
+	void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable);
 
-	inline void readFormat4(ByteReader& reader, Format4* f)
-	{
-		int32 start = reader.getPos() - 6; // Start position is -3x u16
-
-		f->segCountX2 = reader.readUInt16();
-		f->searchRange = reader.readUInt16();
-		f->entrySelector = reader.readUInt16();
-		f->rangeShift = reader.readUInt16();
-
-		int32 segmentCount = f->segCountX2 / 2;
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->endCode.emplace_back(reader.readUInt16());
-		}
-		reader.seek(2);
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->startCode.emplace_back(reader.readUInt16());
-		}
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->idDelta.emplace_back(reader.readUInt16());
-		}
-		for (int32 i = 0; i < segmentCount; i++)
-		{
-			f->idRangeOffset.emplace_back(reader.readUInt16());
-		}
-		int32 end = reader.getPos();
-		int32 remaining = f->length - (end - start);
-		for (int32 i = 0; i < remaining / 2; i++)
-		{
-			f->glyphIndexArray.emplace_back(reader.readUInt16());
-		}
-	}
+	void readFormat4(ByteReader& reader, Format4* f);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
-	inline bool readCMAP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-		auto cmap = fontInfo->cmap.get();
-		reader.seek(initialOffset, ESeekDir::Beginning);
-		cmap->version = reader.readUInt16();
-		cmap->subTableCount = reader.readUInt16();
-
-		for (int32 i = 0; i < cmap->subTableCount; i++)
-		{
-			CMAPEncodingSubTable encodingSubTable;
-			encodingSubTable.platformId = reader.readUInt16();
-			encodingSubTable.platformSpecificId = reader.readUInt16();
-			encodingSubTable.offset = reader.readUInt32();
-			cmap->subTables.emplace_back(encodingSubTable);
-		}
-
-		// Go to the offset of this CMAP subtable
-		reader.seek(initialOffset + fontInfo->cmap->subTables[0].offset, ESeekDir::Beginning);
-
-		auto fmt = reader.readUInt16();
-		auto length = reader.readUInt16();
-		auto language = reader.readUInt16();
-
-		switch (fmt)
-		{
-			case 4:
-			{
-				fontInfo->format = std::make_shared<Format4>();
-
-				auto f = fontInfo->format.get();
-				f->format = fmt;
-				f->length = length;
-				f->language = language;
-				readFormat4(reader, f);
-				break;
-			}
-			default:
-			{
-#ifdef _DEBUG
-				LOG_ERROR("Format {} not implemented.", fmt)
-#endif
-				return false;
-			}
-		}
-		return true;
-	}
+	bool readCMAP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/loca
-	inline void readLOCA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-		auto loca = fontInfo->loca.get();
-
-		// Load all ASCII characters from 0 to 127
-		for (int i = 0; i <= 128; i++)
-		{
-			char c = (char)i;
-			if (c == '\0')
-			{
-				continue;
-			}
-			int32 index = getGlyphIndex(c, fontInfo);
-			loca->glyphIndexes[c] = index;
-			int32 offset = getGlyphOffset(reader, fontInfo, index, initialOffset);
-			loca->glyphOffsets[c] = offset;
-		}
-	}
+	void readLOCA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/head
-	inline void readHEAD(ByteReader& reader, FontInfo* fontInfo)
-	{
-		auto head = fontInfo->head.get();
-
-		head->version.s[0] = reader.readUInt16();
-		head->version.s[1] = reader.readUInt16();
-
-		head->fontRevision.s[0] = reader.readUInt16();
-		head->fontRevision.s[1] = reader.readUInt16();
-
-		head->checkSumAdjustment = reader.readUInt32();
-		head->magicNumber = reader.readUInt32();
-
-		head->flags = reader.readUInt16();
-		head->unitsPerEm = reader.readUInt16();
-
-		head->created = reader.readInt64();
-		head->modified = reader.readInt64();
-
-		head->xMin = reader.readInt16();
-		head->yMin = reader.readInt16();
-		head->xMax = reader.readInt16();
-		head->yMax = reader.readInt16();
-
-		head->macStyle = reader.readUInt16();
-		head->lowestRecPPEM = reader.readUInt16();
-		head->fontDirectionHint = reader.readInt16();
-		head->indexToLocFormat = reader.readInt16();
-		head->glyphDataFormat = reader.readInt16();
-	}
+	void readHEAD(ByteReader& reader, FontInfo* fontInfo);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/glyf
-	inline bool readGLYF(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-
-		for (const auto& [k, v] : fontInfo->loca->glyphOffsets)
-		{
-			reader.seek(initialOffset + v, ESeekDir::Beginning); // Reset to beginning of the GLYF table
-			GlyphShape shape;
-			if (!getGlyphShape(reader, fontInfo, &shape))
-			{
-				LOG_ERROR("Failed to read glyph shape {}", k)
-				return false;
-			}
-
-			fontInfo->glyf->shapes[k] = shape;
-		}
-	}
+	bool readGLYF(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/name
-	inline bool readNAME(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-		// Get record metadata
-		NAME* name = fontInfo->name.get();
-		reader.seek(initialOffset, ESeekDir::Beginning);
-		name->format = reader.readUInt16();
-		name->count = reader.readUInt16();
-		name->stringOffset = reader.readUInt16();
-
-		// Construct all records
-		for (int32 i = 0; i < name->count; i++)
-		{
-			NameRecord record;
-			record.platformId = reader.readUInt16();
-			record.platformSpecificId = reader.readUInt16();
-			record.languageId = reader.readUInt16();
-			record.nameId = reader.readUInt16();
-			record.length = reader.readUInt16();
-			record.offset = reader.readUInt16();
-			name->records.emplace_back(record);
-		}
-
-		// Read all name strings
-		for (int32 i = 0; i < name->records.size(); i++)
-		{
-			auto& record = name->records[i];
-			reader.seek(initialOffset + name->stringOffset + record.offset + 1, ESeekDir::Beginning);
-
-			// Read the text
-			std::string text;
-
-			// Read the raw record text into a buffer
-			std::vector<uint8> textBuffer;
-			reader.readSize(record.length, textBuffer);
-
-			// For some reason there can be `\0` in between every character,
-			// so we'll loop through the text buffer and if the current
-			// element is a valid char, add it to the text string.
-			for (int32 j = 0; j < textBuffer.size(); j++)
-			{
-				if (textBuffer[j] == '\0')
-				{
-					continue;
-				}
-				text.push_back(textBuffer[j]);
-			}
-
-			switch (record.nameId)
-			{
-				case 1: // Family
-					name->family = text;
-					break;
-				case 2: // Subfamily
-					name->subFamily = text;
-					break;
-				case 3: // Subfamily ID
-					name->subFamilyId = text;
-					break;
-				case 4: // Full name
-					name->fullName = text;
-					break;
-				default:
-					continue;
-			}
-		}
-
-		return true;
-	}
+	bool readNAME(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/hhea
-	inline bool readHHEA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-		HHEA* hhea = fontInfo->hhea.get();
-		reader.seek(initialOffset, ESeekDir::Beginning);
-
-		hhea->majorVersion = reader.readUInt16();
-		hhea->minorVersion = reader.readUInt16();
-		hhea->ascender = reader.readInt16();
-		hhea->descender = reader.readInt16();
-		hhea->lineGap = reader.readInt16();
-		hhea->advanceWidthMax = reader.readUInt16();
-		hhea->minLeftSideBearing = reader.readInt16();
-		hhea->minRightSideBearing = reader.readInt16();
-		hhea->xMaxExtent = reader.readInt16();
-		hhea->caretSlopeRise = reader.readInt16();
-		hhea->caretSlopeRun = reader.readInt16();
-		hhea->caretOffset = reader.readInt16();
-		hhea->reserved = reader.readInt64();
-		hhea->metricDataFormat = reader.readInt16();
-		hhea->hMetricCount = reader.readUInt16();
-
-		return true;
-	}
+	bool readHHEA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/maxp
-	inline bool readMAXP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-		MAXP* maxp = fontInfo->maxp.get();
-		reader.seek(initialOffset, ESeekDir::Beginning);
-
-		maxp->version.i = reader.readUInt32();
-		maxp->glyphCount = reader.readUInt16();
-
-		return true;
-	}
+	bool readMAXP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/hmtx
-	inline bool readHMTX(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
-	{
-		HMTX* hmtx = fontInfo->hmtx.get();
-		reader.seek(initialOffset, ESeekDir::Beginning);
-		uint8* hmtx_ptr = reader.ptr();
+	bool readHMTX(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
 
-		auto  glyphIndexes = fontInfo->loca->glyphIndexes;
-		int32 hMetricCount = fontInfo->hhea->hMetricCount;
-		if (hMetricCount < glyphIndexes.size())
-		{
-			LOG_ERROR("Horizontal Metric count ({}) is lower than Glyph Index count ({}).", hMetricCount, glyphIndexes.size())
-			return false;
-		}
-		hmtx->hMetrics.resize(hMetricCount);
-		int32 glyphCount = fontInfo->maxp->glyphCount;
+	void readTableInfo(ByteReader& reader, std::map<ETableType, Table>& tables, int32 tableSize);
 
-		for (auto& [k, glyphIndex] : glyphIndexes)
-		{
-			if (glyphIndex == 36)
-			{
-				int a = 5;
-			}
-			LongHMetric lhm;
-			uint8*		p;
-			// Seek to beginning of HMTX
-			reader.seek(initialOffset, ESeekDir::Beginning);
-			if (glyphIndex < hMetricCount)
-			{
-				// Seek to glyph offset. Multiply by 4 because each glyph is 32 bytes.
-				reader.seek(4 * glyphIndex);
-				lhm.advanceWidth = reader.readInt16();
-				lhm.leftSideBearing = reader.readInt16();
-			}
-			else
-			{
-				// Seek to last glyph offset.
-				reader.seek(4 * (hMetricCount - 1));
-				lhm.advanceWidth = reader.readInt16();
-				// Seek to end of AdvanceWidth section. Multiply by 4 because each glyph is 32 bytes.
-				reader.seek(initialOffset + (4 * hMetricCount), ESeekDir::Beginning);
-				// Seek offset for this specific glyph
-				reader.seek(2 * (glyphIndex - hMetricCount));
-				lhm.leftSideBearing = reader.readInt16();
-			}
-			hmtx->hMetrics[glyphIndex] = lhm;
-		}
+	bool readTables(ByteReader& reader, FontInfo* fontInfo);
 
-		return true;
-	}
-
-	inline void readTableinfo(ByteReader& reader, std::map<ETableType, Table>& tables, int32 tableSize)
-	{
-		for (int32 i = 0; i < tableSize; i++)
-		{
-			Table t;
-
-			// Read the tag into a string.
-			std::string tag = reader.readString(4);
-
-			// Convert to uppercase
-			Strings::toUpper(tag);
-
-			// Necessary because no reflection
-			SET_TABLE_TYPE(CMAP);
-			SET_TABLE_TYPE(GLYF);
-			SET_TABLE_TYPE(HEAD);
-			SET_TABLE_TYPE(HHEA);
-			SET_TABLE_TYPE(HMTX);
-			SET_TABLE_TYPE(LOCA);
-			SET_TABLE_TYPE(MAXP);
-			SET_TABLE_TYPE(NAME);
-			SET_TABLE_TYPE(POST);
-			SET_TABLE_TYPE(CVT);
-			SET_TABLE_TYPE(FPGM);
-			SET_TABLE_TYPE(HDMX);
-			SET_TABLE_TYPE(KERN);
-			SET_TABLE_TYPE(OS2);
-			SET_TABLE_TYPE(PREP);
-
-			t.checkSum = reader.readUInt32();
-			t.offset = reader.readUInt32();
-			t.length = reader.readUInt32();
-
-			if (tables.find(t.type) != tables.end())
-			{
-				// Skip duplicates
-				continue;
-			}
-			tables[t.type] = t;
-		}
-	}
-
-	inline bool readTables(ByteReader& reader, FontInfo* fontInfo)
-	{
-		// Read NAME
-		auto nameTable = fontInfo->tables[ETableType::NAME];
-		fontInfo->name = std::make_shared<NAME>();
-		readNAME(reader, fontInfo, nameTable.offset);
-
-		// Read HEAD
-		auto headTable = fontInfo->tables[ETableType::HEAD];
-		fontInfo->head = std::make_shared<HEAD>();
-		reader.seek(headTable.offset, ESeekDir::Beginning);
-		readHEAD(reader, fontInfo);
-
-		//  Read CMAP
-		auto cmapTable = fontInfo->tables[ETableType::CMAP];
-		fontInfo->cmap = std::make_shared<CMAP>();
-		if (!readCMAP(reader, fontInfo, cmapTable.offset))
-		{
-			return false;
-		}
-		// Read LOCA
-		auto locaTable = fontInfo->tables[ETableType::LOCA];
-		fontInfo->loca = std::make_shared<LOCA>();
-		readLOCA(reader, fontInfo, locaTable.offset);
-
-		// Read GLYF
-		auto glyfTable = fontInfo->tables[ETableType::GLYF];
-		fontInfo->glyf = std::make_shared<GLYF>();
-		if (!readGLYF(reader, fontInfo, glyfTable.offset))
-		{
-			return false;
-		}
-
-		// Read HHEA
-		auto hheaTable = fontInfo->tables[ETableType::HHEA];
-		fontInfo->hhea = std::make_shared<HHEA>();
-		if (!readHHEA(reader, fontInfo, hheaTable.offset))
-		{
-			return false;
-		}
-
-		// Read MAXP
-		auto maxpTable = fontInfo->tables[ETableType::MAXP];
-		fontInfo->maxp = std::make_shared<MAXP>();
-		if (!readMAXP(reader, fontInfo, maxpTable.offset))
-		{
-			return false;
-		}
-
-		// Read HMTX
-		auto hmtxTable = fontInfo->tables[ETableType::HMTX];
-		fontInfo->hmtx = std::make_shared<HMTX>();
-		if (!readHMTX(reader, fontInfo, hmtxTable.offset))
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	inline bool readfontInfo(ByteReader& reader, FontInfo* fontInfo)
-	{
-		readOffsetSubtable(reader, &fontInfo->offsetSubtable);
-
-		int32 tableSize = fontInfo->offsetSubtable.tableCount;
-		readTableinfo(reader, fontInfo->tables, tableSize);
-		return readTables(reader, fontInfo);
-	}
+	bool readfontInfo(ByteReader& reader, FontInfo* fontInfo);
 } // namespace TTF
 
 using namespace TTF;
@@ -927,76 +390,14 @@ class FontDatabase
 {
 	std::map<std::string, FontInfo> fonts;
 
-	std::string getfontInfoPath()
-	{
-#if defined(_WIN32) || defined(_WIN64)
-		return "C:\\Windows\\Fonts";
-#else
-		return "";
-#endif
-	}
+	std::string getfontInfoPath();
 
-	void registerFont(std::string& data, const std::string& fileName)
-	{
-		FontInfo font;
-		font.fileName = fileName;
-		ByteReader buffer(data, data.size(), std::endian::big);
-		if (!readfontInfo(buffer, &font))
-		{
-			return;
-		}
-		fonts[font.name->family.c_str()] = font;
-	}
+	void registerFont(std::string& data, const std::string& fileName);
 
-	void loadFonts()
-	{
-		std::filesystem::path fontDir = getfontInfoPath();
-		if (!std::filesystem::exists(fontDir))
-		{
-			LOG_ERROR("OS not implemented.");
-			return;
-		}
-
-		for (const auto& entry : std::filesystem::directory_iterator(fontDir))
-		{
-			int8*		data = nullptr;
-			std::string path = entry.path().string();
-
-			// Only read .ttf files
-			if (!path.ends_with(".ttf"))
-			{
-				continue;
-			}
-
-			if (!path.find("arial.ttf"))
-			{
-				continue;
-			}
-
-			std::string strBuffer;
-			if (!IO::readFile(path, strBuffer))
-			{
-				LOG_ERROR("Failed to load font {}.", path)
-				return;
-			}
-
-			registerFont(strBuffer, path);
-			break;
-		}
-	}
+	void loadFonts();
 
 public:
-	FontInfo* getFontInfo(const std::string& name)
-	{
-		for (auto& [k, v] : fonts)
-		{
-			if (k == name)
-			{
-				return &fonts[name.c_str()];
-			}
-		}
-		return nullptr;
-	}
+	FontInfo* getFontInfo(const std::string& name);
 
-	void init() { loadFonts(); }
+	void init();
 };

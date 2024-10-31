@@ -689,6 +689,15 @@ namespace Math
 	}
 
 	/* Distance between two points in 3D space */
+	template <typename T> static T distance(const vec2_t<T> v0, const vec2_t<T>& v1)
+	{
+		T a = Math::square(v1.x - v0.x);
+		T b = Math::square(v1.y - v0.y);
+		return std::sqrtf(a + b);
+	}
+
+
+	/* Distance between two points in 3D space */
 	template <typename T>
 	static T distance(const vec3_t<T> v0, const vec3_t<T>& v1)
 	{

@@ -188,10 +188,34 @@ void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
 	}
 }
 
-std::vector<vec2i> Painter::getWindings(GlyphShape* glyph)
+/** Sort edges in vertical order, from highest vertical point to lowest. **/
+std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 {
-	std::vector<vec2i> windings;
-	return windings;
+	auto a = edges;
+	if (a.begin() == a.end())
+	{
+		return a;
+	}
+
+	for (auto i = a.begin() + 1; i < a.end(); ++i)
+	{
+		auto k = *i;
+		auto j = i - 1;
+		while (j >= a.begin() && *j < k)
+		{
+			*(j + 1) = *j;
+			if (j != a.begin())
+			{
+				j--;
+			}
+			else
+			{
+				break;
+			}
+		}
+		*(j + 1) = k;
+	}
+	return a;
 }
 
 vec2i Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
@@ -219,38 +243,59 @@ vec2i Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shi
 			auto  p1 = contour.points[nextIndex].position;
 
 			GlyphEdge edge;
-			edge.v0.x = p0.x * xScale + shift.x + offset.x;
-			edge.v0.y = p0.y * yScale + shift.y + offset.y;
-			edge.v1.x = p1.x * xScale + shift.x + offset.x;
-			edge.v1.y = p1.y * yScale + shift.y + offset.y;
+			edge.line.a.x = p0.x * xScale + shift.x + offset.x;
+			edge.line.a.y = p0.y * yScale + shift.y + offset.y;
+			edge.line.b.x = p1.x * xScale + shift.x + offset.x;
+			edge.line.b.y = p1.y * yScale + shift.y + offset.y;
 			edges.emplace_back(edge);
 
-			if (edge.v0.x > maxX) { maxX = edge.v0.x; } //
-			if (edge.v0.y > maxY) { maxY = edge.v0.y; } //
-			if (edge.v0.x < minX) { minX = edge.v0.x; } //
-			if (edge.v0.y < minY) { minY = edge.v0.y; } //
-			if (edge.v1.x > maxX) { maxX = edge.v1.x; } //
-			if (edge.v1.y > maxY) { maxY = edge.v1.y; } //
-			if (edge.v1.x < minX) { minX = edge.v1.x; } //
-			if (edge.v1.y < minY) { minY = edge.v1.y; } //
+			if (edge.line.a.x > maxX)
+			{
+				maxX = edge.line.a.x;
+			} //
+			if (edge.line.a.y > maxY)
+			{
+				maxY = edge.line.a.y;
+			} //
+			if (edge.line.a.x < minX)
+			{
+				minX = edge.line.a.x;
+			} //
+			if (edge.line.a.y < minY)
+			{
+				minY = edge.line.a.y;
+			} //
+			if (edge.line.b.x > maxX)
+			{
+				maxX = edge.line.b.x;
+			} //
+			if (edge.line.b.y > maxY)
+			{
+				maxY = edge.line.b.y;
+			} //
+			if (edge.line.b.x < minX)
+			{
+				minX = edge.line.b.x;
+			} //
+			if (edge.line.b.y < minY)
+			{
+				minY = edge.line.b.y;
+			} //
 		}
 	}
 
-	// Rasterize edges, from left to right alternating drawing when we hit a line
-	bool on = false;
-	for (int32 x = minX; x < maxX; x++)
-	{
-		for (int32 y = minY; y < maxY; y++)
-		{
-			//drawPoint(x, y, m_fontColor);
-		}
-	}
-
+	edges = sortEdges(edges);
 	for (int i = 0; i < edges.size(); i++)
 	{
 		auto e = edges[i];
-		drawLine(e.v0, e.v1, Color::red());
+		drawLine(e.line.a, e.line.b, Color::white());
 	}
+
+	// Span fill
+	int32 x = (minX + maxX) / 2;
+	int32 y = (minY + maxY) / 2;
+	int32 seed = edges[0].line.a.x + 1;
+	for (int32 y = minY; y < maxY; y++) {}
 
 	return vec2i(maxX - minX, maxY - minY);
 }
@@ -294,46 +339,81 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 		{
 			assert(m_font != nullptr);
 
-			// Get vertical metrics
-			float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
-			float ascent = m_font->hhea->ascender;
-			float descent = m_font->hhea->descender;
-			float lineGap = m_font->hhea->lineGap;
+			float scale = (1.0f / m_font->head->unitsPerEm) * m_fontSize;
+			int32 letterAdvance = 0;
+			int32 wordAdvance = 0;
+			int32 lineAdvance = 0;
 
-			ascent = std::roundf(ascent * scale);
-			descent = std::roundf(descent * scale);
-
-			// Track horizontal position
-			int32 x = 0;
-
-			// Draw each character
-			for (auto c : text)
+			for (int32 i = 0; i < text.size(); i++)
 			{
-				GlyphShape* glyph = &m_font->glyf->shapes[c];
-				int32		glyphIndex = m_font->loca->glyphIndexes[c];
-
-				// Get horizontal metrics for this glyph
-				int32 advanceWidth = m_font->hmtx->hMetrics[glyphIndex].advanceWidth;
-				int32 leftSideBearing = m_font->hmtx->hMetrics[glyphIndex].leftSideBearing;
-
-				int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
-				int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
-				int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
-				int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
-
-				int32 y = ascent + y0;
-				auto  shift = vec2i(x1 - x0, y1 - y0);
-				auto  offset = vec2i(x, y);
-
-				// Only draw actual characters
-				if (c != ' ')
+				char c = text[i];
+				if (c == ' ')
 				{
-					offset = drawGlyph(glyph, vec2f(scale, -scale), shift, offset, false);
+					wordAdvance += 0.33333f * m_fontSize; // hardcoded
 				}
+				else if (c == '\n')
+				{
+					lineAdvance += 1.3f * m_fontSize; // hardcoded
+					wordAdvance = 0.0f;
+					letterAdvance = 0.0f;
+				}
+				else
+				{
+					GlyphShape* glyph = &m_font->glyphs[c];
 
-				// Advance
-				x += (float)advanceWidth * scale;
+					vec2i screenOffset = pos;
+					vec2i localOffset;
+					localOffset.x = glyph->minX * scale;
+					localOffset.y = -glyph->minY * scale;
+
+					localOffset.x += letterAdvance;
+					localOffset.y += lineAdvance;
+
+					drawGlyph(glyph, vec2f(scale, -scale), screenOffset, localOffset, false);
+
+					letterAdvance += glyph->advanceWidth * scale;
+				}
 			}
+
+			// Get vertical metrics
+			// float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
+			// float ascent = m_font->ascender;
+			// float descent = m_font->descender;
+
+			// ascent = std::roundf(ascent * scale);
+			// descent = std::roundf(descent * scale);
+
+			//// Track horizontal position
+			// int32 x = 0;
+
+			//// Draw each character
+			// for (auto c : text)
+			//{
+			//	GlyphShape* glyph = &m_font->glyphs[c];
+			//	int32		glyphIndex = m_font->glyphIndexes[c];
+
+			//	// Get horizontal metrics for this glyph
+			//	int32 advanceWidth = glyph->advanceWidth;
+			//	int32 leftSideBearing = glyph->leftSideBearing;
+
+			//	int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
+			//	int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
+			//	int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
+			//	int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
+
+			//	int32 y = ascent + y0;
+			//	auto  shift = vec2i(x1 - x0, y1 - y0);
+			//	auto  offset = vec2i(x, y);
+
+			//	// Only draw actual characters
+			//	if (c != ' ')
+			//	{
+			//		offset = drawGlyph(glyph, vec2f(scale, -scale), shift, offset, false);
+			//	}
+
+			//	// Advance
+			//	x += (float)(advanceWidth + leftSideBearing) * scale;
+			//}
 		}
 	}
 }
