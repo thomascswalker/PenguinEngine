@@ -180,7 +180,7 @@ bool ScanlineRHI::vertexStage()
 	}
 
 	// Check the order of the vertexes on the screen. If they are
-	EWindingOrder order = Math::getVertexOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]);
+	EWindingOrder order = Math::getWindingOrder(m_screenPoints[0], m_screenPoints[1], m_screenPoints[2]);
 	switch (order)
 	{
 		case EWindingOrder::Clockwise: // Triangle is back-facing, exit

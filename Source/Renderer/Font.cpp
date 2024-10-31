@@ -164,6 +164,10 @@ void TTF::convertGlyphPoints(GlyphShape* glyph)
 		v.type = End;
 		v.contourIndex = endPoint;
 		contour.points.emplace_back(v);
+
+		// Reverse to make CCW
+		std::reverse(contour.points.begin(), contour.points.end());
+
 		i++;
 		j++;
 

@@ -16,43 +16,12 @@ enum class EFontRenderMode : uint8
 	Texture
 };
 
-struct Segment
-{
-	int y, xl, xr, dy;
-};
-
-// https://theswissbay.ch/pdf/Gentoomen%20Library/Game%20Development/Programming/Graphics%20Gems%201.pdf
-struct Stack
-{
-	std::queue<Segment> segments;
-
-	int32 ymin;
-	int32 ymax;
-
-	void push(const Segment& segment)
-	{
-		if (segment.y + segment.dy >= ymin && segment.y + segment.dy < ymax)
-		{
-			segments.push(segment);
-		}
-	}
-
-	Segment pop()
-	{
-		Segment s = segments.front();
-		segments.pop();
-		s.y += s.dy;
-		return s;
-	}
-};
-
-
 class Painter
 {
 	Texture*		m_data = nullptr;
 	recti			m_viewport{};
 	FontInfo*		m_font = nullptr;
-	int32			m_fontSize = 24;
+	int32			m_fontSize = 64;
 	Color			m_fontColor = Color::white();
 	EFontRenderMode m_glyphRenderMode = EFontRenderMode::System;
 
@@ -96,9 +65,11 @@ public:
 	 */
 	void drawBezierCurve(std::vector<vec2i> points, const Color& color);
 
+	void drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2);
+
 	std::vector<GlyphEdge> sortEdges(std::vector<GlyphEdge>& edges);
 
-	vec2i drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert);
+	void drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert);
 
 	void drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos);
 

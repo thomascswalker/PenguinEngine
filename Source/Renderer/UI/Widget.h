@@ -245,7 +245,7 @@ public:
 		// Draw text
 		painter->setFontColor(m_textColor);
 		// Compute text position
-		vec2i textPos = m_geometry.min();
+		vec2i textPos = m_geometry.max();
 		textPos.x += m_geometry.width / 2;
 		textPos.y += m_geometry.height / 2;
 		painter->drawText(textPos, m_text);

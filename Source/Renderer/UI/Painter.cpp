@@ -2,6 +2,7 @@
 
 #include "Painter.h"
 #include "Engine/Actors/Camera.h"
+#include "Engine/Mesh.h"
 
 inline std::string g_defaultFont = "Arial";
 constexpr int32	   g_scaleFactor = 150;
@@ -188,6 +189,38 @@ void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
 	}
 }
 
+inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2)
+{
+	int32 minX = std::min({ v0.x, v1.x, v2.x });
+	int32 minY = std::min({ v0.y, v1.y, v2.y });
+	int32 maxX = std::max({ v0.x, v1.x, v2.x });
+	int32 maxY = std::max({ v0.y, v1.y, v2.y });
+
+	for (int32 x = minX; x < maxX; x++)
+	{
+		for (int32 y = minY; y < maxY; y++)
+		{
+			// Check pixel is in viewport
+			if (x < m_viewport.x 
+				|| y < m_viewport.y 
+				|| x > m_viewport.x + m_viewport.width 
+				|| y > m_viewport.y + m_viewport.height)
+			{
+				continue;
+			}
+			vec2i p = { x, y };
+			if (Math::isBarycentric(v0, v1, v2, p))
+			{
+				drawPoint(x, y, Color::red());
+			}
+		}
+	}
+
+	// drawLine(v0, v1, Color::green());
+	// drawLine(v1, v2, Color::green());
+	// drawLine(v2, v0, Color::green());
+}
+
 /** Sort edges in vertical order, from highest vertical point to lowest. **/
 std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 {
@@ -218,7 +251,7 @@ std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 	return a;
 }
 
-vec2i Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
+void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
 {
 	// Tesselate the curves
 	int32 pointCount = glyph->vertices.size();
@@ -227,20 +260,23 @@ vec2i Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shi
 	float xScale = scale.x;
 	float yScale = invert ? -scale.y : scale.y;
 
+	std::vector<vec2i>	   points;
 	std::vector<GlyphEdge> edges;
 	int32				   i = 0;
 
-	int32 minX = 16384;
-	int32 minY = 16384;
-	int32 maxX = 0;
-	int32 maxY = 0;
 	for (auto& contour : glyph->contours)
 	{
+
 		for (int32 i = 0; i < contour.points.size(); i++)
 		{
 			auto  p0 = contour.points[i].position;
 			int32 nextIndex = i + 1 == contour.points.size() ? 0 : i + 1;
 			auto  p1 = contour.points[nextIndex].position;
+
+			vec2i scaledPoint;
+			scaledPoint.x = p0.x * xScale + shift.x + offset.x;
+			scaledPoint.y = p0.y * yScale + shift.y + offset.y;
+			points.emplace_back(scaledPoint);
 
 			GlyphEdge edge;
 			edge.line.a.x = p0.x * xScale + shift.x + offset.x;
@@ -248,56 +284,23 @@ vec2i Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shi
 			edge.line.b.x = p1.x * xScale + shift.x + offset.x;
 			edge.line.b.y = p1.y * yScale + shift.y + offset.y;
 			edges.emplace_back(edge);
-
-			if (edge.line.a.x > maxX)
-			{
-				maxX = edge.line.a.x;
-			} //
-			if (edge.line.a.y > maxY)
-			{
-				maxY = edge.line.a.y;
-			} //
-			if (edge.line.a.x < minX)
-			{
-				minX = edge.line.a.x;
-			} //
-			if (edge.line.a.y < minY)
-			{
-				minY = edge.line.a.y;
-			} //
-			if (edge.line.b.x > maxX)
-			{
-				maxX = edge.line.b.x;
-			} //
-			if (edge.line.b.y > maxY)
-			{
-				maxY = edge.line.b.y;
-			} //
-			if (edge.line.b.x < minX)
-			{
-				minX = edge.line.b.x;
-			} //
-			if (edge.line.b.y < minY)
-			{
-				minY = edge.line.b.y;
-			} //
 		}
 	}
 
-	edges = sortEdges(edges);
-	for (int i = 0; i < edges.size(); i++)
+	// Triangulate all of the points
+	//points = { { 100, 100 }, {50, 150}, { 100, 200 }, { 150, 200 }, { 200, 250 }, { 200, 150 }, { 150, 100 }, { 125, 25 } };
+	Triangulator triangulator(points);
+	auto		 triangles = triangulator.triangulate();
+
+	// Draw each triangle
+	for (int32 i = 0; i < triangles.size() / 3;)
 	{
-		auto e = edges[i];
-		drawLine(e.line.a, e.line.b, Color::white());
+		vec2i v0 = points[triangles[i++]];
+		vec2i v1 = points[triangles[i++]];
+		vec2i v2 = points[triangles[i++]];
+
+		drawTriangle(v0, v1, v2);
 	}
-
-	// Span fill
-	int32 x = (minX + maxX) / 2;
-	int32 y = (minY + maxY) / 2;
-	int32 seed = edges[0].line.a.x + 1;
-	for (int32 y = minY; y < maxY; y++) {}
-
-	return vec2i(maxX - minX, maxY - minY);
 }
 
 void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos)

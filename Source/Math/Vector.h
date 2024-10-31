@@ -751,6 +751,33 @@ namespace Math
 	 * @param bary The output parameter that will store the calculated barycentric coordinates.
 	 * @return True if the point is inside the triangle, false otherwise.
 	 */
+	template <typename T> 
+	static bool isBarycentric(const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& c, const vec2_t<T>& point)
+	{
+		if ((point.x == a.x && point.y == a.y) || (point.x == b.x && point.y == b.y) || (point.x == c.x && point.y == c.y))
+		{
+			return false;
+		}
+
+		float A = 0.5f * (-b.y * c.x + a.y * (-b.x + c.x) + a.x * (b.y - c.y) + b.x * c.y);
+		float sign = A < 0.0f ? -1.0f : 1.0f;
+
+		float s = (a.y * c.x - a.x * c.y + (c.y - a.y) * point.x + (a.x - c.x) * point.y) * sign;
+		float t = (a.x * b.y - a.y * b.x + (a.y - b.y) * point.x + (b.x - a.x) * point.y) * sign;
+
+		return s >= 0.0f && t >= 0.0f && (s + t) <= (2.0f * A * sign);
+	}
+
+	/**
+	 * Calculates the barycentric coordinates of a point P with respect to a triangle defined by vertices V0, V1, and V2.
+	 *
+	 * @param p The point to calculate the barycentric coordinates for.
+	 * @param v0 The first vertex of the triangle.
+	 * @param v1 The second vertex of the triangle.
+	 * @param v2 The third vertex of the triangle.
+	 * @param bary The output parameter that will store the calculated barycentric coordinates.
+	 * @return True if the point is inside the triangle, false otherwise.
+	 */
 	template <typename T>
 	static bool getBarycentric(const vec3_t<T>& p,
 	                           const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2,
@@ -785,8 +812,19 @@ namespace Math
 		return bary.x >= T(0) && bary.y >= T(0) && bary.z >= T(0);
 	}
 
+	template <typename T> 
+	static EWindingOrder getWindingOrder(const vec2_t<T>& v0, const vec2_t<T>& v1, const vec2_t<T>& v2)
+	{
+		const float result = (v1.x - v0.x) * (v2.y - v0.y) - (v1.y - v0.y) * (v2.x - v0.x);
+		if (result == T(0))
+		{
+			return EWindingOrder::CoLinear;
+		}
+		return result > T(0) ? EWindingOrder::Clockwise : EWindingOrder::CounterClockwise;
+	}
+
 	template <typename T>
-	static EWindingOrder getVertexOrder(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
+	static EWindingOrder getWindingOrder(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
 	{
 		const float result = (v1.x - v0.x) * (v2.y - v0.y) - (v1.y - v0.y) * (v2.x - v0.x);
 		if (result == T(0))
