@@ -130,8 +130,8 @@ void Engine::constructUI()
 
 	auto exitButton = constructWidget<Button>("Exit");
 	exitButton->m_onClicked.addRaw(this, &Engine::exit);
-	exitButton->setText("quit");
-	exitButton->setTextColor(UIColors::Red);
+	exitButton->setText("Quit");
+	exitButton->setTextColor(UIColors::White);
 	exitButton->setHorizontalResizeMode(EResizeMode::Fixed);
 	exitButton->setFixedWidth(50);
 	menuPanel->addChild(exitButton);
@@ -148,13 +148,13 @@ void Engine::constructUI()
 
 	auto meshButton = constructWidget<Button>("ImportMesh");
 	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
-	meshButton->setText("load model");
+	meshButton->setText("Load Model");
 	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(meshButton);
 
 	auto texButton = constructWidget<Button>("ImportTexture");
 	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
-	texButton->setText("load texture");
+	texButton->setText("Load Texture");
 	texButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(texButton);
 

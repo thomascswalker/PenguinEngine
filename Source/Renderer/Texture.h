@@ -197,6 +197,13 @@ public:
 		std::fill(ptr, ptr + size, value);
 	}
 
+	void fillRange(int32 row, int32 x0, int32 x1, const Color& inColor)
+	{
+		int32* ptr = (int32*)m_buffer.data() + (row * m_pitch);
+		int32  color = inColor.toInt32();
+		std::fill(ptr + x0, ptr + x1, color);
+	}
+
 	void fillRow(int32 row, const Color& inColor)
 	{
 		int32* ptr = (int32*)m_buffer.data() + (row * m_pitch);

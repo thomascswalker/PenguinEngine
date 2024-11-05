@@ -85,7 +85,7 @@ namespace Clipping
 		return clipLine(&line->a, &line->b, size);
 	}
 
-	inline vec3f clip(const vec4f& input, const int32 width, const int32 height)
+	inline vec3f clipVertex(const vec4f& input, const int32 width, const int32 height)
 	{
 		// Apply perspective correction
 		const vec3f clipPosition{

@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <vector>
+#include <cassert>
 
+#include "Core/LinkedList.h"
 #include "Math/Vector.h"
 #include "Math/Transform.h"
 
@@ -38,12 +40,17 @@ struct Vertex
 	vec2f texCoord; // 8-bytes
 
 	Vertex() = default;
-	Vertex(float x, float y, float z, float nx, float ny, float nz, float u, float v)
-		: position(x, y, z), normal(nx, ny, nz), texCoord(u, v) {}
-	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec2f& inTexCoord)
-		: position(inPosition)
-		, normal(inNormal)
-		, texCoord(inTexCoord) {}
+	Vertex(float x, float y, float z, float nx, float ny, float nz, float u, float v) : position(x, y, z), normal(nx, ny, nz), texCoord(u, v) {}
+	Vertex(const vec3f& inPosition, const vec3f& inNormal, const vec2f& inTexCoord) : position(inPosition), normal(inNormal), texCoord(inTexCoord) {}
+};
+
+struct Vertex2D
+{
+	Vertex2D*	  prev;
+	Vertex2D*	  next;
+	int32		  index;
+	EWindingOrder windingOrder;
+	bool		  reflex;
 };
 
 struct Triangle
@@ -58,11 +65,10 @@ struct Triangle
 
 	Triangle() = default;
 
-	Triangle(const std::vector<int32>& inPositionIndexes, const std::vector<int32>& inNormalIndexes,
-		const std::vector<int32>& inTexCoordIndexes)
-		: positionIndexes(inPositionIndexes)
-		, normalIndexes(inNormalIndexes)
-		, texCoordIndexes(inTexCoordIndexes) {}
+	Triangle(const std::vector<int32>& inPositionIndexes, const std::vector<int32>& inNormalIndexes, const std::vector<int32>& inTexCoordIndexes)
+		: positionIndexes(inPositionIndexes), normalIndexes(inNormalIndexes), texCoordIndexes(inTexCoordIndexes)
+	{
+	}
 
 	Vertex operator[](int32 index) const
 	{
@@ -91,6 +97,13 @@ struct Triangle
 	}
 };
 
+template <typename T> struct Triangle2D
+{
+	vec2_t<T> v0;
+	vec2_t<T> v1;
+	vec2_t<T> v2;
+};
+
 class Mesh
 {
 	// Properties
@@ -104,80 +117,40 @@ class Mesh
 public:
 	Mesh() = default;
 
-	Mesh(const std::vector<Triangle>& inTriangles, const std::vector<vec3f>& inPositions,
-		const std::vector<vec3f>& inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
-		: m_triangles(inTriangles)
-		, m_positions(inPositions)
-		, m_normals(inNormals)
-		, m_texCoords(inTexCoords)
+	Mesh(const std::vector<Triangle>& inTriangles, const std::vector<vec3f>& inPositions, const std::vector<vec3f>& inNormals = {}, const std::vector<vec2f>& inTexCoords = {})
+		: m_triangles(inTriangles), m_positions(inPositions), m_normals(inNormals), m_texCoords(inTexCoords)
 	{
 		processTriangles();
 	}
 
-	[[nodiscard]] bool hasNormals() const
-	{
-		return !m_normals.empty();
-	}
+	[[nodiscard]] bool hasNormals() const { return !m_normals.empty(); }
 
-	[[nodiscard]] bool hasTexCoords() const
-	{
-		return !m_texCoords.empty();
-	}
+	[[nodiscard]] bool hasTexCoords() const { return !m_texCoords.empty(); }
 
 	void processTriangles();
 
 	std::vector<float> toVertexData();
 
-	std::vector<Triangle>* getTriangles()
-	{
-		return &m_triangles;
-	}
+	std::vector<Triangle>* getTriangles() { return &m_triangles; }
 
-	[[nodiscard]] std::vector<vec3f>* getPositions()
-	{
-		return &m_positions;
-	}
+	[[nodiscard]] std::vector<vec3f>* getPositions() { return &m_positions; }
 
-	[[nodiscard]] std::vector<vec3f>* getNormals()
-	{
-		return &m_normals;
-	}
+	[[nodiscard]] std::vector<vec3f>* getNormals() { return &m_normals; }
 
-	[[nodiscard]] std::vector<vec2f>* getTexCoords()
-	{
-		return &m_texCoords;
-	}
+	[[nodiscard]] std::vector<vec2f>* getTexCoords() { return &m_texCoords; }
 
-	void setTriangles(const std::vector<Triangle>& triangles)
-	{
-		m_triangles = triangles;
-	}
+	void setTriangles(const std::vector<Triangle>& triangles) { m_triangles = triangles; }
 
-	void setPositions(const std::vector<vec3f>& positions)
-	{
-		m_positions = positions;
-	}
+	void setPositions(const std::vector<vec3f>& positions) { m_positions = positions; }
 
-	void setNormals(const std::vector<vec3f>& normals)
-	{
-		m_normals = normals;
-	}
+	void setNormals(const std::vector<vec3f>& normals) { m_normals = normals; }
 
-	void setTexCoords(const std::vector<vec2f>& texCoords)
-	{
-		m_texCoords = texCoords;
-	}
+	void setTexCoords(const std::vector<vec2f>& texCoords) { m_texCoords = texCoords; }
 
-	std::vector<float>* getVertexData()
-	{
-		return &m_vertexBuffer;
-	}
+	std::vector<float>* getVertexData() { return &m_vertexBuffer; }
 
 	/** Returns the size of this mesh's geometry in bytes. **/
-	[[nodiscard]] size_t memorySize() const
-	{
-		return m_vertexBuffer.size() * sizeof(float);
-	}
+	[[nodiscard]] size_t memorySize() const { return m_vertexBuffer.size() * sizeof(float); }
 };
 
 struct MeshDescription
@@ -195,3 +168,41 @@ struct MeshDescription
 	/** Vertex data pointer **/
 	float* data = nullptr;
 };
+
+struct Index3
+{
+	union
+	{
+		struct
+		{
+			int32 a;
+			int32 b;
+			int32 c;
+		};
+		int32 abc[3] = { 0, 0, 0 };
+	};
+
+	Index3() = default;
+	Index3(int32 inA, int32 inB, int32 inC) : a(inA), b(inB), c(inC) {}
+
+	int32&		 operator[](int32 index) { return abc[index]; }
+	const int32& operator[](int32 index) const { return abc[index]; }
+
+	bool contains(int32 index) const { return (a == index) || (b == index) || (c == index); }
+};
+
+// https://github.com/SebLague/Shape-Editor-Tool/blob/master/Shape%20Editor%20E04/Assets/Geometry/Triangulator.cs
+namespace Triangulation
+{
+	namespace Triangle2
+	{
+		inline float signedArea(const vec2i& a, const vec2i& b, const vec2i& c)
+		{
+			return 0.5f * ((a.x * b.y - a.y * b.x) + (b.x * c.y - b.y * c.x) + (c.x * a.y - c.y * a.x));
+		}
+
+	}
+
+	bool isTriangleFlipped(int32 orientation, const vec2i& a, const vec2i& b, const vec2i& c);
+	bool triangulate(const std::vector<vec2i>& inVertexPositions, std::vector<Index3>& indexes);
+}

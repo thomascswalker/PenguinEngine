@@ -2,9 +2,7 @@
 
 #include "Painter.h"
 #include "Engine/Actors/Camera.h"
-
-inline std::string g_defaultFont = "Arial";
-constexpr int32	   g_scaleFactor = 150;
+#include "Engine/Mesh.h"
 
 void Painter::assertValid()
 {
@@ -13,7 +11,12 @@ void Painter::assertValid()
 
 Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewport)
 {
-	setFont(g_fontDatabase->getFontInfo(g_defaultFont));
+	setFont(g_fontDatabase->getFontInfo(m_fontFamily, m_fontSubFamily));
+}
+
+void Painter::drawPoint(int32 x, int32 y, const Color& color)
+{
+	m_data->setPixelFromColor(x, y, color);
 }
 
 void Painter::drawLine(vec2i a, vec2i b, const Color& color)
@@ -183,35 +186,103 @@ void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
 	}
 }
 
-std::vector<vec2i> Painter::getWindings(GlyphShape* glyph)
+inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2, const Color& color)
 {
-	std::vector<vec2i> windings;
-	return windings;
-}
+	int32 minX = std::min({ v0.x, v1.x, v2.x });
+	int32 minY = std::min({ v0.y, v1.y, v2.y });
+	int32 maxX = std::max({ v0.x, v1.x, v2.x });
+	int32 maxY = std::max({ v0.y, v1.y, v2.y });
 
-void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, const Color& color)
-{
-	std::vector<vec2i> points = TTF::tessellateGlyph(glyph);
-
-	for (int32 i = 0; i < points.size() - 1; i++)
+	for (int32 x = minX; x < maxX; x++)
 	{
-		vec2i p0 = points[i];
-		vec2i p1 = i == points.size() - 1 ? points[0] : points[i + 1];
-
-		p0.x = (float)p0.x * scale.x;
-		p0.y = (float)p0.y * scale.y;
-
-		p1.x = (float)p1.x * scale.x;
-		p1.y = (float)p1.y * scale.y;
-
-		p0 += shift + offset;
-		p1 += shift + offset;
-
-		drawLine(p0, p1, color);
+		for (int32 y = minY; y < maxY; y++)
+		{
+			// Check pixel is in viewport
+			if (x < m_viewport.x || y < m_viewport.y || x > m_viewport.x + m_viewport.width || y > m_viewport.y + m_viewport.height)
+			{
+				continue;
+			}
+			vec2i p = { x, y };
+			if (Math::isBarycentric(v0, v1, v2, p))
+			{
+				drawPoint(x, y, color);
+			}
+		}
 	}
 }
 
-void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const Color& color)
+/** Sort edges in vertical order, from highest vertical point to lowest. **/
+std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
+{
+	auto a = edges;
+	if (a.begin() == a.end())
+	{
+		return a;
+	}
+
+	for (auto i = a.begin() + 1; i < a.end(); ++i)
+	{
+		auto k = *i;
+		auto j = i - 1;
+		while (j >= a.begin() && *j < k)
+		{
+			*(j + 1) = *j;
+			if (j != a.begin())
+			{
+				j--;
+			}
+			else
+			{
+				break;
+			}
+		}
+		*(j + 1) = k;
+	}
+	return a;
+}
+
+void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
+{
+	// Tesselate the curves
+	int32 pointCount = glyph->points.size();
+
+	// Calculate and scale edges
+	float xScale = scale.x;
+	float yScale = invert ? -scale.y : scale.y;
+
+	// Build list of points
+	std::vector<vec2i> points;
+	for (int32 i = 0; i < glyph->points.size(); i++)
+	{
+		points.emplace_back(glyph->points[i].position);
+	}
+
+	// Triangulate all of the points
+	std::vector<Index3> indexes;
+	if (!Triangulation::triangulate(points, indexes))
+	{
+		LOG_ERROR("Failed to triangulate glyph '{}'", glyph->index);
+		return;
+	}
+
+	// Draw each triangle
+	for (int32 i = 0; i < indexes.size(); i++)
+	{
+		vec2i v0 = points[indexes[i].a];
+		v0.x = v0.x * xScale + shift.x + offset.x;
+		v0.y = v0.y * yScale + shift.y + offset.y;
+		vec2i v1 = points[indexes[i].b];
+		v1.x = v1.x * xScale + shift.x + offset.x;
+		v1.y = v1.y * yScale + shift.y + offset.y;
+		vec2i v2 = points[indexes[i].c];
+		v2.x = v2.x * xScale + shift.x + offset.x;
+		v2.y = v2.y * yScale + shift.y + offset.y;
+
+		drawTriangle(v0, v1, v2, m_fontColor);
+	}
+}
+
+void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos)
 {
 	int32		maxX = pos.x + g_glyphTextureWidth;
 	int32		maxY = pos.y + g_glyphTextureHeight;
@@ -224,7 +295,7 @@ void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos, const C
 			if (v)
 			{
 				m_data->setPixelFromColor(x + 1, y + 1, Color::black()); // Outline
-				m_data->setPixelFromColor(x, y, color);					 // Actual text color
+				m_data->setPixelFromColor(x, y, m_fontColor);			 // Actual text color
 			}
 		}
 	}
@@ -241,7 +312,7 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 			{
 				const GlyphTexture* glyphTexture = g_glyphTextureMap[c];
 				int32				y = pos.y + glyphTexture->descent;
-				drawGlyphTexture(glyphTexture, vec2i(x, y), m_fontColor);
+				drawGlyphTexture(glyphTexture, vec2i(x, y));
 				x += g_glyphTextureWidth;
 			}
 			return;
@@ -250,43 +321,37 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 		{
 			assert(m_font != nullptr);
 
-			// Get vertical metrics
-			float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
-			float ascent = m_font->hhea->ascender;
-			float descent = m_font->hhea->descender;
-			float lineGap = m_font->hhea->lineGap;
+			float scale = (1.0f / m_font->head->unitsPerEm) * m_fontSize;
+			int32 letterAdvance = 0;
+			int32 wordAdvance = 0;
+			int32 lineAdvance = 0;
 
-			ascent = std::roundf(ascent * scale);
-			descent = std::roundf(descent * scale);
-
-			// Track horizontal position
-			int32 x = 0;
-
-			// Draw each character
-			for (auto c : text)
+			for (int32 i = 0; i < text.size(); i++)
 			{
-				GlyphShape* glyph = &m_font->glyf->shapes[c];
-				int32		glyphIndex = m_font->loca->glyphIndexes[c];
-
-				// Get horizontal metrics for this glyph
-				int32 advanceWidth = m_font->hmtx->hMetrics[glyphIndex].advanceWidth;
-				int32 leftSideBearing = m_font->hmtx->hMetrics[glyphIndex].leftSideBearing;
-
-				int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
-				int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
-				int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
-				int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
-
-				int32 y = ascent + y0;
-
-				// Only draw actual characters
-				if (c != ' ')
+				char c = text[i];
+				if (c == ' ')
 				{
-					drawGlyph(glyph, vec2f(scale, -scale), vec2i(x1 - x0, y1 - y0), vec2i(x, y), m_fontColor);
+					wordAdvance += 0.33333f * m_fontSize; // hardcoded
 				}
+				else if (c == '\n')
+				{
+					lineAdvance += 1.3f * m_fontSize; // hardcoded
+					wordAdvance = 0.0f;
+					letterAdvance = 0.0f;
+				}
+				else
+				{
+					GlyphShape* glyph = &m_font->glyphs[c];
 
-				// Advance
-				x += roundf((float)advanceWidth * scale);
+					vec2i screenOffset = pos;
+					vec2i localOffset;
+					localOffset.x = (glyph->minX * scale) + letterAdvance;
+					localOffset.y = (-glyph->minY * scale) + lineAdvance;
+
+					drawGlyph(glyph, vec2f(scale, -scale), screenOffset, localOffset, false);
+
+					letterAdvance += glyph->advanceWidth * scale;
+				}
 			}
 		}
 	}
