@@ -64,7 +64,7 @@ uint32 TTF::getGlyphOffset(ByteReader& reader, FontInfo* fontInfo, uint32 glyphI
 
 void TTF::readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag)
 {
-	int32 pointCount = shape->vertices.size();
+	int32 pointCount = shape->points.size();
 
 	// Value for each coordinate. All coordinates are sequential and either:
 	// 1. If it's the first coordinate, it's just added to 0.
@@ -74,7 +74,7 @@ void TTF::readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 inde
 	// https://stevehanov.ca/blog/?id=143
 	for (int32 i = 0; i < pointCount; i++)
 	{
-		GlyphVertex* v = &shape->vertices[i];
+		GlyphVertex* v = &shape->points[i];
 		EGlyphFlag	 f = v->flag;
 
 		// Char
@@ -129,52 +129,6 @@ std::vector<vec2i> TTF::interpolatePoints(std::vector<vec2i>& points)
 	return out;
 }
 
-/**
- * @brief Converts non-control points to control points by interpolating the
- * beginning and end control points of that segment.
- */
-void TTF::convertGlyphPoints(GlyphShape* glyph)
-{
-	// Copy existing vertices to a local array
-	std::vector<GlyphVertex>& vertices = glyph->vertices;
-
-	// Resize the vertex array to double size
-	int32 vertexCount = vertices.size();
-
-	// Starting point for any uninterpreted vertices
-	int32 nextEndPointIndex = glyph->contourEndPoints[0];
-	int32 endPointIndex = 0;
-
-	int32 i = 0;
-	int32 j = 0;
-
-	while (i < glyph->contourCount)
-	{
-		GlyphContour contour;
-		int32		 endPoint = glyph->contourEndPoints[i];
-		while (j < endPoint)
-		{
-			GlyphVertex v = vertices[j];
-			v.type = Line;
-			v.contourIndex = endPoint;
-			contour.points.emplace_back(v);
-			j++;
-		}
-		GlyphVertex v = vertices[j];
-		v.type = End;
-		v.contourIndex = endPoint;
-		contour.points.emplace_back(v);
-
-		// Reverse to make CCW
-		std::reverse(contour.points.begin(), contour.points.end());
-
-		i++;
-		j++;
-
-		glyph->contours.emplace_back(contour);
-	}
-}
-
 bool TTF::getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph)
 {
 	glyph->minX = reader.readInt16();
@@ -213,7 +167,7 @@ bool TTF::getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* gl
 	EGlyphFlag flag;
 	int32	   end = info->tables[ETableType::GLYF].length;
 
-	glyph->vertices.resize(pointCount);
+	glyph->points.resize(pointCount);
 	for (int32 i = 0; i < pointCount; ++i)
 	{
 		if (reader.getPos() >= end)
@@ -234,14 +188,12 @@ bool TTF::getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* gl
 			--flagCount;
 		}
 
-		glyph->vertices[i].flag = flag;
+		glyph->points[i].flag = flag;
 	}
 
 	// Update point count to number of flags
 	readGlyphCoordinates(reader, glyph, 0, XShort, XShortPos);
 	readGlyphCoordinates(reader, glyph, 1, YShort, YShortPos);
-
-	convertGlyphPoints(glyph);
 
 	return true;
 }
@@ -750,11 +702,14 @@ void FontDatabase::registerFont(std::string& data, const std::string& fileName)
 	FontInfo font;
 	font.fileName = fileName;
 	ByteReader buffer(data, data.size(), std::endian::big);
+	LOG_DEBUG("Reading file {}", fileName)
 	if (!readfontInfo(buffer, &font))
 	{
+		LOG_ERROR("Failed to read font from file {}", fileName)
 		return;
 	}
-	fonts[font.family.c_str()] = font;
+	families[font.family].fonts[font.subFamily] = font;
+	LOG_DEBUG("Registered font '{}:{}'.", font.family.c_str(), font.subFamily.c_str())
 }
 
 void FontDatabase::loadFonts()
@@ -777,11 +732,6 @@ void FontDatabase::loadFonts()
 			continue;
 		}
 
-		if (!path.find("arial.ttf"))
-		{
-			continue;
-		}
-
 		std::string strBuffer;
 		if (!IO::readFile(path, strBuffer))
 		{
@@ -790,17 +740,23 @@ void FontDatabase::loadFonts()
 		}
 
 		registerFont(strBuffer, path);
-		break;
 	}
+	int a = 5;
 }
 
-FontInfo* FontDatabase::getFontInfo(const std::string& name)
+FontInfo* FontDatabase::getFontInfo(const std::string& family, const std::string& subFamily)
 {
-	for (auto& [k, v] : fonts)
+	for (auto& [k, v] : families)
 	{
-		if (k == name)
+		if (k == family)
 		{
-			return &fonts[name.c_str()];
+			for (auto& [fk, fv] : v.fonts)
+			{
+				if (fk == subFamily)
+				{
+					return &fv;
+				}
+			}
 		}
 	}
 	return nullptr;

@@ -4,9 +4,6 @@
 #include "Engine/Actors/Camera.h"
 #include "Engine/Mesh.h"
 
-inline std::string g_defaultFont = "Arial";
-constexpr int32	   g_scaleFactor = 150;
-
 void Painter::assertValid()
 {
 	assert(m_data != nullptr);
@@ -14,7 +11,7 @@ void Painter::assertValid()
 
 Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewport)
 {
-	setFont(g_fontDatabase->getFontInfo(g_defaultFont));
+	setFont(g_fontDatabase->getFontInfo(m_fontFamily, m_fontSubFamily));
 }
 
 void Painter::drawPoint(int32 x, int32 y, const Color& color)
@@ -189,7 +186,7 @@ void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
 	}
 }
 
-inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2)
+inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2, const Color& color)
 {
 	int32 minX = std::min({ v0.x, v1.x, v2.x });
 	int32 minY = std::min({ v0.y, v1.y, v2.y });
@@ -201,24 +198,17 @@ inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i&
 		for (int32 y = minY; y < maxY; y++)
 		{
 			// Check pixel is in viewport
-			if (x < m_viewport.x 
-				|| y < m_viewport.y 
-				|| x > m_viewport.x + m_viewport.width 
-				|| y > m_viewport.y + m_viewport.height)
+			if (x < m_viewport.x || y < m_viewport.y || x > m_viewport.x + m_viewport.width || y > m_viewport.y + m_viewport.height)
 			{
 				continue;
 			}
 			vec2i p = { x, y };
 			if (Math::isBarycentric(v0, v1, v2, p))
 			{
-				drawPoint(x, y, Color::red());
+				drawPoint(x, y, color);
 			}
 		}
 	}
-
-	// drawLine(v0, v1, Color::green());
-	// drawLine(v1, v2, Color::green());
-	// drawLine(v2, v0, Color::green());
 }
 
 /** Sort edges in vertical order, from highest vertical point to lowest. **/
@@ -254,52 +244,41 @@ std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
 {
 	// Tesselate the curves
-	int32 pointCount = glyph->vertices.size();
+	int32 pointCount = glyph->points.size();
 
 	// Calculate and scale edges
 	float xScale = scale.x;
 	float yScale = invert ? -scale.y : scale.y;
 
-	std::vector<vec2i>	   points;
-	std::vector<GlyphEdge> edges;
-	int32				   i = 0;
-
-	for (auto& contour : glyph->contours)
+	// Build list of points
+	std::vector<vec2i> points;
+	for (int32 i = 0; i < glyph->points.size(); i++)
 	{
-
-		for (int32 i = 0; i < contour.points.size(); i++)
-		{
-			auto  p0 = contour.points[i].position;
-			int32 nextIndex = i + 1 == contour.points.size() ? 0 : i + 1;
-			auto  p1 = contour.points[nextIndex].position;
-
-			vec2i scaledPoint;
-			scaledPoint.x = p0.x * xScale + shift.x + offset.x;
-			scaledPoint.y = p0.y * yScale + shift.y + offset.y;
-			points.emplace_back(scaledPoint);
-
-			GlyphEdge edge;
-			edge.line.a.x = p0.x * xScale + shift.x + offset.x;
-			edge.line.a.y = p0.y * yScale + shift.y + offset.y;
-			edge.line.b.x = p1.x * xScale + shift.x + offset.x;
-			edge.line.b.y = p1.y * yScale + shift.y + offset.y;
-			edges.emplace_back(edge);
-		}
+		points.emplace_back(glyph->points[i].position);
 	}
 
 	// Triangulate all of the points
-	//points = { { 100, 100 }, {50, 150}, { 100, 200 }, { 150, 200 }, { 200, 250 }, { 200, 150 }, { 150, 100 }, { 125, 25 } };
-	Triangulator triangulator(points);
-	auto		 triangles = triangulator.triangulate();
+	std::vector<Index3> indexes;
+	if (!Triangulation::triangulate(points, indexes))
+	{
+		LOG_ERROR("Failed to triangulate glyph '{}'", glyph->index);
+		return;
+	}
 
 	// Draw each triangle
-	for (int32 i = 0; i < triangles.size() / 3;)
+	for (int32 i = 0; i < indexes.size(); i++)
 	{
-		vec2i v0 = points[triangles[i++]];
-		vec2i v1 = points[triangles[i++]];
-		vec2i v2 = points[triangles[i++]];
+		vec2i v0 = points[indexes[i].a];
+		v0.x = v0.x * xScale + shift.x + offset.x;
+		v0.y = v0.y * yScale + shift.y + offset.y;
+		vec2i v1 = points[indexes[i].b];
+		v1.x = v1.x * xScale + shift.x + offset.x;
+		v1.y = v1.y * yScale + shift.y + offset.y;
+		vec2i v2 = points[indexes[i].c];
+		v2.x = v2.x * xScale + shift.x + offset.x;
+		v2.y = v2.y * yScale + shift.y + offset.y;
 
-		drawTriangle(v0, v1, v2);
+		drawTriangle(v0, v1, v2, m_fontColor);
 	}
 }
 
@@ -366,57 +345,14 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 
 					vec2i screenOffset = pos;
 					vec2i localOffset;
-					localOffset.x = glyph->minX * scale;
-					localOffset.y = -glyph->minY * scale;
-
-					localOffset.x += letterAdvance;
-					localOffset.y += lineAdvance;
+					localOffset.x = (glyph->minX * scale) + letterAdvance;
+					localOffset.y = (-glyph->minY * scale) + lineAdvance;
 
 					drawGlyph(glyph, vec2f(scale, -scale), screenOffset, localOffset, false);
 
 					letterAdvance += glyph->advanceWidth * scale;
 				}
 			}
-
-			// Get vertical metrics
-			// float scale = TTF::getScaleForPixelHeight(m_font, m_fontSize);
-			// float ascent = m_font->ascender;
-			// float descent = m_font->descender;
-
-			// ascent = std::roundf(ascent * scale);
-			// descent = std::roundf(descent * scale);
-
-			//// Track horizontal position
-			// int32 x = 0;
-
-			//// Draw each character
-			// for (auto c : text)
-			//{
-			//	GlyphShape* glyph = &m_font->glyphs[c];
-			//	int32		glyphIndex = m_font->glyphIndexes[c];
-
-			//	// Get horizontal metrics for this glyph
-			//	int32 advanceWidth = glyph->advanceWidth;
-			//	int32 leftSideBearing = glyph->leftSideBearing;
-
-			//	int32 x0 = std::floor(glyph->bounds.min().x * scale + pos.x);
-			//	int32 y0 = std::floor(-glyph->bounds.max().y * scale + pos.y);
-			//	int32 x1 = std::floor(glyph->bounds.max().x * scale + pos.x);
-			//	int32 y1 = std::floor(-glyph->bounds.min().y * scale + pos.y);
-
-			//	int32 y = ascent + y0;
-			//	auto  shift = vec2i(x1 - x0, y1 - y0);
-			//	auto  offset = vec2i(x, y);
-
-			//	// Only draw actual characters
-			//	if (c != ' ')
-			//	{
-			//		offset = drawGlyph(glyph, vec2f(scale, -scale), shift, offset, false);
-			//	}
-
-			//	// Advance
-			//	x += (float)(advanceWidth + leftSideBearing) * scale;
-			//}
 		}
 	}
 }

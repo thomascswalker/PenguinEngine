@@ -130,7 +130,7 @@ void Engine::constructUI()
 
 	auto exitButton = constructWidget<Button>("Exit");
 	exitButton->m_onClicked.addRaw(this, &Engine::exit);
-	exitButton->setText("X");
+	exitButton->setText("Quit");
 	exitButton->setTextColor(UIColors::White);
 	exitButton->setHorizontalResizeMode(EResizeMode::Fixed);
 	exitButton->setFixedWidth(50);
@@ -140,23 +140,23 @@ void Engine::constructUI()
 	viewportCanvas->setVerticalResizeMode(EResizeMode::Expanding);
 	canvas->addChild(viewportCanvas);
 
-	//auto toolPanel = constructWidget<Panel>("Tools");
-	//toolPanel->setLayoutMode(ELayoutMode::Vertical);
-	//toolPanel->setHorizontalResizeMode(EResizeMode::Fixed);
-	//toolPanel->setFixedWidth(140);
-	//viewportCanvas->addChild(toolPanel);
+	auto toolPanel = constructWidget<Panel>("Tools");
+	toolPanel->setLayoutMode(ELayoutMode::Vertical);
+	toolPanel->setHorizontalResizeMode(EResizeMode::Fixed);
+	toolPanel->setFixedWidth(140);
+	viewportCanvas->addChild(toolPanel);
 
-	//auto meshButton = constructWidget<Button>("ImportMesh");
-	//meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
-	////meshButton->setText("Load Model");
-	//meshButton->setVerticalResizeMode(EResizeMode::Fixed);
-	//toolPanel->addChild(meshButton);
+	auto meshButton = constructWidget<Button>("ImportMesh");
+	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
+	meshButton->setText("Load Model");
+	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
+	toolPanel->addChild(meshButton);
 
-	//auto texButton = constructWidget<Button>("ImportTexture");
-	//texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
-	////texButton->setText("Load Texture");
-	//texButton->setVerticalResizeMode(EResizeMode::Fixed);
-	//toolPanel->addChild(texButton);
+	auto texButton = constructWidget<Button>("ImportTexture");
+	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
+	texButton->setText("Load Texture");
+	texButton->setVerticalResizeMode(EResizeMode::Fixed);
+	toolPanel->addChild(texButton);
 
 }
 

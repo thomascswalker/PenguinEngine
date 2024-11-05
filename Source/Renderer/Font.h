@@ -157,30 +157,25 @@ namespace TTF
 		}
 	};
 
-	struct GlyphContour
-	{
-		std::vector<GlyphVertex> points;
-	};
-
 	struct GlyphShape
 	{
 		// Simple
-		uint16					  contourCount;
+		uint16					 contourCount;
+		std::vector<GlyphVertex> points;
 
-		int16					  minX;
-		int16					  maxX;
-		int16					  minY;
-		int16					  maxY;
-		int16					  width;
-		int16					  height;
+		int16 minX;
+		int16 maxX;
+		int16 minY;
+		int16 maxY;
+		int16 width;
+		int16 height;
 
-		uint16					  instructionLength;
-		std::vector<uint8>		  instructions;
-		std::vector<GlyphVertex>  vertices;
-		std::vector<uint16>		  contourEndPoints;
-		std::vector<GlyphContour> contours;
-		int32					  advanceWidth;
-		int32					  leftSideBearing;
+		uint16			   instructionLength;
+		std::vector<uint8> instructions;
+
+		std::vector<uint16> contourEndPoints;
+		int32				advanceWidth;
+		int32				leftSideBearing;
 
 		// Compound
 		std::vector<GlyphShape> subGlyphs;
@@ -382,13 +377,18 @@ namespace TTF
 	bool readTables(ByteReader& reader, FontInfo* fontInfo);
 
 	bool readfontInfo(ByteReader& reader, FontInfo* fontInfo);
+
+	struct FontFamily
+	{
+		std::map<std::string, FontInfo> fonts;
+	};
 } // namespace TTF
 
 using namespace TTF;
 
 class FontDatabase
 {
-	std::map<std::string, FontInfo> fonts;
+	std::map<std::string, FontFamily> families;
 
 	std::string getfontInfoPath();
 
@@ -397,7 +397,7 @@ class FontDatabase
 	void loadFonts();
 
 public:
-	FontInfo* getFontInfo(const std::string& name);
+	FontInfo* getFontInfo(const std::string& family, const std::string& subFamily);
 
 	void init();
 };

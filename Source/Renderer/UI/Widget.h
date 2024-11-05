@@ -211,7 +211,7 @@ public:
 		vec2i textPos = m_geometry.min();
 		int32 textWidth = m_text.size() * g_glyphTextureWidth;
 		textPos.x += (m_geometry.width / 2) - (textWidth / 2);
-		textPos.y += (m_geometry.height / 2) - (g_glyphTextureHeight / 2);
+		//textPos.y += (m_geometry.height);
 		painter->drawText(textPos, m_text);
 	}
 
@@ -245,8 +245,8 @@ public:
 		// Draw text
 		painter->setFontColor(m_textColor);
 		// Compute text position
-		vec2i textPos = m_geometry.max();
-		textPos.x += m_geometry.width / 2;
+		vec2i textPos = m_geometry.min();
+		textPos.x += (m_geometry.width / 2);
 		textPos.y += m_geometry.height / 2;
 		painter->drawText(textPos, m_text);
 	}

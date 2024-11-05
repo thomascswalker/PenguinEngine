@@ -16,13 +16,20 @@ enum class EFontRenderMode : uint8
 	Texture
 };
 
+inline const std::string g_defaultFontFamily = "Consolas";
+inline const std::string g_defaultFontSubFamily = "Regular";
+inline const int32		 g_defaultFontSize = 20;
+inline const Color		 g_defaultFontColor = Color::white();
+
 class Painter
 {
 	Texture*		m_data = nullptr;
 	recti			m_viewport{};
 	FontInfo*		m_font = nullptr;
-	int32			m_fontSize = 64;
-	Color			m_fontColor = Color::white();
+	std::string		m_fontFamily = g_defaultFontFamily;
+	std::string		m_fontSubFamily = g_defaultFontSubFamily;
+	int32			m_fontSize = g_defaultFontSize;
+	Color			m_fontColor = g_defaultFontColor;
 	EFontRenderMode m_glyphRenderMode = EFontRenderMode::System;
 
 	void assertValid();
@@ -65,7 +72,7 @@ public:
 	 */
 	void drawBezierCurve(std::vector<vec2i> points, const Color& color);
 
-	void drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2);
+	void drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i& v2, const Color& color);
 
 	std::vector<GlyphEdge> sortEdges(std::vector<GlyphEdge>& edges);
 
