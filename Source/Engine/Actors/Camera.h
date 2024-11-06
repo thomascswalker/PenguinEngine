@@ -53,6 +53,8 @@ struct ViewData
 
 class Camera : public Actor
 {
+	GENERATE_SUPER(Actor)
+
 public:
 	ViewData m_viewData;
 	int32 m_width   = g_defaultViewportWidth;

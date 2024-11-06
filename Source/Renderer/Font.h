@@ -15,6 +15,7 @@
 #include "Math/Rect.h"
 #include "Math/Matrix.h"
 #include "Math/Line.h"
+#include <Engine/Mesh.h>
 
 /** https://handmade.network/forums/articles/t/7330-implementing_a_font_reader_and_rasterizer_from_scratch%252C_part_1__ttf_font_reader. **/
 /** https://handmade.network/forums/wip/t/7610-reading_ttf_files_and_rasterizing_them_using_a_handmade_approach%252C_part_2__rasterization **/
@@ -162,6 +163,7 @@ namespace TTF
 		// Simple
 		uint16					 contourCount;
 		std::vector<GlyphVertex> points;
+		std::vector<Index3>		 indexes;
 
 		int16 minX;
 		int16 maxX;
@@ -184,6 +186,16 @@ namespace TTF
 		int32					arg1;
 		int32					arg2;
 		mat2i					transform;
+
+		std::vector<vec2i> getPositions() const
+		{
+			std::vector<vec2i> positions;
+			for (int32 i = 0; i < points.size(); i++)
+			{
+				positions.emplace_back(points[i].position);
+			}
+			return positions;
+		}
 	};
 
 	struct NameRecord

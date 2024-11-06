@@ -74,8 +74,8 @@ class ScanlineRHI : public IRHI
 	std::vector<float> m_vertexBuffer;
 	/** Vector of mesh descriptions of meshes which are currently bound. **/
 	std::vector<MeshDescription> m_meshDescriptions;
-	/** Pointer to the first Vertex in the current triangle. **/
-	Vertex* m_vertexBufferPtr;
+	/** Pointer to the first Vertex3 in the current triangle. **/
+	Vertex3* m_vertexBufferPtr;
 	/** Pointer to the current texture. */
 	Texture* m_texturePtr;
 	/** 3-element array of the current screen points. */
@@ -85,7 +85,7 @@ class ScanlineRHI : public IRHI
 	std::vector<PixelData> m_pixelBuffer;
 	/** Pointer to the current mesh. **/
 	Mesh* m_currentMesh                              = nullptr;
-	Triangle* m_currentTriangle                      = nullptr;
+	Triangle3* m_currentTriangle                      = nullptr;
 	std::shared_ptr<RenderSettings> m_renderSettings = nullptr;
 
 	std::shared_ptr<Painter> m_painter = nullptr;
@@ -110,7 +110,7 @@ public:
 	void rasterStage();
 	void fragmentStage() const;
 
-	void drawTriangle(Vertex* vertex);
+	void drawTriangle(Vertex3* vertex);
 	void drawWireframe() const;
 	void drawNormal();
 	void drawGrid(Grid* grid) override;

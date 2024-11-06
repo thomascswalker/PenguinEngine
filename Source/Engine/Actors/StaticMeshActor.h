@@ -8,6 +8,8 @@
 
 class StaticMeshActor : public Actor, public IRenderable
 {
+	GENERATE_SUPER(Actor)
+
 	StaticMeshComponent* m_staticMeshComponent = nullptr;
 
 public:

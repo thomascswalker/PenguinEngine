@@ -3,7 +3,7 @@
 #include "Math/Clipping.h"
 #include "Renderer/UI/Widget.h"
 
-/** Vertex Shader **/
+/** Vertex3 Shader **/
 
 VertexOutput ScanlineVertexShader::process(const VertexInput& input)
 {
@@ -102,7 +102,7 @@ void ScanlineRHI::drawRenderables()
 		// Draw each triangle in the vertex buffer
 		for (int32 index = 0; index < desc.vertexCount; index += 3)
 		{
-			Vertex* vertex = (Vertex*)m_vertexBuffer.data() + index;
+			Vertex3* vertex = (Vertex3*)m_vertexBuffer.data() + index;
 			drawTriangle(vertex);
 		}
 	}
@@ -130,8 +130,8 @@ void ScanlineRHI::addRenderable(IRenderable* renderable)
 	MeshDescription desc{};
 	desc.data = vertexData->data();
 	desc.byteSize = vertexData->size();
-	desc.stride = sizeof(Vertex);
-	desc.vertexCount = vertexData->size() / sizeof(Vertex);
+	desc.stride = sizeof(Vertex3);
+	desc.vertexCount = vertexData->size() / sizeof(Vertex3);
 	desc.transform = renderable->getTransform();
 
 	// Add to mesh descriptions
@@ -198,9 +198,9 @@ void ScanlineRHI::rasterStage()
 	// Clear pixel buffer prior to rasterization
 	m_pixelBuffer.clear();
 
-	Vertex v0 = m_vertexBufferPtr[0];
-	Vertex v1 = m_vertexBufferPtr[1];
-	Vertex v2 = m_vertexBufferPtr[2];
+	Vertex3 v0 = m_vertexBufferPtr[0];
+	Vertex3 v1 = m_vertexBufferPtr[1];
+	Vertex3 v2 = m_vertexBufferPtr[2];
 
 	vec3f s0 = m_screenPoints[0];
 	vec3f s1 = m_screenPoints[1];
@@ -304,7 +304,7 @@ void ScanlineRHI::fragmentStage() const
 	}
 }
 
-void ScanlineRHI::drawTriangle(Vertex* vertex)
+void ScanlineRHI::drawTriangle(Vertex3* vertex)
 {
 	// Set the vertex buffer pointer to the current vertex.
 	m_vertexBufferPtr = vertex;

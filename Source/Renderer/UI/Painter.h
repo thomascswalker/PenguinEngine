@@ -1,14 +1,13 @@
 #pragma once
 
-#include <queue>
 #include <vector>
 
 #include "Core/Types.h"
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Renderer/Texture.h"
-#include <Renderer/Font.h>
-#include <Renderer/FontTexture.h>
+#include "Renderer/Font.h"
+#include "Renderer/FontTexture.h"
 
 enum class EFontRenderMode : uint8
 {
@@ -16,9 +15,9 @@ enum class EFontRenderMode : uint8
 	Texture
 };
 
-inline const std::string g_defaultFontFamily = "Consolas";
-inline const std::string g_defaultFontSubFamily = "Regular";
-inline const int32		 g_defaultFontSize = 20;
+inline const std::string g_defaultFontFamily = "Segoe UI";
+inline const std::string g_defaultFontSubFamily = "Normal";
+inline const int32		 g_defaultFontSize = 12;
 inline const Color		 g_defaultFontColor = Color::white();
 
 class Painter
@@ -40,13 +39,16 @@ public:
 	/** Getters & Setters **/
 
 	void setViewport(recti viewport) { m_viewport = viewport; }
+
+	FontInfo* getFont() const { return m_font; }
 	void setFont(FontInfo* font) { m_font = font; }
 
+	int32	  getFontSize() const { return m_fontSize; }
 	void  setFontSize(int32 fontSize) { m_fontSize = fontSize; }
-	int32 getFontSize() const { return m_fontSize; }
-
-	void  setFontColor(const Color& color) { m_fontColor = color; }
+	
 	Color getFontColor() const { return m_fontColor; }
+	void  setFontColor(const Color& color) { m_fontColor = color; }
+	
 
 	/** Drawing **/
 
@@ -76,7 +78,7 @@ public:
 
 	std::vector<GlyphEdge> sortEdges(std::vector<GlyphEdge>& edges);
 
-	void drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert);
+	void drawGlyph(GlyphShape* glyph, float scale, const vec2i& shift, const vec2i& offset, bool invert);
 
 	void drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos);
 

@@ -195,6 +195,18 @@ bool TTF::getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* gl
 	readGlyphCoordinates(reader, glyph, 0, XShort, XShortPos);
 	readGlyphCoordinates(reader, glyph, 1, YShort, YShortPos);
 
+	// Triangulate the glyph
+	std::vector<vec2i> points;
+	for (auto& p : glyph->points)
+	{
+		points.emplace_back(p.position);
+	}
+	if (!Triangulation::triangulate(points, glyph->indexes))
+	{
+		LOG_ERROR("Failed to triangulate glyph '{}'", glyph->index)
+		return false;
+	}
+
 	return true;
 }
 
@@ -732,6 +744,12 @@ void FontDatabase::loadFonts()
 			continue;
 		}
 
+		// Only read Segoe UI
+		if (path.find("segoeui.ttf") == std::string::npos)
+		{
+			continue;
+		}
+
 		std::string strBuffer;
 		if (!IO::readFile(path, strBuffer))
 		{
@@ -741,7 +759,6 @@ void FontDatabase::loadFonts()
 
 		registerFont(strBuffer, path);
 	}
-	int a = 5;
 }
 
 FontInfo* FontDatabase::getFontInfo(const std::string& family, const std::string& subFamily)
@@ -759,6 +776,7 @@ FontInfo* FontDatabase::getFontInfo(const std::string& family, const std::string
 			}
 		}
 	}
+	LOG_ERROR("Font '{}:{}' not found.", family, subFamily)
 	return nullptr;
 }
 

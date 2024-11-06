@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Macros.h"
 #include "Engine/Components/Component.h"
 #include "Engine/Object.h"
 #include "Engine/ObjectManager.h"
@@ -8,6 +9,8 @@
 /** Represents an object in the scene which can tick and has a transform. **/
 class Actor : public Object, public ITickable
 {
+	GENERATE_SUPER(Object)
+
 protected:
 	std::vector<Component*> m_components;
 

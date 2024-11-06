@@ -139,7 +139,7 @@ public:
 		std::vector<vec3f> normals;
 		std::vector<vec2f> texCoords;
 
-		std::vector<Triangle> triangles;
+		std::vector<Triangle3> triangles;
 		int32 triangleCount = 0;
 		std::vector<uint32> positionIndexes;
 		std::vector<uint32> normalIndexes;
@@ -184,7 +184,7 @@ public:
 
 			case 'f': // Parse face indices
 				{
-					Triangle triangle;
+					Triangle3 triangle;
 					parseFace(line, &triangle.positionIndexes, &triangle.normalIndexes,
 					          &triangle.texCoordIndexes);
 					triangles.emplace_back(triangle);
