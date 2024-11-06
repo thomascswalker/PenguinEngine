@@ -203,7 +203,7 @@ class D3D11RHI : public IRHI
 	ComPtr<ID3D11Texture2D>		   m_depthStencilTexture = nullptr;
 	ComPtr<ID3D11Texture2D>		   m_backBuffer = nullptr;
 
-	/** Vertex & Index Buffer **/
+	/** Vertex3 & Index Buffer **/
 
 	ID3D11Buffer*					 m_constantBuffers[g_constantBufferCount];
 	std::vector<Buffer11>			 m_meshBuffers;

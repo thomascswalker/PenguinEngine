@@ -2,11 +2,12 @@
 
 #include <utility>
 
-#include "Math/Rect.h"
-#include "Renderer/Texture.h"
-#include "Input/Mouse.h"
+#include "Core/Macros.h"
 #include "Engine/Delegate.h"
+#include "Input/Mouse.h"
+#include "Math/Rect.h"
 #include "Painter.h"
+#include "Renderer/Texture.h"
 
 class Widget;
 class Button;
@@ -41,8 +42,6 @@ enum class EResizeMode
 	Fixed,
 	Expanding
 };
-
-#define GENERATE_SUPER(n) using Super = n;
 
 class Widget
 {
@@ -211,7 +210,7 @@ public:
 		vec2i textPos = m_geometry.min();
 		int32 textWidth = m_text.size() * g_glyphTextureWidth;
 		textPos.x += (m_geometry.width / 2) - (textWidth / 2);
-		//textPos.y += (m_geometry.height);
+		// textPos.y += (m_geometry.height);
 		painter->drawText(textPos, m_text);
 	}
 
@@ -225,6 +224,7 @@ DECLARE_MULTICAST_DELEGATE(OnClicked);
 class Button : public Label
 {
 	GENERATE_SUPER(Label)
+
 public:
 	OnClicked m_onClicked;
 
@@ -244,10 +244,37 @@ public:
 		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 		// Draw text
 		painter->setFontColor(m_textColor);
-		// Compute text position
+
+		// Compute the bounding box of the whole text block
+		FontInfo* font = painter->getFont();
+		int32	  fontSize = painter->getFontSize();
+		int32	  textWidth = 0;
+		int32	  textHeight = fontSize;
+		float	  scale = (1.0f / font->head->unitsPerEm) * painter->getFontSize();
+		for (auto c : m_text)
+		{
+			GlyphShape* glyph = &font->glyphs[c];
+			textWidth += glyph->advanceWidth;
+		}
+		textWidth *= scale;
+
+		// Compute text position, offsetting the minimum point of the widget
+		//
+		//                    max
+		//                    ^
+		//  ===================
+		//  |                 |
+		//  |      text       |
+		//  |      ^          |
+		//  |                 |
+		//  ===================
+		//  ^
+		//  min
+		//
 		vec2i textPos = m_geometry.min();
-		textPos.x += (m_geometry.width / 2);
-		textPos.y += m_geometry.height / 2;
+		textPos.x += (m_geometry.width / 2) - (textWidth / 2);
+		textPos.y += (m_geometry.height / 2) - (textHeight / 4); // TODO: Why divide by 4?
+
 		painter->drawText(textPos, m_text);
 	}
 

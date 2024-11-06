@@ -2,7 +2,7 @@
 
 void Mesh::processTriangles()
 {
-	for (Triangle& triangle : m_triangles)
+	for (Triangle3& triangle : m_triangles)
 	{
 		triangle.v0.position = m_positions[triangle.positionIndexes[0]];
 		triangle.v1.position = m_positions[triangle.positionIndexes[1]];
@@ -28,16 +28,16 @@ void Mesh::processTriangles()
 
 std::vector<float> Mesh::toVertexData()
 {
-	int32			   vertexSize = (int32)sizeof(Vertex);
+	int32			   vertexSize = (int32)sizeof(Vertex3);
 	auto			   size = m_triangles.size() * 3 * vertexSize;
 	std::vector<float> data(size);
 	size_t			   offset = 0;
 
 	float* dataPtr = data.data();
 	// Triangle
-	for (Triangle& tri : m_triangles)
+	for (Triangle3& tri : m_triangles)
 	{
-		// Vertex 0
+		// Vertex3 0
 		data[offset++] = tri.v0.position.x;
 		data[offset++] = tri.v0.position.y;
 		data[offset++] = tri.v0.position.z;
@@ -47,7 +47,7 @@ std::vector<float> Mesh::toVertexData()
 		data[offset++] = tri.v0.texCoord.x;
 		data[offset++] = tri.v0.texCoord.y;
 
-		// Vertex 1
+		// Vertex3 1
 		data[offset++] = tri.v1.position.x;
 		data[offset++] = tri.v1.position.y;
 		data[offset++] = tri.v1.position.z;
@@ -57,7 +57,7 @@ std::vector<float> Mesh::toVertexData()
 		data[offset++] = tri.v1.texCoord.x;
 		data[offset++] = tri.v1.texCoord.y;
 
-		// Vertex 2
+		// Vertex3 2
 		data[offset++] = tri.v2.position.x;
 		data[offset++] = tri.v2.position.y;
 		data[offset++] = tri.v2.position.z;
@@ -73,8 +73,8 @@ std::vector<float> Mesh::toVertexData()
 
 bool Triangulation::isTriangleFlipped(int32 orientation, const vec2i& a, const vec2i& b, const vec2i& c)
 {
-	int32 triSignedArea = Triangle2::signedArea(a, b, c);
-	return triSignedArea * orientation < 0;
+	int32 triSignedArea = Triangle2i::signedArea(a, b, c);
+	return (triSignedArea * orientation) < 0;
 }
 
 // Triangulation
@@ -123,7 +123,7 @@ bool Triangulation::triangulate(const std::vector<vec2i>& inVertexPositions, std
 	int32 earVertexNumber = 0;
 	int32 earTestCount = 0;
 
-	for (int32 remainingVertexCount = polygonVertexCount; remainingVertexCount >= 3;)
+	for (int32 remainingVertexCount = polygonVertexCount; remainingVertexCount > 2;)
 	{
 		bool isEar = true;
 
@@ -140,7 +140,7 @@ bool Triangulation::triangulate(const std::vector<vec2i>& inVertexPositions, std
 				do
 				{
 					vec2i testVertexPosition = vertexPositions[testVertexNumber];
-					if (Math::isBarycentric(prevVertexPosition, earVertexPosition, nextVertexPosition, testVertexPosition))
+					if (Math::isInTriangle(prevVertexPosition, earVertexPosition, nextVertexPosition, testVertexPosition))
 					{
 						isEar = false;
 						break;

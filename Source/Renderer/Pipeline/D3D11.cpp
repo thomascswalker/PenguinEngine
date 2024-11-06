@@ -88,7 +88,7 @@ bool D3D11RHI::createRenderTargetView()
 
 bool D3D11RHI::createShaders()
 {
-	LOG_DEBUG("Creating D3D11 Vertex and Pixel Shaders.")
+	LOG_DEBUG("Creating D3D11 Vertex3 and Pixel Shaders.")
 	HRESULT result = createShader("VTX", "VertexShader.hlsl", EShaderType::VertexShader);
 	CHECK_HR(result, "Failed to create vertex shader");
 	result = createShader("PXL", "PixelShader.hlsl", EShaderType::PixelShader);
@@ -554,7 +554,7 @@ void D3D11RHI::addRenderable(IRenderable* renderable)
 	buffer.createConstantBuffer(vertexData->size());
 
 	MeshDescription meshDesc;
-	meshDesc.stride = sizeof(Vertex);
+	meshDesc.stride = sizeof(Vertex3);
 	meshDesc.data = vertexData->data();
 	meshDesc.byteSize = vertexData->size();
 	meshDesc.transform = renderable->getTransform();

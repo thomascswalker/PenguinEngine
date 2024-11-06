@@ -193,6 +193,16 @@ inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i&
 	int32 maxX = std::max({ v0.x, v1.x, v2.x });
 	int32 maxY = std::max({ v0.y, v1.y, v2.y });
 
+	vec2f v0f = v0.toType<float>() + 0.5f;
+	vec2f v1f = v1.toType<float>() + 0.5f;
+	vec2f v2f = v2.toType<float>() + 0.5f;
+
+#ifdef PENG_ANTIALIASING
+	int32 sampleCount = 2;
+	int32 sampleSquared = sampleCount * sampleCount;
+	float halfSample = 1.0f / sampleCount;
+#endif
+
 	for (int32 x = minX; x < maxX; x++)
 	{
 		for (int32 y = minY; y < maxY; y++)
@@ -202,13 +212,43 @@ inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i&
 			{
 				continue;
 			}
-			vec2i p = { x, y };
-			if (Math::isBarycentric(v0, v1, v2, p))
+			if (Math::isInTriangle(v0f, v1f, v2f, vec2f{ x + 0.5f, y + 0.5f }))
 			{
-				drawPoint(x, y, color);
+				drawPoint(x, y, m_fontColor);
+				continue;
 			}
+
+#ifdef PENG_ANTIALIASING
+			// Subpixel Antialiasing
+			float sum = 0.0f;
+			for (int32 i = 0; i < sampleCount; i++)
+			{
+				for (int32 j = 0; j < sampleCount; j++)
+				{
+					float offset = halfSample * i;
+					vec2f p = { (float)x + offset, (float)y + offset };
+					if (Math::isInTriangle(v0f, v1f, v2f, p))
+					{
+						sum += halfSample;
+					}
+				}
+			}
+
+			if (sum == 0.0f)
+			{
+				continue;
+			}
+
+			drawPoint(x, y, m_fontColor);
+			Color currentColor = m_data->getPixelAsColor(x, y);
+			drawPoint(x, y, Color::blend(currentColor, m_fontColor, EBlendMode::Normal, sum));
+#endif
 		}
 	}
+
+	// drawLine(v0, v1, color);
+	// drawLine(v1, v2, color);
+	// drawLine(v2, v0, color);
 }
 
 /** Sort edges in vertical order, from highest vertical point to lowest. **/
@@ -241,40 +281,31 @@ std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 	return a;
 }
 
-void Painter::drawGlyph(GlyphShape* glyph, const vec2f& scale, const vec2i& shift, const vec2i& offset, bool invert)
+void Painter::drawGlyph(GlyphShape* glyph, float scale, const vec2i& shift, const vec2i& offset, bool invert)
 {
 	// Tesselate the curves
 	int32 pointCount = glyph->points.size();
 
 	// Calculate and scale edges
-	float xScale = scale.x;
-	float yScale = invert ? -scale.y : scale.y;
+	float xScale = scale;
+	float yScale = invert ? -scale : scale;
 
 	// Build list of points
-	std::vector<vec2i> points;
-	for (int32 i = 0; i < glyph->points.size(); i++)
-	{
-		points.emplace_back(glyph->points[i].position);
-	}
-
-	// Triangulate all of the points
-	std::vector<Index3> indexes;
-	if (!Triangulation::triangulate(points, indexes))
-	{
-		LOG_ERROR("Failed to triangulate glyph '{}'", glyph->index);
-		return;
-	}
+	std::vector<vec2i> points = glyph->getPositions();
 
 	// Draw each triangle
-	for (int32 i = 0; i < indexes.size(); i++)
+	for (int32 i = 0; i < glyph->indexes.size(); i++)
 	{
-		vec2i v0 = points[indexes[i].a];
+		// Get each point of the triangle
+		vec2i v0 = points[glyph->indexes[i].a];
+		vec2i v1 = points[glyph->indexes[i].b];
+		vec2i v2 = points[glyph->indexes[i].c];
+
+		// Scale each point
 		v0.x = v0.x * xScale + shift.x + offset.x;
 		v0.y = v0.y * yScale + shift.y + offset.y;
-		vec2i v1 = points[indexes[i].b];
 		v1.x = v1.x * xScale + shift.x + offset.x;
 		v1.y = v1.y * yScale + shift.y + offset.y;
-		vec2i v2 = points[indexes[i].c];
 		v2.x = v2.x * xScale + shift.x + offset.x;
 		v2.y = v2.y * yScale + shift.y + offset.y;
 
@@ -321,14 +352,14 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 		{
 			assert(m_font != nullptr);
 
+			// Compute the font scale from the current font size (height in pixels)
 			float scale = (1.0f / m_font->head->unitsPerEm) * m_fontSize;
 			int32 letterAdvance = 0;
 			int32 wordAdvance = 0;
 			int32 lineAdvance = 0;
 
-			for (int32 i = 0; i < text.size(); i++)
+			for (auto c : text)
 			{
-				char c = text[i];
 				if (c == ' ')
 				{
 					wordAdvance += 0.33333f * m_fontSize; // hardcoded
@@ -343,13 +374,18 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 				{
 					GlyphShape* glyph = &m_font->glyphs[c];
 
+					// Start position of the whole text block
 					vec2i screenOffset = pos;
+
+					// Start position of this glyph specifically
 					vec2i localOffset;
 					localOffset.x = (glyph->minX * scale) + letterAdvance;
 					localOffset.y = (-glyph->minY * scale) + lineAdvance;
 
-					drawGlyph(glyph, vec2f(scale, -scale), screenOffset, localOffset, false);
+					// Draw the glyph
+					drawGlyph(glyph, scale, screenOffset, localOffset, false);
 
+					// Advance the position of the next glyph
 					letterAdvance += glyph->advanceWidth * scale;
 				}
 			}
