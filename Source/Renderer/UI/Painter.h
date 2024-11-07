@@ -9,46 +9,72 @@
 #include "Renderer/Font.h"
 #include "Renderer/FontTexture.h"
 
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+
 enum class EFontRenderMode : uint8
 {
 	System,
-	Texture
+	Texture,
+	FreeType
 };
 
-inline const std::string g_defaultFontFamily = "Segoe UI";
-inline const std::string g_defaultFontSubFamily = "Normal";
-inline const int32		 g_defaultFontSize = 12;
+inline const std::string g_defaultFontFamily = "Roboto";
+inline const std::string g_defaultFontSubFamily = "Regular";
+inline const int32		 g_defaultFontSize = 11;
 inline const Color		 g_defaultFontColor = Color::white();
+
+struct Character
+{
+	std::vector<uint8> buffer;
+	vec2i			   size;
+	int32			   yOffset;
+	int32			   advance;
+};
 
 class Painter
 {
 	Texture*		m_data = nullptr;
 	recti			m_viewport{};
-	FontInfo*		m_font = nullptr;
+	FT_Face			m_face = nullptr;
+	FT_Library		m_library = nullptr;
 	std::string		m_fontFamily = g_defaultFontFamily;
 	std::string		m_fontSubFamily = g_defaultFontSubFamily;
 	int32			m_fontSize = g_defaultFontSize;
 	Color			m_fontColor = g_defaultFontColor;
-	EFontRenderMode m_glyphRenderMode = EFontRenderMode::System;
+	EFontRenderMode m_glyphRenderMode = EFontRenderMode::FreeType;
+
+	using CharacterMap = std::map<char, Character>;
+	CharacterMap m_characters;
 
 	void assertValid();
 
 public:
 	Painter(Texture* data, recti viewport);
+	~Painter();
 
 	/** Getters & Setters **/
 
 	void setViewport(recti viewport) { m_viewport = viewport; }
 
-	FontInfo* getFont() const { return m_font; }
-	void setFont(FontInfo* font) { m_font = font; }
+	void initFont();
 
-	int32	  getFontSize() const { return m_fontSize; }
-	void  setFontSize(int32 fontSize) { m_fontSize = fontSize; }
-	
+	FT_Face getFont() const { return m_face; }
+	void	setFont(FT_Face font) { m_face = font; }
+
+	int32 getFontSize() const { return m_fontSize; }
+	void  setFontSize(int32 fontSize)
+	{
+		m_fontSize = fontSize;
+		FT_Set_Pixel_Sizes(m_face, 0, fontSize);
+	}
+
 	Color getFontColor() const { return m_fontColor; }
 	void  setFontColor(const Color& color) { m_fontColor = color; }
-	
+
+	Character* getCharacter(const char c) { return &m_characters[c]; }
 
 	/** Drawing **/
 

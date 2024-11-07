@@ -337,57 +337,35 @@ namespace TTF
 	};
 
 	float getScaleForPixelHeight(FontInfo* fontInfo, int32 pixelHeight);
-
 	int32 getGlyphIndex(uint16 codePoint, FontInfo* fontInfo);
-
 	/** Returns the byte offset of the specified Glyph relative to the GLYF table. **/
-	uint32 getGlyphOffset(ByteReader& reader, FontInfo* fontInfo, uint32 glyphIndex, int32 initialOffset);
-
-	void readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag);
-
+	uint32			   getGlyphOffset(ByteReader& reader, FontInfo* fontInfo, uint32 glyphIndex, int32 initialOffset);
+	void			   readGlyphCoordinates(ByteReader& reader, GlyphShape* shape, int32 index, EGlyphFlag byteFlag, EGlyphFlag deltaFlag);
 	std::vector<vec2i> interpolatePoints(std::vector<vec2i>& points);
-
-	void convertGlyphPoints(GlyphShape* glyph);
-
-	bool getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph);
-
+	bool			   getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph);
 	// https://github.com/nothings/stb/blob/2e2bef463a5b53ddf8bb788e25da6b8506314c08/stb_truetype.h#L1813
 	bool getCompoundGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph);
-
 	bool getGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph);
-
 	void readOffsetSubtable(ByteReader& reader, OffsetSubtable* offsetSubtable);
-
 	void readFormat4(ByteReader& reader, Format4* f);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/cmap
 	bool readCMAP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/loca
 	void readLOCA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/head
 	void readHEAD(ByteReader& reader, FontInfo* fontInfo);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/glyf
 	bool readGLYF(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/name
 	bool readNAME(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/hhea
 	bool readHHEA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/maxp
 	bool readMAXP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	// https://learn.microsoft.com/en-us/typography/opentype/spec/hmtx
 	bool readHMTX(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset);
-
 	void readTableInfo(ByteReader& reader, std::map<ETableType, Table>& tables, int32 tableSize);
-
 	bool readTables(ByteReader& reader, FontInfo* fontInfo);
-
 	bool readfontInfo(ByteReader& reader, FontInfo* fontInfo);
 
 	struct FontFamily
@@ -400,16 +378,15 @@ using namespace TTF;
 
 class FontDatabase
 {
-	std::map<std::string, FontFamily> families;
+	//FT_Library					   library;
+	//std::map<std::string, std::map<std::string, FT_Face>> faces;
 
-	std::string getfontInfoPath();
-
-	void registerFont(std::string& data, const std::string& fileName);
-
-	void loadFonts();
+	std::vector<std::string> getFontDirectories();
+	void		registerFont(const std::string& fileName);
+	void		loadFonts();
 
 public:
-	FontInfo* getFontInfo(const std::string& family, const std::string& subFamily);
-
-	void init();
+	//FT_Face getFontInfo(const std::string& family, const std::string& subFamily);
+	//void	  init();
+	//FT_Library getLibrary() { return library; }
 };
