@@ -38,7 +38,6 @@ target_include_directories(PenguinEngine PUBLIC)
 target_include_directories(PenguinEngine PUBLIC lib)
 
 # ZLib
-
 set(ZLIB_LIBRARY "${lib_dir}/zlib.lib")
 set(ZLIB_INCLUDE_DIR "${include_dir}/zlib")
 find_package(ZLIB REQUIRED)
@@ -56,4 +55,3 @@ if(FREETYPE_FOUND)
     target_include_directories(PenguinEngine PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif(FREETYPE_FOUND)
 
-cmake_print_variables(FREETYPE_FOUND)
