@@ -3,6 +3,8 @@
 #include "Painter.h"
 #include "Engine/Actors/Camera.h"
 #include "Engine/Mesh.h"
+#include "Renderer/Font.h"
+#include <Importers/ResourceManager.h>
 
 void Painter::assertValid()
 {
@@ -11,7 +13,51 @@ void Painter::assertValid()
 
 Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewport)
 {
-	setFont(g_fontDatabase->getFontInfo(m_fontFamily, m_fontSubFamily));
+	initFont();
+}
+
+Painter::~Painter()
+{
+	FT_Done_Face(m_face);
+	FT_Done_FreeType(m_library);
+}
+
+void Painter::initFont()
+{
+	if (FT_Error error = FT_Init_FreeType(&m_library))
+	{
+		LOG_ERROR("Failed to initialize FreeType.")
+		throw std::runtime_error("Failed to initialize FreeType.");
+	}
+	std::string robotoFileName = ResourceManager::getResourceFileName("Fonts\\Roboto-Regular.ttf");
+	if (FT_Error error = FT_New_Face(m_library, robotoFileName.c_str(), 0, &m_face))
+	{
+		LOG_ERROR("Failed to load font face.")
+		throw std::runtime_error("Failed to load font face.");
+	}
+	FT_Set_Pixel_Sizes(m_face, 0, m_fontSize);
+
+	for (int32 c = 0; c < 128; c++)
+	{
+		// Get the current glyph slot and in the process, render the glyph into a bitmap
+		FT_UInt glyphIndex = FT_Get_Char_Index(m_face, c);
+		FT_Load_Glyph(m_face, glyphIndex, FT_LOAD_RENDER);
+		FT_GlyphSlot slot = m_face->glyph;
+		// Create a new Character and copy the glyph bitmap into this character
+		Character character;
+		uint32	  size = slot->bitmap.width * slot->bitmap.rows;
+		character.buffer.resize(size);
+		std::memcpy(character.buffer.data(), slot->bitmap.buffer, size);
+
+		// Set character properties
+		// Divide by 64 to convert from int16 to int8
+		character.advance = slot->advance.x / 64;
+		character.yOffset = -slot->bitmap_top;
+		character.size = vec2i{ (uint8)slot->bitmap.width, (uint8)slot->bitmap.rows };
+
+		// Add character to the character map
+		m_characters[c] = character;
+	}
 }
 
 void Painter::drawPoint(int32 x, int32 y, const Color& color)
@@ -350,10 +396,11 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 		}
 		case EFontRenderMode::System:
 		{
-			assert(m_font != nullptr);
+			// assert(m_font != nullptr);
 
 			// Compute the font scale from the current font size (height in pixels)
-			float scale = (1.0f / m_font->head->unitsPerEm) * m_fontSize;
+			// float scale = (1.0f / m_font->head->unitsPerEm) * m_fontSize;
+			float scale = 0;
 			int32 letterAdvance = 0;
 			int32 wordAdvance = 0;
 			int32 lineAdvance = 0;
@@ -372,7 +419,8 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 				}
 				else
 				{
-					GlyphShape* glyph = &m_font->glyphs[c];
+					// GlyphShape* glyph = &m_font->glyphs[c];
+					GlyphShape* glyph = nullptr;
 
 					// Start position of the whole text block
 					vec2i screenOffset = pos;
@@ -389,6 +437,39 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 					letterAdvance += glyph->advanceWidth * scale;
 				}
 			}
+			break;
+		}
+		case EFontRenderMode::FreeType:
+		{
+			int32 offset = 0;
+			for (const auto& c : text)
+			{
+				Character* character = &m_characters[c];
+				int32	   advance = character->advance; // ???
+				int32	   w = character->size.x;
+				int32	   h = character->size.y;
+
+				int32 minX = pos.x + offset;
+				int32 minY = pos.y + character->yOffset;
+				int32 maxX = minX + w;
+				int32 maxY = minY + h;
+
+				for (int32 y = minY; y < maxY; y++)
+				{
+					for (int32 x = minX; x < maxX; x++)
+					{
+						int32 memOffset = (y - minY) * w + (x - minX);
+						uint8 p = character->buffer[memOffset];
+						float perc = p / 255.0f;
+						Color color = m_data->getPixelAsColor(x, y);
+						drawPoint(x, y, Color::blend(color, m_fontColor, EBlendMode::Normal, perc));
+					}
+				}
+
+				offset += advance;
+			}
+
+			break;
 		}
 	}
 }

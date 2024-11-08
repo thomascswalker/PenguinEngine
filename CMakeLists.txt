@@ -3,6 +3,8 @@ cmake_policy(VERSION 3.12)
 project(PenguinEngine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
+include(CMakePrintHelpers)
+
 add_definitions(-DUNICODE -D_UNICODE)
 
 set(project_dir "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -13,7 +15,7 @@ set(build_dir "${project_dir}/Build")
 file(MAKE_DIRECTORY ${build_dir})
 
 file(
-    GLOB_RECURSE source_list 
+    GLOB_RECURSE source_list
     LIST_DIRECTORIES false
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "${project_dir}/*.cpp"
@@ -32,40 +34,24 @@ endforeach()
 
 # Additional include paths
 target_include_directories(PenguinEngine PUBLIC source)
-target_include_directories(PenguinEngine PUBLIC include)
+target_include_directories(PenguinEngine PUBLIC)
 target_include_directories(PenguinEngine PUBLIC lib)
 
-# Include ZLib
-set(ZLIB_INCLUDE_DIR "${include_dir}/zlib")
+# ZLib
 set(ZLIB_LIBRARY "${lib_dir}/zlib.lib")
-
+set(ZLIB_INCLUDE_DIR "${include_dir}/zlib")
 find_package(ZLIB REQUIRED)
-if (ZLIB_FOUND)
-    include_directories(${ZLIB_INCLUDE_DIRS})
-    target_link_libraries(PenguinEngine ${ZLIB_LIBRARIES})
+if(ZLIB_FOUND)
+    target_link_libraries(PenguinEngine PRIVATE ${ZLIB_LIBRARIES})
+    target_include_directories(PenguinEngine PRIVATE ${ZLIB_INCLUDE_DIRS})
 endif(ZLIB_FOUND)
 
-# Binaries
-if (WIN32)
-    set(RELEASE_DLL_DIR ${bin_dir})
+# FreeType
+set(FREETYPE_LIBRARY "${lib_dir}/freetype.lib")
+set(FREETYPE_INCLUDE_DIRS "${include_dir}")
+find_package(Freetype)
+if(FREETYPE_FOUND)
+    target_link_libraries(PenguinEngine PRIVATE ${FREETYPE_LIBRARIES})
+    target_include_directories(PenguinEngine PRIVATE ${FREETYPE_INCLUDE_DIRS})
+endif(FREETYPE_FOUND)
 
-    set_property(TARGET PenguinEngine
-        PROPERTY
-        TARGET_RUNTIME_DLLS
-        $<$<CONFIG:Debug>:${RELEASE_DLL_DIR}>
-        $<$<CONFIG:Release>:${RELEASE_DLL_DIR}>
-    )
-
-    # Ensure DLLs are copied to the output directory
-    add_custom_command(TARGET PenguinEngine PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "$<$<CONFIG:Debug>:${RELEASE_DLL_DIR}>"
-        "$<TARGET_FILE_DIR:PenguinEngine>"
-    )
-
-    add_custom_command(TARGET PenguinEngine PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "$<$<CONFIG:Release>:${RELEASE_DLL_DIR}>"
-        "$<TARGET_FILE_DIR:PenguinEngine>" 
-    )
-endif()

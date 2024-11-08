@@ -52,7 +52,7 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	}
 
 	// Load fonts
-	g_fontDatabase->init();
+	//g_fontDatabase->init();
 	LOG_INFO("Initialized font database.")
 
 	// Construct UI
@@ -125,7 +125,7 @@ void Engine::constructUI()
 	menuPanel->setLayoutMode(ELayoutMode::Horizontal);
 	menuPanel->setVerticalResizeMode(EResizeMode::Fixed);
 	menuPanel->setHorizontalResizeMode(EResizeMode::Expanding);
-	menuPanel->setFixedHeight(40);
+	menuPanel->setFixedHeight(20);
 	canvas->addChild(menuPanel);
 
 	auto exitButton = constructWidget<Button>("Exit");
@@ -148,13 +148,13 @@ void Engine::constructUI()
 
 	auto meshButton = constructWidget<Button>("ImportMesh");
 	meshButton->m_onClicked.addRaw(this, &Engine::loadMesh);
-	meshButton->setText("Load Model");
+	meshButton->setText("Import Model");
 	meshButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(meshButton);
 
 	auto texButton = constructWidget<Button>("ImportTexture");
 	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
-	texButton->setText("Load Texture");
+	texButton->setText("Import Texture");
 	texButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(texButton);
 

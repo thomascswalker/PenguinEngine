@@ -2,6 +2,73 @@
 
 #include "Math/MathCommon.h"
 
+//void FontDatabase::init()
+//{
+//	//FT_Error error = FT_Init_FreeType(&library);
+//	//if (error)
+//	//{
+//	//	LOG_ERROR("Failed to initialize FreeType: {}", FT_Error_String(error))
+//	//}
+//	//loadFonts();
+//}
+
+void FontDatabase::loadFonts()
+{
+	for (auto& p : getFontDirectories())
+	{
+		for (const auto& entry : std::filesystem::directory_iterator(p))
+		{
+			std::string path = entry.path().string();
+
+			// Only read .ttf files
+			std::string lowerPath = path;
+			Strings::toLower(lowerPath);
+			if (!lowerPath.ends_with(".ttf"))
+			{
+				continue;
+			}
+
+			registerFont(path);
+		}
+	}
+}
+
+std::vector<std::string> FontDatabase::getFontDirectories()
+{
+#if defined(_WIN32) || defined(_WIN64)
+	return { "C:\\Windows\\Fonts", "C:\\Users\\thoma\\AppData\\Local\\Microsoft\\Windows\\Fonts" };
+#else
+	return "";
+#endif
+}
+
+void FontDatabase::registerFont(const std::string& fileName)
+{
+	//FT_Face face;
+	//FT_New_Face(library, fileName.c_str(), 0, &face);
+	//faces[face->family_name][face->style_name] = face;
+}
+//
+//FT_Face FontDatabase::getFontInfo(const std::string& family, const std::string& subFamily)
+//{
+//	for (auto& [k, v] : faces)
+//	{
+//		if (k == family)
+//		{
+//			for (auto& [k2, v2] : v)
+//			{
+//				if (k2 == subFamily)
+//				{
+//					return v2;
+//				}
+//			}
+//			
+//		}
+//	}
+//	LOG_ERROR("Font '{}:{}' not found.", family, subFamily)
+//	return nullptr;
+//}
+
 float TTF::getScaleForPixelHeight(FontInfo* fontInfo, int32 lineHeight)
 {
 	int deltaHeight = fontInfo->ascender - fontInfo->descender;
@@ -698,89 +765,4 @@ bool TTF::readfontInfo(ByteReader& reader, FontInfo* fontInfo)
 	int32 tableSize = fontInfo->offsetSubtable.tableCount;
 	readTableInfo(reader, fontInfo->tables, tableSize);
 	return readTables(reader, fontInfo);
-}
-
-std::string FontDatabase::getfontInfoPath()
-{
-#if defined(_WIN32) || defined(_WIN64)
-	return "C:\\Windows\\Fonts";
-#else
-	return "";
-#endif
-}
-
-void FontDatabase::registerFont(std::string& data, const std::string& fileName)
-{
-	FontInfo font;
-	font.fileName = fileName;
-	ByteReader buffer(data, data.size(), std::endian::big);
-	LOG_DEBUG("Reading file {}", fileName)
-	if (!readfontInfo(buffer, &font))
-	{
-		LOG_ERROR("Failed to read font from file {}", fileName)
-		return;
-	}
-	families[font.family].fonts[font.subFamily] = font;
-	LOG_DEBUG("Registered font '{}:{}'.", font.family.c_str(), font.subFamily.c_str())
-}
-
-void FontDatabase::loadFonts()
-{
-	std::filesystem::path fontDir = getfontInfoPath();
-	if (!std::filesystem::exists(fontDir))
-	{
-		LOG_ERROR("OS not implemented.");
-		return;
-	}
-
-	for (const auto& entry : std::filesystem::directory_iterator(fontDir))
-	{
-		int8*		data = nullptr;
-		std::string path = entry.path().string();
-
-		// Only read .ttf files
-		if (!path.ends_with(".ttf"))
-		{
-			continue;
-		}
-
-		// Only read Segoe UI
-		if (path.find("segoeui.ttf") == std::string::npos)
-		{
-			continue;
-		}
-
-		std::string strBuffer;
-		if (!IO::readFile(path, strBuffer))
-		{
-			LOG_ERROR("Failed to load font {}.", path)
-			return;
-		}
-
-		registerFont(strBuffer, path);
-	}
-}
-
-FontInfo* FontDatabase::getFontInfo(const std::string& family, const std::string& subFamily)
-{
-	for (auto& [k, v] : families)
-	{
-		if (k == family)
-		{
-			for (auto& [fk, fv] : v.fonts)
-			{
-				if (fk == subFamily)
-				{
-					return &fv;
-				}
-			}
-		}
-	}
-	LOG_ERROR("Font '{}:{}' not found.", family, subFamily)
-	return nullptr;
-}
-
-void FontDatabase::init()
-{
-	loadFonts();
 }

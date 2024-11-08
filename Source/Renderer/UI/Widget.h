@@ -192,6 +192,7 @@ class Label : public Widget
 protected:
 	std::string m_text;
 	Color		m_textColor = Color::white();
+	int32		m_fontSize = 11;
 	int32		m_defaultFixedHeight = 25;
 	int32		m_defaultMargin = 5;
 
@@ -215,8 +216,8 @@ public:
 	}
 
 	virtual void setText(const std::string& text) { m_text = text; }
-
 	virtual void setTextColor(const Color& color) { m_textColor = color; }
+	virtual void setFontSize(const int32 fontSize) { m_fontSize = fontSize; }
 };
 
 DECLARE_MULTICAST_DELEGATE(OnClicked);
@@ -244,36 +245,19 @@ public:
 		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 		// Draw text
 		painter->setFontColor(m_textColor);
+		painter->setFontSize(m_fontSize);
 
-		// Compute the bounding box of the whole text block
-		FontInfo* font = painter->getFont();
-		int32	  fontSize = painter->getFontSize();
-		int32	  textWidth = 0;
-		int32	  textHeight = fontSize;
-		float	  scale = (1.0f / font->head->unitsPerEm) * painter->getFontSize();
-		for (auto c : m_text)
+		// Compute the full text width in order to center the text
+		int32 textWidth = 0;
+		for (auto& c : m_text)
 		{
-			GlyphShape* glyph = &font->glyphs[c];
-			textWidth += glyph->advanceWidth;
+			textWidth += painter->getCharacter(c)->size.x;
 		}
-		textWidth *= scale;
 
-		// Compute text position, offsetting the minimum point of the widget
-		//
-		//                    max
-		//                    ^
-		//  ===================
-		//  |                 |
-		//  |      text       |
-		//  |      ^          |
-		//  |                 |
-		//  ===================
-		//  ^
-		//  min
-		//
+		// Center alignment
 		vec2i textPos = m_geometry.min();
 		textPos.x += (m_geometry.width / 2) - (textWidth / 2);
-		textPos.y += (m_geometry.height / 2) - (textHeight / 4); // TODO: Why divide by 4?
+		textPos.y += (m_geometry.height / 2) + (painter->getFontSize() / 2);
 
 		painter->drawText(textPos, m_text);
 	}
