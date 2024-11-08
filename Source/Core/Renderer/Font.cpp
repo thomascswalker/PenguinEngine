@@ -2,7 +2,7 @@
 
 #include "Math/MathCommon.h"
 
-//void FontDatabase::init()
+// void FontDatabase::init()
 //{
 //	//FT_Error error = FT_Init_FreeType(&library);
 //	//if (error)
@@ -10,7 +10,7 @@
 //	//	LOG_ERROR("Failed to initialize FreeType: {}", FT_Error_String(error))
 //	//}
 //	//loadFonts();
-//}
+// }
 
 void FontDatabase::loadFonts()
 {
@@ -44,12 +44,12 @@ std::vector<std::string> FontDatabase::getFontDirectories()
 
 void FontDatabase::registerFont(const std::string& fileName)
 {
-	//FT_Face face;
-	//FT_New_Face(library, fileName.c_str(), 0, &face);
-	//faces[face->family_name][face->style_name] = face;
+	// FT_Face face;
+	// FT_New_Face(library, fileName.c_str(), 0, &face);
+	// faces[face->family_name][face->style_name] = face;
 }
 //
-//FT_Face FontDatabase::getFontInfo(const std::string& family, const std::string& subFamily)
+// FT_Face FontDatabase::getFontInfo(const std::string& family, const std::string& subFamily)
 //{
 //	for (auto& [k, v] : faces)
 //	{
@@ -62,7 +62,7 @@ void FontDatabase::registerFont(const std::string& fileName)
 //					return v2;
 //				}
 //			}
-//			
+//
 //		}
 //	}
 //	LOG_ERROR("Font '{}:{}' not found.", family, subFamily)
@@ -280,9 +280,10 @@ bool TTF::getSimpleGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* gl
 // https://github.com/nothings/stb/blob/2e2bef463a5b53ddf8bb788e25da6b8506314c08/stb_truetype.h#L1813
 bool TTF::getCompoundGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph)
 {
-#define MORE_COMPONENTS 0x0020
-	int32 subGlyphCount = 0;
-	bool  canContinue = true;
+	constexpr auto MORE_COMPONENTS = 0x0020;
+
+	int32		   subGlyphCount = 0;
+	bool		   canContinue = true;
 
 	do
 	{
@@ -346,6 +347,8 @@ bool TTF::getCompoundGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* 
 		break;
 	}
 	while (canContinue);
+
+	return true;
 }
 
 bool TTF::getGlyphShape(ByteReader& reader, FontInfo* info, GlyphShape* glyph)
@@ -418,7 +421,7 @@ bool TTF::readCMAP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 
 	for (int32 i = 0; i < cmap->subTableCount; i++)
 	{
-		CMAPEncodingSubTable encodingSubTable;
+		CMAPEncodingSubTable encodingSubTable{};
 		encodingSubTable.platformId = reader.readUInt16();
 		encodingSubTable.platformSpecificId = reader.readUInt16();
 		encodingSubTable.offset = reader.readUInt32();
@@ -520,6 +523,7 @@ bool TTF::readGLYF(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 
 		fontInfo->glyphs[k] = shape;
 	}
+	return true;
 }
 
 // https://learn.microsoft.com/en-us/typography/opentype/spec/name
@@ -534,7 +538,7 @@ bool TTF::readNAME(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 	// Construct all records
 	for (int32 i = 0; i < fontInfo->count; i++)
 	{
-		NameRecord record;
+		NameRecord record{};
 		record.platformId = reader.readUInt16();
 		record.platformSpecificId = reader.readUInt16();
 		record.languageId = reader.readUInt16();
@@ -630,7 +634,7 @@ bool TTF::readHMTX(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 {
 	reader.seek(initialOffset, ESeekDir::Beginning);
 
-	auto  glyphIndexes = fontInfo->glyphIndexes;
+	auto& glyphIndexes = fontInfo->glyphIndexes;
 	int32 numAdvanceWidthMetrics = fontInfo->numAdvanceWidthMetrics;
 	int32 glyphCount = fontInfo->glyphCount;
 	int32 lastAdvanceWidth = 0;
@@ -666,7 +670,7 @@ void TTF::readTableInfo(ByteReader& reader, std::map<ETableType, Table>& tables,
 {
 	for (int32 i = 0; i < tableSize; i++)
 	{
-		Table t;
+		Table t{};
 
 		// Read the tag into a string.
 		std::string tag = reader.readString(4);
@@ -707,49 +711,49 @@ void TTF::readTableInfo(ByteReader& reader, std::map<ETableType, Table>& tables,
 bool TTF::readTables(ByteReader& reader, FontInfo* fontInfo)
 {
 	// Read NAME
-	auto nameTable = fontInfo->tables[ETableType::NAME];
+	auto& nameTable = fontInfo->tables[ETableType::NAME];
 	readNAME(reader, fontInfo, nameTable.offset);
 
 	// Read HEAD
-	auto headTable = fontInfo->tables[ETableType::HEAD];
+	auto& headTable = fontInfo->tables[ETableType::HEAD];
 	fontInfo->head = std::make_shared<HEAD>();
 	reader.seek(headTable.offset, ESeekDir::Beginning);
 	readHEAD(reader, fontInfo);
 
 	//  Read CMAP
-	auto cmapTable = fontInfo->tables[ETableType::CMAP];
+	auto& cmapTable = fontInfo->tables[ETableType::CMAP];
 	fontInfo->cmap = std::make_shared<CMAP>();
 	if (!readCMAP(reader, fontInfo, cmapTable.offset))
 	{
 		return false;
 	}
 	// Read LOCA
-	auto locaTable = fontInfo->tables[ETableType::LOCA];
+	auto& locaTable = fontInfo->tables[ETableType::LOCA];
 	readLOCA(reader, fontInfo, locaTable.offset);
 
 	// Read GLYF
-	auto glyfTable = fontInfo->tables[ETableType::GLYF];
+	auto& glyfTable = fontInfo->tables[ETableType::GLYF];
 	if (!readGLYF(reader, fontInfo, glyfTable.offset))
 	{
 		return false;
 	}
 
 	// Read HHEA
-	auto hheaTable = fontInfo->tables[ETableType::HHEA];
+	auto& hheaTable = fontInfo->tables[ETableType::HHEA];
 	if (!readHHEA(reader, fontInfo, hheaTable.offset))
 	{
 		return false;
 	}
 
 	// Read MAXP
-	auto maxpTable = fontInfo->tables[ETableType::MAXP];
+	auto& maxpTable = fontInfo->tables[ETableType::MAXP];
 	if (!readMAXP(reader, fontInfo, maxpTable.offset))
 	{
 		return false;
 	}
 
 	// Read HMTX
-	auto hmtxTable = fontInfo->tables[ETableType::HMTX];
+	auto& hmtxTable = fontInfo->tables[ETableType::HMTX];
 	if (!readHMTX(reader, fontInfo, hmtxTable.offset))
 	{
 		return false;

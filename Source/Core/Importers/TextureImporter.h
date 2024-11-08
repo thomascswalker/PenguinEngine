@@ -145,7 +145,7 @@ struct PngChunk
 {
 	RawBuffer<uint8> uncompressedBuffer;
 	RawBuffer<uint8> compressedBuffer;
-	EPngChunkType type;
+	EPngChunkType	 type{};
 };
 
 struct PngMetadata

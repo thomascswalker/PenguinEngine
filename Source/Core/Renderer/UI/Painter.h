@@ -30,8 +30,8 @@ struct Character
 {
 	std::vector<uint8> buffer;
 	vec2i			   size;
-	int32			   yOffset;
-	int32			   advance;
+	int32			   yOffset = 0;
+	int32			   advance = 0;
 };
 
 class Painter

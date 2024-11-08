@@ -35,13 +35,6 @@ using LongDateTime = int64;
 
 namespace TTF
 {
-	enum class EScalarType : uint8
-	{
-		True = 0x74727565,
-		OpenType = 0x4F54544F,
-		Typ1 = 0X74797031
-	};
-
 	enum class ETableType : uint8
 	{
 		CMAP,
@@ -127,9 +120,9 @@ namespace TTF
 	struct GlyphVertex
 	{
 		vec2i			 position;
-		EGlyphVertexType type;
-		EGlyphFlag		 flag;
-		int32			 contourIndex;
+		EGlyphVertexType type{};
+		EGlyphFlag		 flag{};
+		int32			 contourIndex = 0;
 	};
 
 	struct GlyphEdge

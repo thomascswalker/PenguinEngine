@@ -11,7 +11,7 @@ class ObjectManager
 {
 	std::array<Object*, g_maxObjectCount> m_objects{};
 	std::queue<ObjectId> m_availableIds{};
-	uint32 m_objectCount = 0;
+	int32 m_objectCount = 0;
 
 public:
 	ObjectManager()

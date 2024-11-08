@@ -300,7 +300,7 @@ inline void Painter::drawTriangle(const vec2i& v0, const vec2i& v1, const vec2i&
 /** Sort edges in vertical order, from highest vertical point to lowest. **/
 std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 {
-	auto a = edges;
+	auto& a = edges;
 	if (a.begin() == a.end())
 	{
 		return a;
@@ -308,7 +308,7 @@ std::vector<GlyphEdge> Painter::sortEdges(std::vector<GlyphEdge>& edges)
 
 	for (auto i = a.begin() + 1; i < a.end(); ++i)
 	{
-		auto k = *i;
+		auto& k = *i;
 		auto j = i - 1;
 		while (j >= a.begin() && *j < k)
 		{
@@ -420,21 +420,21 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 				else
 				{
 					// GlyphShape* glyph = &m_font->glyphs[c];
-					GlyphShape* glyph = nullptr;
+					//GlyphShape* glyph = nullptr;
 
-					// Start position of the whole text block
-					vec2i screenOffset = pos;
+					//// Start position of the whole text block
+					//vec2i screenOffset = pos;
 
-					// Start position of this glyph specifically
-					vec2i localOffset;
-					localOffset.x = (glyph->minX * scale) + letterAdvance;
-					localOffset.y = (-glyph->minY * scale) + lineAdvance;
+					//// Start position of this glyph specifically
+					//vec2i localOffset;
+					//localOffset.x = (glyph->minX * scale) + letterAdvance;
+					//localOffset.y = (-glyph->minY * scale) + lineAdvance;
 
-					// Draw the glyph
-					drawGlyph(glyph, scale, screenOffset, localOffset, false);
+					//// Draw the glyph
+					//drawGlyph(glyph, scale, screenOffset, localOffset, false);
 
-					// Advance the position of the next glyph
-					letterAdvance += glyph->advanceWidth * scale;
+					//// Advance the position of the next glyph
+					//letterAdvance += glyph->advanceWidth * scale;
 				}
 			}
 			break;

@@ -90,21 +90,17 @@ using line3d = line3d_t<float>;
 template <typename T> struct vec2_t;
 using vec2i = vec2_t<int32>;
 using vec2f = vec2_t<float>;
-using vec2d = vec2_t<double>;
 
 template <typename T> struct vec3_t;
 using vec3i = vec3_t<int32>;
 using vec3f = vec3_t<float>;
-using vec3d = vec3_t<double>;
 
 template <typename T> struct vec4_t;
 using vec4i = vec4_t<int32>;
 using vec4f = vec4_t<float>;
-using vec4d = vec4_t<double>;
 
 template <typename T> struct triangle_t;
 using trianglef = triangle_t<float>;
-using triangled = triangle_t<double>;
 
 // Matrix
 

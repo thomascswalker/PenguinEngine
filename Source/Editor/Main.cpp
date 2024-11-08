@@ -3,9 +3,6 @@
 #define NOMINMAX
 
 #include "Application.h"
-#include "Core/Buffer.h"
-#include "Core/ErrorCodes.h"
-#include "Core/IO.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -28,19 +25,6 @@ int32 WINAPI wWinMain(_In_ HINSTANCE hInstance,
 
 	// Delete the application after it's been run.
 	delete app;
-
-	// If there are any errors, display them in a message box.
-	if (exitCode != Success)
-	{
-		const auto errorMsgs = Logging::Logger::getInstance()->getMessages(Logging::ELogLevel::Error);
-		std::string msg      = "Application failed with error(s):\n\n";
-		for (const auto& errorMsg : errorMsgs)
-		{
-			msg += errorMsg + '\n';
-		}
-		const std::wstring wMsg(msg.begin(), msg.end());
-		MessageBox(nullptr, wMsg.c_str(), L"Error", MB_OK | MB_ICONERROR);
-	}
 
 	// Return the result of running the application.
 	return exitCode;

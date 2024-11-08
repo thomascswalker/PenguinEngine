@@ -382,7 +382,7 @@ public:
 				m_pos += offset;
 				break;
 			case ESeekDir::End:
-				m_pos = m_size - offset;
+				m_pos = (int32)m_size - offset;
 				break;
 		}
 		return m_pos;

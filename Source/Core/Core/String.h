@@ -61,7 +61,7 @@ namespace Strings
 
 	inline void split(const std::string& inString, std::vector<std::string>& outStrings, int32 count)
 	{
-		int32 substringCount = inString.length() / count;
+		int32 substringCount = (int32)inString.length() / count;
 		for (int32 i = 0; i < substringCount; i++)
 		{
 			outStrings.emplace_back(inString.substr(i * count, count));

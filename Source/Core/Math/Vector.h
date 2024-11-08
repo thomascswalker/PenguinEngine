@@ -410,7 +410,7 @@ struct vec3_t
 	__m128 toM128() const
 	{
 		// Convert to float array in reverse order as elements are loaded right to left
-		float _xyzw[4] = {(T)x, (T)y, (T)z, 0.0f};
+		float _xyzw[4] = { (float)x, (float)y, (float)z, 0.0f };
 		// Store the float array
 		return _mm_load_ps(_xyzw);
 	}
