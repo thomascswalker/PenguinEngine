@@ -11,6 +11,7 @@ namespace ResourceManager
 	{
 		std::filesystem::path root = __FILE__;
 		root = root.parent_path(); // Engine
+		root = root.parent_path(); // Core
 		root = root.parent_path(); // Source
 		return root.parent_path(); // PenguinEngine
 	}

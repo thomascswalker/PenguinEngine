@@ -3,7 +3,7 @@
 #include "Math/MathFwd.h"
 #include "Platforms/Generic/PlatformMemory.h"
 
-#include "zlib.h"
+#include "zlib/zlib.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define ZLIB_WINAPI

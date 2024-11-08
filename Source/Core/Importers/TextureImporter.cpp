@@ -2,7 +2,7 @@
 
 #include "Importers/TextureImporter.h"
 
-#include "zlib.h"
+#include "zlib/zlib.h"
 
 #include "Application.h"
 #include "Core/Compression.h"
