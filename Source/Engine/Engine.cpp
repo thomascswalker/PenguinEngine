@@ -125,7 +125,7 @@ void Engine::constructUI()
 	menuPanel->setLayoutMode(ELayoutMode::Horizontal);
 	menuPanel->setVerticalResizeMode(EResizeMode::Fixed);
 	menuPanel->setHorizontalResizeMode(EResizeMode::Expanding);
-	menuPanel->setFixedHeight(40);
+	menuPanel->setFixedHeight(20);
 	canvas->addChild(menuPanel);
 
 	auto exitButton = constructWidget<Button>("Exit");
@@ -155,7 +155,6 @@ void Engine::constructUI()
 	auto texButton = constructWidget<Button>("ImportTexture");
 	texButton->m_onClicked.addRaw(this, &Engine::loadTexture);
 	texButton->setText("Import Texture");
-	texButton->setFontSize(16);
 	texButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(texButton);
 

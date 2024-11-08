@@ -37,9 +37,6 @@ void Painter::initFont()
 	}
 	FT_Set_Pixel_Sizes(m_face, 0, m_fontSize);
 
-	int32 maxAscent = int(m_face->ascender * (m_face->size->metrics.y_scale / 65536.0)) >> 6;
-	int32 maxDescent = int(abs(m_face->descender * (m_face->size->metrics.y_scale / 65536.0))) >> 6;
-
 	for (int32 c = 0; c < 128; c++)
 	{
 		// Get the current glyph slot and in the process, render the glyph into a bitmap
