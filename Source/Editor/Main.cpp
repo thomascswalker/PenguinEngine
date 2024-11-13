@@ -2,32 +2,45 @@
 
 #define NOMINMAX
 
-#include "Application.h"
+#include <memory>
+
+#include "Core/Logging.h"
+#include "Engine/Engine.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
-// Windows entry point
-#include "Platforms/Windows/Win32.h"
+	// Windows entry point
+	#include "Platforms/Windows/Win32.h"
 
-int32 WINAPI wWinMain(_In_ HINSTANCE hInstance,
-                      _In_opt_ HINSTANCE hPrevInstance,
-                      _In_ LPWSTR lpCmdLine,
-                      _In_ int nShowCmd)
+int32 WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
 {
-	// Create a new application
-	Application* app = Application::getInstance();
-
 	// Initialize the application with Win32
-	app->Init<Win32Platform>(hInstance);
+	g_hInstance = hInstance;
+	auto application = Win32Application::create(hInstance);
+	application->init();
 
-	// Run the application. This encapsulates the entire lifetime of the platform, engine, renderer, etc.
-	const int32 exitCode = app->run();
+	// Create the main window
+	application->createMainWindow();
+	auto mainWindow = application->getMainWindow();
 
-	// Delete the application after it's been run.
-	delete app;
+	WindowDescription desc;
+	desc.x = 25;
+	desc.y = 50;
+	desc.width = 200;
+	desc.height = 300;
+	application->createWindow(desc, mainWindow);
 
-	// Return the result of running the application.
-	return exitCode;
+	TimePoint startTime;
+	TimePoint endTime;
+	while (application->getIsRunning())
+	{
+		startTime = PTimer::now();
+		float deltaTime = std::chrono::duration_cast<DurationMs>(endTime - startTime).count();
+		application->tick(deltaTime);
+		endTime = PTimer::now();
+	}
+
+	return 0;
 }
 
 #elif __APPLE__

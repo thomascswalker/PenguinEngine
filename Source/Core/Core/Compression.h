@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Math/MathFwd.h"
-#include "Platforms/Generic/PlatformMemory.h"
+#include "Platforms/Generic/GenericMemory.h"
 
 #include "zlib/zlib.h"
 
@@ -16,18 +16,18 @@ namespace Compression
 {
 	static voidpf zalloc(void* opaque, const uint32 size, const uint32 num)
 	{
-		return PlatformMemory::malloc(static_cast<size_t>(size) * num);
+		return ApplicationMemory::malloc(static_cast<size_t>(size) * num);
 	}
 
 	static void zfree(void* opaque, void* p)
 	{
-		PlatformMemory::free(p);
+		ApplicationMemory::free(p);
 	}
 
 	static int32 uncompressZlib(RawBuffer<uint8>* uncompressedBuffer, RawBuffer<uint8>* compressedBuffer)
 	{
 		uint32 uncompressedSize = (uint32)uncompressedBuffer->size();
-		uint8* uncompressedData = PlatformMemory::malloc<uint8>(uncompressedSize);
+		uint8* uncompressedData = ApplicationMemory::malloc<uint8>(uncompressedSize);
 
 		z_stream stream;
 		stream.zalloc    = &zalloc;

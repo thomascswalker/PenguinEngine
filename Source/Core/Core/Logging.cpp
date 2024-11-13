@@ -1,8 +1,8 @@
 ﻿#include "Core/Logging.h"
 
-Logging::Logger* Logging::Logger::m_instance = getInstance();
+Logging::Logger* Logging::Logger::m_instance = get();
 
-Logging::Logger* Logging::Logger::getInstance()
+Logging::Logger* Logging::Logger::get()
 {
 	if (m_instance == nullptr)
 	{

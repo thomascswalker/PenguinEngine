@@ -5,9 +5,10 @@
 
 #include "Core/Array.h"
 #include "Core/Buffer.h"
-#include "Platforms/Generic/Platform.h"
+#include "Platforms/Generic/Application.h"
 #include "Math/Color.h"
 #include "Math/Vector.h"
+#include <Platforms/Generic/Application.h>
 
 class Texture;
 /* Global container for all texture objects. */
@@ -48,16 +49,16 @@ class Texture
 	/** The order of RGB bytes in RGBA */
 	ETextureByteOrder m_byteOrder = ETextureByteOrder::RGBA;
 
-	void _initFromPlatformType()
+	void _initFromApplicationType()
 	{
-		EPlatformType platformType = getPlatformType();
+		EApplicationType platformType = getApplicationType();
 		switch (platformType)
 		{
-			case EPlatformType::Windows:
+			case EApplicationType::Windows:
 				m_byteOrder = ETextureByteOrder::BRGA;
 				break;
-			case EPlatformType::MacOS:
-			case EPlatformType::Linux:
+			case EApplicationType::MacOS:
+			case EApplicationType::Linux:
 			default:
 				m_byteOrder = ETextureByteOrder::RGBA;
 				break;

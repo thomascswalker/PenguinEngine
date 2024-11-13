@@ -86,10 +86,10 @@ enum class EKey : uint8
 
 enum class EModifierKey : uint8
 {
-	None  = 0x00,
+	None = 0x00,
 	Shift = 0x01,
-	Ctrl  = 0x02,
-	Alt   = 0x04
+	Ctrl = 0x02,
+	Alt = 0x04
 };
 
 DEFINE_BITMASK_OPERATORS(EModifierKey)
@@ -131,25 +131,23 @@ protected:
 	vec2f m_deltaCursorPosition;
 
 	std::map<EKey, bool> m_keyStateMap;
-	EModifierKey m_modifierKeys = EModifierKey::None;
+	EModifierKey		 m_modifierKeys = EModifierKey::None;
 
 	IInputHandler();
 	~IInputHandler() = default;
 
 public:
-	static IInputHandler* getInstance();
-
 	// Events
-	OnMouseMoved m_onMouseMoved;
-	OnMouseLeftDown m_onMouseLeftDown;
-	OnMouseRightDown m_onMouseRightDown;
-	OnMouseMiddleDown m_onMouseMiddleDown;
-	OnMouseLeftUp m_onMouseLeftUp;
-	OnMouseRightUp m_onMouseRightUp;
-	OnMouseMiddleUp m_onMouseMiddleUp;
+	OnMouseMoved		  m_onMouseMoved;
+	OnMouseLeftDown		  m_onMouseLeftDown;
+	OnMouseRightDown	  m_onMouseRightDown;
+	OnMouseMiddleDown	  m_onMouseMiddleDown;
+	OnMouseLeftUp		  m_onMouseLeftUp;
+	OnMouseRightUp		  m_onMouseRightUp;
+	OnMouseMiddleUp		  m_onMouseMiddleUp;
 	OnMouseMiddleScrolled m_onMouseMiddleScrolled;
-	OnKeyPressed m_keyPressed;
-	OnMenuActionPressed m_menuActionPressed;
+	OnKeyPressed		  m_keyPressed;
+	OnMenuActionPressed	  m_menuActionPressed;
 
 	// Mouse
 	virtual bool onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition);
@@ -163,18 +161,15 @@ public:
 	virtual vec2f getCurrentCursorPosition() const;
 	virtual vec2f getPreviousCursorPosition() const;
 	virtual vec2f getDeltaCursorPosition() const;
-	virtual void resetDeltaCursorPosition();
+	virtual void  resetDeltaCursorPosition();
 
 	// Keys
 	virtual std::vector<EKey> getKeysDown() const;
-	virtual bool onKeyDown(EKey keyCode, int32 keyFlags, bool isRepeat);
-	virtual bool onKeyUp(EKey keyCode, int32 keyFlags, bool isRepeat);
-	virtual bool isKeyDown(EKey keyCode) const;
-	virtual void consumeKey(const EKey keyCode);
-	virtual bool isAltDown() const;
-	virtual bool isShiftDown() const;
-	virtual bool isCtrlDown() const;
-
-	// Menus
-	virtual void onMenuActionPressed(EMenuAction actionId) = 0;
+	virtual bool			  onKeyDown(EKey keyCode, int32 keyFlags, bool isRepeat);
+	virtual bool			  onKeyUp(EKey keyCode, int32 keyFlags, bool isRepeat);
+	virtual bool			  isKeyDown(EKey keyCode) const;
+	virtual void			  consumeKey(const EKey keyCode);
+	virtual bool			  isAltDown() const;
+	virtual bool			  isShiftDown() const;
+	virtual bool			  isCtrlDown() const;
 };

@@ -4,15 +4,12 @@
 
 #include "zlib/zlib.h"
 
-#include "Application.h"
 #include "Core/Compression.h"
 
 constexpr int32 g_channelCount = 4; // Desired channel count for all textures
 constexpr int32 g_channelGray  = 1; // Gray scale (single channel)
 constexpr int32 g_channelRgb   = 3; // RGB (no alpha)
 constexpr int32 g_channelRgba  = 4; // RGBA (includes alpha)
-
-auto app = Application::getInstance();
 
 inline uint8 truncate(int32 value)
 {
@@ -192,7 +189,7 @@ int32 TextureImporter::pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, si
 	int32 inBpp  = inChannelCount * bpc;  // Bytes-per-pixel from the input image
 
 	// Allocate memory to the output PNG given the bytes-per-pixel of the desired channel count.
-	out = PlatformMemory::malloc<uint8>(width * height * outBpp); // extra bytes to write off the end into
+	out = ApplicationMemory::malloc<uint8>(width * height * outBpp); // extra bytes to write off the end into
 	if (!out)
 	{
 		LOG_ERROR("Out of memory.");
@@ -218,7 +215,7 @@ int32 TextureImporter::pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, si
 
 	// Allocate two scan m_lines worth of memory to the workspace buffer. This buffer will contain the temporary
 	// unfiltered bytes. This is eventually copied into the final PNG buffer.
-	auto filterBuffer = PlatformMemory::malloc<uint8>(outRowByteCount * 2);
+	auto filterBuffer = ApplicationMemory::malloc<uint8>(outRowByteCount * 2);
 	if (!filterBuffer)
 	{
 		LOG_ERROR("Out of memory.");
@@ -277,7 +274,7 @@ int32 TextureImporter::pngUnfilter(RawBuffer<uint8>* buffer, PngTexture* png, si
 	}
 
 	// Free the temporary workspace buffer we were using
-	PlatformMemory::free(filterBuffer);
+	ApplicationMemory::free(filterBuffer);
 
 	// Set the final PNG data pointer to our `out` pointer where we've stored all the data. This probably shouldn't
 	// be necessary as the `out` pointer is derived from `png->data.getPtr()` in the first place, but this seems

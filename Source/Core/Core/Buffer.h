@@ -5,7 +5,7 @@
 #include <bit>
 #include <cassert>
 
-#include "Platforms/Generic/PlatformMemory.h"
+#include "Platforms/Generic/GenericMemory.h"
 
 inline uint8 g_bitsPerByte = 8;
 
@@ -31,7 +31,7 @@ template <typename T> T swapByteOrder(T value)
 
 /**
  * @brief This class stores data of type T with a specified size. The management of this class' memory is done
- * with PlatformMemory functions.
+ * with ApplicationMemory functions.
  */
 template <typename T> class RawBuffer
 {
@@ -42,11 +42,11 @@ template <typename T> class RawBuffer
 public:
 	RawBuffer() = default;
 
-	explicit RawBuffer(const size_t inSize) : m_size(inSize) { m_data = PlatformMemory::malloc<T>(inSize); }
+	explicit RawBuffer(const size_t inSize) : m_size(inSize) { m_data = ApplicationMemory::malloc<T>(inSize); }
 
 	explicit RawBuffer(T* inData, const size_t inSize) : m_data(inData), m_size(inSize)
 	{
-		m_data = PlatformMemory::malloc<T>(inSize);
+		m_data = ApplicationMemory::malloc<T>(inSize);
 		std::memcpy(m_data, inData, inSize);
 	}
 
@@ -55,7 +55,7 @@ public:
 	{
 		if (other.m_data)
 		{
-			m_data = PlatformMemory::malloc<T>(m_size);
+			m_data = ApplicationMemory::malloc<T>(m_size);
 			std::memcpy(m_data, other.m_data, m_size);
 		}
 		else
@@ -79,11 +79,11 @@ public:
 	{
 		if (!(*this == other))
 		{
-			PlatformMemory::free(m_data);
+			ApplicationMemory::free(m_data);
 			if (other.m_data)
 			{
 				m_size = other.m_size;
-				m_data = PlatformMemory::malloc<T>(m_size);
+				m_data = ApplicationMemory::malloc<T>(m_size);
 				std::memcpy(m_data, other.m_data, m_size);
 			}
 			else
@@ -100,7 +100,7 @@ public:
 	{
 		if (!(*this == other))
 		{
-			PlatformMemory::free(m_data);
+			ApplicationMemory::free(m_data);
 			m_data = other.m_data;
 			m_size = other.m_size;
 			other.m_data = nullptr;
@@ -124,11 +124,11 @@ public:
 #endif
 		if (m_data != nullptr)
 		{
-			PlatformMemory::free(m_data);
+			ApplicationMemory::free(m_data);
 			m_data = nullptr;
 		}
 		m_size = inSize;
-		m_data = (T*)PlatformMemory::malloc(inSize);
+		m_data = (T*)ApplicationMemory::malloc(inSize);
 #ifdef _DEBUG
 		assert(m_data != nullptr);
 #endif
@@ -142,10 +142,10 @@ public:
 #endif
 		if (m_data != nullptr)
 		{
-			PlatformMemory::free(m_data);
+			ApplicationMemory::free(m_data);
 			m_data = nullptr;
 		}
-		m_data = (T*)PlatformMemory::malloc(m_size);
+		m_data = (T*)ApplicationMemory::malloc(m_size);
 #ifdef _DEBUG
 		assert(m_data != nullptr);
 #endif
@@ -157,7 +157,7 @@ public:
 		size_t oldSize = m_size;
 
 		// Allocate a temporary buffer for the current data
-		void* tmp = PlatformMemory::malloc(oldSize);
+		void* tmp = ApplicationMemory::malloc(oldSize);
 
 		// Copy current data into the temp buffer
 		std::memcpy(tmp, m_data, oldSize);
@@ -166,10 +166,10 @@ public:
 		m_size += addSize;
 
 		// Free the old data
-		PlatformMemory::free(m_data);
+		ApplicationMemory::free(m_data);
 
 		// Create a new array with the new size
-		m_data = (T*)PlatformMemory::malloc(m_size);
+		m_data = (T*)ApplicationMemory::malloc(m_size);
 
 		// Copy the old data into the new buffer
 		std::memcpy(m_data, tmp, oldSize);
@@ -177,7 +177,7 @@ public:
 
 	void clear()
 	{
-		PlatformMemory::free(m_data);
+		ApplicationMemory::free(m_data);
 		m_size = 0;
 		m_data = nullptr;
 	}

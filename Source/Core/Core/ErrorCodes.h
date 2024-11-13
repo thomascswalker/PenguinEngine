@@ -5,11 +5,11 @@ enum EErrorCodes
 	// Generic
 	Success = 0,
 
-	// Platform
-	PlatformInitError = 10,
-	PlatformCreateError,
-	PlatformShowError,
-	PlatformStartError,
-	PlatformEndError,
-	PlatformLoopError,
+	// Application
+	ApplicationInitError = 10,
+	ApplicationCreateError,
+	ApplicationShowError,
+	ApplicationStartError,
+	ApplicationEndError,
+	ApplicationLoopError,
 };

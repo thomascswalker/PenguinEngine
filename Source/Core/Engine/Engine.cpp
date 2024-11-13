@@ -1,6 +1,5 @@
 ﻿#include "Engine/Engine.h"
 
-#include "Application.h"
 #include "ObjectManager.h"
 #include "Actors/StaticMeshActor.h"
 
@@ -8,16 +7,17 @@
 #include "Importers/MeshImporter.h"
 #include "Importers/TextureImporter.h"
 #include "Input/InputHandler.h"
-#include "Platforms/Generic/PlatformInterface.h"
+#include "Platforms/Generic/GenericApplication.h"
 #include "Engine/Mesh.h"
 #include "Renderer/UI/Widget.h"
 #include "Renderer/Font.h"
+#include <Platforms/Windows/Win32.h>
 
 using namespace WidgetManager;
 
-Engine* Engine::m_instance = getInstance();
+Engine* Engine::m_instance = get();
 
-Engine* Engine::getInstance()
+Engine* Engine::get()
 {
 	if (m_instance == nullptr)
 	{
@@ -33,26 +33,8 @@ bool Engine::startup(uint32 inWidth, uint32 inHeight)
 	m_viewport = std::make_shared<Viewport>(inWidth, inHeight);
 	m_isRunning = true;
 
-	// Track starting time
-	m_startTime = PTimer::now();
-
-	// Bind input events
-	if (IInputHandler* input = IInputHandler::getInstance())
-	{
-		LOG_INFO("Setting up input.")
-		// Keyboard
-		input->m_keyPressed.addRaw(this, &Engine::onKeyPressed);
-
-		// Mouse
-		input->m_onMouseMiddleScrolled.addRaw(this, &Engine::onMouseMiddleScrolled);
-		input->m_onMouseLeftDown.addRaw(this, &Engine::onLeftMouseDown);
-		input->m_onMouseLeftUp.addRaw(this, &Engine::onLeftMouseUp);
-		input->m_onMouseMiddleUp.addRaw(this, &Engine::onMiddleMouseUp);
-		input->m_onMouseMoved.addRaw(this, &Engine::onMouseMoved);
-	}
-
 	// Load fonts
-	//g_fontDatabase->init();
+	// g_fontDatabase->init();
 	LOG_INFO("Initialized font database.")
 
 	// Construct UI
@@ -69,48 +51,44 @@ bool Engine::shutdown()
 	return true;
 }
 
-void Engine::tick()
+void Engine::tick(float deltaTime)
 {
-	const TimePoint endTime = PTimer::now();
-	m_deltaTime = std::chrono::duration_cast<DurationMs>(endTime - m_startTime).count();
-	m_startTime = PTimer::now();
+	//// Update camera movement
+	//if (const IInputHandler* input = IInputHandler::get())
+	//{
+	//	// Update camera position
+	//	Camera*		camera = getViewportCamera();
+	//	const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
 
-	// Update camera movement
-	if (const IInputHandler* input = IInputHandler::getInstance())
-	{
-		// Update camera position
-		Camera*		camera = getViewportCamera();
-		const vec2f deltaMouseCursor = input->getDeltaCursorPosition();
+	//	// Orbit
+	//	if (input->isMouseDown(EMouseButtonType::Left) && input->isAltDown())
+	//	{
+	//		camera->orbit(deltaMouseCursor.x * m_deltaTime, deltaMouseCursor.y * m_deltaTime);
+	//	}
 
-		// Orbit
-		if (input->isMouseDown(EMouseButtonType::Left) && input->isAltDown())
-		{
-			camera->orbit(deltaMouseCursor.x * m_deltaTime, deltaMouseCursor.y * m_deltaTime);
-		}
+	//	// Pan
+	//	if (input->isMouseDown(EMouseButtonType::Middle) && input->isAltDown())
+	//	{
+	//		camera->pan(deltaMouseCursor.x * m_deltaTime, deltaMouseCursor.y * m_deltaTime);
+	//	}
 
-		// Pan
-		if (input->isMouseDown(EMouseButtonType::Middle) && input->isAltDown())
-		{
-			camera->pan(deltaMouseCursor.x * m_deltaTime, deltaMouseCursor.y * m_deltaTime);
-		}
+	//	// Zoom
+	//	if (input->isMouseDown(EMouseButtonType::Right) && input->isAltDown())
+	//	{
+	//		camera->zoom(deltaMouseCursor.y * m_deltaTime);
+	//	}
+	//}
 
-		// Zoom
-		if (input->isMouseDown(EMouseButtonType::Right) && input->isAltDown())
-		{
-			camera->zoom(deltaMouseCursor.y * m_deltaTime);
-		}
-	}
+	//// Tick every object
+	//auto tickables = g_objectManager.getTickables();
+	//for (auto tickable : tickables)
+	//{
+	//	tickable->update(m_deltaTime);
+	//}
 
-	// Tick every object
-	auto tickables = g_objectManager.getTickables();
-	for (auto tickable : tickables)
-	{
-		tickable->update(m_deltaTime);
-	}
-
-	// Update UI Widgets
-	Widget* root = WidgetManager::g_rootWidget;
-	WidgetManager::layoutWidget(root, vec2i{ m_viewport->getWidth(), m_viewport->getHeight() }, recti{ { 0, 0 }, m_viewport->getSize() });
+	//// Update UI Widgets
+	//Widget* root = WidgetManager::g_rootWidget;
+	//WidgetManager::layoutWidget(root, vec2i{ m_viewport->getWidth(), m_viewport->getHeight() }, recti{ { 0, 0 }, m_viewport->getSize() });
 }
 
 void Engine::constructUI()
@@ -157,7 +135,6 @@ void Engine::constructUI()
 	texButton->setText("Import Texture");
 	texButton->setVerticalResizeMode(EResizeMode::Fixed);
 	toolPanel->addChild(texButton);
-
 }
 
 void Engine::onKeyPressed(const EKey keyCode) const
@@ -201,16 +178,16 @@ void Engine::onKeyPressed(const EKey keyCode) const
 
 void Engine::onLeftMouseDown(MouseData& mouse) const
 {
-	WidgetManager::updateWidgets(mouse);
+	//WidgetManager::updateWidgets(mouse);
 }
 
 void Engine::onLeftMouseUp(MouseData& mouse) const
 {
-	WidgetManager::updateWidgets(mouse);
+	//WidgetManager::updateWidgets(mouse);
 
-	Camera* camera = getViewportCamera();
-	camera->m_deltaRotation.phi = 0.0f;
-	camera->m_deltaRotation.theta = 0.0f;
+	//Camera* camera = getViewportCamera();
+	//camera->m_deltaRotation.phi = 0.0f;
+	//camera->m_deltaRotation.theta = 0.0f;
 }
 
 void Engine::onMiddleMouseUp(MouseData& mouse) const
@@ -232,47 +209,45 @@ void Engine::onMouseMiddleScrolled(MouseData& mouse) const
 
 void Engine::loadMesh() const
 {
-	Application* app = Application::getInstance();
-	IPlatform*	 platform = app->getPlatform();
-	std::string	 fileName;
-	if (platform->getFileDialog(fileName, "obj"))
-	{
-		// Load model
-		auto mesh = new Mesh();
-		ObjImporter::import(fileName, mesh);
-		mesh->processTriangles();
-		g_meshes.push_back(std::move(mesh));
-		LOG_INFO("Loaded model {}.", fileName)
+	//auto		platform = EntryPoint::getApplication();
+	//std::string fileName;
+	//if (platform->getFileDialog(fileName, "obj"))
+	//{
+	//	// Load model
+	//	auto mesh = new Mesh();
+	//	ObjImporter::import(fileName, mesh);
+	//	mesh->processTriangles();
+	//	g_meshes.push_back(std::move(mesh));
+	//	LOG_INFO("Loaded model {}.", fileName)
 
-		if (StaticMeshActor* staticMeshActor = g_objectManager.createObject<StaticMeshActor>())
-		{
-			// Set the mesh in the actor
-			staticMeshActor->setMesh(g_meshes.back());
-			// Bind the mesh to the render pipeline
-			m_viewport->getRHI()->addRenderable(staticMeshActor);
-		}
-		else
-		{
-			LOG_ERROR("Failed to construct StaticMeshActor.")
-		}
-	}
+	//	if (StaticMeshActor* staticMeshActor = g_objectManager.createObject<StaticMeshActor>())
+	//	{
+	//		// Set the mesh in the actor
+	//		staticMeshActor->setMesh(g_meshes.back());
+	//		// Bind the mesh to the render pipeline
+	//		m_viewport->getRHI()->addRenderable(staticMeshActor);
+	//	}
+	//	else
+	//	{
+	//		LOG_ERROR("Failed to construct StaticMeshActor.")
+	//	}
+	//}
 }
 
 void Engine::loadTexture() const
 {
-	Application* app = Application::getInstance();
-	IPlatform*	 platform = app->getPlatform();
-	std::string	 fileName;
-	if (platform->getFileDialog(fileName, "png"))
-	{
-		// Load texture
-		g_textures.clear();
-		const auto texture = std::make_shared<Texture>();
-		TextureImporter::import(fileName, texture.get(), ETextureFileFormat::Rgba);
-		texture->flipVertical();
-		g_textures.emplace_back(texture);
-		LOG_INFO("Loaded texture {}.", fileName)
+	//auto		platform = EntryPoint::getApplication();
+	//std::string fileName;
+	//if (platform->getFileDialog(fileName, "png"))
+	//{
+	//	// Load texture
+	//	g_textures.clear();
+	//	const auto texture = std::make_shared<Texture>();
+	//	TextureImporter::import(fileName, texture.get(), ETextureFileFormat::Rgba);
+	//	texture->flipVertical();
+	//	g_textures.emplace_back(texture);
+	//	LOG_INFO("Loaded texture {}.", fileName)
 
-		m_viewport->getRHI()->addTexture(texture.get());
-	}
+	//	m_viewport->getRHI()->addTexture(texture.get());
+	//}
 }

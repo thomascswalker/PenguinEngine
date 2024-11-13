@@ -1,9 +1,5 @@
 ﻿#include "Input/InputHandler.h"
 
-#if (defined(_WIN32) || defined(_WIN64))
-#include "Platforms/Windows/Win32InputHandler.h"
-#endif
-
 IInputHandler::IInputHandler()
 {
 	constexpr uint8 keyCount = static_cast<uint8>(EKey::Count);
@@ -11,15 +7,6 @@ IInputHandler::IInputHandler()
 	{
 		m_keyStateMap.emplace(static_cast<EKey>(index), false);
 	}
-}
-
-IInputHandler* IInputHandler::getInstance()
-{
-#if (defined(_WIN32) || defined(_WIN64))
-	return Win32InputHandler::getInstance();
-#else
-	return nullptr;
-#endif
 }
 
 bool IInputHandler::onMouseDown(EMouseButtonType buttonType, const vec2f& cursorPosition)

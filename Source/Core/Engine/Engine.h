@@ -17,10 +17,10 @@ class Engine
 
 public:
 	static Engine* m_instance;
-	static Engine* getInstance();
+	static Engine* get();
 
 	/**
-	 * @brief Called during the IPlatform::create() method.
+	 * @brief Called during the IApplication::create() method.
 	 * @param inWidth The default window width.
 	 * @param inHeight The default window height.
 	 * @return bool True if startup is successful, false otherwise.
@@ -28,7 +28,7 @@ public:
 	bool startup(uint32 inWidth, uint32 inHeight);
 
 	/**
-	 * @brief Called when the engine is requested to shutdown. This is handled by the specific IPlatform instantiation.
+	 * @brief Called when the engine is requested to shutdown. This is handled by the specific IApplication instantiation.
 	 * @return bool True if the shutdown is successful, false otherwise.
 	 */
 	bool shutdown();
@@ -36,7 +36,7 @@ public:
 	/**
 	 * @brief Called every game loop. This will tick all objects in the scene (cameras, meshes, etc.)
 	 */
-	void tick();
+	void tick(float deltaTime);
 
 	void exit() { m_isRunning = false; }
 

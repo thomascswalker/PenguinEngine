@@ -62,7 +62,7 @@ namespace TTF
 		t.type = ETableType::name; \
 	}
 
-	enum class ECMAPPlatform : uint8
+	enum class ECMAPApplication : uint8
 	{
 		Unicode = 0,
 		Macintosh = 1,

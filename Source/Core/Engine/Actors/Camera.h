@@ -3,7 +3,7 @@
 #include "Engine/Actors/Actor.h"
 #include "Math/MathFwd.h"
 #include "Math/Spherical.h"
-#include "Platforms/Generic/PlatformMemory.h"
+#include "Platforms/Generic/GenericMemory.h"
 
 
 constexpr float g_defaultFov  = 54.3f;

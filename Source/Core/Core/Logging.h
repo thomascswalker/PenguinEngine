@@ -51,7 +51,7 @@ namespace Logging
 		~Logger() = default;
 		void operator=(const Logger& other) = delete;
 
-		static Logger* getInstance();
+		static Logger* get();
 
 		template <typename... Types> void log(std::format_string<Types...> fmt, ELogLevel inLevel, Types&&... args)
 		{
@@ -110,23 +110,23 @@ namespace Logging
 	{
 #if _DEBUG
 		std::cout << std::format(fmt, std::forward<Types>(args)...) << std::endl;
-		Logger::getInstance()->log(fmt, ELogLevel::Debug, std::forward<Types>(args)...);
+		Logger::get()->log(fmt, ELogLevel::Debug, std::forward<Types>(args)...);
 #endif
 	}
 
 	template <typename... Types> static constexpr void info(std::format_string<Types...> fmt, Types&&... args)
 	{
-		Logger::getInstance()->log(fmt, ELogLevel::Info, std::forward<Types>(args)...);
+		Logger::get()->log(fmt, ELogLevel::Info, std::forward<Types>(args)...);
 	}
 
 	template <typename... Types> static constexpr void warning(std::format_string<Types...> fmt, Types&&... args)
 	{
-		Logger::getInstance()->log(fmt, ELogLevel::Warning, std::forward<Types>(args)...);
+		Logger::get()->log(fmt, ELogLevel::Warning, std::forward<Types>(args)...);
 	}
 
 	template <typename... Types> static constexpr void error(std::format_string<Types...> fmt, Types&&... args)
 	{
-		Logger::getInstance()->log(fmt, ELogLevel::Error, std::forward<Types>(args)...);
+		Logger::get()->log(fmt, ELogLevel::Error, std::forward<Types>(args)...);
 	}
 } // namespace Logging
 

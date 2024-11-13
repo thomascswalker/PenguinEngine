@@ -19,9 +19,9 @@ constexpr int32	 g_maxWindowWidth = 2560;
 constexpr int32	 g_maxWindowHeight = 1440;
 constexpr int32	 g_maxWindowBufferSize = (g_maxWindowWidth + 1) * (g_maxWindowHeight + 1) * g_bytesPerPixel;
 /**
- * @brief Platform-specific memory management functions.
+ * @brief Application-specific memory management functions.
  */
-namespace PlatformMemory
+namespace ApplicationMemory
 {
 	/**
 	 * @brief Frees the specified memory block.

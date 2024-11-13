@@ -48,7 +48,7 @@ public:
 
 	void setByteCode(const void* byteCode, const size_t byteCodeSize)
 	{
-		m_byteCode = PlatformMemory::malloc<char>(byteCodeSize);
+		m_byteCode = ApplicationMemory::malloc<char>(byteCodeSize);
 		std::memcpy(m_byteCode, byteCode, byteCodeSize);
 		m_byteCodeSize = byteCodeSize;
 	}
