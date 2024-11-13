@@ -20,15 +20,19 @@ int32 WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	application->init();
 
 	// Create the main window
-	application->createMainWindow();
+	WindowDescription mainWindowDesc;
+	mainWindowDesc.width = 640;
+	mainWindowDesc.height = 480;
+	mainWindowDesc.title = "Penguin Engine";
+	application->createWindow(mainWindowDesc, nullptr);
 	auto mainWindow = application->getMainWindow();
 
-	WindowDescription desc;
-	desc.x = 25;
-	desc.y = 50;
-	desc.width = 200;
-	desc.height = 300;
-	application->createWindow(desc, mainWindow);
+	WindowDescription windowDesc;
+	windowDesc.x = 25;
+	windowDesc.y = 50;
+	windowDesc.width = 200;
+	windowDesc.height = 300;
+	application->createWindow(windowDesc, mainWindow);
 
 	TimePoint startTime;
 	TimePoint endTime;

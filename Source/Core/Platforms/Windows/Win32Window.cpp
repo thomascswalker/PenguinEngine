@@ -14,7 +14,7 @@ void Win32Window::resize(int32 width, int32 height)
 	m_bitmapInfo.bmiHeader.biHeight = -height;
 	m_displayBitmap = ::CreateBitmap(width, height, 1, 32, nullptr);
 
-	m_texture = std::make_shared<Texture>(vec2i{ m_description.width, m_description.height });
+	m_displayTexture = std::make_shared<Texture>(vec2i{ m_description.width, m_description.height });
 }
 
 void Win32Window::show()
@@ -23,34 +23,70 @@ void Win32Window::show()
 	::ShowWindow(m_hwnd, command);
 }
 
-void Win32Window::paint()
+void Win32Window::hide()
 {
-	m_painter->drawRect({ 0, 0, 25, 25 }, Color::red());
-
-	InvalidateRect(m_hwnd, nullptr, TRUE);
-	PAINTSTRUCT paint;
-	const HDC	deviceContext = BeginPaint(m_hwnd, &paint);
-	const HDC	renderContext = CreateCompatibleDC(deviceContext);
-
-	int32 width = m_description.width;
-	int32 height = m_description.height;
-	SetDIBits(renderContext, m_displayBitmap, 0, height, m_texture->getData(), &m_bitmapInfo, 0);
-	if (!BitBlt(deviceContext, 0, 0, m_description.width, m_description.height, renderContext, 0, 0, SRCCOPY)) // NOLINT
-	{
-		LOG_ERROR("Failed during BitBlt")
-	}
-
-	// Cleanup and end painting
-	ReleaseDC(m_hwnd, deviceContext);
-	DeleteDC(deviceContext);
-	EndPaint(m_hwnd, &paint);
+	int32 command = SW_HIDE;
+	::ShowWindow(m_hwnd, command);
 }
 
-bool Win32Window::initialize(Win32Application* platform, HINSTANCE instance, const WindowDescription& desc, std ::shared_ptr<Win32Window> parent)
+void Win32Window::paint()
+{
+	HDC windowDeviceContext;
+	HDC memoryDeviceContext = NULL;
+
+	// Retrieve the handle to a display device context for the client
+	// area of the window.
+	windowDeviceContext = GetDC(m_hwnd);
+
+	// Create a compatible DC, which is used in a BitBlt from the window DC.
+	memoryDeviceContext = CreateCompatibleDC(windowDeviceContext);
+	if (!memoryDeviceContext)
+	{
+		MessageBox(m_hwnd, L"CreateCompatibleDC has failed", L"Failed", MB_OK);
+		return;
+	}
+
+	// Get the client area for size calculation.
+	RECT rcClient;
+	GetClientRect(m_hwnd, &rcClient);
+	int32 width = rcClient.right - rcClient.left;
+	int32 height = rcClient.bottom - rcClient.top;
+
+	// This is the best stretch mode.
+	SetStretchBltMode(windowDeviceContext, HALFTONE);
+
+	// Create a compatible bitmap from the Window DC.
+	m_displayBitmap = CreateCompatibleBitmap(windowDeviceContext, width, height);
+	if (!m_displayBitmap)
+	{
+		MessageBox(m_hwnd, L"CreateCompatibleBitmap Failed", L"Failed", MB_OK);
+		return;
+	}
+
+	// Select the compatible bitmap into the compatible memory DC.
+	SelectObject(memoryDeviceContext, m_displayBitmap);
+
+	// Bit block transfer into our compatible memory DC.
+	StretchDIBits(windowDeviceContext, // Target context
+		0, 0,						   // Dest pos
+		width, height,				   // Dest size
+		0, 0,						   // Source pos
+		width, height,				   // Source size
+		m_displayTexture->getData(),		   // Source data
+		&m_bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
+
+	SAFE_DELETE(m_displayBitmap)
+	SAFE_DELETE(memoryDeviceContext)
+	ReleaseDC(m_hwnd, windowDeviceContext);
+}
+
+bool Win32Window::initialize(
+	Win32Application* platform, HINSTANCE instance, const WindowDescription& desc, std ::shared_ptr<Win32Window> parent)
 {
 	auto flags = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
 	auto parentHwnd = parent != nullptr ? parent->getHwnd() : nullptr;
-	m_hwnd = CreateWindowEx(0, m_windowClass, Strings::toWString(m_description.title).c_str(), flags, 0, 0, m_description.width, m_description.height, parentHwnd, nullptr, instance, nullptr);
+	m_hwnd = CreateWindowEx(0, m_windowClass, Strings::toWString(desc.title).c_str(), flags, 0, 0, desc.width,
+		desc.height, parentHwnd, nullptr, instance, nullptr);
 
 	if (m_hwnd == nullptr)
 	{
@@ -70,8 +106,9 @@ bool Win32Window::initialize(Win32Application* platform, HINSTANCE instance, con
 	m_bitmapInfo.bmiHeader.biBitCount = 32;
 	m_bitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-	m_texture = std::make_shared<Texture>(vec2i{ width, height });
-	m_painter = std::make_shared<Painter>(m_texture.get(), recti(0, 0, width, height));
+	m_displayTexture = std::make_shared<Texture>(vec2i{ width, height });
+	m_displayTexture->fill(Color::red());
+	m_painter = std::make_shared<Painter>(m_displayTexture.get(), recti(0, 0, width, height));
 
 	return true;
 }
@@ -80,8 +117,8 @@ bool Win32Window::create(const HINSTANCE hInstance)
 {
 
 	// Create the window.
-	m_hwnd =
-		CreateWindowEx(0, m_windowClass, Strings::toWString(m_description.title).c_str(), WS_OVERLAPPEDWINDOW, 0, 0, m_description.width, m_description.height, nullptr, nullptr, hInstance, nullptr);
+	m_hwnd = CreateWindowEx(0, m_windowClass, Strings::toWString(m_description.title).c_str(), WS_OVERLAPPEDWINDOW, 0,
+		0, m_description.width, m_description.height, nullptr, nullptr, hInstance, nullptr);
 
 	return m_hwnd != nullptr;
 }

@@ -3,10 +3,16 @@
 #include <vector>
 #include <windows.h>
 
-#include "Platforms/Generic/GenericApplication.h"
 #include "Engine/Actors/Camera.h"
-#include "Win32Window.h"
 #include "Engine/Timer.h"
+#include "Platforms/Generic/GenericApplication.h"
+#include "Win32Window.h"
+
+#define SAFE_DELETE(x)   \
+	if (x != nullptr)    \
+	{                    \
+		DeleteObject(x); \
+	}
 
 inline HINSTANCE		 g_hInstance;
 inline Win32Application* g_windowsApplication = nullptr;
@@ -68,10 +74,11 @@ inline std::map<int32, EKey> g_win32KeyMap{
 class Win32Application : public IApplication, public IInputHandler
 {
 	// Windows specific variables
-	std::vector<std ::shared_ptr<Win32Window>> m_windows;
-	std ::shared_ptr<Win32Window>			   m_mainWindow;
-	HINSTANCE								   m_hInstance;
-	MouseData								   m_mouse;
+	std::vector<std::shared_ptr<Win32Window>> m_windows;
+	Win32Window*							  m_activeWindow;
+	std ::shared_ptr<Win32Window>			  m_mainWindow;
+	HINSTANCE								  m_hInstance;
+	MouseData								  m_mouse;
 
 protected:
 	/**
@@ -89,15 +96,15 @@ public:
 	LRESULT		   windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam);
 	static LRESULT appWindowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam);
 
-	void						  init() override;
-	void						  tick(float deltaTime) override;
-	void						  setupInput() override;
-	std ::shared_ptr<Win32Window> createWindow(const WindowDescription& description, std ::shared_ptr<Win32Window> parent);
-	void						  createMainWindow();
-	std ::shared_ptr<Win32Window> getMainWindow();
-	void						  processMessages() override;
+	void init() override;
+	void tick(float deltaTime) override;
+	void setupInput() override;
 
-	std ::shared_ptr<Win32Window> getWindowFromHwnd(HWND hwnd);
+	std::shared_ptr<Win32Window> createWindow(
+		const WindowDescription& description, std ::shared_ptr<Win32Window> parent);
+	std::shared_ptr<Win32Window> getMainWindow();
+	void						 processMessages() override;
+	std::shared_ptr<Win32Window> getWindowFromHwnd(HWND hwnd);
 
 	// Input Handler
 	bool onMouseDown(const EMouseButtonType buttonType, const vec2f& cursorPosition) override;

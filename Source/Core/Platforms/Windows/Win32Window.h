@@ -17,7 +17,7 @@ class Win32Window : public GenericWindow
 
 	BITMAPINFO				 m_bitmapInfo{};
 	HBITMAP					 m_displayBitmap = nullptr;
-	std::shared_ptr<Texture> m_texture = nullptr;
+	std::shared_ptr<Texture> m_displayTexture = nullptr;
 	std::shared_ptr<Painter> m_painter = nullptr;
 
 public:
@@ -27,6 +27,7 @@ public:
 	Win32Window();
 	void resize(int32 width, int32 height) override;
 	void show() override;
+	void hide() override;
 	void paint() override;
 	bool initialize(Win32Application* platform, HINSTANCE hInstance, const WindowDescription& inDescription, std ::shared_ptr<Win32Window> parent);
 	bool create(const HINSTANCE hInstance);

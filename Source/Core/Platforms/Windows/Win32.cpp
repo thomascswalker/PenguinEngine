@@ -75,27 +75,23 @@ void Win32Application::setupInput()
 	m_onMouseMoved.addRaw(engine, &Engine::onMouseMoved);
 }
 
-std::shared_ptr<Win32Window> Win32Application::createWindow(const WindowDescription& description, std ::shared_ptr<Win32Window> parent)
+std::shared_ptr<Win32Window> Win32Application::createWindow(
+	const WindowDescription& description, std ::shared_ptr<Win32Window> parent)
 {
-	std ::shared_ptr<Win32Window> window = std::make_shared<Win32Window>();
+	std::shared_ptr<Win32Window> window = std::make_shared<Win32Window>();
 	if (!window->initialize(this, m_hInstance, description, parent))
 	{
 		LOG_ERROR("Failed to initialize new window: {}", getLastErrorAsString());
 		return nullptr;
 	}
+	window->show();
 	m_windows.push_back(window);
+
+	if (m_windows.size() == 1)
+	{
+		m_mainWindow = window;
+	}
 	return m_windows.back();
-}
-
-void Win32Application::createMainWindow()
-{
-	WindowDescription description;
-	description.width = 640;
-	description.height = 480;
-	description.title = "Penguin Engine";
-
-	m_mainWindow = createWindow(description, nullptr);
-	m_mainWindow->show();
 }
 
 std::shared_ptr<Win32Window> Win32Application::getMainWindow()
@@ -110,136 +106,139 @@ LRESULT Win32Application::windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARA
 	switch (msg)
 	{
 		case WM_CREATE:
-		{
-			SetTimer(hwnd, g_windowsTimerId, 1, nullptr);
-			ShowCursor(TRUE);
-			break;
-		}
+			{
+				SetTimer(hwnd, g_windowsTimerId, 1, nullptr);
+				ShowCursor(TRUE);
+				break;
+			}
 		case WM_CLOSE:
 		case WM_DESTROY:
-		{
-			if (window)
 			{
-				m_windows.erase(std::remove(m_windows.begin(), m_windows.end(), window));
+				if (window)
+				{
+					m_windows.erase(std::remove(m_windows.begin(), m_windows.end(), window));
+				}
+
+				DestroyWindow(hwnd);
+
+				return 0;
 			}
-
-			DestroyWindow(hwnd);
-
-			return 0;
-		}
 		case WM_LBUTTONDOWN:
 		case WM_LBUTTONUP:
 		case WM_RBUTTONDOWN:
 		case WM_RBUTTONUP:
 		case WM_MBUTTONUP:
 		case WM_MBUTTONDOWN:
-		{
-			bool			 mouseUp = false;
-			EMouseButtonType buttonType;
+			{
+				bool			 mouseUp = false;
+				EMouseButtonType buttonType;
 
-			switch (msg)
-			{
-				case WM_LBUTTONDOWN:
-					buttonType = EMouseButtonType::Left;
-					break;
-				case WM_LBUTTONUP:
-					buttonType = EMouseButtonType::Left;
-					mouseUp = true;
-					break;
-				case WM_RBUTTONDOWN:
-					buttonType = EMouseButtonType::Right;
-					break;
-				case WM_RBUTTONUP:
-					buttonType = EMouseButtonType::Right;
-					mouseUp = true;
-					break;
-				case WM_MBUTTONUP:
-					buttonType = EMouseButtonType::Middle;
-					mouseUp = true;
-					break;
-				case WM_MBUTTONDOWN:
-					buttonType = EMouseButtonType::Middle;
-					break;
-				default:
-					return 1;
-			}
+				switch (msg)
+				{
+					case WM_LBUTTONDOWN:
+						buttonType = EMouseButtonType::Left;
+						break;
+					case WM_LBUTTONUP:
+						buttonType = EMouseButtonType::Left;
+						mouseUp = true;
+						break;
+					case WM_RBUTTONDOWN:
+						buttonType = EMouseButtonType::Right;
+						break;
+					case WM_RBUTTONUP:
+						buttonType = EMouseButtonType::Right;
+						mouseUp = true;
+						break;
+					case WM_MBUTTONUP:
+						buttonType = EMouseButtonType::Middle;
+						mouseUp = true;
+						break;
+					case WM_MBUTTONDOWN:
+						buttonType = EMouseButtonType::Middle;
+						break;
+					default:
+						return 1;
+				}
 
-			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			if (mouseUp)
-			{
-				onMouseUp(buttonType, cursorPosition);
+				const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				if (mouseUp)
+				{
+					onMouseUp(buttonType, cursorPosition);
+				}
+				else
+				{
+					onMouseDown(buttonType, cursorPosition);
+				}
+				break;
 			}
-			else
-			{
-				onMouseDown(buttonType, cursorPosition);
-			}
-			break;
-		}
 		// Mouse movement
 		case WM_MOUSEMOVE:
 		case WM_INPUT:
-		{
-			const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-			onMouseMoved(cursorPosition);
-			break;
-		}
+			{
+				const vec2f cursorPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+				onMouseMoved(cursorPosition);
+				break;
+			}
 		case WM_MOUSEWHEEL:
-		{
-			const float deltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
-			onMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
-			break;
-		}
+			{
+				const float deltaScroll = GET_WHEEL_DELTA_WPARAM(wParam);
+				onMouseWheel(-deltaScroll / 120.0f); // Invert delta scroll so rolling forward is positive
+				break;
+			}
 		// Keyboard input
 		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:
-		{
-			const auto key = static_cast<int32>(wParam);
-			if (!g_win32KeyMap.contains(key))
 			{
-				return 0;
+				const auto key = static_cast<int32>(wParam);
+				if (!g_win32KeyMap.contains(key))
+				{
+					return 0;
+				}
+				onKeyDown(g_win32KeyMap.at(key), 0, false);
+				break;
 			}
-			onKeyDown(g_win32KeyMap.at(key), 0, false);
-			break;
-		}
 		case WM_SYSKEYUP:
 		case WM_KEYUP:
-		{
-			const auto key = static_cast<int32>(wParam);
-			if (!g_win32KeyMap.contains(key))
 			{
-				return 0;
+				const auto key = static_cast<int32>(wParam);
+				if (!g_win32KeyMap.contains(key))
+				{
+					return 0;
+				}
+				onKeyUp(g_win32KeyMap.at(key), 0, false);
+				break;
 			}
-			onKeyUp(g_win32KeyMap.at(key), 0, false);
-			break;
-		}
 		case WM_GETMINMAXINFO:
-		{
-			auto minMaxInfo = (MINMAXINFO*)lParam;
-			minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
-			minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
-			minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
-			minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
-			break;
-		}
-		case WM_PAINT:
-		{
-			if (!window)
 			{
-				return 0;
+				auto minMaxInfo = (MINMAXINFO*)lParam;
+				minMaxInfo->ptMinTrackSize.x = g_minWindowWidth;
+				minMaxInfo->ptMinTrackSize.y = g_minWindowHeight;
+				minMaxInfo->ptMaxTrackSize.x = g_maxWindowWidth;
+				minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
+				break;
 			}
-			window->paint();
-			break;
-		}
+		case WM_PAINT:
+			{
+				if (!window)
+				{
+					return 0;
+				}
+				PAINTSTRUCT ps;
+				HDC			hdc = BeginPaint(hwnd, &ps);
+				window->paint();
+				EndPaint(hwnd, &ps);
+				break;
+			}
 		case WM_EXITSIZEMOVE:
 		case WM_ERASEBKGND:
-		{
-			result = 1;
-			break;
-		}
+			{
+				result = 1;
+				break;
+			}
 		default:
-		{
-			return DefWindowProc(hwnd, msg, wParam, lParam);
-		}
+			{
+				return DefWindowProc(hwnd, msg, wParam, lParam);
+			}
 	}
 
 	return result;
