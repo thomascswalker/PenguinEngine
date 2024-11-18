@@ -481,11 +481,11 @@ void TTF::readHEAD(ByteReader& reader, FontInfo* fontInfo)
 {
 	auto head = fontInfo->head.get();
 
-	head->version.s[0] = reader.readUInt16();
-	head->version.s[1] = reader.readUInt16();
+	head->version[0] = reader.readUInt16();
+	head->version[1] = reader.readUInt16();
 
-	head->fontRevision.s[0] = reader.readUInt16();
-	head->fontRevision.s[1] = reader.readUInt16();
+	head->fontRevision[0] = reader.readUInt16();
+	head->fontRevision[1] = reader.readUInt16();
 
 	head->checkSumAdjustment = reader.readUInt32();
 	head->magicNumber = reader.readUInt32();
@@ -623,7 +623,7 @@ bool TTF::readHHEA(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 bool TTF::readMAXP(ByteReader& reader, FontInfo* fontInfo, int32 initialOffset)
 {
 	reader.seek(initialOffset, ESeekDir::Beginning);
-	fontInfo->version.i = reader.readUInt32();
+	fontInfo->version = reader.readUInt32();
 	fontInfo->glyphCount = reader.readUInt16();
 
 	return true;

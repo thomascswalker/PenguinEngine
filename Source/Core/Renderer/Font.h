@@ -24,11 +24,6 @@ struct GlyphVertex;
 class FontDatabase;
 inline std::shared_ptr<FontDatabase> g_fontDatabase = std::make_shared<FontDatabase>();
 
-typedef union
-{
-	uint16 s[2];
-	uint32 i;
-} Fixed;
 using FWord = int16;
 using UFWord = uint16;
 using LongDateTime = int64;
@@ -255,8 +250,8 @@ namespace TTF
 
 	struct HEAD
 	{
-		Fixed version;
-		Fixed fontRevision;
+		uint16 version[2];
+		uint16 fontRevision[2];
 
 		uint32 checkSumAdjustment;
 		uint32 magicNumber;
@@ -304,7 +299,7 @@ namespace TTF
 		std::map<char, GlyphShape> glyphs;
 
 		// MAXP
-		Fixed version;
+		uint32 version;
 		int32 glyphCount;
 
 		// HHEA

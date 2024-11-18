@@ -4,7 +4,7 @@
 
 #define CORE_API __declspec(dllexport)
 
-enum class EOrientation
+enum EOrientation
 {
 	Horizontal,
 	Vertical

@@ -3,11 +3,10 @@
 #include <codecvt>
 #include <windowsx.h>
 
-#include "Platforms/Windows/Win32.h"
-
 #include "Core/ErrorCodes.h"
 #include "Engine/Engine.h"
 #include "Importers/TextureImporter.h"
+#include "Platforms/Windows/Win32.h"
 #include "Renderer/Pipeline/D3D11.h"
 
 /**
@@ -36,19 +35,20 @@ Win32Application* Win32Application::create(HINSTANCE hInstance)
 	return g_windowsApplication;
 }
 
-void Win32Application::init()
+void Win32Application::initialize(Engine* engine)
 {
 	m_isRunning = true;
+	// Forces g_engine to not turn into null
+	g_engine = engine;
 	setupInput();
 }
 
 void Win32Application::tick(float deltaTime)
 {
-	// Update delta time
-	const TimePoint endTime = PTimer::now();
+	CHECK(g_engine)
 
 	// Tick the engine
-	// Engine::get()->tick(deltaTime);
+	g_engine->tick(deltaTime);
 
 	// Process Windows messages
 	processMessages();
@@ -59,42 +59,66 @@ void Win32Application::tick(float deltaTime)
 	}
 }
 
+int32 Win32Application::exec()
+{
+	TimePoint startTime;
+	TimePoint endTime;
+	while (getIsRunning())
+	{
+		startTime = PTimer::now();
+		float deltaTime = std::chrono::duration_cast<DurationMs>(endTime - startTime).count();
+		tick(deltaTime);
+		endTime = PTimer::now();
+	}
+
+	return 0;
+}
+
 void Win32Application::setupInput()
 {
 	LOG_INFO("Setting up input.")
-	Engine* engine = Engine::get();
 
 	// Keyboard
-	m_keyPressed.addRaw(engine, &Engine::onKeyPressed);
+	m_keyPressed.addRaw(g_engine, &Engine::onKeyPressed);
 
 	// Mouse
-	m_onMouseMiddleScrolled.addRaw(engine, &Engine::onMouseMiddleScrolled);
-	m_onMouseLeftDown.addRaw(engine, &Engine::onLeftMouseDown);
-	m_onMouseLeftUp.addRaw(engine, &Engine::onLeftMouseUp);
-	m_onMouseMiddleUp.addRaw(engine, &Engine::onMiddleMouseUp);
-	m_onMouseMoved.addRaw(engine, &Engine::onMouseMoved);
+	m_onMouseMiddleScrolled.addRaw(g_engine, &Engine::onMouseMiddleScrolled);
+	m_onMouseLeftDown.addRaw(g_engine, &Engine::onLeftMouseDown);
+	m_onMouseLeftUp.addRaw(g_engine, &Engine::onLeftMouseUp);
+	m_onMouseMiddleUp.addRaw(g_engine, &Engine::onMiddleMouseUp);
+	m_onMouseMoved.addRaw(g_engine, &Engine::onMouseMoved);
 }
 
-std::shared_ptr<Win32Window> Win32Application::createWindow(
-	const WindowDescription& description, std ::shared_ptr<Win32Window> parent)
+std::shared_ptr<GenericWindow> Win32Application::createWindow(const WindowDescription& description, std::shared_ptr<GenericWindow> parent)
 {
 	std::shared_ptr<Win32Window> window = std::make_shared<Win32Window>();
-	if (!window->initialize(this, m_hInstance, description, parent))
+	if (!window->initialize(this, m_hInstance, description, dynamic_cast<Win32Window*>(parent.get())))
 	{
 		LOG_ERROR("Failed to initialize new window: {}", getLastErrorAsString());
 		return nullptr;
 	}
 	window->show();
-	m_windows.push_back(window);
+	m_windows.emplace_back(window);
 
 	if (m_windows.size() == 1)
 	{
-		m_mainWindow = window;
+		m_mainWindow = m_windows[0];
 	}
 	return m_windows.back();
 }
 
-std::shared_ptr<Win32Window> Win32Application::getMainWindow()
+std::shared_ptr<GenericWindow> Win32Application::createWindow(std::shared_ptr<GenericWindow> parent, const std::string& title, const vec2i& size = { g_defaultViewportWidth, g_defaultViewportHeight }, const vec2i& pos = 0)
+{
+	WindowDescription desc;
+	desc.title = title;
+	desc.width = size.x;
+	desc.height = size.y;
+	desc.x = pos.x;
+	desc.y = pos.y;
+	return createWindow(desc, parent);
+}
+
+std::shared_ptr<GenericWindow> Win32Application::getMainWindow()
 {
 	return m_mainWindow;
 }
@@ -105,6 +129,11 @@ LRESULT Win32Application::windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARA
 	std ::shared_ptr<Win32Window> window = getWindowFromHwnd(hwnd);
 	switch (msg)
 	{
+		case WM_TIMER:
+			{
+				InvalidateRect(hwnd, nullptr, false);
+				return 0;
+			}
 		case WM_CREATE:
 			{
 				SetTimer(hwnd, g_windowsTimerId, 1, nullptr);
@@ -217,6 +246,17 @@ LRESULT Win32Application::windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARA
 				minMaxInfo->ptMaxTrackSize.y = g_maxWindowHeight;
 				break;
 			}
+		case WM_SIZE:
+			{
+				if (window)
+				{
+					uint32 width = LOWORD(lParam);
+					uint32 height = HIWORD(lParam);
+					window->resize(width, height);
+				}
+
+				return 0;
+			}
 		case WM_PAINT:
 			{
 				if (!window)
@@ -261,7 +301,7 @@ void Win32Application::processMessages()
 	}
 }
 
-std ::shared_ptr<Win32Window> Win32Application::getWindowFromHwnd(HWND hwnd)
+std::shared_ptr<Win32Window> Win32Application::getWindowFromHwnd(HWND hwnd)
 {
 	for (auto& window : m_windows)
 	{

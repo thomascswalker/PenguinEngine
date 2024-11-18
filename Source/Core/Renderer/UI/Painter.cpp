@@ -8,10 +8,10 @@
 
 void Painter::assertValid()
 {
-	assert(m_data != nullptr);
+	assert(m_texture != nullptr);
 }
 
-Painter::Painter(Texture* data, recti viewport) : m_data(data), m_viewport(viewport)
+Painter::Painter(Texture* data, recti viewport) : m_texture(data), m_viewport(viewport)
 {
 	initFont();
 }
@@ -60,9 +60,20 @@ void Painter::initFont()
 	}
 }
 
+void Painter::setFontSize(int32 fontSize)
+{
+	m_fontSize = fontSize;
+	FT_Set_Pixel_Sizes(m_face, 0, fontSize);
+}
+
+void Painter::fill(const Color& color) 
+{
+	m_texture->fill(color);
+}
+
 void Painter::drawPoint(int32 x, int32 y, const Color& color)
 {
-	m_data->setPixelFromColor(x, y, color);
+	m_texture->setPixelFromColor(x, y, color);
 }
 
 void Painter::drawLine(vec2i a, vec2i b, const Color& color)
@@ -87,7 +98,7 @@ void Painter::drawLine(vec2i a, vec2i b, const Color& color)
 		{
 			break;
 		}
-		m_data->setPixelFromColor(x0, y0, color);
+		m_texture->setPixelFromColor(x0, y0, color);
 
 		e2 = 2 * err;
 		if (e2 >= dy)
@@ -122,7 +133,7 @@ void Painter::drawRect(recti r, const Color& color, int32 thickness)
 	for (int32 row = start; row < end; row++)
 	{
 		// Pointer to the first pixel in this row with the X offset
-		uint32* ptr = m_data->scanline(row) + r.min().x;
+		uint32* ptr = m_texture->scanline(row) + r.min().x;
 
 		// Fill the entire row if it's either the start or end row,
 		// accounting for thickness
@@ -163,7 +174,7 @@ void Painter::drawRectFilled(recti r, const Color& color)
 	{
 		for (int32 row = start; row < end; row++)
 		{
-			auto ptr = m_data->scanline(row) + r.min().x;
+			auto ptr = m_texture->scanline(row) + r.min().x;
 			std::fill(ptr, ptr + (int32)r.width, value);
 		}
 	}
@@ -172,12 +183,12 @@ void Painter::drawRectFilled(recti r, const Color& color)
 		float perc = (float)color.a / 255.0f;
 		for (int32 y = start; y < end; y++)
 		{
-			auto ptr = m_data->scanline(y) + r.min().x;
+			auto ptr = m_texture->scanline(y) + r.min().x;
 			for (int32 x = r.min().x; x < r.max().x; x++)
 			{
-				Color currentColor = m_data->getPixelAsColor(x, y);
+				Color currentColor = m_texture->getPixelAsColor(x, y);
 				currentColor = Color::blend(currentColor, color, EBlendMode::Normal, perc);
-				m_data->setPixelFromColor(x, y, currentColor);
+				m_texture->setPixelFromColor(x, y, currentColor);
 			}
 		}
 	}
@@ -221,7 +232,7 @@ void Painter::drawBezierCurve(std::vector<vec2i> points, const Color& color)
 
 			// Draw a line between the previous point and the current interpolated point
 			// drawLine(*pPoint, p012, color);
-			m_data->setPixelFromColor(p012.x, p012.y, color);
+			m_texture->setPixelFromColor(p012.x, p012.y, color);
 
 			// Store the most recently-interpolated point
 			*pPoint = p012;
@@ -371,8 +382,8 @@ void Painter::drawGlyphTexture(const GlyphTexture* ft, const vec2i& pos)
 			int32 v = *ptr++;
 			if (v)
 			{
-				m_data->setPixelFromColor(x + 1, y + 1, Color::black()); // Outline
-				m_data->setPixelFromColor(x, y, m_fontColor);			 // Actual text color
+				m_texture->setPixelFromColor(x + 1, y + 1, Color::black()); // Outline
+				m_texture->setPixelFromColor(x, y, m_fontColor);			 // Actual text color
 			}
 		}
 	}
@@ -458,10 +469,14 @@ void Painter::drawText(const vec2i& pos, const std::string& text)
 				{
 					for (int32 x = minX; x < maxX; x++)
 					{
+						if (!m_viewport.contains(vec2i(x, y)))
+						{
+							continue;
+						}
 						int32 memOffset = (y - minY) * w + (x - minX);
 						uint8 p = character->buffer[memOffset];
 						float perc = p / 255.0f;
-						Color color = m_data->getPixelAsColor(x, y);
+						Color color = m_texture->getPixelAsColor(x, y);
 						drawPoint(x, y, Color::blend(color, m_fontColor, EBlendMode::Normal, perc));
 					}
 				}

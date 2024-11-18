@@ -2,10 +2,14 @@
 
 #define NOMINMAX
 
+// Launch engine as editor
+#define WITH_EDITOR
+
 #include <memory>
 
+#include "Renderer/UI/Widget.h"
 #include "Core/Logging.h"
-#include "Engine/Engine.h"
+#include "EditorEngine.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -16,33 +20,17 @@ int32 WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 {
 	// Initialize the application with Win32
 	g_hInstance = hInstance;
-	auto application = Win32Application::create(hInstance);
-	application->init();
 
-	// Create the main window
-	WindowDescription mainWindowDesc;
-	mainWindowDesc.width = 640;
-	mainWindowDesc.height = 480;
-	mainWindowDesc.title = "Penguin Engine";
-	application->createWindow(mainWindowDesc, nullptr);
-	auto mainWindow = application->getMainWindow();
+	// Create a new app
+	auto app = Win32Application::create(hInstance);
+	auto engine = EditorEngine::create();
+	g_engine = g_editor;
 
-	WindowDescription windowDesc;
-	windowDesc.x = 25;
-	windowDesc.y = 50;
-	windowDesc.width = 200;
-	windowDesc.height = 300;
-	application->createWindow(windowDesc, mainWindow);
+	app->initialize(engine);
+	engine->initialize(app);
 
-	TimePoint startTime;
-	TimePoint endTime;
-	while (application->getIsRunning())
-	{
-		startTime = PTimer::now();
-		float deltaTime = std::chrono::duration_cast<DurationMs>(endTime - startTime).count();
-		application->tick(deltaTime);
-		endTime = PTimer::now();
-	}
+	// Run
+	int32 exitCode = app->exec();
 
 	return 0;
 }

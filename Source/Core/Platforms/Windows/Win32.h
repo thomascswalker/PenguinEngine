@@ -3,10 +3,13 @@
 #include <vector>
 #include <windows.h>
 
-#include "Engine/Actors/Camera.h"
 #include "Engine/Timer.h"
 #include "Platforms/Generic/GenericApplication.h"
 #include "Win32Window.h"
+
+#ifdef WITH_EDITOR
+	#define PENG_EDITOR
+#endif
 
 #define SAFE_DELETE(x)   \
 	if (x != nullptr)    \
@@ -96,24 +99,34 @@ public:
 	LRESULT		   windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam);
 	static LRESULT appWindowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam);
 
-	void init() override;
+	void initialize(Engine* engine) override;
 	void tick(float deltaTime) override;
-	void setupInput() override;
+	bool isEditor() const override
+	{
+#ifdef PENG_EDITOR
+		return true;
+#else
+		return false;
+#endif
+	}
+	int32 exec() override;
+	void  setupInput() override;
 
-	std::shared_ptr<Win32Window> createWindow(
-		const WindowDescription& description, std ::shared_ptr<Win32Window> parent);
-	std::shared_ptr<Win32Window> getMainWindow();
-	void						 processMessages() override;
-	std::shared_ptr<Win32Window> getWindowFromHwnd(HWND hwnd);
+	std::shared_ptr<GenericWindow> createWindow(const WindowDescription& description, std::shared_ptr<GenericWindow> parent) override;
+	std::shared_ptr<GenericWindow> createWindow(std::shared_ptr<GenericWindow> parent, const std::string& title, const vec2i& size, const vec2i& pos) override;
+	std::shared_ptr<GenericWindow> getMainWindow() override;
+	void						   processMessages() override;
+	std::shared_ptr<Win32Window>   getWindowFromHwnd(HWND hwnd);
 
 	// Input Handler
-	bool onMouseDown(const EMouseButtonType buttonType, const vec2f& cursorPosition) override;
-	bool onMouseUp(const EMouseButtonType buttonType, const vec2f& cursorPosition) override;
-	bool onMouseWheel(const float delta) override;
-	bool onMouseMoved(const vec2f& cursorPosition) override;
-	bool isMouseDown(const EMouseButtonType buttonType) const override;
-	bool isAnyMouseDown() const override;
-	bool onKeyDown(const EKey keyCode, int32 keyFlags, bool isRepeat) override;
-	bool onKeyUp(const EKey keyCode, int32 keyFlags, bool isRepeat) override;
-	bool isKeyDown(const EKey keyCode) const override;
+	MouseData* getMouseData() { return &m_mouse; }
+	bool	   onMouseDown(const EMouseButtonType buttonType, const vec2f& cursorPosition) override;
+	bool	   onMouseUp(const EMouseButtonType buttonType, const vec2f& cursorPosition) override;
+	bool	   onMouseWheel(const float delta) override;
+	bool	   onMouseMoved(const vec2f& cursorPosition) override;
+	bool	   isMouseDown(const EMouseButtonType buttonType) const override;
+	bool	   isAnyMouseDown() const override;
+	bool	   onKeyDown(const EKey keyCode, int32 keyFlags, bool isRepeat) override;
+	bool	   onKeyUp(const EKey keyCode, int32 keyFlags, bool isRepeat) override;
+	bool	   isKeyDown(const EKey keyCode) const override;
 };

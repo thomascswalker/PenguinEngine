@@ -58,11 +58,12 @@ namespace _DelegatesInternal
 
 	static void* (*alloc)(size_t size) = [](size_t size)
 	{
-		return malloc(size);
+		return std::malloc(size);
 	};
 	static void (*free)(void* ptr) = [](void* ptr)
 	{
-		free(ptr);
+		std::free(ptr);
+		ptr = nullptr;
 	};
 
 	template <typename T>

@@ -84,7 +84,7 @@ void ScanlineRHI::draw()
 	drawRenderables();
 	// TODO: Figure out why drawing is vertically flipped
 	m_frameBuffer->flipVertical();
-	drawUI(WidgetManager::g_rootWidget);
+	//drawUI(WidgetManager::g_rootWidget);
 }
 
 void ScanlineRHI::drawRenderables()
@@ -110,15 +110,15 @@ void ScanlineRHI::drawRenderables()
 
 void ScanlineRHI::drawUI(Widget* w)
 {
-	// Draw all UI elements
-	if (w)
-	{
-		w->paint(m_painter.get());
-		for (Widget* w : w->getChildren())
-		{
-			drawUI(w);
-		}
-	}
+	//// Draw all UI elements
+	//if (w)
+	//{
+	//	w->paint(m_painter.get());
+	//	for (Widget* w : w->getChildren())
+	//	{
+	//		drawUI(w);
+	//	}
+	//}
 }
 
 void ScanlineRHI::addRenderable(IRenderable* renderable)

@@ -36,7 +36,7 @@ struct Character
 
 class Painter
 {
-	Texture*		m_data = nullptr;
+	Texture*		m_texture = nullptr;
 	recti			m_viewport{};
 	FT_Face			m_face = nullptr;
 	FT_Library		m_library = nullptr;
@@ -57,6 +57,8 @@ public:
 
 	/** Getters & Setters **/
 
+	void setTexture(Texture* texture) { m_texture = texture; }
+
 	void setViewport(recti viewport) { m_viewport = viewport; }
 
 	void initFont();
@@ -65,11 +67,7 @@ public:
 	void	setFont(FT_Face font) { m_face = font; }
 
 	int32 getFontSize() const { return m_fontSize; }
-	void  setFontSize(int32 fontSize)
-	{
-		m_fontSize = fontSize;
-		FT_Set_Pixel_Sizes(m_face, 0, fontSize);
-	}
+	void  setFontSize(int32 fontSize);
 
 	Color getFontColor() const { return m_fontColor; }
 	void  setFontColor(const Color& color) { m_fontColor = color; }
@@ -77,6 +75,8 @@ public:
 	Character* getCharacter(const char c) { return &m_characters[c]; }
 
 	/** Drawing **/
+
+	void fill(const Color& color);
 
 	void drawPoint(int32 x, int32 y, const Color& color);
 

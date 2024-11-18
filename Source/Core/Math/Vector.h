@@ -1,9 +1,15 @@
 ﻿// ReSharper disable CppInconsistentNaming
 #pragma once
 
-#include <format>
+#include "Core/Macros.h"
+
+#ifdef WINDOWS_PLATFORM
+	#include <DirectXMath.h>
+#endif
+
+#include <algorithm>
 #include <cassert>
-#include <DirectXMath.h>
+#include <format>
 #include <intrin.h>
 
 #include "Core/Logging.h"
@@ -29,14 +35,11 @@ struct vec2_t
 	};
 
 	// Constructors
-	vec2_t()
-		: x(0), y(0) {}
+	vec2_t() : x(0), y(0) {}
 
-	vec2_t(T inX)
-		: x(inX), y(inX) {}
+	vec2_t(T inX) : x(inX), y(inX) {}
 
-	vec2_t(T inX, T inY)
-		: x(inX), y(inY) {}
+	vec2_t(T inX, T inY) : x(inX), y(inY) {}
 
 	vec2_t(const std::initializer_list<T>& values)
 	{
@@ -45,26 +48,17 @@ struct vec2_t
 	}
 
 	// Functions
-	static vec2_t zeroVector()
-	{
-		return vec2_t();
-	}
+	static vec2_t zeroVector() { return vec2_t(); }
 
-	static vec2_t identityVector()
-	{
-		return vec2_t(1);
-	}
+	static vec2_t identityVector() { return vec2_t(1); }
 
 	template <typename ToType>
 	vec2_t<ToType> toType() const
 	{
-		return {static_cast<ToType>(x), static_cast<ToType>(y)};
+		return { static_cast<ToType>(x), static_cast<ToType>(y) };
 	}
 
-	T length()
-	{
-		return x * x + y * y;
-	}
+	T length() { return x * x + y * y; }
 
 	void normalize()
 	{
@@ -76,13 +70,16 @@ struct vec2_t
 	vec2_t normalized() const
 	{
 		T len = length();
-		return {x / len, y / len};
+		return { x / len, y / len };
 	}
 
-	std::string toString() const
+	void clamp(T min, T max)
 	{
-		return std::format("[{}, {}]", x, y);
+		x = std::clamp(x, min, max);
+		y = std::clamp(y, min, max);
 	}
+
+	std::string toString() const { return std::format("[{}, {}]", x, y); }
 
 	void zero()
 	{
@@ -91,10 +88,7 @@ struct vec2_t
 	}
 
 	// Operators
-	vec2_t operator+(const vec2_t& v) const
-	{
-		return {x + v.x, y + v.y};
-	}
+	vec2_t operator+(const vec2_t& v) const { return { x + v.x, y + v.y }; }
 
 	vec2_t& operator+=(const vec2_t& v)
 	{
@@ -103,10 +97,7 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator-(const vec2_t& v) const
-	{
-		return {x - v.x, y - v.y};
-	}
+	vec2_t operator-(const vec2_t& v) const { return { x - v.x, y - v.y }; }
 
 	vec2_t& operator-=(const vec2_t& v)
 	{
@@ -115,10 +106,7 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator*(const vec2_t& v) const
-	{
-		return {x * v.x, y * v.y};
-	}
+	vec2_t operator*(const vec2_t& v) const { return { x * v.x, y * v.y }; }
 
 	vec2_t& operator*=(const vec2_t& v)
 	{
@@ -127,10 +115,7 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator/(const vec2_t& v) const
-	{
-		return {x / v.x, y / v.y};
-	}
+	vec2_t operator/(const vec2_t& v) const { return { x / v.x, y / v.y }; }
 
 	vec2_t& operator/=(const vec2_t& v)
 	{
@@ -139,55 +124,25 @@ struct vec2_t
 		return *this;
 	}
 
-	vec2_t operator-()
-	{
-		return vec2_t(-x, -y);
-	}
+	vec2_t operator-() { return vec2_t(-x, -y); }
 
-	bool operator<(const vec2_t& other) const
-	{
-		return x < other.x && y < other.y;
-	}
+	bool operator<(const vec2_t& other) const { return x < other.x && y < other.y; }
 
-	bool operator>(const vec2_t& other) const
-	{
-		return x > other.x && y > other.y;
-	}
+	bool operator>(const vec2_t& other) const { return x > other.x && y > other.y; }
 
-	bool operator>(T value)
-	{
-		return x > value && y > value;
-	}
+	bool operator>(T value) { return x > value && y > value; }
 
-	bool operator<(T value)
-	{
-		return x < value && y < value;
-	}
+	bool operator<(T value) { return x < value && y < value; }
 
-	bool operator==(T value)
-	{
-		return x == value && y == value;
-	}
+	bool operator==(T value) { return x == value && y == value; }
 
-	bool operator==(const vec2_t& other)
-	{
-		return x == other.x && y == other.y;
-	}
+	bool operator==(const vec2_t& other) { return x == other.x && y == other.y; }
 
-	bool operator!=(const vec2_t& other)
-	{
-		return x != other.x || y != other.y;
-	}
+	bool operator!=(const vec2_t& other) { return x != other.x || y != other.y; }
 
-	T operator[](int32 index) const
-	{
-		return xy[index];
-	}
+	T operator[](int32 index) const { return xy[index]; }
 
-	T& operator[](int32 index)
-	{
-		return xy[index];
-	}
+	T& operator[](int32 index) { return xy[index]; }
 };
 
 template <typename T>
@@ -209,17 +164,13 @@ struct vec3_t
 	};
 
 	// Constructors
-	vec3_t()
-		: x(0), y(0), z(0) {}
+	vec3_t() : x(0), y(0), z(0) {}
 
-	vec3_t(T inX)
-		: x(inX), y(inX), z(inX) {}
+	vec3_t(T inX) : x(inX), y(inX), z(inX) {}
 
-	vec3_t(T inX, T inY, T inZ)
-		: x(inX), y(inY), z(inZ) {}
+	vec3_t(T inX, T inY, T inZ) : x(inX), y(inY), z(inZ) {}
 
-	vec3_t(const vec2_t<T>& v, T inZ = T(1))
-		: x(v.x), y(v.y), z(inZ) {}
+	vec3_t(const vec2_t<T>& v, T inZ = T(1)) : x(v.x), y(v.y), z(inZ) {}
 
 	vec3_t(const std::initializer_list<T>& values)
 	{
@@ -229,50 +180,26 @@ struct vec3_t
 	}
 
 	// Functions
-	static vec3_t zeroVector()
-	{
-		return vec3_t();
-	}
+	static vec3_t zeroVector() { return vec3_t(); }
 
-	static vec3_t identityVector()
-	{
-		return vec3_t(1);
-	}
+	static vec3_t identityVector() { return vec3_t(1); }
 
-	static vec3_t forwardVector()
-	{
-		return vec3_t(1, 0, 0);
-	}
+	static vec3_t forwardVector() { return vec3_t(1, 0, 0); }
 
-	static vec3_t backVector()
-	{
-		return vec3_t(-1, 0, 0);
-	}
+	static vec3_t backVector() { return vec3_t(-1, 0, 0); }
 
-	static vec3_t upVector()
-	{
-		return vec3_t(0, 1, 0);
-	}
+	static vec3_t upVector() { return vec3_t(0, 1, 0); }
 
-	static vec3_t downVector()
-	{
-		return vec3_t(0, -1, 0);
-	}
+	static vec3_t downVector() { return vec3_t(0, -1, 0); }
 
-	static vec3_t rightVector()
-	{
-		return vec3_t(0, 0, 1);
-	}
+	static vec3_t rightVector() { return vec3_t(0, 0, 1); }
 
-	static vec3_t leftVector()
-	{
-		return vec3_t(0, 0, -1);
-	}
+	static vec3_t leftVector() { return vec3_t(0, 0, -1); }
 
 	template <typename ToType>
 	vec3_t<ToType> toType() const
 	{
-		return vec3_t<ToType>{static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z)};
+		return vec3_t<ToType>{ static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z) };
 	}
 
 	void zero()
@@ -298,10 +225,10 @@ struct vec3_t
 		}
 #else
 		// https://fastcpp.blogspot.com/2012/02/calculating-length-of-3d-vector-using.html
-		__m128 vec        = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f); // Convert to __m128
-		__m128 dotProduct = _mm_dp_ps(vec, vec, g_maskW); // Compute dot product
-		__m128 invNormal  = _mm_rsqrt_ps(dotProduct); // Get inverse normal
-		vec               = _mm_mul_ps(vec, invNormal); // Multiply original vector by the inverse normal
+		__m128 vec = _mm_setr_ps((float)x, (float)y, (float)z, 0.0f); // Convert to __m128
+		__m128 dotProduct = _mm_dp_ps(vec, vec, g_maskW);			  // Compute dot product
+		__m128 invNormal = _mm_rsqrt_ps(dotProduct);				  // Get inverse normal
+		vec = _mm_mul_ps(vec, invNormal);							  // Multiply original vector by the inverse normal
 
 		// Reassign XYZ
 		_MM_EXTRACT_FLOAT(x, vec, 0);
@@ -338,11 +265,7 @@ struct vec3_t
 	vec3_t cross(const vec3_t& v) const
 	{
 #ifndef PENG_SSE
-		return vec3_t{
-			y * v.z - z * v.y,
-			x * v.z - z * v.x,
-			x * v.y - y * v.x
-		};
+		return vec3_t{ y * v.z - z * v.y, x * v.z - z * v.x, x * v.y - y * v.x };
 #else
 		__m128 V1 = toM128();
 		__m128 V2 = v.toM128();
@@ -387,25 +310,20 @@ struct vec3_t
 #endif
 	}
 
-	vec3_t swizzleXY() const
+	void clamp(T min, T max)
 	{
-		return {y, x, z};
+		x = std::clamp(x, min, max);
+		y = std::clamp(y, min, max);
+		z = std::clamp(z, min, max);
 	}
 
-	vec3_t swizzleXZ() const
-	{
-		return {z, y, x};
-	}
+	vec3_t swizzleXY() const { return { y, x, z }; }
 
-	vec3_t swizzleYZ() const
-	{
-		return {x, z, y};
-	}
+	vec3_t swizzleXZ() const { return { z, y, x }; }
 
-	vec3_t swizzleXYZ() const
-	{
-		return {z, x, y};
-	}
+	vec3_t swizzleYZ() const { return { x, z, y }; }
+
+	vec3_t swizzleXYZ() const { return { z, x, y }; }
 
 	__m128 toM128() const
 	{
@@ -415,16 +333,10 @@ struct vec3_t
 		return _mm_load_ps(_xyzw);
 	}
 
-	std::string toString() const
-	{
-		return std::format("[{}, {}, {}]", x, y, z);
-	}
+	std::string toString() const { return std::format("[{}, {}, {}]", x, y, z); }
 
 	// Operators
-	vec3_t operator+(const vec3_t& v) const
-	{
-		return {x + v.x, y + v.y, z + v.z};
-	}
+	vec3_t operator+(const vec3_t& v) const { return { x + v.x, y + v.y, z + v.z }; }
 
 	vec3_t& operator+=(const vec3_t& v)
 	{
@@ -434,10 +346,7 @@ struct vec3_t
 		return *this;
 	}
 
-	vec3_t operator-(const vec3_t& v) const
-	{
-		return {x - v.x, y - v.y, z - v.z};
-	}
+	vec3_t operator-(const vec3_t& v) const { return { x - v.x, y - v.y, z - v.z }; }
 
 	vec3_t& operator-=(const vec3_t& v)
 	{
@@ -447,10 +356,7 @@ struct vec3_t
 		return *this;
 	}
 
-	vec3_t operator*(const vec3_t& v) const
-	{
-		return {x * v.x, y * v.y, z * v.z};
-	}
+	vec3_t operator*(const vec3_t& v) const { return { x * v.x, y * v.y, z * v.z }; }
 
 	vec3_t& operator*=(const vec3_t& v)
 	{
@@ -460,10 +366,7 @@ struct vec3_t
 		return *this;
 	}
 
-	vec3_t operator/(const vec3_t& v) const
-	{
-		return {x / v.x, y / v.y, z / v.z};
-	}
+	vec3_t operator/(const vec3_t& v) const { return { x / v.x, y / v.y, z / v.z }; }
 
 	vec3_t& operator/=(const vec3_t& v)
 	{
@@ -473,45 +376,21 @@ struct vec3_t
 		return *this;
 	}
 
-	bool operator==(const vec3_t& v) const
-	{
-		return x == v.x && y == v.y && z == v.z;
-	}
+	bool operator==(const vec3_t& v) const { return x == v.x && y == v.y && z == v.z; }
 
-	bool operator!=(const vec3_t& v) const
-	{
-		return x != v.x || y != v.y || z != v.z;
-	}
+	bool operator!=(const vec3_t& v) const { return x != v.x || y != v.y || z != v.z; }
 
-	vec3_t operator-() const
-	{
-		return vec3_t(-x, -y, -z);
-	}
+	vec3_t operator-() const { return vec3_t(-x, -y, -z); }
 
-	bool operator<(const vec3_t& other)
-	{
-		return x < other.x && y < other.y && z < other.z;
-	}
+	bool operator<(const vec3_t& other) { return x < other.x && y < other.y && z < other.z; }
 
-	bool operator>(const vec3_t& other)
-	{
-		return x > other.x && y > other.y && z > other.z;
-	}
+	bool operator>(const vec3_t& other) { return x > other.x && y > other.y && z > other.z; }
 
-	T operator[](int32 index) const
-	{
-		return xyz[index];
-	}
+	T operator[](int32 index) const { return xyz[index]; }
 
-	T& operator[](int32 index)
-	{
-		return xyz[index];
-	}
+	T& operator[](int32 index) { return xyz[index]; }
 
-	operator vec2_t<T>() const
-	{
-		return {x, y};
-	}
+	operator vec2_t<T>() const { return { x, y }; }
 };
 
 template <typename T>
@@ -534,17 +413,13 @@ struct vec4_t
 	};
 
 	// Constructors
-	vec4_t()
-		: x(0), y(0), z(0), w(0) {}
+	vec4_t() : x(0), y(0), z(0), w(0) {}
 
-	vec4_t(T inX)
-		: x(inX), y(inX), z(inX), w(inX) {}
+	vec4_t(T inX) : x(inX), y(inX), z(inX), w(inX) {}
 
-	vec4_t(T inX, T inY, T inZ, T inW)
-		: x(inX), y(inY), z(inZ), w(inW) {}
+	vec4_t(T inX, T inY, T inZ, T inW) : x(inX), y(inY), z(inZ), w(inW) {}
 
-	vec4_t(T* values)
-		: x(values[0]), y(values[1]), z(values[2]), w(values[3]) {}
+	vec4_t(T* values) : x(values[0]), y(values[1]), z(values[2]), w(values[3]) {}
 
 	vec4_t(const std::initializer_list<T>& values)
 	{
@@ -554,30 +429,28 @@ struct vec4_t
 		w = *(values.begin() + 3);
 	}
 
-	vec4_t(const vec3_t<T>& v, T inW = T(1))
-		: x(v.x), y(v.y), z(v.z), w(inW) {}
+	vec4_t(const vec3_t<T>& v, T inW = T(1)) : x(v.x), y(v.y), z(v.z), w(inW) {}
 
 	// Functions
-	static vec4_t zeroVector()
-	{
-		return vec4_t();
-	}
+	static vec4_t zeroVector() { return vec4_t(); }
 
-	static vec4_t identityVector()
+	static vec4_t identityVector() { return vec4_t(1); }
+
+	void clamp(T min, T max)
 	{
-		return vec4_t(1);
+		x = std::clamp(x, min, max);
+		y = std::clamp(y, min, max);
+		z = std::clamp(z, min, max);
+		w = std::clamp(w, min, max);
 	}
 
 	template <typename ToType>
 	vec4_t<ToType> toType() const
 	{
-		return {static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w)};
+		return { static_cast<ToType>(x), static_cast<ToType>(y), static_cast<ToType>(z), static_cast<ToType>(w) };
 	}
 
-	std::string toString() const
-	{
-		return std::format("[{}, {}, {}, {}]", x, y, z, w);
-	}
+	std::string toString() const { return std::format("[{}, {}, {}, {}]", x, y, z, w); }
 
 	void zero()
 	{
@@ -588,10 +461,7 @@ struct vec4_t
 	}
 
 	// Operators
-	vec4_t operator+(const vec4_t& v) const
-	{
-		return {x + v.x, y + v.y, z + v.z, w + v.w};
-	}
+	vec4_t operator+(const vec4_t& v) const { return { x + v.x, y + v.y, z + v.z, w + v.w }; }
 
 	vec4_t& operator+=(const vec4_t& v)
 	{
@@ -602,10 +472,7 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator-(const vec4_t& v) const
-	{
-		return {x - v.x, y - v.y, z - v.z, w - v.w};
-	}
+	vec4_t operator-(const vec4_t& v) const { return { x - v.x, y - v.y, z - v.z, w - v.w }; }
 
 	vec4_t& operator-=(const vec4_t& v)
 	{
@@ -616,10 +483,7 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator*(const vec4_t& v) const
-	{
-		return {x * v.x, y * v.y, z * v.z, w * v.w};
-	}
+	vec4_t operator*(const vec4_t& v) const { return { x * v.x, y * v.y, z * v.z, w * v.w }; }
 
 	vec4_t& operator*=(const vec4_t& v)
 	{
@@ -630,10 +494,7 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator/(const vec4_t& v) const
-	{
-		return {x / v.x, y / v.y, z / v.z, w / v.w};
-	}
+	vec4_t operator/(const vec4_t& v) const { return { x / v.x, y / v.y, z / v.z, w / v.w }; }
 
 	vec4_t& operator/=(const vec4_t& v)
 	{
@@ -644,40 +505,19 @@ struct vec4_t
 		return *this;
 	}
 
-	vec4_t operator-()
-	{
-		return vec4_t(-x, -y, -z, -w);
-	}
+	vec4_t operator-() { return vec4_t(-x, -y, -z, -w); }
 
-	bool operator<(const vec4_t& other)
-	{
-		return x < other.x && y < other.y && z < other.z;
-	}
+	bool operator<(const vec4_t& other) { return x < other.x && y < other.y && z < other.z; }
 
-	bool operator>(const vec4_t& other)
-	{
-		return x > other.x && y > other.y && z > other.z && w > other.w;
-	}
+	bool operator>(const vec4_t& other) { return x > other.x && y > other.y && z > other.z && w > other.w; }
 
-	T operator[](int32 index) const
-	{
-		return xyzw[index];
-	}
+	T operator[](int32 index) const { return xyzw[index]; }
 
-	T& operator[](int32 index)
-	{
-		return xyzw[index];
-	}
+	T& operator[](int32 index) { return xyzw[index]; }
 
-	operator vec2_t<T>() const
-	{
-		return {x, y};
-	}
+	operator vec2_t<T>() const { return { x, y }; }
 
-	operator vec3_t<T>() const
-	{
-		return {x, y, z};
-	}
+	operator vec3_t<T>() const { return { x, y, z }; }
 };
 
 namespace Math
@@ -689,13 +529,13 @@ namespace Math
 	}
 
 	/* Distance between two points in 3D space */
-	template <typename T> static T distance(const vec2_t<T> v0, const vec2_t<T>& v1)
+	template <typename T>
+	static T distance(const vec2_t<T> v0, const vec2_t<T>& v1)
 	{
 		T a = Math::square(v1.x - v0.x);
 		T b = Math::square(v1.y - v0.y);
 		return std::sqrtf(a + b);
 	}
-
 
 	/* Distance between two points in 3D space */
 	template <typename T>
@@ -741,10 +581,12 @@ namespace Math
 		return (b - a).cross(p - a);
 	}
 
-	template <typename T> 
-	static bool isInTriangle(const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& c, const vec2_t<T>& point, float threshold = 0.0f)
+	template <typename T>
+	static bool isInTriangle(
+		const vec2_t<T>& a, const vec2_t<T>& b, const vec2_t<T>& c, const vec2_t<T>& point, float threshold = 0.0f)
 	{
-		if ((point.x == a.x && point.y == a.y) || (point.x == b.x && point.y == b.y) || (point.x == c.x && point.y == c.y))
+		if ((point.x == a.x && point.y == a.y) || (point.x == b.x && point.y == b.y)
+			|| (point.x == c.x && point.y == c.y))
 		{
 			return false;
 		}
@@ -759,7 +601,8 @@ namespace Math
 	}
 
 	/**
-	 * Calculates the barycentric coordinates of a point P with respect to a triangle defined by vertices V0, V1, and V2.
+	 * Calculates the barycentric coordinates of a point P with respect to a triangle defined by vertices V0, V1, and
+	 * V2.
 	 *
 	 * @param p The point to calculate the barycentric coordinates for.
 	 * @param v0 The first vertex of the triangle.
@@ -769,9 +612,8 @@ namespace Math
 	 * @return True if the point is inside the triangle, false otherwise.
 	 */
 	template <typename T>
-	static bool getBarycentric(const vec3_t<T>& p,
-	                           const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2,
-	                           vec3_t<T>& bary)
+	static bool getBarycentric(
+		const vec3_t<T>& p, const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2, vec3_t<T>& bary)
 	{
 		// Calculate the vectors representing the edges of the triangle
 		const vec3_t<T> ba = v1 - v0;
@@ -802,7 +644,7 @@ namespace Math
 		return bary.x >= T(0) && bary.y >= T(0) && bary.z >= T(0);
 	}
 
-	template <typename T> 
+	template <typename T>
 	static EWindingOrder getWindingOrder(const vec2_t<T>& v0, const vec2_t<T>& v1, const vec2_t<T>& v2)
 	{
 		const float result = (v1.x - v0.x) * (v2.y - v0.y) - (v1.y - v0.y) * (v2.x - v0.x);
@@ -824,8 +666,8 @@ namespace Math
 		return result > T(0) ? EWindingOrder::Clockwise : EWindingOrder::CounterClockwise;
 	}
 
-	static constexpr float edgeFunction(const float x0, const float y0, const float x1, const float y1, const float x2,
-	                                    const float y2)
+	static constexpr float edgeFunction(
+		const float x0, const float y0, const float x1, const float y1, const float x2, const float y2)
 	{
 		return (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
 	}
@@ -855,8 +697,8 @@ namespace Math
 	template <typename T>
 	static vec3_t<T> getSurfaceNormal(const vec3_t<T>& v0, const vec3_t<T>& v1, const vec3_t<T>& v2)
 	{
-		vec3_t<T> edge0  = v0 - v2;
-		vec3_t<T> edge1  = v1 - v2;
+		vec3_t<T> edge0 = v0 - v2;
+		vec3_t<T> edge1 = v1 - v2;
 		vec3_t<T> normal = edge0.cross(edge1);
 		return normal.normalized();
 	}

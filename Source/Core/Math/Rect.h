@@ -102,12 +102,12 @@ struct rect_t
 		height -= value;
 	}
 
-	[[nodiscard]] bool contains(const vec2f& point) const
+	[[nodiscard]] bool contains(const vec2_t<T>& point) const
 	{
 		return point.x >= x && point.y >= y && point.x <= x + width && point.y <= y + height;
 	}
 
-	[[nodiscard]] bool overlaps(const rectf& other) const
+	[[nodiscard]] bool overlaps(const rect_t<T>& other) const
 	{
 		return other.x >= x || other.y >= y || other.x + width <= x + width || other.y + height <= y + height;
 	}

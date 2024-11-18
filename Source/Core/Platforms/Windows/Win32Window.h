@@ -3,6 +3,7 @@
 #include <memory>
 #include <Windows.h>
 
+#include "Core/Macros.h"
 #include "Platforms/Windows/Win32Misc.h"
 #include "Platforms/Generic/Application.h"
 #include "Platforms/Generic/GenericWindow.h"
@@ -11,6 +12,8 @@
 
 class Win32Window : public GenericWindow
 {
+	GENERATE_SUPER(GenericWindow)
+
 	Win32Application* m_platform = nullptr;
 	HWND			  m_hwnd = nullptr;
 	Win32Window*	  m_parent = nullptr;
@@ -29,8 +32,8 @@ public:
 	void show() override;
 	void hide() override;
 	void paint() override;
-	bool initialize(Win32Application* platform, HINSTANCE hInstance, const WindowDescription& inDescription, std ::shared_ptr<Win32Window> parent);
-	bool create(const HINSTANCE hInstance);
+	void clear() override;
+	bool initialize(Win32Application* platform, HINSTANCE hInstance, const WindowDescription& inDescription, Win32Window* parent);
 
 	static std::shared_ptr<GenericWindow> make() { return std::make_shared<Win32Window>(); }
 

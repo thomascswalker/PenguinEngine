@@ -1,11 +1,8 @@
 #pragma once
 
+#include "Core/Classes.h"
 #include "Math/MathFwd.h"
 
-class IApplication;
-class Win32Application;
-class AppleApplication;
-class LinuxApplication;
 
 #ifdef WINDOWS_PLATFORM
 typedef Win32Application Application;

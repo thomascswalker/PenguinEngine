@@ -3,7 +3,7 @@
 
 const TCHAR Win32Window::m_windowClass[] = TEXT("PenguinWindow");
 
-Win32Window::Win32Window() {}
+Win32Window::Win32Window() : Super() {}
 
 void Win32Window::resize(int32 width, int32 height)
 {
@@ -14,7 +14,12 @@ void Win32Window::resize(int32 width, int32 height)
 	m_bitmapInfo.bmiHeader.biHeight = -height;
 	m_displayBitmap = ::CreateBitmap(width, height, 1, 32, nullptr);
 
+	// Create a new texture for this window.
 	m_displayTexture = std::make_shared<Texture>(vec2i{ m_description.width, m_description.height });
+
+	// Set the painter texture to the new texture we just remade.
+	m_painter->setTexture(m_displayTexture.get());
+	m_painter->setViewport(recti(0, 0, width, height));
 }
 
 void Win32Window::show()
@@ -31,6 +36,22 @@ void Win32Window::hide()
 
 void Win32Window::paint()
 {
+	// Clear to background color first
+	clear();
+
+	if (m_canvas != nullptr)
+	{
+		// Layout all widgets
+		LayoutEngine::layoutAllWidgets(m_canvas.get(), recti(0, 0, getWidth(), getHeight()));
+		LayoutEngine::updateWidgets(m_canvas.get(), g_windowsApplication->getMouseData());
+
+		// Render all widgets to bitmap
+		for (Widget* w : m_canvas->getChildren())
+		{
+			w->paint(m_painter.get());
+		}
+	}
+
 	HDC windowDeviceContext;
 	HDC memoryDeviceContext = NULL;
 
@@ -72,7 +93,7 @@ void Win32Window::paint()
 		width, height,				   // Dest size
 		0, 0,						   // Source pos
 		width, height,				   // Source size
-		m_displayTexture->getData(),		   // Source data
+		m_displayTexture->getData(),   // Source data
 		&m_bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
 
 	SAFE_DELETE(m_displayBitmap)
@@ -80,13 +101,16 @@ void Win32Window::paint()
 	ReleaseDC(m_hwnd, windowDeviceContext);
 }
 
-bool Win32Window::initialize(
-	Win32Application* platform, HINSTANCE instance, const WindowDescription& desc, std ::shared_ptr<Win32Window> parent)
+void Win32Window::clear()
+{
+	m_painter->fill(getBackgroundColor());
+}
+
+bool Win32Window::initialize(Win32Application* platform, HINSTANCE instance, const WindowDescription& desc, Win32Window* parent)
 {
 	auto flags = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
 	auto parentHwnd = parent != nullptr ? parent->getHwnd() : nullptr;
-	m_hwnd = CreateWindowEx(0, m_windowClass, Strings::toWString(desc.title).c_str(), flags, 0, 0, desc.width,
-		desc.height, parentHwnd, nullptr, instance, nullptr);
+	m_hwnd = CreateWindowEx(0, m_windowClass, Strings::toWString(desc.title).c_str(), flags, 0, 0, desc.width, desc.height, parentHwnd, nullptr, instance, nullptr);
 
 	if (m_hwnd == nullptr)
 	{
@@ -107,20 +131,9 @@ bool Win32Window::initialize(
 	m_bitmapInfo.bmiHeader.biCompression = BI_RGB;
 
 	m_displayTexture = std::make_shared<Texture>(vec2i{ width, height });
-	m_displayTexture->fill(Color::red());
 	m_painter = std::make_shared<Painter>(m_displayTexture.get(), recti(0, 0, width, height));
 
 	return true;
-}
-
-bool Win32Window::create(const HINSTANCE hInstance)
-{
-
-	// Create the window.
-	m_hwnd = CreateWindowEx(0, m_windowClass, Strings::toWString(m_description.title).c_str(), WS_OVERLAPPEDWINDOW, 0,
-		0, m_description.width, m_description.height, nullptr, nullptr, hInstance, nullptr);
-
-	return m_hwnd != nullptr;
 }
 
 LRESULT CALLBACK Win32Window::windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)

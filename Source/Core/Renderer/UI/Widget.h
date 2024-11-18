@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "Core/Core.h"
 #include "Core/Macros.h"
 #include "Engine/Delegate.h"
 #include "Input/Mouse.h"
@@ -10,6 +11,7 @@
 #include "Renderer/Texture.h"
 
 class Widget;
+class Layout;
 class Button;
 class Panel;
 
@@ -31,30 +33,25 @@ namespace UIColors
 	inline Color Blue = Color("#2E84D8");
 } // namespace UIColors
 
-enum class ELayoutMode
-{
-	Horizontal,
-	Vertical
-};
-
-enum class EResizeMode
+enum EResizeMode
 {
 	Fixed,
-	Expanding
+	Expanding,
 };
 
 class Widget
 {
 protected:
 	/** Properties **/
-	ELayoutMode m_layoutMode = ELayoutMode::Horizontal;
-	EResizeMode m_horizontalResizeMode = EResizeMode::Expanding;
-	EResizeMode m_verticalResizeMode = EResizeMode::Expanding;
-	bool		m_consumeInput = false;
+	EOrientation m_layoutMode = Horizontal;
+	EResizeMode	 m_horizontalResizeMode = Expanding;
+	EResizeMode	 m_verticalResizeMode = Expanding;
+	bool		 m_consumeInput = false;
 
 	Widget*				 m_parent = nullptr;
-	std::vector<Widget*> m_children;
-	std::string			 m_objectName;
+	std::vector<Widget*> m_children{};
+	Layout*				 m_layout;
+	std::string			 m_objectName{};
 
 	/** Geometry **/
 
@@ -68,9 +65,8 @@ protected:
 	bool m_hovered = false;
 	bool m_clicked = false;
 
-	Widget() {}
-
 public:
+	Widget();
 	void	setParent(Widget* w) { m_parent = w; }
 	Widget* getParent() { return m_parent; }
 
@@ -109,20 +105,7 @@ public:
 	void  setFixedSize(vec2i size) { m_fixedSize = size; }
 
 	virtual void paint(Painter* painter) {}
-	virtual void update(MouseData& mouse)
-	{
-		// Hover
-		bool newHovered = m_geometry.contains(mouse.position);
-		if (newHovered && !m_hovered)
-		{
-			onHoverBegin();
-		}
-		if (!newHovered && m_hovered)
-		{
-			onHoverEnd();
-		}
-		m_hovered = newHovered;
-	}
+	virtual void update(MouseData* mouse);
 	virtual void reposition(const vec2i& position)
 	{
 		m_geometry.x = position.x;
@@ -145,23 +128,21 @@ public:
 	virtual void onHoverEnd() { LOG_DEBUG("{} Hover end", m_objectName) }
 
 	virtual void onClickBegin() { LOG_DEBUG("{} Click begin", m_objectName) }
-	virtual void onClickEnd() { LOG_DEBUG("{} Click end", m_objectName) }
+	virtual void onClickEnd(){ LOG_DEBUG("{} Click end", m_objectName) }
 
-	virtual void		setLayoutMode(ELayoutMode mode) { m_layoutMode = mode; }
-	virtual ELayoutMode getLayoutMode() const { return m_layoutMode; }
+	std::vector<Widget*> getChildren();
+
+	void	setLayout(Layout* layout);
+	Layout* getLayout() { return m_layout; }
+
+	virtual void		 setLayoutMode(EOrientation mode) { m_layoutMode = mode; }
+	virtual EOrientation getLayoutMode() const { return m_layoutMode; }
 
 	virtual void		setHorizontalResizeMode(EResizeMode mode) { m_horizontalResizeMode = mode; }
 	virtual EResizeMode getHorizontalResizeMode() const { return m_horizontalResizeMode; }
 
 	virtual void		setVerticalResizeMode(EResizeMode mode) { m_verticalResizeMode = mode; }
 	virtual EResizeMode getVerticalResizeMode() const { return m_verticalResizeMode; }
-
-	virtual void addChild(Widget* w)
-	{
-		m_children.emplace_back(w);
-		w->setParent(this);
-	}
-	virtual std::vector<Widget*>& getChildren() { return m_children; }
 };
 
 class Canvas : public Widget
@@ -227,7 +208,8 @@ class Button : public Label
 	GENERATE_SUPER(Label)
 
 public:
-	OnClicked m_onClicked;
+	// Emitted when the button is clicked.
+	OnClicked onClicked;
 
 	Button(const std::string& text = "") : Label(text) {}
 
@@ -262,17 +244,17 @@ public:
 		painter->drawText(textPos, m_text);
 	}
 
-	virtual void update(MouseData& mouse) override
+	virtual void update(MouseData* mouse) override
 	{
 		Super::update(mouse);
 
 		// If input has been consumed, skip this widget updating
-		if (mouse.inputConsumed)
+		if (mouse->inputConsumed)
 		{
 			return;
 		}
 		// Click
-		bool newClicked = mouse.leftDown && m_hovered;
+		bool newClicked = mouse->leftDown && m_hovered;
 		if (newClicked && !m_clicked)
 		{
 			onClickBegin();
@@ -281,7 +263,7 @@ public:
 		{
 			onClickEnd();
 			// Set input to consumed
-			mouse.inputConsumed = m_consumeInput;
+			mouse->inputConsumed = m_consumeInput;
 		}
 		m_clicked = newClicked;
 	}
@@ -294,26 +276,69 @@ public:
 		{
 			return;
 		}
-		m_onClicked.broadcast();
+		onClicked.broadcast();
 	}
 };
 
-namespace WidgetManager
+class LayoutItem
 {
-	inline std::vector<Widget*> g_widgets;
-	inline Widget*				g_rootWidget = nullptr;
+public:
+	LayoutItem() = default;
+	virtual Widget* getWidget() = 0;
+	virtual Layout* getLayout() = 0;
+};
 
-	template <typename T> T* constructWidget(const std::string& name = "")
+class WidgetItem : public LayoutItem
+{
+	Widget* widget;
+	Layout* layout;
+
+public:
+	WidgetItem(Widget* w, Layout* l) : widget(w), layout(l) {}
+	Widget* getWidget() override { return widget; }
+	Layout* getLayout() override { return widget->getLayout(); }
+};
+
+class Layout : public LayoutItem
+{
+	Widget*					 m_parent = nullptr;
+	std::vector<LayoutItem*> m_items;
+	EOrientation			 m_orientation;
+
+public:
+	Layout(Widget* parent = nullptr)
 	{
-		T* newWidget = new T();
-		g_widgets.emplace_back(std::move(newWidget));
-		g_widgets.back()->setObjectName(name);
-		return dynamic_cast<T*>(g_widgets.back());
+		if (parent == nullptr)
+		{
+			return;
+		}
+		parent->setLayout(this);
+		m_parent = parent;
 	}
 
-	inline void updateWidgets(MouseData& mouse)
+	Widget* getParent() const { return m_parent; }
+	void	setParent(Widget* w) { m_parent = w; }
+	Widget* getWidget() override { return nullptr; }
+	Layout* getLayout() override { return this; }
+
+	EOrientation getOrientation() const { return m_orientation; }
+	void		 setOrientation(EOrientation o) { m_orientation = o; }
+
+	template <typename T>
+	void addWidget(T* w, const std::string& name = "")
 	{
-		for (Widget* w : g_widgets)
+		// Create a WidgetItem wrapper for this widget
+		m_items.emplace_back(new WidgetItem(w, this));
+	}
+
+	std::vector<Widget*> getWidgets();
+};
+
+namespace LayoutEngine
+{
+	inline void updateWidgets(Canvas* canvas, MouseData* mouse)
+	{
+		for (auto w : canvas->getChildren())
 		{
 			w->update(mouse);
 		}
@@ -321,70 +346,94 @@ namespace WidgetManager
 
 	inline recti layoutWidget(Widget* w, const vec2i& available, const recti& viewport)
 	{
-		ELayoutMode layoutMode = w->getLayoutMode();
+
 		EResizeMode h = w->getHorizontalResizeMode();
 		EResizeMode v = w->getVerticalResizeMode();
 
+		// Resize _this_ widget
 		switch (h)
 		{
-			case EResizeMode::Fixed:
-			{
-				w->setWidth(std::clamp(0, w->getFixedWidth(), available.x));
-				break;
-			}
-			case EResizeMode::Expanding:
-			{
-				w->setWidth(available.x);
-				break;
-			}
+			case Fixed:
+				{
+					w->setWidth(std::clamp(0, w->getFixedWidth(), available.x));
+					break;
+				}
+			case Expanding:
+				{
+					w->setWidth(available.x);
+					break;
+				}
 		}
-		// Vertical resize
 		switch (v)
 		{
-			case EResizeMode::Fixed:
-			{
-				w->setHeight(std::clamp(0, w->getFixedHeight(), available.y));
-				break;
-			}
-			case EResizeMode::Expanding:
-			{
-				w->setHeight(available.y);
-				break;
-			}
+			case Fixed:
+				{
+					w->setHeight(std::clamp(0, w->getFixedHeight(), available.y));
+					break;
+				}
+			case Expanding:
+				{
+					w->setHeight(available.y);
+					break;
+				}
 		}
 
-		vec2i childPosition = w->getPosition();
-		int32 childCount = w->getChildren().size();
-		int32 divisor = childCount <= 1 ? 1 : childCount - 1;
-
-		for (auto child : w->getChildren())
+		// Get the layout within this widget
+		Layout* layout = w->getLayout();
+		if (layout != nullptr)
 		{
-			int32 childWidth = (child->getHorizontalResizeMode() == EResizeMode::Expanding) ? layoutMode == ELayoutMode::Horizontal ? w->getWidth() / divisor // Expanding + Horizontal
-																																	: w->getWidth()			  // Expanding
-																							: child->getFixedWidth();										  // Fixed
-			int32 childHeight = (child->getVerticalResizeMode() == EResizeMode::Expanding) ? layoutMode == ELayoutMode::Vertical ? w->getHeight() / divisor	  // Expanding + Vertical
-																																 : w->getHeight()			  // Expanding
-																						   : child->getFixedHeight();										  // Vertical
+			int32 childCount = w->getChildren().size();
+			int32 divisor = childCount <= 1 ? 1 : childCount;
 
-			childPosition.x = childPosition.x >= viewport.width ? childPosition.x - viewport.width : childPosition.x;
-			childPosition.y = childPosition.y >= viewport.height ? childPosition.y - viewport.height : childPosition.y;
-			child->setPosition(childPosition);
-
-			layoutWidget(child, vec2i{ childWidth, childHeight }, viewport);
-
-			if (h == EResizeMode::Expanding)
+			auto		 children = w->getChildren();
+			EOrientation orientation = layout->getOrientation();
+			for (int32 i = 0; i < childCount; i++)
 			{
-				childPosition.x += childWidth;
-			}
-			if (v == EResizeMode::Expanding)
-			{
-				childPosition.y += childHeight;
+				auto child = children[i];
+
+				// Root child position starts at the parent's position
+				vec2i childPosition = w->getPosition();
+
+				// Compute size
+				int32 childWidth = (child->getHorizontalResizeMode() == Expanding) // If the child horizontally expands
+					? orientation == Horizontal	  // And the orientation of the parent is horizontal
+						? w->getWidth() / divisor // Divide parent width by divisor to get child width
+						: w->getWidth()			  // Otherwise just use the entire parent width
+					: child->getFixedWidth();	  // Otherwise use fixed width
+				int32 childHeight = (child->getVerticalResizeMode() == Expanding) // If the child vertically expands
+					? orientation == Vertical	   // And the orientation of the parent is vertical
+						? w->getHeight() / divisor // Divide parent height by divisor to get child height
+						: w->getHeight()		   // Otherwise just use the entire parent height
+					: child->getFixedHeight();	   // Otherwise use fixed height
+
+				// Set child width/height based on the computed width/height above
+				child->setWidth(childWidth);
+				child->setHeight(childHeight);
+
+				// Compute position
+				childPosition.x = orientation == Horizontal ? childPosition.x + (childWidth * i) : childPosition.x;
+				childPosition.y = orientation == Vertical ? childPosition.y + (childHeight * i) : childPosition.y;
+				child->setPosition(childPosition);
+				child->recompute();
+
+				if (child->getLayout() != nullptr)
+				{
+					vec2i childSize(childWidth, childHeight);
+					layoutWidget(child, childSize, { childPosition, childSize });
+				}
 			}
 		}
-
-		// Compute render geometry
-		w->recompute();
 
 		return w->getGeometry();
 	}
-} // namespace WidgetManager
+
+	inline void layoutAllWidgets(Widget* w, const recti& viewport)
+	{
+		auto widgets = w->getChildren();
+		if (widgets.size() == 0)
+		{
+			return;
+		}
+		layoutWidget(w, vec2i(viewport.width, viewport.height), viewport);
+	}
+}; // namespace LayoutEngine

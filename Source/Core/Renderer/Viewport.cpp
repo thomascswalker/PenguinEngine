@@ -128,12 +128,9 @@ IRHI* Viewport::getRHI() const
 
 void Viewport::formatDebugText()
 {
-	const Engine* engine = Engine::get();
 	m_debugText          = std::format(
 		"Stats\n"
-		"FPS: {}\n"
 		"Size: {}\n",
-		engine->getFps(),
 		getSize().toString());
 }
 
