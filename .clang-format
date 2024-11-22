@@ -7,10 +7,11 @@ AlignConsecutiveDeclarations: true
 AlignEscapedNewlines: Left
 AlignOperands: DontAlign
 AlignTrailingComments: true
-AllowShortBlocksOnASingleLine: true
+AllowShortBlocksOnASingleLine: Empty
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortLambdasOnASingleLine: All
+AlwaysBreakTemplateDeclarations: true
 BraceWrapping:
   AfterCaseLabel: true
   AfterClass: true
@@ -33,17 +34,17 @@ BreakInheritanceList: AfterColon
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakStringLiterals: false
-ColumnLimit: 200
+ColumnLimit: 250
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: false
 EmptyLineBeforeAccessModifier: LogicalBlock
-IndentCaseBlocks: false
+IndentCaseBlocks: true
 IndentCaseLabels: true
 IndentPPDirectives: BeforeHash
 IndentWidth: 4
 NamespaceIndentation: All
 PointerAlignment: Left
-SortIncludes: false
+SortIncludes: true
 SpaceBeforeCaseColon: false
 TabWidth: 4
 UseTab: Always
