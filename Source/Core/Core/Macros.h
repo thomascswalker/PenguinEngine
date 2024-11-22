@@ -1,6 +1,6 @@
 #pragma once
 
-#define CHECK(X) assert(X);
+#define CHECK(X) assert(X)
 
 #define PARENS ()
 

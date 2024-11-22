@@ -40,12 +40,13 @@ void Win32Application::initialize(Engine* engine)
 	m_isRunning = true;
 	// Forces g_engine to not turn into null
 	g_engine = engine;
+	g_engine->initialize(this);
 	setupInput();
 }
 
 void Win32Application::tick(float deltaTime)
 {
-	CHECK(g_engine)
+	CHECK(g_engine);
 
 	// Tick the engine
 	g_engine->tick(deltaTime);

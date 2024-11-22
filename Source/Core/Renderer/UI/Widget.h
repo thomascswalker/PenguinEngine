@@ -43,10 +43,9 @@ class Widget
 {
 protected:
 	/** Properties **/
-	EOrientation m_layoutMode = Horizontal;
-	EResizeMode	 m_horizontalResizeMode = Expanding;
-	EResizeMode	 m_verticalResizeMode = Expanding;
-	bool		 m_consumeInput = false;
+	EResizeMode m_horizontalResizeMode = Expanding;
+	EResizeMode m_verticalResizeMode = Expanding;
+	bool		m_consumeInput = false;
 
 	Widget*				 m_parent = nullptr;
 	std::vector<Widget*> m_children{};
@@ -128,15 +127,15 @@ public:
 	virtual void onHoverEnd() { LOG_DEBUG("{} Hover end", m_objectName) }
 
 	virtual void onClickBegin() { LOG_DEBUG("{} Click begin", m_objectName) }
-	virtual void onClickEnd(){ LOG_DEBUG("{} Click end", m_objectName) }
+	virtual void onClickEnd() { LOG_DEBUG("{} Click end", m_objectName) }
 
-	std::vector<Widget*> getChildren();
+	void				 addChild(Widget* w);
+	void				 addChild(std::shared_ptr<Widget> w);
+	std::vector<Widget*> getChildren(bool recursive = false);
 
 	void	setLayout(Layout* layout);
 	Layout* getLayout() { return m_layout; }
-
-	virtual void		 setLayoutMode(EOrientation mode) { m_layoutMode = mode; }
-	virtual EOrientation getLayoutMode() const { return m_layoutMode; }
+	virtual void layoutChildren() = 0;
 
 	virtual void		setHorizontalResizeMode(EResizeMode mode) { m_horizontalResizeMode = mode; }
 	virtual EResizeMode getHorizontalResizeMode() const { return m_horizontalResizeMode; }
@@ -165,9 +164,14 @@ public:
 		painter->drawRectFilled(m_geometry, UIColors::DarkGray);
 		painter->drawRect(m_geometry, UIColors::VeryDarkGray);
 	}
+
+	virtual void layoutChildren() override
+	{
+
+	}
 };
 
-class Label : public Widget
+class Label : public Panel
 {
 	GENERATE_SUPER(Widget)
 protected:
@@ -280,6 +284,14 @@ public:
 	}
 };
 
+class ViewportWidget : public Widget
+{
+	GENERATE_SUPER(Widget)
+
+public:
+	virtual void paint(Painter* painter) override { painter->fill(Color::black()); }
+};
+
 class LayoutItem
 {
 public:
@@ -303,7 +315,7 @@ class Layout : public LayoutItem
 {
 	Widget*					 m_parent = nullptr;
 	std::vector<LayoutItem*> m_items;
-	EOrientation			 m_orientation;
+	EOrientation			 m_orientation = Horizontal;
 
 public:
 	Layout(Widget* parent = nullptr)
@@ -325,7 +337,7 @@ public:
 	void		 setOrientation(EOrientation o) { m_orientation = o; }
 
 	template <typename T>
-	void addWidget(T* w, const std::string& name = "")
+	void addWidget(T* w)
 	{
 		// Create a WidgetItem wrapper for this widget
 		m_items.emplace_back(new WidgetItem(w, this));
@@ -336,104 +348,7 @@ public:
 
 namespace LayoutEngine
 {
-	inline void updateWidgets(Canvas* canvas, MouseData* mouse)
-	{
-		for (auto w : canvas->getChildren())
-		{
-			w->update(mouse);
-		}
-	}
-
-	inline recti layoutWidget(Widget* w, const vec2i& available, const recti& viewport)
-	{
-
-		EResizeMode h = w->getHorizontalResizeMode();
-		EResizeMode v = w->getVerticalResizeMode();
-
-		// Resize _this_ widget
-		switch (h)
-		{
-			case Fixed:
-				{
-					w->setWidth(std::clamp(0, w->getFixedWidth(), available.x));
-					break;
-				}
-			case Expanding:
-				{
-					w->setWidth(available.x);
-					break;
-				}
-		}
-		switch (v)
-		{
-			case Fixed:
-				{
-					w->setHeight(std::clamp(0, w->getFixedHeight(), available.y));
-					break;
-				}
-			case Expanding:
-				{
-					w->setHeight(available.y);
-					break;
-				}
-		}
-
-		// Get the layout within this widget
-		Layout* layout = w->getLayout();
-		if (layout != nullptr)
-		{
-			int32 childCount = w->getChildren().size();
-			int32 divisor = childCount <= 1 ? 1 : childCount;
-
-			auto		 children = w->getChildren();
-			EOrientation orientation = layout->getOrientation();
-			for (int32 i = 0; i < childCount; i++)
-			{
-				auto child = children[i];
-
-				// Root child position starts at the parent's position
-				vec2i childPosition = w->getPosition();
-
-				// Compute size
-				int32 childWidth = (child->getHorizontalResizeMode() == Expanding) // If the child horizontally expands
-					? orientation == Horizontal	  // And the orientation of the parent is horizontal
-						? w->getWidth() / divisor // Divide parent width by divisor to get child width
-						: w->getWidth()			  // Otherwise just use the entire parent width
-					: child->getFixedWidth();	  // Otherwise use fixed width
-				int32 childHeight = (child->getVerticalResizeMode() == Expanding) // If the child vertically expands
-					? orientation == Vertical	   // And the orientation of the parent is vertical
-						? w->getHeight() / divisor // Divide parent height by divisor to get child height
-						: w->getHeight()		   // Otherwise just use the entire parent height
-					: child->getFixedHeight();	   // Otherwise use fixed height
-
-				// Set child width/height based on the computed width/height above
-				child->setWidth(childWidth);
-				child->setHeight(childHeight);
-
-				// Compute position
-				childPosition.x = orientation == Horizontal ? childPosition.x + (childWidth * i) : childPosition.x;
-				childPosition.y = orientation == Vertical ? childPosition.y + (childHeight * i) : childPosition.y;
-				child->setPosition(childPosition);
-				child->recompute();
-
-				if (child->getLayout() != nullptr)
-				{
-					vec2i childSize(childWidth, childHeight);
-					layoutWidget(child, childSize, { childPosition, childSize });
-				}
-			}
-		}
-
-		return w->getGeometry();
-	}
-
-	inline void layoutAllWidgets(Widget* w, const recti& viewport)
-	{
-		auto widgets = w->getChildren();
-		if (widgets.size() == 0)
-		{
-			return;
-		}
-		layoutWidget(w, vec2i(viewport.width, viewport.height), viewport);
-	}
+	void  updateWidgets(Widget* w, MouseData* mouse);
+	recti layoutWidget(Widget* parent, const recti& viewport);
+	void  layoutAllWidgets(Widget* w, const recti& viewport);
 }; // namespace LayoutEngine

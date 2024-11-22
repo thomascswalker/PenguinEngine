@@ -32,10 +32,9 @@ public:
 	void show() override;
 	void hide() override;
 	void paint() override;
+	void paintWidgets(Widget* w);
 	void clear() override;
 	bool initialize(Win32Application* platform, HINSTANCE hInstance, const WindowDescription& inDescription, Win32Window* parent);
-
-	static std::shared_ptr<GenericWindow> make() { return std::make_shared<Win32Window>(); }
 
 	static LRESULT CALLBACK windowProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam);
 	HWND					getHwnd() const { return m_hwnd; }

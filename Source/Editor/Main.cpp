@@ -27,7 +27,6 @@ int32 WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	g_engine = g_editor;
 
 	app->initialize(engine);
-	engine->initialize(app);
 
 	// Run
 	int32 exitCode = app->exec();

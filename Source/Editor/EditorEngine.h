@@ -14,8 +14,16 @@ protected:
 
 	// UI
 	std::shared_ptr<GenericWindow> m_mainWindow;
+
+	// Main menu
+	std::shared_ptr<Panel>		   m_mainMenu;
 	std::shared_ptr<Button>		   m_exitButton;
 	std::shared_ptr<Button>		   m_newWindowButton;
+	std::shared_ptr<Button>		   m_tempButton;
+
+	// Viewport
+	std::shared_ptr<Canvas> m_viewportCanvas;
+	std::shared_ptr<ViewportWidget> m_viewportWidget;
 
 	std::shared_ptr<GenericWindow> m_newWindow;
 

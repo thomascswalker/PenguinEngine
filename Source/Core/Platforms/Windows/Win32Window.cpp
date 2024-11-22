@@ -42,14 +42,9 @@ void Win32Window::paint()
 	if (m_canvas != nullptr)
 	{
 		// Layout all widgets
-		LayoutEngine::layoutAllWidgets(m_canvas.get(), recti(0, 0, getWidth(), getHeight()));
-		LayoutEngine::updateWidgets(m_canvas.get(), g_windowsApplication->getMouseData());
-
-		// Render all widgets to bitmap
-		for (Widget* w : m_canvas->getChildren())
-		{
-			w->paint(m_painter.get());
-		}
+		LayoutEngine::layoutAllWidgets(m_canvas, recti(0, 0, getWidth(), getHeight()));
+		LayoutEngine::updateWidgets(m_canvas, g_windowsApplication->getMouseData());
+		paintWidgets(m_canvas);
 	}
 
 	HDC windowDeviceContext;
@@ -99,6 +94,17 @@ void Win32Window::paint()
 	SAFE_DELETE(m_displayBitmap)
 	SAFE_DELETE(memoryDeviceContext)
 	ReleaseDC(m_hwnd, windowDeviceContext);
+}
+
+void Win32Window::paintWidgets(Widget* w)
+{
+	// Render all widgets to bitmap
+	w->paint(m_painter.get());
+	auto children = w->getChildren(false);
+	for (Widget* child : children)
+	{
+		paintWidgets(child);
+	}
 }
 
 void Win32Window::clear()

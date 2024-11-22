@@ -19,6 +19,7 @@ protected:
 public:
 	virtual ~IApplication() = default;
 
+	static IApplication* getApplication();
 	bool getIsRunning() const { return m_isRunning; }
 
 	virtual void  initialize(Engine* m_engine) = 0;
